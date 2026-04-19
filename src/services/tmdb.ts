@@ -90,7 +90,8 @@ export const getMediaDetails = async (id: number, type: 'movie' | 'tv', releaseY
 
 const proxyImage = (url: string) => {
   if (!url) return '';
-  return `http://localhost:4000/api/image?url=${encodeURIComponent(url)}`;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+  return `${baseUrl}/api/image?url=${encodeURIComponent(url)}`;
 };
 
 const GENRE_MAP: Record<number, string> = {

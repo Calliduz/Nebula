@@ -84,7 +84,7 @@ export default function App() {
       {/* The Player and Details now render via Routes, the following are kept for backward-compat and manual transitions if needed */}
 
       <AnimatePresence>
-        {state.selectedMovie && (
+        {state.selectedMovie && !isWatching && (
           <MovieDetails 
             key="movie-details-modal" movie={state.selectedMovie} onClose={() => actions.setSelectedMovie(null)} 
             onPlay={(s, e) => actions.startPlayback(state.selectedMovie, s, e)} onSelectMovie={actions.setSelectedMovie}
@@ -164,6 +164,7 @@ function MediaPlayerStub({ actions, state }: any) {
   return (
     <div className="fixed inset-0 z-[1000] bg-black">
       <MediaPlayer 
+        key={`player-${id}-s${season ?? 0}-e${episode ?? 0}`}
         movie={movie} 
         season={season}
         episode={episode}

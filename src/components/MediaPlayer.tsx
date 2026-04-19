@@ -4,7 +4,7 @@ import { X, Pause, Play, RotateCcw, RotateCw, VolumeX, Volume2, Maximize, Settin
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
-const API = 'http://localhost:4000';
+const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
 interface MediaPlayerProps {
   movie: any;
@@ -110,10 +110,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     }
   };
 
-  // ── Fetch TV Details for Drawer ────────────────────────────────────────────
+  // ── Fetch TV Details for Drawer (via backend proxy — no API key in frontend) ──
   useEffect(() => {
     if (movie.type !== 'tv') return;
-    fetch(`https://api.themoviedb.org/3/tv/${movie.id}?api_key=ca3e506649859f518e38d7c4909a3cf3`)
+    fetch(`${API}/api/tv-details/${movie.id}`)
       .then(r => r.json())
       .then(data => setTvDetails(data))
       .catch(console.error);
@@ -413,26 +413,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         style={{ opacity: showUi ? 1 : 0, transition: 'opacity 0.2s' }}
       >
         {/* Top bar */}
-        <div className="flex items-center gap-4 px-6 py-5 bg-gradient-to-b from-black/70 to-transparent pointer-events-auto">
+        <div className="flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
           <button
             onClick={safeClose}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 border border-white/5"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 border border-white/5 shrink-0"
             title="Back (Esc)"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold truncate leading-tight flex items-center gap-2">
+            <h2 className="text-sm sm:text-base font-semibold truncate leading-tight flex items-center gap-2">
               {movie.title}
               {season !== undefined && episode !== undefined && (
-                <span className="text-nebula-cyan font-display italic text-sm">S{season}E{episode}</span>
+                <span className="text-nebula-cyan font-display italic text-xs sm:text-sm">S{season}E{episode}</span>
               )}
             </h2>
-            <div className="flex items-center gap-3 mt-0.5">
-              <p className="text-white/40 text-[10px] uppercase tracking-widest">{movie.type === 'tv' ? 'Secure TV Link' : 'Secure Movie Link'} — {movie.year}</p>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <p className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest">{movie.type === 'tv' ? 'TV Link' : 'Movie Link'} — {movie.year}</p>
               {qualityTag && qualityTag !== 'UNKNOWN' && (
-                <div className="flex items-center gap-1.5">
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                <div className="flex items-center gap-1">
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
                     qualityTag === 'CAM' || qualityTag === 'TC'
                       ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
                       : qualityTag === 'BLURAY'
@@ -442,7 +442,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                     {qualityTag === 'WEBDL' ? 'WEB-DL' : qualityTag === 'WEBRIP' ? 'WEBRip' : qualityTag}
                   </span>
                   {resolution && resolution !== 'UNKNOWN' && (
-                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-white/50">
+                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-white/50">
                       {resolution}
                     </span>
                   )}
@@ -453,65 +453,58 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         </div>
 
         {/* Bottom controls */}
-        <div className="px-6 pb-6 pt-16 bg-gradient-to-t from-black/80 to-transparent pointer-events-auto">
-          {/* Progress bar */}
+        <div className="px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 bg-gradient-to-t from-black/90 to-transparent pointer-events-auto">
+          {/* Progress bar — taller touch area on mobile */}
           <div
-            className="relative h-1 w-full bg-white/20 rounded-full mb-4 cursor-pointer group"
+            className="relative w-full rounded-full mb-3 sm:mb-4 cursor-pointer group"
             onClick={handleSeek}
-            style={{ height: '4px' }}
+            style={{ height: '20px', display: 'flex', alignItems: 'center' }}
           >
-            {/* Buffered */}
-            <div
-              className="absolute inset-y-0 left-0 bg-white/20 rounded-full"
-              style={{ width: `${buffered}%` }}
-            />
-            {/* Played */}
-            <div
-              className="absolute inset-y-0 left-0 bg-white rounded-full"
-              style={{ width: `${progress}%` }}
-            />
-            {/* Seek thumb */}
-            <div
-              className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity -ml-1.5"
-              style={{ left: `${progress}%` }}
-            />
+            <div className="absolute inset-x-0 rounded-full bg-white/20" style={{ height: '3px' }}>
+              <div className="absolute inset-y-0 left-0 bg-white/30 rounded-full" style={{ width: `${buffered}%` }} />
+              <div className="absolute inset-y-0 left-0 bg-white rounded-full" style={{ width: `${progress}%` }} />
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg"
+                style={{ left: `${progress}%` }}
+              />
+            </div>
           </div>
 
           {/* Control row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 sm:gap-5">
               {/* Rewind */}
               <button
                 onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10); }}
-                className="text-white/70 hover:text-white transition-colors"
+                className="text-white/70 hover:text-white transition-colors p-1"
                 title="–10s (J)"
               >
-                <RotateCcw size={20} />
+                <RotateCcw size={18} />
               </button>
 
               {/* Play/Pause */}
               <button
                 onClick={togglePlay}
-                className="text-white hover:text-white/80 transition-colors"
+                className="text-white hover:text-white/80 transition-colors p-1"
                 title="Play/Pause (Space)"
               >
-                {isPaused ? <Play size={28} fill="currentColor" /> : <Pause size={28} fill="currentColor" />}
+                {isPaused ? <Play size={26} fill="currentColor" /> : <Pause size={26} fill="currentColor" />}
               </button>
 
               {/* Forward */}
               <button
                 onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10); }}
-                className="text-white/70 hover:text-white transition-colors"
+                className="text-white/70 hover:text-white transition-colors p-1"
                 title="+10s (L)"
               >
-                <RotateCw size={20} />
+                <RotateCw size={18} />
               </button>
 
-              {/* Next Episode */}
+              {/* Next Episode — icon only on mobile */}
               {movie.type === 'tv' && (
                 <button
                   onClick={handleNextEpisode}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all border border-white/5"
+                  className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all border border-white/5"
                   title="Next Episode"
                 >
                   <span className="hidden sm:inline italic">NEXT</span>
@@ -519,8 +512,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                 </button>
               )}
 
-              {/* Volume */}
-              <div className="flex items-center gap-2 group/vol">
+              {/* Volume — hidden on mobile (use device volume buttons) */}
+              <div className="hidden sm:flex items-center gap-2 group/vol">
                 <button onClick={() => setIsMuted(p => !p)} className="text-white/70 hover:text-white transition-colors">
                   {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
@@ -534,49 +527,49 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               </div>
 
               {/* Time */}
-              <span className="text-white/50 text-xs tabular-nums">
-                {currentTime} / {duration}
+              <span className="text-white/50 text-[10px] sm:text-xs tabular-nums">
+                {currentTime} <span className="text-white/20">/</span> {duration}
               </span>
             </div>
 
-            <div className="flex items-center gap-4 relative">
+            <div className="flex items-center gap-2 sm:gap-4 relative">
               {/* Episodes Button */}
               {movie.type === 'tv' && (
                 <button
                   onClick={() => setShowEpisodeDrawer(true)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all text-xs font-bold border border-white/10 ${showEpisodeDrawer ? 'bg-white text-black' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all text-xs font-bold border border-white/10 ${showEpisodeDrawer ? 'bg-white text-black' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
                 >
-                  <List size={16} />
-                  <span>EPISODES</span>
+                  <List size={14} />
+                  <span className="hidden sm:inline">EPISODES</span>
                 </button>
               )}
 
-              {/* Subtitles (Standalone) */}
+              {/* Search Subs */}
               <button
                 onClick={aggregateSubtitles}
                 disabled={fetchingSubtitles}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all text-xs font-bold border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 ${fetchingSubtitles ? 'animate-pulse' : ''}`}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all text-xs font-bold border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 ${fetchingSubtitles ? 'animate-pulse' : ''}`}
               >
-                {fetchingSubtitles ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                <span>{subtitles.length > 0 ? 'SUBTITLES' : 'SEARCH SUBS'}</span>
+                {fetchingSubtitles ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                <span className="hidden sm:inline">{subtitles.length > 0 ? 'SUBS' : 'SUBS'}</span>
               </button>
 
               {/* Settings */}
               <button
                 onClick={() => setShowSettings(p => !p)}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
                 title="Settings"
               >
-                <Settings size={18} />
+                <Settings size={16} />
               </button>
 
-              {/* Fullscreen */}
+              {/* Fullscreen — icon only */}
               <button
                 onClick={handleFullscreen}
-                className="text-white/50 hover:text-white transition-colors"
+                className="text-white/50 hover:text-white transition-colors p-1"
                 title="Fullscreen (F)"
               >
-                <Maximize size={18} />
+                <Maximize size={16} />
               </button>
 
               {/* Settings panel */}
@@ -676,15 +669,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-80 bg-obsidian border-l border-white/10 z-[300] shadow-2xl flex flex-col pointer-events-auto"
+              className="fixed top-0 right-0 bottom-0 w-full sm:w-80 bg-obsidian border-l border-white/10 z-[300] shadow-2xl flex flex-col pointer-events-auto"
             >
-              <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-widest text-white italic">Episode Relay</h3>
                   <p className="text-[10px] text-white/30 uppercase tracking-tighter">Season {season}</p>
                 </div>
-                <button onClick={() => setShowEpisodeDrawer(false)} className="w-8 h-8 rounded-full bg-white/5 text-white/40 hover:text-white flex items-center justify-center transition-colors">
-                  <X size={16} />
+                <button onClick={() => setShowEpisodeDrawer(false)} className="w-9 h-9 rounded-full bg-white/5 text-white/40 hover:text-white flex items-center justify-center transition-colors">
+                  <X size={18} />
                 </button>
               </div>
 
