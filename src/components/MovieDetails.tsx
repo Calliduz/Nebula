@@ -35,17 +35,17 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       className="fixed inset-0 z-[150] bg-obsidian overflow-y-auto overflow-x-hidden custom-scrollbar"
     >
-      <div className="absolute inset-x-0 top-0 h-[70vh] z-0">
+      <div className="absolute inset-x-0 top-0 h-[70vh] z-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-obsidian/60 to-obsidian z-10" />
         <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-obsidian/40 to-transparent z-10" />
         <img 
           src={movie.backdrop || movie.poster} 
-          className="w-full h-full object-cover blur-[2px] scale-105 opacity-40" 
+          className="w-full h-full object-cover blur-[2px] scale-110 opacity-40 origin-center" 
           alt="" 
           referrerPolicy="no-referrer" onError={handleImageError}
         />
         <div 
-          className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] blur-[120px] opacity-20 rounded-full"
+          className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] blur-[150px] opacity-30 rounded-full"
           style={{ backgroundColor: accentColor }}
         />
       </div>

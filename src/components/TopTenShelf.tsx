@@ -10,7 +10,7 @@ export const TopTenShelf = ({ onSelect }: { onSelect: (m: any) => void }) => {
         <h3 className="text-3xl font-display font-black uppercase tracking-tighter">Top 5 Records</h3>
         <div className="h-px flex-1 mx-8 bg-gradient-to-r from-white/10 to-transparent" />
       </div>
-      <div className="flex gap-12 sm:gap-16 overflow-x-auto py-10 -my-10 custom-scrollbar pb-2 px-2 sm:px-4 snap-x snap-mandatory">
+      <div className="flex gap-12 sm:gap-16 overflow-x-auto py-10 -my-10 no-scrollbar pb-2 px-2 sm:px-4 snap-x snap-mandatory">
         {topMovies.map((movie, i) => (
           <div 
             key={`top-shelf-${movie.id}-${i}`} 

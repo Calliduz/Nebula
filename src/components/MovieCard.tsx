@@ -31,7 +31,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
 
   return (
     <div 
-      className={`relative min-w-[140px] md:min-w-[180px] aspect-[2/3] transition-all duration-300 ${isHovered ? 'z-50' : 'z-10'} ${snap ? 'snap-start' : ''}`}
+      className={`relative min-w-[160px] md:min-w-[220px] aspect-[2/3] transition-all duration-300 ${isHovered ? 'z-50' : 'z-10'} ${snap ? 'snap-start' : ''}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={() => onSelect?.(movie)}
@@ -138,8 +138,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
 
         {!isHovered && (
           <div className="absolute bottom-4 left-4 right-4 z-20">
-            <p className="text-[9px] text-dim font-extrabold uppercase tracking-widest mb-1">{movie.genre}</p>
-            <p className="text-[15px] font-bold leading-tight drop-shadow-lg truncate">{movie.title}</p>
+            <p className="text-[10px] text-dim font-extrabold uppercase tracking-widest mb-1">{movie.genre}</p>
+            <p className="text-[18px] font-bold leading-tight drop-shadow-lg truncate">{movie.title}</p>
           </div>
         )}
       </motion.div>
