@@ -42,6 +42,8 @@ export default function App() {
                   filteredMovies={state.filteredMovies} recommendations={state.recommendations}
                   myList={state.myList} toggleMyList={actions.toggleMyList}
                   setViewingCategory={actions.setViewingCategory}
+                  rows={state.rows}
+                  allMovies={state.allMovies}
                 />
               </>
             ) : (

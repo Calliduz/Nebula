@@ -15,6 +15,7 @@ export interface NebulaMovie {
   imdb?: number;
   type: 'movie' | 'tv';
   clearLogo?: string | null;
+  fanartBackground?: string | null;
 }
 
 const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = {}) => {
@@ -39,39 +40,62 @@ const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = 
   return res.json();
 };
 
+const proxyImage = (url: string) => {
+  if (!url) return '';
+  return `http://localhost:4000/api/image?url=${encodeURIComponent(url)}`;
+};
+
+const GENRE_MAP: Record<number, string> = {
+  28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
+  99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History',
+  27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi',
+  10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western',
+  10759: 'Action & Adventure', 10762: 'Kids', 10763: 'News', 10764: 'Reality',
+  10765: 'Sci-Fi & Fantasy', 10766: 'Soap', 10767: 'Talk', 10768: 'War & Politics'
+};
+
+export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promise<NebulaMovie[]> => {
+  if (!normalized.length) return normalized;
+  
+  try {
+    const ids = normalized.map(m => m.id).join(',');
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+    const logoRes = await fetch(`${apiBase}/metadata?batch=${ids}`);
+    const logoData = await logoRes.json();
+    
+    if (logoData && logoData.results) {
+      logoData.results.forEach((meta: any) => {
+        const index = normalized.findIndex((m: NebulaMovie) => m.id.toString() === meta.id.toString());
+        if (index !== -1) {
+          normalized[index].clearLogo = meta.logoUrl;
+          normalized[index].fanartBackground = meta.backgroundUrl;
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('Metadata enrichment failed', e);
+  }
+  return normalized;
+};
+
 const normalizeMovie = (item: any, type: 'movie' | 'tv' = 'movie'): NebulaMovie => ({
-  id: item.id,
+  id: item.id || Math.floor(Math.random() * 1000000),
   title: item.title || item.name || 'Unknown Title',
   description: item.overview || 'No overview available.',
-  image: item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : 'https://picsum.photos/seed/nebula/400/600',
-  backdrop: item.backdrop_path ? `${BACKDROP_BASE_URL}${item.backdrop_path}` : '',
-  genre: item.genre_ids ? item.genre_ids.join(', ') : 'Unknown Genre', // We can map IDs to names later if needed
+  image: item.poster_path ? proxyImage(`${IMAGE_BASE_URL}${item.poster_path}`) : proxyImage('https://picsum.photos/seed/nebula/400/600'),
+  backdrop: item.backdrop_path ? proxyImage(`${BACKDROP_BASE_URL}${item.backdrop_path}`) : '',
+  genre: item.genre_ids ? item.genre_ids.map((id: number) => GENRE_MAP[id] || 'Unknown').join(', ') : 'Unknown Genre', 
   year: parseInt((item.release_date || item.first_air_date || '2024').substring(0, 4), 10),
   imdb: item.vote_average ? parseFloat(item.vote_average.toFixed(1)) : undefined,
   type: item.media_type || type,
+  duration: item.runtime ? `${item.runtime}m` : '124m',
+  quality: '4K',
 });
 
 export const getTrending = async (type: 'movie' | 'tv' | 'all' = 'all'): Promise<NebulaMovie[]> => {
   try {
     const data = await fetchFromTMDB(`/trending/${type}/day`);
     const normalized = data.results.map((m: any) => normalizeMovie(m, m.media_type || (type === 'all' ? 'movie' : type)));
-    
-    // Attach ClearLOGOs for top 5 (Featured)
-    const top5Ids = normalized.slice(0, 5).map((m: NebulaMovie) => m.id).join(',');
-    try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-      const logoRes = await fetch(`${apiBase}/metadata?batch=${top5Ids}`);
-      const logoData = await logoRes.json();
-      if (logoData && logoData.results) {
-         logoData.results.forEach((meta: any) => {
-            const index = normalized.findIndex((m: NebulaMovie) => m.id.toString() === meta.id.toString());
-            if (index !== -1) normalized[index].clearLogo = meta.logoUrl;
-         });
-      }
-    } catch (e) {
-      console.error('Failed to attach fanart metadata', e);
-    }
-
     return normalized;
   } catch (err) {
     console.error(err);
@@ -103,6 +127,25 @@ export const getPopularTV = async (): Promise<NebulaMovie[]> => {
   try {
     const data = await fetchFromTMDB('/tv/popular');
     return data.results.map((m: any) => normalizeMovie(m, 'tv'));
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+export const getTopRatedMovies = async (): Promise<NebulaMovie[]> => {
+  try {
+    const data = await fetchFromTMDB('/movie/top_rated');
+    return data.results.map((m: any) => normalizeMovie(m, 'movie'));
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
+export const getMoviesByGenre = async (genreId: number): Promise<NebulaMovie[]> => {
+  try {
+    const data = await fetchFromTMDB('/discover/movie', { with_genres: genreId.toString(), sort_by: 'popularity.desc' });
+    return data.results.map((m: any) => normalizeMovie(m, 'movie'));
   } catch (err) {
     console.error(err);
     return [];

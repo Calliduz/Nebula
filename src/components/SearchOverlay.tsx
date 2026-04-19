@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search } from 'lucide-react';
-import { ALL_MOVIES } from '../data/movies';
 import { topSearches } from '../data/constants';
 import { handleImageError } from '../utils/helpers';
 
@@ -73,14 +72,18 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                         className="flex gap-4 p-3 rounded-xl hover:bg-white/5 cursor-pointer group transition-all"
                       >
                         <div className="w-20 aspect-[2/3] rounded-lg overflow-hidden border border-white/10 flex-shrink-0">
-                          <img src={movie.poster} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" referrerPolicy="no-referrer" onError={handleImageError} />
+                          <img src={movie.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" referrerPolicy="no-referrer" onError={handleImageError} />
                         </div>
                         <div className="py-2">
-                           <h4 className="font-bold text-white group-hover:text-nebula-cyan transition-colors">{movie.title}</h4>
-                           <p className="text-[10px] text-dim uppercase mt-1 tracking-widest">{movie.genre}</p>
+                           {movie.clearLogo ? (
+                             <img src={movie.clearLogo} alt={movie.title} className="h-4 object-contain mb-1" />
+                           ) : (
+                             <h4 className="font-bold text-white group-hover:text-nebula-cyan transition-colors">{movie.title}</h4>
+                           )}
+                           <p className="text-[10px] text-dim uppercase mt-1 tracking-widest">{movie.genre.split(', ')[0]}</p>
                            <div className="flex items-center gap-2 mt-2">
-                              <span className="px-1.5 py-0.5 rounded bg-white/10 text-[8px] border border-white/10 text-white/50">{movie.quality}</span>
-                              <span className="text-[10px] text-nebula-cyan font-bold leading-none">{movie.rating}</span>
+                              <span className="px-1.5 py-0.5 rounded bg-white/10 text-[8px] border border-white/10 text-white/50">{movie.quality || '4K'}</span>
+                              <span className="text-[10px] text-nebula-cyan font-bold leading-none">{movie.imdb} Rating</span>
                            </div>
                         </div>
                       </motion.div>

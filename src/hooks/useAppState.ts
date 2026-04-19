@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useScroll, useTransform } from 'motion/react';
 import { useLocalStorage } from './useLocalStorage';
-import { getTrending, searchMedia, getPopularMovies, getPopularTV, NebulaMovie } from '../services/tmdb';
+import { 
+  getTrending, searchMedia, getPopularMovies, getPopularTV, 
+  getTopRatedMovies, getMoviesByGenre, enrichMoviesWithMetadata, NebulaMovie 
+} from '../services/tmdb';
 
 export function useAppState() {
   const [activeTab, setActiveTab] = useState('home');
@@ -24,13 +27,24 @@ export function useAppState() {
   const [visibleCount, setVisibleCount] = useState(12);
 
   // Data States
-  const [allMovies, setAllMovies] = useState<NebulaMovie[]>([]);
   const [featuredMovies, setFeaturedMovies] = useState<NebulaMovie[]>([]);
+  const [rows, setRows] = useState<{title: string, items: NebulaMovie[]}[]>([]);
   const [searchResults, setSearchResults] = useState<NebulaMovie[]>([]);
+
+  const [allMovies, setAllMovies] = useState<NebulaMovie[]>([]); 
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { scrollY } = useScroll();
   const heroParallax = useTransform(scrollY, [0, 500], [0, 150]);
+
+  // Helper to merge new movies into the global pool uniquely
+  const updateGlobalPool = (newMovies: NebulaMovie[]) => {
+    setAllMovies(prev => {
+      const existingIds = new Set(prev.map(m => m.id));
+      const uniqueNew = newMovies.filter(m => !existingIds.has(m.id));
+      return [...prev, ...uniqueNew];
+    });
+  };
 
   useEffect(() => {
     setVisibleCount(12);
@@ -39,21 +53,63 @@ export function useAppState() {
   const loadMore = () => setVisibleCount(prev => prev + 12);
 
   const getCategoryMovies = () => {
+    const flat = rows.flatMap(r => r.items);
     switch (viewingCategory) {
-      case 'Movies': return allMovies.filter(m => m.type === 'movie');
-      case 'TV Shows': return allMovies.filter(m => m.type === 'tv');
-      case 'My Secure Records': return allMovies.filter(m => myList.includes(m.id));
-      default: return allMovies;
+      case 'Movies': return flat.filter(m => m.type === 'movie');
+      case 'TV Shows': return flat.filter(m => m.type === 'tv');
+      case 'Library':
+      case 'My Secure Records': return flat.filter(m => myList.includes(m.id));
+      default: return flat;
     }
   };
 
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoading(true);
-      const trending = await getTrending('all');
-      setFeaturedMovies(trending.slice(0, 5));
-      setAllMovies(trending);
-      setIsLoading(false);
+      try {
+        // Fetch Categories
+        const [trending, popMovies, topRated, action, scifi, animation] = await Promise.all([
+          getTrending('all'),
+          getPopularMovies(),
+          getTopRatedMovies(),
+          getMoviesByGenre(28),
+          getMoviesByGenre(878),
+          getMoviesByGenre(16)
+        ]);
+
+        // Enrich Featured
+        const enrichedFeatured = await enrichMoviesWithMetadata(trending.slice(0, 5));
+        setFeaturedMovies(enrichedFeatured);
+
+        // Prepare Rows
+        const newRows = [
+          { title: 'Trending Operations', items: trending },
+          { title: 'Popular Field Assets', items: popMovies },
+          { title: 'Top Rated Missions', items: topRated },
+          { title: 'Action-Heavy Engagements', items: action },
+          { title: 'Sci-Fi Explorations', items: scifi },
+          { title: 'Animated Protocols', items: animation },
+        ];
+        
+        setRows(newRows);
+        updateGlobalPool([...trending, ...popMovies, ...topRated, ...action, ...scifi, ...animation]);
+
+        // Background Enrichment for row items (Async)
+        newRows.forEach(async (row, i) => {
+           const enriched = await enrichMoviesWithMetadata(row.items.slice(0, 10));
+           setRows(prev => {
+              const updated = [...prev];
+              updated[i] = { ...updated[i], items: [...enriched, ...row.items.slice(10)] };
+              return updated;
+           });
+           updateGlobalPool(enriched);
+        });
+
+      } catch (err) {
+        console.error('Data acquisition failure', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchInitialData();
   }, []);
@@ -64,7 +120,10 @@ export function useAppState() {
       if (searchQuery.trim().length > 1) {
         setIsLoading(true);
         const results = await searchMedia(searchQuery);
-        setSearchResults(results);
+        const enriched = await enrichMoviesWithMetadata(results.slice(0, 6)); // Enrich first 6 search results
+        const finalResults = [...enriched, ...results.slice(6)];
+        setSearchResults(finalResults);
+        updateGlobalPool(finalResults);
         setIsLoading(false);
       } else {
         setSearchResults([]);
@@ -105,26 +164,24 @@ export function useAppState() {
   }, [isHoveringHero, isPlaying, isSearchOpen, featuredMovies.length]);
 
   const filteredMovies = useMemo(() => {
-    return allMovies
+    const source = viewingCategory ? getCategoryMovies() : rows[0]?.items || [];
+    return source
       .filter(m => {
-        // Search is now handled externally, but we still apply genre/mood
         const matchesGenre = selectedGenre === 'All' || m.genre.includes(selectedGenre);
         const matchesMood = activeMood === 'All Moods' || m.genre.toLowerCase().includes(activeMood.toLowerCase().split(' ')[0]);
         if (activeTab === 'my-list') return myList.includes(m.id);
         return matchesGenre && matchesMood;
       })
       .sort((a, b) => {
-        if (sortBy === 'IMDB Rating') {
-          return (b.imdb || 0) - (a.imdb || 0);
-        }
+        if (sortBy === 'IMDB Rating') return (b.imdb || 0) - (a.imdb || 0);
         return sortBy === 'Release Date' ? b.year - a.year : 0;
       });
-  }, [selectedGenre, activeMood, activeTab, myList, sortBy, allMovies]);
+  }, [selectedGenre, activeMood, activeTab, myList, sortBy, rows, viewingCategory]);
 
   const recommendations = useMemo(() => {
-    // Shuffled copy for recommendations
-    return [...allMovies].sort(() => Math.random() - 0.5);
-  }, [allMovies]);
+    const flat = rows.flatMap(r => r.items);
+    return [...flat].sort(() => Math.random() - 0.5).slice(0, 20);
+  }, [rows]);
 
   const startPlayback = (movie: any) => {
     setHistory(prev => [...prev.filter(id => id !== movie.id), movie.id]);
@@ -167,7 +224,8 @@ export function useAppState() {
       searchResults,
       recommendations,
       allMovies,
-      featuredMovies
+      featuredMovies,
+      rows
     },
     actions: {
       setActiveTab,

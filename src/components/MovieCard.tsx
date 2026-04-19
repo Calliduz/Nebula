@@ -55,7 +55,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
               key="poster"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              src={movie.poster}
+              src={movie.image}
               alt={movie.title}
               className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-700"
               referrerPolicy="no-referrer" onError={handleImageError}
@@ -69,7 +69,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
               className="absolute inset-0 bg-black"
             >
               <img 
-                src={`${movie.poster}?blur=2`} 
+                src={movie.backdrop || movie.image} 
                 className="w-full h-full object-cover scale-110" 
                 referrerPolicy="no-referrer" onError={handleImageError} 
               />
@@ -128,8 +128,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
           </div>
 
           <div className="flex gap-2 flex-wrap">
-             {['Sci-Fi', 'Action', 'Dark'].map((tag, i) => (
-                <span key={`${movie.id}-tag-${tag}-${i}`} className="text-[8px] uppercase tracking-widest font-bold text-white/40">{tag}</span>
+             {movie.genre.split(', ').slice(0, 3).map((tag: string, i: number) => (
+                <span key={`tag-${movie.id}-${tag}-${i}`} className="text-[8px] uppercase tracking-widest font-bold text-white/40">{tag}</span>
              ))}
           </div>
 
@@ -138,8 +138,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
 
         {!isHovered && (
           <div className="absolute bottom-4 left-4 right-4 z-20">
-            <p className="text-[10px] text-dim font-extrabold uppercase tracking-widest mb-1">{movie.genre}</p>
-            <p className="text-[18px] font-bold leading-tight drop-shadow-lg truncate">{movie.title}</p>
+            <p className="text-[10px] text-dim font-extrabold uppercase tracking-widest mb-1">{movie.genre.split(', ')[0]}</p>
+            {movie.clearLogo ? (
+              <img src={movie.clearLogo} alt={movie.title} className="h-8 object-contain drop-shadow-xl" />
+            ) : (
+              <p className="text-[18px] font-bold leading-tight drop-shadow-lg truncate">{movie.title}</p>
+            )}
           </div>
         )}
       </motion.div>

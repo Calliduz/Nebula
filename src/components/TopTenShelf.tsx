@@ -1,13 +1,13 @@
 import React from 'react';
-import { ALL_MOVIES } from '../data/movies';
+import { NebulaMovie } from '../services/tmdb';
 import { handleImageError } from '../utils/helpers';
 
-export const TopTenShelf = ({ onSelect }: { onSelect: (m: any) => void }) => {
-  const topMovies = ALL_MOVIES.slice(0, 5);
+export const TopTenShelf = ({ data, onSelect }: { data: NebulaMovie[], onSelect: (m: any) => void }) => {
+  const topMovies = data.slice(0, 10);
   return (
     <section className="mb-20">
       <div className="flex items-center justify-between mb-10">
-        <h3 className="text-3xl font-display font-black uppercase tracking-tighter">Top 5 Records</h3>
+        <h3 className="text-3xl font-display font-black uppercase tracking-tighter">Top Ten Operations</h3>
         <div className="h-px flex-1 mx-8 bg-gradient-to-r from-white/10 to-transparent" />
       </div>
       <div className="flex gap-12 sm:gap-16 overflow-x-auto py-10 -my-10 no-scrollbar pb-2 px-2 sm:px-4 snap-x snap-mandatory">
@@ -21,7 +21,7 @@ export const TopTenShelf = ({ onSelect }: { onSelect: (m: any) => void }) => {
               {i + 1}
             </span>
             <div className="w-[120px] sm:w-[180px] aspect-[2/3] -ml-[60px] sm:-ml-[90px] rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:scale-110 group-hover:border-nebula-cyan/50 group-hover:shadow-[0_20px_60px_rgba(0,229,255,0.2)] group-hover:z-30 z-10 origin-left relative">
-              <img src={movie.poster} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={movie.title} referrerPolicy="no-referrer" onError={handleImageError} />
+              <img src={movie.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={movie.title} referrerPolicy="no-referrer" onError={handleImageError} />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
             </div>
           </div>

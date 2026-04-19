@@ -29,7 +29,6 @@ export const Hero: React.FC<HeroProps> = ({
 
   return (
     <section className="relative h-[85vh] md:h-[95vh] overflow-hidden">
-      <div className="absolute inset-0 z-10 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
       
       <AnimatePresence mode="wait">
         <motion.div
@@ -45,7 +44,7 @@ export const Hero: React.FC<HeroProps> = ({
             style={{ y: heroParallax }}
           >
             <img 
-              src={activeHero.image} 
+              src={activeHero.fanartBackground || activeHero.backdrop || activeHero.image} 
               alt={activeHero.title}
               className="w-full h-full object-cover md:scale-105"
               referrerPolicy="no-referrer" 
@@ -60,17 +59,11 @@ export const Hero: React.FC<HeroProps> = ({
       <div className="absolute inset-0 z-20 flex items-center px-4 sm:px-6 md:px-12 pt-10 pointer-events-none">
         <div className="max-w-3xl pointer-events-auto mt-20">
           <motion.div
-            key={`hero-content-${currentHeroIndex}`}
+            key={`hero-content-${activeHero.id || currentHeroIndex}`}
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-[2px] bg-nebula-red glow-red" />
-              <span className="text-white text-[10px] font-black uppercase tracking-[0.5em] flex items-center gap-2">
-                 Nebula Original
-              </span>
-            </div>
             
             {activeHero.clearLogo ? (
               <img src={activeHero.clearLogo} alt={activeHero.title} className="w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] object-contain mb-8 md:mb-10 drop-shadow-2xl" />
@@ -131,7 +124,7 @@ export const Hero: React.FC<HeroProps> = ({
       <div className="absolute bottom-20 md:bottom-20 left-4 right-4 md:left-auto md:right-12 flex flex-row md:flex-col justify-center gap-3 md:gap-4 z-30">
         {featuredMovies.map((movie, i) => (
           <button 
-            key={`hero-thumb-${i}`} 
+            key={`hero-thumb-${movie.id || i}`} 
             onClick={() => setCurrentHeroIndex(i)}
             className="group relative flex items-center justify-center md:justify-end"
           >
