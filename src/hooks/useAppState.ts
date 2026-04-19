@@ -6,7 +6,13 @@ import {
   getTopRatedMovies, getMoviesByGenre, enrichMoviesWithMetadata, NebulaMovie 
 } from '../services/tmdb';
 
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+
 export function useAppState() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const params = useParams();
+
   const [activeTab, setActiveTab] = useState('home');
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [isHoveringHero, setIsHoveringHero] = useState(false);
@@ -168,6 +174,25 @@ export function useAppState() {
     }
   };
 
+  // Sync state with URL changes
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/') {
+       setSelectedMovie(null);
+       setIsPlaying(false);
+    } else if (path.startsWith('/movie/') || path.startsWith('/tv/')) {
+       const parts = path.split('/');
+       const type = parts[1];
+       const id = parseInt(parts[2]);
+       
+       if (!selectedMovie || selectedMovie.id !== id) {
+          const found = allMovies.find(m => m.id === id && m.type === type);
+          if (found) setSelectedMovie(found);
+          // Note: If not found in pool, the MovieDetails component handles its own fetch
+       }
+    }
+  }, [location.pathname, allMovies]);
+
   useEffect(() => {
     if (isHoveringHero || isPlaying || isSearchOpen || featuredMovies.length === 0) return;
     
@@ -201,8 +226,16 @@ export function useAppState() {
 
   const startPlayback = (movie: any) => {
     setHistory(prev => [...prev.filter(id => id !== movie.id), movie.id]);
+    navigate(`/watch/${movie.type}/${movie.id}`);
+  };
+
+  const wrappedSetSelectedMovie = (movie: any) => {
+    if (!movie) {
+      navigate('/');
+    } else {
+      navigate(`/${movie.type}/${movie.id}`);
+    }
     setSelectedMovie(movie);
-    setIsPlaying(true);
   };
 
   const handleNavClick = (id: string) => {
@@ -252,7 +285,7 @@ export function useAppState() {
       setViewingCategory,
       setIsSearchOpen,
       setSearchQuery,
-      setSelectedMovie,
+      setSelectedMovie: wrappedSetSelectedMovie,
       setSortBy,
       setActiveMood,
       toggleMyList,

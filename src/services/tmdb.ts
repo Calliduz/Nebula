@@ -205,3 +205,15 @@ export const getMoviesByGenre = async (genreId: number): Promise<NebulaMovie[]> 
     return [];
   }
 };
+
+export const getMediaBasicInfo = async (id: string | number, type: 'movie' | 'tv'): Promise<NebulaMovie | null> => {
+  try {
+    const data = await fetchFromTMDB(`/${type}/${id}`);
+    if (!data || data.status_code === 34) return null;
+    return normalizeMovie(data, type);
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+

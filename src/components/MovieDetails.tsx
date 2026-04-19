@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Star, Clock, Calendar, Shield, AudioWaveform as Waveform, Sparkles, Maximize, Play, X, Plus } from 'lucide-react';
 import { handleImageError } from '../utils/helpers';
-import { getMediaDetails } from '../services/tmdb';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { getMediaDetails, getMediaBasicInfo } from '../services/tmdb';
 
 interface MovieDetailsProps {
-  movie: any;
+  movie?: any;
   onClose: () => void;
   onPlay: () => void;
   onSelectMovie?: (m: any) => void;
@@ -13,7 +14,11 @@ interface MovieDetailsProps {
   onToggleList: () => void;
 }
 
-export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPlay, onSelectMovie, isInList, onToggleList }) => {
+export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie, onClose, onPlay, onSelectMovie, isInList, onToggleList }) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [movie, setMovie] = useState<any>(initialMovie);
   const [activeTab, setActiveTab] = useState('Overview');
   const [deepDetails, setDeepDetails] = useState<{trailers: any[], similar: any[], cast: any[]}>({
     trailers: [],
@@ -23,14 +28,30 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDeep = async () => {
+    const fetchEverything = async () => {
       setIsLoading(true);
-      const details = await getMediaDetails(movie.id, movie.type);
-      setDeepDetails(details);
+      
+      let currentMovie = movie;
+      const type = location.pathname.includes('/tv/') ? 'tv' : 'movie';
+      const tmdbId = id || movie?.id;
+
+      if (!currentMovie && tmdbId) {
+        // Landing directly on the URL
+        currentMovie = await getMediaBasicInfo(tmdbId, type);
+        setMovie(currentMovie);
+      }
+
+      if (currentMovie) {
+        const details = await getMediaDetails(currentMovie.id, currentMovie.type);
+        setDeepDetails(details);
+      }
       setIsLoading(false);
     };
-    fetchDeep();
-  }, [movie.id, movie.type]);
+    fetchEverything();
+  }, [id, initialMovie?.id]);
+
+  if (!movie && isLoading) return <div className="fixed inset-0 z-[200] bg-obsidian flex items-center justify-center text-white">Establishing Satellite Link...</div>;
+  if (!movie) return null;
 
   const accentColor = movie.accent || '#00E5FF';
   const TABS = ['Overview', 'Trailers & Extras', 'Related Titles'];
