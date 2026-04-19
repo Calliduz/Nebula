@@ -19,15 +19,17 @@ export default function App() {
   const { state, actions, refs } = useAppState();
   const location = useLocation();
   const navigate = useNavigate();
+  const isWatching = location.pathname.includes('/watch/');
 
   return (
     <div className="flex min-h-screen bg-obsidian font-sans overflow-x-hidden">
-      <AnimatePresence>
-        <TopNav 
-          key="layout-nav"
-          activeTab={state.activeTab} onTabChange={actions.handleNavClick} scrolled={state.scrolled}
-          onSearchClick={() => actions.setIsSearchOpen(true)} viewingCategory={state.viewingCategory} setViewingCategory={actions.setViewingCategory}
-        />
+        {!isWatching && (
+          <TopNav 
+            key="layout-nav"
+            activeTab={state.activeTab} onTabChange={actions.handleNavClick} scrolled={state.scrolled}
+            onSearchClick={() => actions.setIsSearchOpen(true)} viewingCategory={state.viewingCategory} setViewingCategory={actions.setViewingCategory}
+          />
+        )}
 
         <main key="layout-main" className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 pb-24 lg:pb-0 ${state.isSearchOpen ? 'blur-2xl scale-[0.98] opacity-50' : ''}`}>
           <div className="relative z-40">
@@ -36,7 +38,7 @@ export default function App() {
                  !state.viewingCategory ? (
                   <>
                     <Hero 
-                      currentHeroIndex={state.currentHeroIndex} setCurrentHeroIndex={actions.setCurrentHeroIndex} heroParallax={state.heroParallax}
+                      currentHeroIndex={state.currentHeroIndex} setCurrentHeroIndex={actions.setCurrentHeroIndex}
                       myList={state.myList} toggleMyList={actions.toggleMyList} startPlayback={actions.startPlayback} setSelectedMovie={actions.setSelectedMovie}
                       featuredMovies={state.featuredMovies}
                     />
@@ -72,7 +74,6 @@ export default function App() {
             </Routes>
           </div>
         </main>
-      </AnimatePresence>
 
       <SearchOverlay 
         isOpen={state.isSearchOpen} onClose={() => actions.setIsSearchOpen(false)} searchQuery={state.searchQuery} setSearchQuery={actions.setSearchQuery}
@@ -99,7 +100,7 @@ function HomeStub({ actions, state, refs }: any) {
   return (
     <>
       <Hero 
-        currentHeroIndex={state.currentHeroIndex} setCurrentHeroIndex={actions.setCurrentHeroIndex} heroParallax={state.heroParallax}
+        currentHeroIndex={state.currentHeroIndex} setCurrentHeroIndex={actions.setCurrentHeroIndex}
         myList={state.myList} toggleMyList={actions.toggleMyList} startPlayback={actions.startPlayback} setSelectedMovie={actions.setSelectedMovie}
         featuredMovies={state.featuredMovies}
       />

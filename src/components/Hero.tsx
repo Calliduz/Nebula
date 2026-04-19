@@ -6,7 +6,6 @@ import { handleImageError } from '../utils/helpers';
 interface HeroProps {
   currentHeroIndex: number;
   setCurrentHeroIndex: (index: number) => void;
-  heroParallax: any;
   myList: number[];
   toggleMyList: (id: number) => void;
   startPlayback: (movie: any) => void;
@@ -19,7 +18,6 @@ import { HeroSkeleton } from './HeroSkeleton';
 export const Hero: React.FC<HeroProps> = ({
   currentHeroIndex,
   setCurrentHeroIndex,
-  heroParallax,
   myList,
   toggleMyList,
   startPlayback,
@@ -51,23 +49,18 @@ export const Hero: React.FC<HeroProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1.2 }}
-          className="absolute inset-0"
+          transition={{ duration: 0.8 }}
+          className="absolute inset-0 z-0"
         >
-          <motion.div 
-            className="absolute inset-0 z-0"
-            style={{ y: heroParallax }}
-          >
-            <img 
-              src={activeHero.fanartBackground || activeHero.backdrop || activeHero.image} 
-              alt={activeHero.title}
-              className="w-full h-full object-cover md:scale-105"
-              referrerPolicy="no-referrer" 
-              onError={handleImageError}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/40 to-transparent z-10" />
-            <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-transparent to-transparent z-10" />
-          </motion.div>
+          <img 
+            src={activeHero.fanartBackground || activeHero.backdrop || activeHero.image} 
+            alt={activeHero.title}
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer" 
+            onError={handleImageError}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/40 to-transparent z-10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-transparent to-transparent z-10" />
         </motion.div>
       </AnimatePresence>
 

@@ -23,15 +23,12 @@ const fetchWithCache = async (key: string, fetcher: () => Promise<any>, releaseY
     try {
       const { data, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp < ttl) {
-        console.log(`[ORBITAL CACHE] HIT: ${key}`);
         return data;
       }
-      console.log(`[ORBITAL CACHE] EXPIRED: ${key}`);
     } catch (e) {
       localStorage.removeItem(versionedKey);
     }
   }
-  console.log(`[NETWORK FETCH] Uplinking for: ${key}`);
   const data = await fetcher();
   localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
   return data;
@@ -128,12 +125,10 @@ export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promi
   });
 
   if (allCached) {
-    console.log('[ORBITAL CACHE] All metadata served from per-item cache.');
     return normalized;
   }
 
   try {
-    console.log(`[NETWORK FETCH] Batch metadata uplinking for: ${comboIds}`);
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
     const res = await fetch(`${apiBase}/metadata?batch=${comboIds}`);
     if (!res.ok) throw new Error('Metadata fetch failed');
@@ -158,9 +153,8 @@ export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promi
         }
       });
     }
-  } catch (e) {
-    console.warn('Metadata enrichment failed', e);
-
+  } catch {
+    // silently fail — UI degrades gracefully without logos
   }
   return normalized;
 };

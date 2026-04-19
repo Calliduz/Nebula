@@ -90,7 +90,9 @@
   }
 
   .shimmer-bg {
-    @apply relative overflow-hidden bg-white/5;
+    background: rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
   }
 
   .shimmer-bg::after {

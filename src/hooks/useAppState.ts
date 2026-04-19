@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useScroll, useTransform } from 'motion/react';
+
 import { useLocalStorage } from './useLocalStorage';
 import { 
   getTrending, searchMedia, getPopularMovies, getPopularTV, 
@@ -40,8 +40,6 @@ export function useAppState() {
   const [allMovies, setAllMovies] = useState<NebulaMovie[]>([]); 
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const { scrollY } = useScroll();
-  const heroParallax = useTransform(scrollY, [0, 500], [0, 150]);
 
   // Helper to merge new movies into the global pool uniquely
   const updateGlobalPool = (newMovies: NebulaMovie[]) => {
@@ -268,7 +266,6 @@ export function useAppState() {
       myList,
       history,
       visibleCount,
-      heroParallax,
       filteredMovies,
       searchResults,
       recommendations,
