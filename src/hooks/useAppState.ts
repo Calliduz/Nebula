@@ -160,6 +160,8 @@ export function useAppState() {
       setIsSearchOpen,
       setSearchQuery,
       setSelectedMovie,
+      setSortBy,
+      setActiveMood,
       toggleMyList,
       loadMore,
       getCategoryMovies,
