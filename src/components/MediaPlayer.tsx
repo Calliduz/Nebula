@@ -4,7 +4,8 @@ import { X, Pause, Play, RotateCcw, RotateCw, VolumeX, Volume2, Maximize, Settin
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
-const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+const API = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
 
 interface MediaPlayerProps {
   movie: any;

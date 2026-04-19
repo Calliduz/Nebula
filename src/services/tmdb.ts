@@ -90,7 +90,8 @@ export const getMediaDetails = async (id: number, type: 'movie' | 'tv', releaseY
 
 const proxyImage = (url: string) => {
   if (!url) return '';
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+  const baseUrl = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
   return `${baseUrl}/api/image?url=${encodeURIComponent(url)}`;
 };
 
@@ -130,8 +131,9 @@ export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promi
   }
 
   try {
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-    const res = await fetch(`${apiBase}/metadata?batch=${comboIds}`);
+    const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+    const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
+    const res = await fetch(`${apiBase}/api/metadata?batch=${comboIds}`);
     if (!res.ok) throw new Error('Metadata fetch failed');
     const logoData = await res.json();
 
