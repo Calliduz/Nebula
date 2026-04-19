@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Star, Clock, Calendar, Shield, AudioWaveform as Waveform, Sparkles, Maximize, Play, X, Plus } from 'lucide-react';
 import { handleImageError } from '../utils/helpers';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { getMediaDetails, getMediaBasicInfo } from '../services/tmdb';
+import { getMediaDetails, getMediaBasicInfo, enrichMoviesWithMetadata } from '../services/tmdb';
 
 interface MovieDetailsProps {
   movie?: any;
@@ -37,8 +37,13 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
 
       if (!currentMovie && tmdbId) {
         // Landing directly on the URL
-        currentMovie = await getMediaBasicInfo(tmdbId, type);
-        setMovie(currentMovie);
+        const basic = await getMediaBasicInfo(tmdbId, type);
+        if (basic) {
+          // Enrich with premium assets immediately
+          const enriched = await enrichMoviesWithMetadata([basic]);
+          currentMovie = enriched[0];
+          setMovie(currentMovie);
+        }
       }
 
       if (currentMovie) {

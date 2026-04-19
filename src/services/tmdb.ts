@@ -3,7 +3,7 @@ const API_KEY = import.meta.env.VITE_TMDB_API_KEY || 'PLACEHOLDER';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const BACKDROP_BASE_URL = 'https://image.tmdb.org/t/p/original';
 
-const CACHE_VERSION = 'v1.1';
+const CACHE_VERSION = 'v1.2';
 const CURRENT_YEAR = new Date().getFullYear();
 
 // Legacy records (> 2 years) = Permanent (30 years)
@@ -22,11 +22,16 @@ const fetchWithCache = async (key: string, fetcher: () => Promise<any>, releaseY
   if (cached) {
     try {
       const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < ttl) return data;
+      if (Date.now() - timestamp < ttl) {
+        console.log(`[ORBITAL CACHE] HIT: ${key}`);
+        return data;
+      }
+      console.log(`[ORBITAL CACHE] EXPIRED: ${key}`);
     } catch (e) {
       localStorage.removeItem(versionedKey);
     }
   }
+  console.log(`[NETWORK FETCH] Uplinking for: ${key}`);
   const data = await fetcher();
   localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
   return data;
@@ -104,30 +109,58 @@ export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promi
   if (!normalized.length) return normalized;
   
   const comboIds = normalized.map(m => `${m.id}:${m.type || 'movie'}`).sort().join(',');
-  const cacheKey = `meta-batch-v2-${comboIds}`;
-  
-  // Use a generic year check for the batch (highest year)
-  const maxYear = Math.max(...normalized.map(m => m.year));
+
+  // Check per-item cache (only trust entries WITH logos — never cache nulls permanently)
+  const allCached = normalized.every(m => {
+    const key = `v1.1-meta-single-${m.id}:${m.type}`;
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      try {
+        const { logoUrl, backgroundUrl, ts } = JSON.parse(cached);
+        if (logoUrl && Date.now() - ts < 1000 * 60 * 60 * 24 * 7) {
+          m.clearLogo = logoUrl;
+          m.fanartBackground = backgroundUrl;
+          return true;
+        }
+      } catch {}
+    }
+    return false;
+  });
+
+  if (allCached) {
+    console.log('[ORBITAL CACHE] All metadata served from per-item cache.');
+    return normalized;
+  }
 
   try {
-    const logoData = await fetchWithCache(cacheKey, async () => {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-      const res = await fetch(`${apiBase}/metadata?batch=${comboIds}`);
-      if (!res.ok) throw new Error('Metadata fetch failed');
-      return res.json();
-    }, maxYear);
-    
+    console.log(`[NETWORK FETCH] Batch metadata uplinking for: ${comboIds}`);
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+    const res = await fetch(`${apiBase}/metadata?batch=${comboIds}`);
+    if (!res.ok) throw new Error('Metadata fetch failed');
+    const logoData = await res.json();
+
     if (logoData && logoData.results) {
       logoData.results.forEach((meta: any) => {
         const index = normalized.findIndex((m: NebulaMovie) => m.id.toString() === meta.id.toString());
         if (index !== -1) {
           normalized[index].clearLogo = meta.logoUrl;
           normalized[index].fanartBackground = meta.backgroundUrl;
+
+          // Only write to localStorage if we got a logo (skip caching null results)
+          if (meta.logoUrl) {
+            const key = `v1.1-meta-single-${meta.id}:${normalized[index].type}`;
+            localStorage.setItem(key, JSON.stringify({
+              logoUrl: meta.logoUrl,
+              backgroundUrl: meta.backgroundUrl,
+              ts: Date.now()
+            }));
+          }
         }
       });
     }
   } catch (e) {
     console.warn('Metadata enrichment failed', e);
+
   }
   return normalized;
 };
