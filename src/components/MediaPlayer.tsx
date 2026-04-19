@@ -43,6 +43,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const [fetchingSubtitles, setFetchingSubtitles] = useState(false);
   const [showEpisodeDrawer, setShowEpisodeDrawer] = useState(false);
   const [tvDetails, setTvDetails] = useState<any>(null);
+  const [qualityTag, setQualityTag] = useState<string>(''); // CAM | WEBDL | WEBRIP | BLURAY | etc.
+  const [resolution, setResolution] = useState<string>('');
   const navigate = useNavigate();
 
   const videoRef    = useRef<HTMLVideoElement>(null);
@@ -68,6 +70,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         if (data.streamUrl) {
           // Route through proxy to bypass CDN CORS/Referer lockdown
           setStreamUrl(`${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
+          if (data.qualityTag) setQualityTag(data.qualityTag);
+          if (data.resolution) setResolution(data.resolution);
         } else {
           setError(data.error || 'No stream found.');
         }
@@ -299,22 +303,66 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     >
       {/* ── Loading state ── */}
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-20">
-          {movie.backdrop && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-20 bg-black">
+          {/* Blurred backdrop */}
+          {(movie.fanartBackground || movie.backdrop) && (
             <img
-              src={movie.backdrop}
-              className="absolute inset-0 w-full h-full object-cover opacity-10 blur-2xl"
+              src={movie.fanartBackground || movie.backdrop}
+              className="absolute inset-0 w-full h-full object-cover opacity-10 blur-3xl scale-110"
               alt=""
             />
           )}
-          <Loader2 size={36} className="animate-spin text-white/60" />
-          <p className="text-white/50 text-sm tracking-widest uppercase">Finding stream…</p>
-          <button
-            onClick={onClose}
-            className="mt-4 text-white/30 hover:text-white text-xs underline transition-colors"
-          >
-            Cancel
-          </button>
+          {/* Scanline texture */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.04]"
+            style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.3) 2px, rgba(255,255,255,0.3) 3px)' }}
+          />
+
+          {/* ClearLogo or title */}
+          <div className="relative flex flex-col items-center gap-8">
+            {movie.clearLogo ? (
+              <img
+                src={movie.clearLogo}
+                alt={movie.title}
+                className="h-20 md:h-28 w-auto object-contain drop-shadow-2xl animate-pulse"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <h1 className="text-3xl md:text-5xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl">
+                {movie.title}
+              </h1>
+            )}
+
+            {/* Animated progress bar */}
+            <div className="flex flex-col items-center gap-3 w-64">
+              <div className="w-full h-px bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-nebula-cyan rounded-full"
+                  style={{ animation: 'stream-progress 3s ease-in-out infinite' }}
+                />
+              </div>
+              <p className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-bold animate-pulse">
+                Locating Secure Stream…
+              </p>
+            </div>
+
+            {/* Cancel button */}
+            <button
+              onClick={onClose}
+              className="text-white/20 hover:text-white/60 text-xs underline transition-colors tracking-widest uppercase"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <style>{`
+            @keyframes stream-progress {
+              0%   { width: 0%; opacity: 1; }
+              70%  { width: 85%; opacity: 1; }
+              90%  { width: 90%; opacity: 0.7; }
+              100% { width: 90%; opacity: 0.7; }
+            }
+          `}</style>
         </div>
       )}
 
@@ -373,14 +421,34 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
           >
             <X size={20} />
           </button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold truncate leading-tight flex items-center gap-2">
               {movie.title}
               {season !== undefined && episode !== undefined && (
                 <span className="text-nebula-cyan font-display italic text-sm">S{season}E{episode}</span>
               )}
             </h2>
-            <p className="text-white/40 text-[10px] uppercase tracking-widest">{movie.type === 'tv' ? 'Secure TV Link' : 'Secure Movie Link'} — {movie.year}</p>
+            <div className="flex items-center gap-3 mt-0.5">
+              <p className="text-white/40 text-[10px] uppercase tracking-widest">{movie.type === 'tv' ? 'Secure TV Link' : 'Secure Movie Link'} — {movie.year}</p>
+              {qualityTag && qualityTag !== 'UNKNOWN' && (
+                <div className="flex items-center gap-1.5">
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                    qualityTag === 'CAM' || qualityTag === 'TC'
+                      ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                      : qualityTag === 'BLURAY'
+                      ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                      : 'bg-nebula-cyan/10 border-nebula-cyan/30 text-nebula-cyan'
+                  }`}>
+                    {qualityTag === 'WEBDL' ? 'WEB-DL' : qualityTag === 'WEBRIP' ? 'WEBRip' : qualityTag}
+                  </span>
+                  {resolution && resolution !== 'UNKNOWN' && (
+                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-white/50">
+                      {resolution}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
