@@ -62,9 +62,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         <div className="space-y-16">
           <section>
              <h3 className="text-2xl font-display font-medium tracking-tight text-white mb-8">My Secure Records</h3>
-             {myList.length > 0 ? (
-               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-x-6 gap-y-12">
-                 {allMovies.filter(m => myList.includes(m.id)).map((movie, i) => (
+             {(allMovies || []).length > 0 && myList.length > 0 ? (
+               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
+                 {(allMovies || []).filter(m => myList.includes(m.id)).map((movie, i) => (
                      <MovieCard key={`lib-my-${movie.id}-${i}`} movie={movie} onSelect={onSelectMovie} isInList={true} onToggleList={() => toggleMyList(movie.id)} />
                  ))}
                </div>
@@ -81,9 +81,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
           
           <section>
              <h3 className="text-2xl font-display font-medium tracking-tight text-white mb-8">Operational History</h3>
-             {history.length > 0 ? (
-               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-x-6 gap-y-12">
-                 {history.slice().reverse().map(id => allMovies.find(m => m.id === id)).filter(Boolean).map((movie: any, i) => (
+             {(allMovies || []).length > 0 && history.length > 0 ? (
+               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
+                 {history.slice().reverse().map(id => (allMovies || []).find(m => m.id === id)).filter(Boolean).map((movie: any, i) => (
                    <div key={`lib-hist-${movie.id}-${i}`} className="relative group">
                      <MovieCard movie={movie} onSelect={onSelectMovie} isInList={myList.includes(movie.id)} onToggleList={() => toggleMyList(movie.id)} />
                      <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -110,7 +110,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 md:gap-x-6 gap-y-12">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 md:gap-x-6 gap-y-12">
             {getCategoryMovies().slice(0, visibleCount).map((movie, i) => (
               <MovieCard key={`cat-grid-${viewingCategory}-${movie.id}-${i}`} movie={movie} onSelect={onSelectMovie} isInList={myList.includes(movie.id)} onToggleList={() => toggleMyList(movie.id)} />
             ))}

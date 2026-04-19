@@ -160,14 +160,24 @@ export function useAppState() {
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) searchInputRef.current.focus();
   }, [isSearchOpen]);
+  const handleRandomize = () => {
+    const pool = filteredMovies.length > 0 ? filteredMovies : allMovies;
+    if (pool.length > 0) {
+      const random = pool[Math.floor(Math.random() * pool.length)];
+      setSelectedMovie(random);
+    }
+  };
 
   useEffect(() => {
     if (isHoveringHero || isPlaying || isSearchOpen || featuredMovies.length === 0) return;
+    
+    // Auto-transition timer
     const interval = setInterval(() => {
       setCurrentHeroIndex((prev) => (prev + 1) % featuredMovies.length);
-    }, 8000);
+    }, 10000); // 10s for better readability
+
     return () => clearInterval(interval);
-  }, [isHoveringHero, isPlaying, isSearchOpen, featuredMovies.length]);
+  }, [isHoveringHero, isPlaying, isSearchOpen, featuredMovies.length, currentHeroIndex]); // Reset on index change
 
   const filteredMovies = useMemo(() => {
     const source = viewingCategory ? getCategoryMovies() : rows[0]?.items || [];
@@ -249,7 +259,8 @@ export function useAppState() {
       loadMore,
       getCategoryMovies,
       startPlayback,
-      handleNavClick
+      handleNavClick,
+      handleRandomize
     },
     refs: {
       searchInputRef

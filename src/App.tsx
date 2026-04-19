@@ -20,11 +20,12 @@ export default function App() {
     <div className="flex min-h-screen bg-obsidian font-sans overflow-x-hidden">
       <AnimatePresence>
         <TopNav 
+          key="layout-nav"
           activeTab={state.activeTab} onTabChange={actions.handleNavClick} scrolled={state.scrolled}
           onSearchClick={() => actions.setIsSearchOpen(true)} viewingCategory={state.viewingCategory} setViewingCategory={actions.setViewingCategory}
         />
 
-        <main className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 pb-24 lg:pb-0 ${state.isSearchOpen ? 'blur-2xl scale-[0.98] opacity-50' : ''}`}>
+        <main key="layout-main" className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 pb-24 lg:pb-0 ${state.isSearchOpen ? 'blur-2xl scale-[0.98] opacity-50' : ''}`}>
           <div className="relative z-40">
             {!state.viewingCategory ? (
               <>
@@ -42,6 +43,7 @@ export default function App() {
                   filteredMovies={state.filteredMovies} recommendations={state.recommendations}
                   myList={state.myList} toggleMyList={actions.toggleMyList}
                   setViewingCategory={actions.setViewingCategory}
+                  onRandomize={actions.handleRandomize}
                   rows={state.rows}
                   allMovies={state.allMovies}
                 />

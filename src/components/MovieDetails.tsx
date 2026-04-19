@@ -36,9 +36,17 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
   const TABS = ['Overview', 'Trailers & Extras', 'Related Titles'];
 
   const logoTitle = movie.clearLogo ? (
-    <img src={movie.clearLogo} alt={movie.title} className="h-16 sm:h-24 md:h-32 object-contain mb-8 drop-shadow-2xl" />
+    <div className="mb-8 lg:mb-12">
+      <img 
+        src={movie.clearLogo} 
+        alt={movie.title} 
+        className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]" 
+        referrerPolicy="no-referrer"
+        onError={handleImageError}
+      />
+    </div>
   ) : (
-    <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-accent font-black tracking-tight mb-4 uppercase leading-none break-words">
+    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight mb-8 uppercase leading-[0.9] break-words max-w-2xl drop-shadow-2xl">
       {movie.title}
     </h1>
   );
@@ -158,19 +166,20 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
                  >
                    <div className="w-full">
                      <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4 sm:mb-6">Director's Cut Cast</h3>
-                     <div className="flex gap-4 sm:gap-8 overflow-x-auto pb-4 custom-scrollbar">
-                       {deepDetails.cast.length > 0 ? deepDetails.cast.map((person: any, i: number) => (
-                         <div key={`${person.name}-${person.role}-${i}`} className="flex flex-col items-center gap-2 sm:gap-3 group cursor-pointer shrink-0">
-                           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-white/10 p-1 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden">
-                             <img src={person.avatar} className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt={person.name} />
-                           </div>
-                           <div className="text-center max-w-[80px]">
-                             <p className="text-[9px] sm:text-[10px] font-bold text-white group-hover:text-nebula-cyan transition-colors truncate">{person.name}</p>
-                             <p className="text-[7px] sm:text-[8px] font-bold text-dim uppercase tracking-widest mt-1 truncate">{person.role}</p>
-                           </div>
-                         </div>
-                       )) : <p className="text-dim text-xs">Cast protocols unavailable for this record.</p>}
-                     </div>
+                      <div className="flex gap-6 sm:gap-10 overflow-x-auto pb-6 no-scrollbar touch-pan-x">
+                        {deepDetails.cast.length > 0 ? deepDetails.cast.map((person: any, i: number) => (
+                          <div key={`${person.name}-${person.role}-${i}`} className="flex flex-col items-center gap-4 group cursor-pointer shrink-0">
+                            <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-2 border-white/10 p-1.5 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden relative">
+                              <img src={person.avatar} className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt={person.name} />
+                              <div className="absolute inset-0 bg-nebula-cyan/0 group-hover:bg-nebula-cyan/10 transition-colors" />
+                            </div>
+                            <div className="text-center w-24 sm:w-32">
+                              <p className="text-xs sm:text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors line-clamp-1">{person.name}</p>
+                              <p className="text-[10px] sm:text-[11px] font-medium text-dim uppercase tracking-wider mt-1 line-clamp-1">{person.role}</p>
+                            </div>
+                          </div>
+                        )) : <p className="text-dim text-xs">Cast protocols unavailable for this record.</p>}
+                      </div>
                    </div>
                  </motion.div>
               )}
@@ -236,6 +245,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
             </div>
           </div>
         </div>
+        
+        {/* Generous bottom padding to fix scrollbar desync bug */}
+        <div className="h-40 w-full pointer-events-none" />
       </div>
     </motion.div>
   );

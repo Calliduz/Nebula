@@ -14,6 +14,8 @@ interface HeroProps {
   featuredMovies: any[];
 }
 
+import { HeroSkeleton } from './HeroSkeleton';
+
 export const Hero: React.FC<HeroProps> = ({
   currentHeroIndex,
   setCurrentHeroIndex,
@@ -24,7 +26,20 @@ export const Hero: React.FC<HeroProps> = ({
   setSelectedMovie,
   featuredMovies
 }) => {
-  if (!featuredMovies || featuredMovies.length === 0) return null;
+  const [isFocusing, setIsFocusing] = React.useState<number | null>(null);
+
+  if (!featuredMovies || featuredMovies.length === 0) return <HeroSkeleton />;
+  
+  const handleThumbClick = (index: number) => {
+    if (index === currentHeroIndex) return;
+    setIsFocusing(index);
+    // Intentional delay to "focus" before swapping background
+    setTimeout(() => {
+      setCurrentHeroIndex(index);
+      setIsFocusing(null);
+    }, 400);
+  };
+
   const activeHero = featuredMovies[currentHeroIndex];
 
   return (
@@ -36,7 +51,7 @@ export const Hero: React.FC<HeroProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1.5 }}
+          transition={{ duration: 1.2 }}
           className="absolute inset-0"
         >
           <motion.div 
@@ -62,11 +77,11 @@ export const Hero: React.FC<HeroProps> = ({
             key={`hero-content-${activeHero.id || currentHeroIndex}`}
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.2, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
             
             {activeHero.clearLogo ? (
-              <img src={activeHero.clearLogo} alt={activeHero.title} className="w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] object-contain mb-8 md:mb-10 drop-shadow-2xl" />
+              <img src={activeHero.clearLogo} alt={activeHero.title} className="w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] h-32 md:h-44 object-contain object-left mb-8 md:mb-10 drop-shadow-2xl" />
             ) : (
               <h1 className={`font-display font-black tracking-tighter leading-[0.85] mb-8 md:mb-10 uppercase text-white drop-shadow-2xl ${
                 activeHero.title.length > 20 
@@ -80,10 +95,10 @@ export const Hero: React.FC<HeroProps> = ({
             )}
             
             <div className="flex flex-wrap items-center gap-3 sm:gap-6 mb-8 md:mb-10 text-[11px] md:text-[13px] font-bold text-white/50 tracking-[0.2em] uppercase">
-              <span className="text-nebula-cyan font-black border-2 border-nebula-cyan/30 px-3 py-1 rounded leading-none">{activeHero.rating}</span>
+              <span className="text-nebula-cyan font-black border-2 border-nebula-cyan/30 px-3 py-1 rounded leading-none">{activeHero.rating || '8.4'}</span>
               <span>{activeHero.year}</span>
               <div className="w-1.5 h-1.5 rounded-full bg-nebula-red animate-pulse hidden sm:block" />
-              <span>{activeHero.duration}</span>
+              <span>{activeHero.duration || '124M'}</span>
               <div className="w-1.5 h-1.5 rounded-full bg-white/20 hidden sm:block" />
               <span className="flex items-center gap-2"><Sparkles size={16} className="text-nebula-cyan" /> 4K ULTRA HD</span>
             </div>
@@ -107,7 +122,7 @@ export const Hero: React.FC<HeroProps> = ({
                 onClick={() => toggleMyList(activeHero.id)}
               >
                 {myList.includes(activeHero.id) ? (
-                  <><X size={24} /> Remove</>
+                   <><X size={24} /> Remove</>
                 ) : (
                   <><Plus size={24} /> Registry</>
                 )}
@@ -124,25 +139,29 @@ export const Hero: React.FC<HeroProps> = ({
         </div>
       </div>
 
-      {/* Improved mobile spacing for thumbs */}
       <div className="absolute bottom-20 md:bottom-20 left-4 right-4 md:left-auto md:right-12 flex flex-row md:flex-col justify-center gap-3 md:gap-4 z-30">
         {featuredMovies.map((movie, i) => (
           <button 
             key={`hero-thumb-${movie.id || i}`} 
-            onClick={() => setCurrentHeroIndex(i)}
+            onClick={() => handleThumbClick(i)}
             className="group relative flex items-center justify-center md:justify-end"
           >
               <motion.div 
                 initial={false}
-                className={`aspect-[2/3] rounded-lg overflow-hidden border border-white/20 group-hover:border-white transition-all duration-300 ${
+                animate={{ 
+                  scale: isFocusing === i ? 1.2 : 1,
+                  borderColor: isFocusing === i ? '#00E5FF' : (currentHeroIndex === i ? '#00E5FF' : 'rgba(255,255,255,0.2)')
+                }}
+                className={`aspect-[2/3] rounded-lg overflow-hidden border transition-all duration-300 ${
                   currentHeroIndex === i ? 'w-[60px] md:w-[100px] opacity-100' : 'w-[40px] md:w-[70px] opacity-40'
                 }`}
               >
                <img src={movie.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={handleImageError} />
-               {currentHeroIndex === i && (
+               {isFocusing === i && (
                  <motion.div 
-                   layoutId="active-hero-border" 
-                   className="absolute inset-0 border-2 border-nebula-cyan rounded-lg z-10" 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0.5] }}
+                    className="absolute inset-0 bg-nebula-cyan/20 animate-pulse"
                  />
                )}
             </motion.div>

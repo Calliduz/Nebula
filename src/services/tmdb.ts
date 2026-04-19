@@ -3,20 +3,32 @@ const API_KEY = import.meta.env.VITE_TMDB_API_KEY || 'PLACEHOLDER';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const BACKDROP_BASE_URL = 'https://image.tmdb.org/t/p/original';
 
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
+const CACHE_VERSION = 'v1.1';
+const CURRENT_YEAR = new Date().getFullYear();
 
-const fetchWithCache = async (key: string, fetcher: () => Promise<any>) => {
-  const cached = localStorage.getItem(key);
+// Legacy records (> 2 years) = Permanent (30 years)
+// Current records (<= 2 years) = Expiring (7 days)
+const getTTL = (releaseYear?: number) => {
+  if (!releaseYear) return 1000 * 60 * 60 * 24 * 7; // Default 7 days
+  const isLegacy = (CURRENT_YEAR - releaseYear) >= 2;
+  return isLegacy ? 1000 * 60 * 60 * 24 * 365 * 30 : 1000 * 60 * 60 * 24 * 7;
+};
+
+const fetchWithCache = async (key: string, fetcher: () => Promise<any>, releaseYear?: number) => {
+  const versionedKey = `${CACHE_VERSION}-${key}`;
+  const cached = localStorage.getItem(versionedKey);
+  const ttl = getTTL(releaseYear);
+
   if (cached) {
     try {
       const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_TTL) return data;
+      if (Date.now() - timestamp < ttl) return data;
     } catch (e) {
-      localStorage.removeItem(key);
+      localStorage.removeItem(versionedKey);
     }
   }
   const data = await fetcher();
-  localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+  localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
   return data;
 };
 
@@ -35,7 +47,7 @@ export interface NebulaMovie {
   fanartBackground?: string | null;
 }
 
-const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = {}) => {
+const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = {}, releaseYear?: number) => {
   if (API_KEY === 'PLACEHOLDER' || !API_KEY) {
     console.warn('TMDB API Key is missing. Returning empty array.');
     return { results: [] };
@@ -53,12 +65,12 @@ const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = 
     const res = await fetch(`${TMDB_BASE_URL}${endpoint}?${query.toString()}`, { headers });
     if (!res.ok) throw new Error(`TMDB Error: ${res.status}`);
     return res.json();
-  });
+  }, releaseYear);
 };
 
-export const getMediaDetails = async (id: number, type: 'movie' | 'tv') => {
+export const getMediaDetails = async (id: number, type: 'movie' | 'tv', releaseYear?: number) => {
   try {
-    const data = await fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'videos,similar,credits' });
+    const data = await fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'videos,similar,credits' }, releaseYear);
     return {
       trailers: data.videos?.results.filter((v: any) => v.type === 'Trailer' || v.type === 'Teaser') || [],
       similar: data.similar?.results.map((m: any) => normalizeMovie(m, type)) || [],
@@ -91,11 +103,19 @@ const GENRE_MAP: Record<number, string> = {
 export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promise<NebulaMovie[]> => {
   if (!normalized.length) return normalized;
   
+  const comboIds = normalized.map(m => `${m.id}:${m.type || 'movie'}`).sort().join(',');
+  const cacheKey = `meta-batch-v2-${comboIds}`;
+  
+  // Use a generic year check for the batch (highest year)
+  const maxYear = Math.max(...normalized.map(m => m.year));
+
   try {
-    const ids = normalized.map(m => m.id).join(',');
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-    const logoRes = await fetch(`${apiBase}/metadata?batch=${ids}`);
-    const logoData = await logoRes.json();
+    const logoData = await fetchWithCache(cacheKey, async () => {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+      const res = await fetch(`${apiBase}/metadata?batch=${comboIds}`);
+      if (!res.ok) throw new Error('Metadata fetch failed');
+      return res.json();
+    }, maxYear);
     
     if (logoData && logoData.results) {
       logoData.results.forEach((meta: any) => {

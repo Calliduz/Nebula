@@ -20,6 +20,7 @@ interface HomeFeedProps {
   myList: number[];
   toggleMyList: (id: number) => void;
   setViewingCategory: (category: string | null) => void;
+  onRandomize: () => void;
   rows: {title: string, items: any[]}[];
   allMovies: any[];
 }
@@ -27,14 +28,14 @@ interface HomeFeedProps {
 export const HomeFeed: React.FC<HomeFeedProps> = ({
   sortBy, setSortBy, activeMood, setActiveMood, selectedGenre, setSelectedGenre,
   setSelectedMovie, isLoading, filteredMovies, recommendations, myList,
-  toggleMyList, setViewingCategory, rows, allMovies
+  toggleMyList, setViewingCategory, onRandomize, rows, allMovies
 }) => {
   return (
     <div className="px-4 sm:px-6 md:px-12 mt-6 md:-mt-10 pb-20 relative z-30 flex flex-col gap-8">
       <DiscoveryBar 
         sortBy={sortBy} setSortBy={setSortBy} 
         activeMood={activeMood} setActiveMood={setActiveMood} 
-        onRandomize={() => {}} 
+        onRandomize={onRandomize} 
       />
 
       <GenreBar selectedGenre={selectedGenre} setSelectedGenre={setSelectedGenre} />
