@@ -33,8 +33,7 @@ export default function App() {
   const [sortBy, setSortBy] = useState('Recently Added');
   const [activeMood, setActiveMood] = useState('All Moods');
   const [selectedMovie, setSelectedMovie] = useState<any>(null);
-  const [notificationsCount, setNotificationsCount] = useState(2);
-  const [activeProfile, setActiveProfile] = useState<any>({ name: 'Commander', color: 'bg-nebula-cyan' });
+
   const [scrolled, setScrolled] = useState(false);
   const [myList, setMyList] = useLocalStorage<number[]>('nebula-my-list', []);
   const [history, setHistory] = useLocalStorage<number[]>('nebula-history', []);
@@ -196,10 +195,6 @@ export default function App() {
           activeTab={activeTab} 
           onTabChange={handleNavClick} 
           scrolled={scrolled}
-          notifications={notificationsCount}
-          setNotificationsCount={setNotificationsCount}
-          profile={activeProfile}
-          setProfile={setActiveProfile}
           onSearchClick={() => setIsSearchOpen(true)}
           viewingCategory={viewingCategory}
           setViewingCategory={setViewingCategory}
@@ -304,7 +299,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="absolute bottom-6 left-4 right-4 md:left-auto md:bottom-20 md:right-12 flex flex-row md:flex-col justify-center gap-3 md:gap-4 z-30">
+                <div className="absolute bottom-10 left-4 right-4 md:left-auto md:bottom-20 md:right-12 flex flex-row md:flex-col justify-center gap-3 md:gap-4 z-30">
                   {FEATURED_MOVIES.map((movie, i) => (
                     <button 
                       key={`hero-thumb-${i}`} 
@@ -314,7 +309,7 @@ export default function App() {
                         <motion.div 
                           initial={false}
                           className={`aspect-[2/3] rounded-lg overflow-hidden border border-white/20 group-hover:border-white transition-all duration-300 ${
-                            currentHeroIndex === i ? 'w-[70px] md:w-[100px] opacity-100' : 'w-[50px] md:w-[70px] opacity-40'
+                            currentHeroIndex === i ? 'w-[60px] md:w-[100px] opacity-100' : 'w-[40px] md:w-[70px] opacity-40'
                           }`}
                         >
                          <img src={movie.poster} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={handleImageError} />
@@ -330,7 +325,7 @@ export default function App() {
                 </div>
               </section>
 
-              <div className="px-4 sm:px-6 md:px-12 -mt-10 pb-20 relative z-30 flex flex-col gap-8">
+              <div className="px-4 sm:px-6 md:px-12 mt-6 md:-mt-10 pb-20 relative z-30 flex flex-col gap-8">
                 <DiscoveryBar 
                   sortBy={sortBy} 
                   setSortBy={setSortBy} 
