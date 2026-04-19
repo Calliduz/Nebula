@@ -26,6 +26,7 @@ export function useAppState() {
   const [sortBy, setSortBy] = useState('Recently Added');
   const [activeMood, setActiveMood] = useState('All Moods');
   const [selectedMovie, setSelectedMovie] = useState<any>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const [scrolled, setScrolled] = useState(false);
   const [myList, setMyList] = useLocalStorage<number[]>('nebula-my-list', []);
@@ -222,9 +223,15 @@ export function useAppState() {
     return [...flat].sort(() => Math.random() - 0.5).slice(0, 20);
   }, [rows]);
 
-  const startPlayback = (movie: any) => {
+  const startPlayback = (movie: any, s?: number, e?: number) => {
+    setIsTransitioning(true);
     setHistory(prev => [...prev.filter(id => id !== movie.id), movie.id]);
-    navigate(`/watch/${movie.type}/${movie.id}`);
+    const target = s !== undefined && e !== undefined 
+      ? `/watch/${movie.type}/${movie.id}?season=${s}&episode=${e}`
+      : `/watch/${movie.type}/${movie.id}`;
+    
+    navigate(target);
+    setTimeout(() => setIsTransitioning(false), 800);
   };
 
   const wrappedSetSelectedMovie = (movie: any) => {
@@ -245,6 +252,12 @@ export function useAppState() {
       else if (id === 'library') setViewingCategory('Library');
       else setViewingCategory(null);
     }
+  };
+
+  const handleBack = () => {
+    setIsTransitioning(true);
+    navigate(-1);
+    setTimeout(() => setIsTransitioning(false), 500);
   };
 
   return {
@@ -271,7 +284,8 @@ export function useAppState() {
       recommendations,
       allMovies,
       featuredMovies,
-      rows
+      rows,
+      isTransitioning
     },
     actions: {
       setActiveTab,
@@ -290,7 +304,9 @@ export function useAppState() {
       getCategoryMovies,
       startPlayback,
       handleNavClick,
-      handleRandomize
+      handleRandomize,
+      setIsTransitioning,
+      handleBack
     },
     refs: {
       searchInputRef

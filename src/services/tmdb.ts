@@ -244,3 +244,35 @@ export const getMediaBasicInfo = async (id: string | number, type: 'movie' | 'tv
   }
 };
 
+export const getTVDetails = async (id: string | number) => {
+  try {
+    const data = await fetchFromTMDB(`/tv/${id}`);
+    if (!data) return null;
+    return {
+      number_of_seasons: data.number_of_seasons,
+      seasons: data.seasons, // [{ season_number, episode_count, name, ... }]
+    };
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
+export const getTVSeasonEpisodes = async (tvId: string | number, seasonNumber: number) => {
+  try {
+    const data = await fetchFromTMDB(`/tv/${tvId}/season/${seasonNumber}`);
+    if (!data || !data.episodes) return [];
+    return data.episodes.map((ep: any) => ({
+      episode_number: ep.episode_number,
+      name: ep.name,
+      overview: ep.overview,
+      still_path: ep.still_path ? proxyImage(`${IMAGE_BASE_URL}${ep.still_path}`) : null,
+      air_date: ep.air_date,
+      vote_average: ep.vote_average,
+    }));
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+

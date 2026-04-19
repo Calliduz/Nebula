@@ -1,11 +1,15 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Hls from 'hls.js';
-import { X, Pause, Play, RotateCcw, RotateCw, VolumeX, Volume2, Maximize, Settings, Gauge, Loader2 } from 'lucide-react';
+import { X, Pause, Play, RotateCcw, RotateCw, VolumeX, Volume2, Maximize, Settings, Gauge, Loader2, Subtitles, ChevronRight, List, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 
 const API = 'http://localhost:4000';
 
 interface MediaPlayerProps {
   movie: any;
+  season?: number;
+  episode?: number;
   onClose: () => void;
 }
 
@@ -18,8 +22,9 @@ function formatTime(s: number) {
   return `${m}:${String(sec).padStart(2,'0')}`;
 }
 
-export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
+export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode, onClose }) => {
   const [streamUrl, setStreamUrl]   = useState<string | null>(null);
+  const [subtitles, setSubtitles]   = useState<any[]>([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
   const [isPaused, setIsPaused]     = useState(false);
@@ -32,6 +37,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
   const [currentTime, setCurrentTime] = useState('0:00');
   const [duration, setDuration]     = useState('0:00');
   const [buffered, setBuffered]     = useState(0);
+  const [qualities, setQualities]   = useState<{height: number, levelId: number}[]>([]);
+  const [activeQuality, setActiveQuality] = useState<number>(-1); // -1 = Auto
+  const [activeSubtitle, setActiveSubtitle] = useState<number>(-1); // -1 = Off
+  const [fetchingSubtitles, setFetchingSubtitles] = useState(false);
+  const [showEpisodeDrawer, setShowEpisodeDrawer] = useState(false);
+  const [tvDetails, setTvDetails] = useState<any>(null);
+  const navigate = useNavigate();
 
   const videoRef    = useRef<HTMLVideoElement>(null);
   const hlsRef      = useRef<Hls | null>(null);
@@ -45,7 +57,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
     setError('');
     setStreamUrl(null);
 
-    fetch(`${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`)
+    let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
+    if (season !== undefined) url += `&season=${season}`;
+    if (episode !== undefined) url += `&episode=${episode}`;
+
+    fetch(url)
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
@@ -62,10 +78,41 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
     return () => {
       cancelled = true;
       // Tell backend to stop the heartbeat ping loop
-      fetch(`${API}/api/stream/stop?tmdbId=${movie.id}`, {
+      let stopUrl = `${API}/api/stream/stop?tmdbId=${movie.id}`;
+      fetch(stopUrl, {
         keepalive: true,
       }).catch(() => {});
     };
+  }, [movie.id, season, episode]); 
+
+  // ── Fetch subtitles manually ──────────────────────────────────────────────
+  const aggregateSubtitles = async () => {
+    if (fetchingSubtitles) return;
+    setFetchingSubtitles(true);
+    setSubtitles([]);
+
+    try {
+      let url = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}`;
+      if (season !== undefined) url += `&season=${season}`;
+      if (episode !== undefined) url += `&episode=${episode}`;
+
+      const r = await fetch(url);
+      const data = await r.json();
+      if (data.subtitles) setSubtitles(data.subtitles);
+    } catch (e) {
+      console.error("Subtitle aggregation failed", e);
+    } finally {
+      setFetchingSubtitles(false);
+    }
+  };
+
+  // ── Fetch TV Details for Drawer ────────────────────────────────────────────
+  useEffect(() => {
+    if (movie.type !== 'tv') return;
+    fetch(`https://api.themoviedb.org/3/tv/${movie.id}?api_key=ca3e506649859f518e38d7c4909a3cf3`)
+      .then(r => r.json())
+      .then(data => setTvDetails(data))
+      .catch(console.error);
   }, [movie.id]);
 
   // ── HLS setup ─────────────────────────────────────────────────────────────
@@ -85,7 +132,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
 
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        setQualities(data.levels.map((l, i) => ({ height: l.height, levelId: i })).reverse()); // descending order
         video.volume = isMuted ? 0 : volume / 100;
         video.play().catch(() => setIsPaused(true));
       });
@@ -207,7 +255,38 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
   const setPlaybackSpeed = (s: number) => {
     setSpeed(s);
     if (videoRef.current) videoRef.current.playbackRate = s;
-    setShowSettings(false);
+  };
+
+  const setQuality = (levelId: number) => {
+    setActiveQuality(levelId);
+    if (hlsRef.current) {
+      hlsRef.current.currentLevel = levelId;
+    }
+  };
+
+  const toggleSubtitles = (index: number) => {
+    setActiveSubtitle(index);
+    if (videoRef.current) {
+      Array.from(videoRef.current.textTracks).forEach((track, idx) => {
+        track.mode = idx === index ? 'showing' : 'hidden';
+      });
+    }
+  };
+
+  const handleNextEpisode = () => {
+    if (movie.type !== 'tv' || season === undefined || episode === undefined) return;
+    // Simple increment logic; UI will handle navigation through route Params
+    navigate(`/watch/tv/${movie.id}?season=${season}&episode=${episode + 1}`);
+  };
+
+  const safeClose = () => {
+    onClose();
+    // Fallback if onClose (navigate -1) fails
+    setTimeout(() => {
+      if (window.location.pathname.includes('/watch/')) {
+        navigate('/');
+      }
+    }, 100);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -264,9 +343,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
+        crossOrigin="anonymous"
         playsInline
         onClick={togglePlay}
-      />
+      >
+        {subtitles.map((sub, idx) => (
+          <track 
+            key={idx}
+            kind="subtitles"
+            src={sub.url}
+            srcLang={sub.lang}
+            label={sub.languageName}
+            default={idx === activeSubtitle}
+          />
+        ))}
+      </video>
 
       {/* ── Controls overlay ── */}
       <div
@@ -276,15 +367,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
         {/* Top bar */}
         <div className="flex items-center gap-4 px-6 py-5 bg-gradient-to-b from-black/70 to-transparent pointer-events-auto">
           <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            onClick={safeClose}
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 border border-white/5"
             title="Back (Esc)"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
           <div className="min-w-0">
-            <h2 className="text-base font-semibold truncate leading-tight">{movie.title}</h2>
-            {movie.year && <p className="text-white/40 text-xs">{movie.year}</p>}
+            <h2 className="text-base font-semibold truncate leading-tight flex items-center gap-2">
+              {movie.title}
+              {season !== undefined && episode !== undefined && (
+                <span className="text-nebula-cyan font-display italic text-sm">S{season}E{episode}</span>
+              )}
+            </h2>
+            <p className="text-white/40 text-[10px] uppercase tracking-widest">{movie.type === 'tv' ? 'Secure TV Link' : 'Secure Movie Link'} — {movie.year}</p>
           </div>
         </div>
 
@@ -343,6 +439,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
                 <RotateCw size={20} />
               </button>
 
+              {/* Next Episode */}
+              {movie.type === 'tv' && (
+                <button
+                  onClick={handleNextEpisode}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all border border-white/5"
+                  title="Next Episode"
+                >
+                  <span className="hidden sm:inline italic">NEXT</span>
+                  <ChevronRight size={16} />
+                </button>
+              )}
+
               {/* Volume */}
               <div className="flex items-center gap-2 group/vol">
                 <button onClick={() => setIsMuted(p => !p)} className="text-white/70 hover:text-white transition-colors">
@@ -364,14 +472,34 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
             </div>
 
             <div className="flex items-center gap-4 relative">
-              {/* Speed */}
+              {/* Episodes Button */}
+              {movie.type === 'tv' && (
+                <button
+                  onClick={() => setShowEpisodeDrawer(true)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all text-xs font-bold border border-white/10 ${showEpisodeDrawer ? 'bg-white text-black' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
+                >
+                  <List size={16} />
+                  <span>EPISODES</span>
+                </button>
+              )}
+
+              {/* Subtitles (Standalone) */}
+              <button
+                onClick={aggregateSubtitles}
+                disabled={fetchingSubtitles}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all text-xs font-bold border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 ${fetchingSubtitles ? 'animate-pulse' : ''}`}
+              >
+                {fetchingSubtitles ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                <span>{subtitles.length > 0 ? 'SUBTITLES' : 'SEARCH SUBS'}</span>
+              </button>
+
+              {/* Settings */}
               <button
                 onClick={() => setShowSettings(p => !p)}
-                className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${showSettings ? 'text-white' : 'text-white/50 hover:text-white'}`}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
                 title="Settings"
               >
-                <Gauge size={16} />
-                {speed !== 1 && <span>{speed}x</span>}
+                <Settings size={18} />
               </button>
 
               {/* Fullscreen */}
@@ -385,23 +513,149 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, onClose }) => {
 
               {/* Settings panel */}
               {showSettings && (
-                <div className="absolute bottom-10 right-0 bg-[#111] border border-white/10 rounded-xl overflow-hidden shadow-2xl w-40">
-                  <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 py-2 border-b border-white/10">Speed</p>
-                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setPlaybackSpeed(s)}
-                      className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${speed === s ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                    >
-                      {s === 1 ? 'Normal' : `${s}×`}
-                    </button>
-                  ))}
+                <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-60 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2">
+                  <div className="mb-2">
+                    <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1">Speed</p>
+                    <div className="grid grid-cols-3 gap-1 px-2">
+                      {[0.5, 1, 1.5, 2].map(s => (
+                        <button
+                          key={s}
+                          onClick={() => setPlaybackSpeed(s)}
+                          className={`w-full text-center py-1.5 text-xs rounded-md transition-colors ${speed === s ? 'text-black bg-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+                        >
+                          {s === 1 ? '1x' : `${s}x`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {qualities.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">Quality</p>
+                      <div className="flex flex-col px-2">
+                        <button
+                          onClick={() => setQuality(-1)}
+                          className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${activeQuality === -1 ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                          Auto
+                        </button>
+                        {qualities.map(q => (
+                          <button
+                            key={q.levelId}
+                            onClick={() => setQuality(q.levelId)}
+                            className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${activeQuality === q.levelId ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                          >
+                            {q.height}p
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {(subtitles.length > 0 || fetchingSubtitles) && (
+                    <div>
+                      <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10 flex items-center gap-2">
+                        <Subtitles size={12}/> 
+                        Subtitles {fetchingSubtitles && <Loader2 size={10} className="animate-spin text-nebula-cyan" />}
+                      </p>
+                      <div className="flex flex-col px-2">
+                        {!fetchingSubtitles && (
+                          <button
+                            onClick={() => toggleSubtitles(-1)}
+                            className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${activeSubtitle === -1 ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                          >
+                            Off
+                          </button>
+                        )}
+                        {fetchingSubtitles ? (
+                          <div className="px-2 py-3 text-[10px] text-white/40 italic flex items-center gap-2">
+                            <Loader2 size={12} className="animate-spin" /> Establishing track link...
+                          </div>
+                        ) : (
+                          subtitles.map((sub, i) => (
+                            <button
+                              key={i}
+                              onClick={() => toggleSubtitles(i)}
+                              className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${activeSubtitle === i ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                            >
+                              {sub.languageName}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Episode Side Drawer ── */}
+      <AnimatePresence>
+        {showEpisodeDrawer && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEpisodeDrawer(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] pointer-events-auto"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 w-80 bg-obsidian border-l border-white/10 z-[300] shadow-2xl flex flex-col pointer-events-auto"
+            >
+              <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-white italic">Episode Relay</h3>
+                  <p className="text-[10px] text-white/30 uppercase tracking-tighter">Season {season}</p>
+                </div>
+                <button onClick={() => setShowEpisodeDrawer(false)} className="w-8 h-8 rounded-full bg-white/5 text-white/40 hover:text-white flex items-center justify-center transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+                {/* We map current season episodes if available */}
+                {tvDetails?.seasons?.find((s: any) => s.season_number === season)?.episode_count ? (
+                  Array.from({ length: tvDetails.seasons.find((s: any) => s.season_number === season).episode_count }).map((_, i) => {
+                    const epNum = i + 1;
+                    return (
+                      <button
+                        key={epNum}
+                        onClick={() => {
+                          navigate(`/watch/tv/${movie.id}?season=${season}&episode=${epNum}`);
+                          setShowEpisodeDrawer(false);
+                        }}
+                        className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${episode === epNum ? 'bg-nebula-cyan/20 border border-nebula-cyan/30' : 'hover:bg-white/5 border border-transparent'}`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-display font-black italic text-xs transition-colors ${episode === epNum ? 'bg-nebula-cyan text-obsidian' : 'bg-white/10 text-white/40 group-hover:bg-white/20'}`}>
+                          {epNum}
+                        </div>
+                        <div className="flex-1">
+                          <p className={`text-sm font-bold ${episode === epNum ? 'text-white' : 'text-white/60 group-hover:text-white'}`}>Episode {epNum}</p>
+                          <p className="text-[10px] text-white/20 uppercase tracking-widest">Uplink Stable</p>
+                        </div>
+                        {episode === epNum && <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shadow-[0_0_10px_rgba(46,204,113,0.8)]" />}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+                    <Loader2 size={24} className="animate-spin text-white/10" />
+                    <p className="text-xs text-white/20 uppercase tracking-widest">Hydrating episode list...</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

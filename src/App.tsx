@@ -1,5 +1,6 @@
 import React from 'react';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Loader2 } from 'lucide-react';
 
 // Hooks
 import { useAppState } from './hooks/useAppState';
@@ -13,7 +14,7 @@ import { SearchOverlay } from './components/SearchOverlay';
 import { CategoryView } from './components/CategoryView';
 import { HomeFeed } from './components/HomeFeed';
 
-import { Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 export default function App() {
   const { state, actions, refs } = useAppState();
@@ -86,9 +87,38 @@ export default function App() {
         {state.selectedMovie && (
           <MovieDetails 
             key="movie-details-modal" movie={state.selectedMovie} onClose={() => actions.setSelectedMovie(null)} 
-            onPlay={() => actions.startPlayback(state.selectedMovie)} onSelectMovie={actions.setSelectedMovie}
+            onPlay={(s, e) => actions.startPlayback(state.selectedMovie, s, e)} onSelectMovie={actions.setSelectedMovie}
             isInList={state.myList.includes(state.selectedMovie.id)} onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {state.isTransitioning && (
+          <motion.div
+            key="transition-loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[2000] bg-obsidian flex flex-col items-center justify-center gap-6"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-nebula-cyan/20 blur-3xl rounded-full scale-150 animate-pulse" />
+              <Loader2 size={48} className="animate-spin text-nebula-cyan relative z-10" />
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-white font-display font-black text-xl tracking-tighter uppercase italic">Secure Uplink</p>
+              <div className="h-0.5 w-32 bg-white/10 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '100%' }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                  className="h-full w-full bg-nebula-cyan"
+                />
+              </div>
+              <p className="text-white/30 text-[10px] uppercase tracking-widest mt-2 animate-pulse">Establishing encrypted link...</p>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -122,8 +152,12 @@ function HomeStub({ actions, state, refs }: any) {
 
 function MediaPlayerStub({ actions, state }: any) {
   const { type, id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const movie = state.allMovies.find((m: any) => m.id === parseInt(id || '0')) || state.selectedMovie;
+  
+  const season = searchParams.get('season') ? parseInt(searchParams.get('season')!) : undefined;
+  const episode = searchParams.get('episode') ? parseInt(searchParams.get('episode')!) : undefined;
 
   if (!movie) return <div className="h-screen flex items-center justify-center bg-obsidian text-white">Initializing Secure Stream...</div>;
 
@@ -131,6 +165,8 @@ function MediaPlayerStub({ actions, state }: any) {
     <div className="fixed inset-0 z-[1000] bg-black">
       <MediaPlayer 
         movie={movie} 
+        season={season}
+        episode={episode}
         onClose={() => navigate(-1)} 
       />
     </div>

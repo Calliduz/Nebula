@@ -3,12 +3,12 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Star, Clock, Calendar, Shield, AudioWaveform as Waveform, Sparkles, Maximize, Play, X, Plus } from 'lucide-react';
 import { handleImageError } from '../utils/helpers';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { getMediaDetails, getMediaBasicInfo, enrichMoviesWithMetadata } from '../services/tmdb';
+import { getMediaDetails, getMediaBasicInfo, enrichMoviesWithMetadata, getTVDetails, getTVSeasonEpisodes } from '../services/tmdb';
 
 interface MovieDetailsProps {
   movie?: any;
   onClose: () => void;
-  onPlay: () => void;
+  onPlay: (season?: number, episode?: number) => void;
   onSelectMovie?: (m: any) => void;
   isInList: boolean;
   onToggleList: () => void;
@@ -19,12 +19,17 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
   const navigate = useNavigate();
   const location = useLocation();
   const [movie, setMovie] = useState<any>(initialMovie);
-  const [activeTab, setActiveTab] = useState('Overview');
+  const [activeTab, setActiveTab] = useState(initialMovie?.type === 'tv' ? 'Episodes' : 'Overview');
   const [deepDetails, setDeepDetails] = useState<{trailers: any[], similar: any[], cast: any[]}>({
     trailers: [],
     similar: [],
     cast: []
   });
+  
+  const [tvDetails, setTvDetails] = useState<any>(null);
+  const [activeSeason, setActiveSeason] = useState<number>(1);
+  const [episodes, setEpisodes] = useState<any[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -49,17 +54,32 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
       if (currentMovie) {
         const details = await getMediaDetails(currentMovie.id, currentMovie.type);
         setDeepDetails(details);
+        
+        if (currentMovie.type === 'tv') {
+          const tvInfo = await getTVDetails(currentMovie.id);
+          if (tvInfo) {
+            setTvDetails(tvInfo);
+            const eps = await getTVSeasonEpisodes(currentMovie.id, 1);
+            setEpisodes(eps);
+          }
+        }
       }
       setIsLoading(false);
     };
     fetchEverything();
   }, [id, initialMovie?.id]);
 
+  useEffect(() => {
+    if (movie?.type === 'tv' && movie?.id) {
+      getTVSeasonEpisodes(movie.id, activeSeason).then(setEpisodes);
+    }
+  }, [activeSeason]);
+
   if (!movie && isLoading) return <div className="fixed inset-0 z-[200] bg-obsidian flex items-center justify-center text-white">Establishing Satellite Link...</div>;
   if (!movie) return null;
 
   const accentColor = movie.accent || '#00E5FF';
-  const TABS = ['Overview', 'Trailers & Extras', 'Related Titles'];
+  const TABS = movie.type === 'tv' ? ['Episodes', 'Overview', 'Trailers & Extras', 'Related Titles'] : ['Overview', 'Trailers & Extras', 'Related Titles'];
 
   const logoTitle = movie.clearLogo ? (
     <div className="mb-8 lg:mb-12">
@@ -146,7 +166,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
                 <motion.button 
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={onPlay}
+                  onClick={() => onPlay(movie.type === 'tv' ? 1 : undefined, movie.type === 'tv' ? 1 : undefined)}
                   className="bg-white text-obsidian px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm glow-white flex items-center justify-center gap-3 transition-all hover:bg-nebula-cyan flex-1 sm:flex-none"
                 >
                   <Play size={20} fill="currentColor" /> <span>Watch Now</span>
@@ -184,6 +204,48 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
             </div>
 
             <div className="space-y-12">
+              {activeTab === 'Episodes' && movie.type === 'tv' && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                    {tvDetails?.seasons?.length > 0 && (
+                      <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                        {tvDetails.seasons.filter((s: any) => s.season_number > 0).map((s: any) => (
+                          <button
+                            key={s.season_number}
+                            onClick={() => setActiveSeason(s.season_number)}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeSeason === s.season_number ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                          >
+                            Season {s.season_number}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {episodes.map((ep: any) => (
+                        <div key={ep.episode_number} className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30" onClick={() => onPlay(activeSeason, ep.episode_number)}>
+                           <div className="aspect-video bg-black/50 relative overflow-hidden">
+                             {ep.still_path ? (
+                               <img src={ep.still_path} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity group-hover:scale-105 duration-500" alt={ep.name} />
+                             ) : (
+                               <div className="w-full h-full flex items-center justify-center text-white/20"><Play size={32} /></div>
+                             )}
+                             <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all" />
+                             <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 rounded font-bold text-[10px] text-white backdrop-blur">E{ep.episode_number}</div>
+                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="w-12 h-12 bg-nebula-cyan/90 text-obsidian rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-110 transition-all">
+                                  <Play size={20} fill="currentColor" className="ml-1" />
+                                </div>
+                             </div>
+                           </div>
+                           <div className="p-4 flex flex-col flex-1">
+                              <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors line-clamp-1 mb-1">{ep.episode_number}. {!ep.name || ep.name.includes("Episode") ? `Episode ${ep.episode_number}` : ep.name}</h4>
+                              <p className="text-xs text-dim line-clamp-2 mt-auto">{ep.overview || "No description available."}</p>
+                           </div>
+                        </div>
+                      ))}
+                    </div>
+                </motion.div>
+              )}
+
               {activeTab === 'Overview' && (
                 <motion.div 
                    initial={{ opacity: 0, y: 20 }}
