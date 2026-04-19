@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useScroll, useTransform } from 'motion/react';
 import { useLocalStorage } from './useLocalStorage';
-import { ALL_MOVIES, FEATURED_MOVIES } from '../data/movies';
+import { getTrending, searchMedia, getPopularMovies, getPopularTV, NebulaMovie } from '../services/tmdb';
 
 export function useAppState() {
   const [activeTab, setActiveTab] = useState('home');
@@ -23,6 +23,11 @@ export function useAppState() {
   const [history, setHistory] = useLocalStorage<number[]>('nebula-history', []);
   const [visibleCount, setVisibleCount] = useState(12);
 
+  // Data States
+  const [allMovies, setAllMovies] = useState<NebulaMovie[]>([]);
+  const [featuredMovies, setFeaturedMovies] = useState<NebulaMovie[]>([]);
+  const [searchResults, setSearchResults] = useState<NebulaMovie[]>([]);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { scrollY } = useScroll();
   const heroParallax = useTransform(scrollY, [0, 500], [0, 150]);
@@ -35,15 +40,36 @@ export function useAppState() {
 
   const getCategoryMovies = () => {
     switch (viewingCategory) {
-      case 'Movies': return ALL_MOVIES.slice().reverse();
-      case 'TV Shows': return [...ALL_MOVIES].sort((a, b) => a.id - b.id).slice(3, 10).concat([...ALL_MOVIES].slice(0, 3));
-      case 'My Secure Records': return ALL_MOVIES.filter(m => myList.includes(m.id));
-      default: return ALL_MOVIES;
+      case 'Movies': return allMovies.filter(m => m.type === 'movie');
+      case 'TV Shows': return allMovies.filter(m => m.type === 'tv');
+      case 'My Secure Records': return allMovies.filter(m => myList.includes(m.id));
+      default: return allMovies;
     }
   };
 
   useEffect(() => {
-    const handler = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    const fetchInitialData = async () => {
+      setIsLoading(true);
+      const trending = await getTrending('all');
+      setFeaturedMovies(trending.slice(0, 5));
+      setAllMovies(trending);
+      setIsLoading(false);
+    };
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    const handler = setTimeout(async () => {
+      setDebouncedSearchQuery(searchQuery);
+      if (searchQuery.trim().length > 1) {
+        setIsLoading(true);
+        const results = await searchMedia(searchQuery);
+        setSearchResults(results);
+        setIsLoading(false);
+      } else {
+        setSearchResults([]);
+      }
+    }, 400);
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
@@ -55,11 +81,6 @@ export function useAppState() {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000);
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -76,33 +97,34 @@ export function useAppState() {
   }, [isSearchOpen]);
 
   useEffect(() => {
-    if (isHoveringHero || isPlaying || isSearchOpen) return;
+    if (isHoveringHero || isPlaying || isSearchOpen || featuredMovies.length === 0) return;
     const interval = setInterval(() => {
-      setCurrentHeroIndex((prev) => (prev + 1) % FEATURED_MOVIES.length);
+      setCurrentHeroIndex((prev) => (prev + 1) % featuredMovies.length);
     }, 8000);
     return () => clearInterval(interval);
-  }, [isHoveringHero, isPlaying, isSearchOpen]);
+  }, [isHoveringHero, isPlaying, isSearchOpen, featuredMovies.length]);
 
   const filteredMovies = useMemo(() => {
-    return ALL_MOVIES
+    return allMovies
       .filter(m => {
-        const matchesSearch = debouncedSearchQuery === '' || 
-                              m.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) || 
-                              m.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
-        const matchesGenre = selectedGenre === 'All' || m.genre === selectedGenre;
+        // Search is now handled externally, but we still apply genre/mood
+        const matchesGenre = selectedGenre === 'All' || m.genre.includes(selectedGenre);
         const matchesMood = activeMood === 'All Moods' || m.genre.toLowerCase().includes(activeMood.toLowerCase().split(' ')[0]);
-        if (activeTab === 'my-list') return myList.includes(m.id) && matchesSearch;
-        return matchesSearch && matchesGenre && matchesMood;
+        if (activeTab === 'my-list') return myList.includes(m.id);
+        return matchesGenre && matchesMood;
       })
       .sort((a, b) => {
         if (sortBy === 'IMDB Rating') {
-          const imdbA = (a as any).imdb || (9.9 - (a.id * 0.1));
-          const imdbB = (b as any).imdb || (9.9 - (b.id * 0.1));
-          return imdbB - imdbA;
+          return (b.imdb || 0) - (a.imdb || 0);
         }
-        return sortBy === 'Release Date' ? b.id - a.id : 0;
+        return sortBy === 'Release Date' ? b.year - a.year : 0;
       });
-  }, [debouncedSearchQuery, selectedGenre, activeMood, activeTab, myList, sortBy]);
+  }, [selectedGenre, activeMood, activeTab, myList, sortBy, allMovies]);
+
+  const recommendations = useMemo(() => {
+    // Shuffled copy for recommendations
+    return [...allMovies].sort(() => Math.random() - 0.5);
+  }, [allMovies]);
 
   const startPlayback = (movie: any) => {
     setHistory(prev => [...prev.filter(id => id !== movie.id), movie.id]);
@@ -121,12 +143,6 @@ export function useAppState() {
     }
   };
 
-  const searchResults = debouncedSearchQuery 
-    ? ALL_MOVIES.filter(m => m.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) || m.genre.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
-    : [];
-
-  const recommendations = useMemo(() => ALL_MOVIES.slice().sort(() => Math.random() - 0.5), []);
-
   return {
     state: {
       activeTab,
@@ -137,6 +153,7 @@ export function useAppState() {
       viewingCategory,
       isSearchOpen,
       searchQuery,
+      debouncedSearchQuery,
       isLoading,
       sortBy,
       activeMood,
@@ -148,7 +165,9 @@ export function useAppState() {
       heroParallax,
       filteredMovies,
       searchResults,
-      recommendations
+      recommendations,
+      allMovies,
+      featuredMovies
     },
     actions: {
       setActiveTab,

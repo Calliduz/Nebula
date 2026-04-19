@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play, Plus, Info, Sparkles } from 'lucide-react';
-import { FEATURED_MOVIES } from '../data/movies';
 import { handleImageError } from '../utils/helpers';
 
 interface HeroProps {
@@ -12,6 +11,7 @@ interface HeroProps {
   toggleMyList: (id: number) => void;
   startPlayback: (movie: any) => void;
   setSelectedMovie: (movie: any) => void;
+  featuredMovies: any[];
 }
 
 export const Hero: React.FC<HeroProps> = ({
@@ -21,9 +21,11 @@ export const Hero: React.FC<HeroProps> = ({
   myList,
   toggleMyList,
   startPlayback,
-  setSelectedMovie
+  setSelectedMovie,
+  featuredMovies
 }) => {
-  const activeHero = FEATURED_MOVIES[currentHeroIndex];
+  if (!featuredMovies || featuredMovies.length === 0) return null;
+  const activeHero = featuredMovies[currentHeroIndex];
 
   return (
     <section className="relative h-[85vh] md:h-[95vh] overflow-hidden">
@@ -70,11 +72,15 @@ export const Hero: React.FC<HeroProps> = ({
               </span>
             </div>
             
-            <h1 className="text-5xl sm:text-6xl md:text-[140px] font-display font-black tracking-tighter leading-[0.85] mb-8 md:mb-10 uppercase text-white drop-shadow-2xl">
-              {activeHero.title.split(':').map((part: string, i: number) => (
-                 <span key={`hero-part-${i}`} className={i > 0 ? "block text-[0.4em] md:text-[0.4em] text-white/40 tracking-normal mt-2" : "block"}>{part}</span>
-              ))}
-            </h1>
+            {activeHero.clearLogo ? (
+              <img src={activeHero.clearLogo} alt={activeHero.title} className="w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] object-contain mb-8 md:mb-10 drop-shadow-2xl" />
+            ) : (
+              <h1 className="text-5xl sm:text-6xl md:text-[140px] font-display font-black tracking-tighter leading-[0.85] mb-8 md:mb-10 uppercase text-white drop-shadow-2xl">
+                {activeHero.title.split(':').map((part: string, i: number) => (
+                   <span key={`hero-part-${i}`} className={i > 0 ? "block text-[0.4em] md:text-[0.4em] text-white/40 tracking-normal mt-2" : "block"}>{part}</span>
+                ))}
+              </h1>
+            )}
             
             <div className="flex flex-wrap items-center gap-3 sm:gap-6 mb-8 md:mb-10 text-[11px] md:text-[13px] font-bold text-white/50 tracking-[0.2em] uppercase">
               <span className="text-nebula-cyan font-black border-2 border-nebula-cyan/30 px-3 py-1 rounded leading-none">{activeHero.rating}</span>
@@ -123,7 +129,7 @@ export const Hero: React.FC<HeroProps> = ({
 
       {/* Improved mobile spacing for thumbs */}
       <div className="absolute bottom-20 md:bottom-20 left-4 right-4 md:left-auto md:right-12 flex flex-row md:flex-col justify-center gap-3 md:gap-4 z-30">
-        {FEATURED_MOVIES.map((movie, i) => (
+        {featuredMovies.map((movie, i) => (
           <button 
             key={`hero-thumb-${i}`} 
             onClick={() => setCurrentHeroIndex(i)}
@@ -135,7 +141,7 @@ export const Hero: React.FC<HeroProps> = ({
                   currentHeroIndex === i ? 'w-[60px] md:w-[100px] opacity-100' : 'w-[40px] md:w-[70px] opacity-40'
                 }`}
               >
-               <img src={movie.poster} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={handleImageError} />
+               <img src={movie.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={handleImageError} />
                {currentHeroIndex === i && (
                  <motion.div 
                    layoutId="active-hero-border" 

@@ -13,9 +13,6 @@ import { SearchOverlay } from './components/SearchOverlay';
 import { CategoryView } from './components/CategoryView';
 import { HomeFeed } from './components/HomeFeed';
 
-// Data
-import { FEATURED_MOVIES } from './data/movies';
-
 export default function App() {
   const { state, actions, refs } = useAppState();
 
@@ -34,6 +31,7 @@ export default function App() {
                 <Hero 
                   currentHeroIndex={state.currentHeroIndex} setCurrentHeroIndex={actions.setCurrentHeroIndex} heroParallax={state.heroParallax}
                   myList={state.myList} toggleMyList={actions.toggleMyList} startPlayback={actions.startPlayback} setSelectedMovie={actions.setSelectedMovie}
+                  featuredMovies={state.featuredMovies}
                 />
                 
                 <HomeFeed 
@@ -65,7 +63,7 @@ export default function App() {
       <AnimatePresence>
         {state.isPlaying && (
           <MediaPlayer 
-            key="media-player" movie={state.selectedMovie || FEATURED_MOVIES[state.currentHeroIndex]} 
+            key="media-player" movie={state.selectedMovie || state.featuredMovies[state.currentHeroIndex]} 
             onClose={() => actions.setIsPlaying(false)} 
           />
         )}
