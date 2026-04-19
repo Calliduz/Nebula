@@ -198,7 +198,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
                        rel="noopener noreferrer"
                        className="space-y-4 group cursor-pointer"
                      >
-                       <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 flex items-center justify-center bg-white/5">
+                       <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-white/5">
                          <img 
                            src={`https://img.youtube.com/vi/${video.key}/maxresdefault.jpg`} 
                            className="w-full h-full object-cover opacity-40 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105" 
@@ -206,8 +206,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
                            referrerPolicy="no-referrer" onError={handleImageError}
                          />
                          <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all" />
-                         <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-nebula-cyan group-hover:text-obsidian transition-all group-hover:scale-110">
-                            <Play size={20} fill="currentColor" />
+                         
+                         {/* Centered Play Button Overlay */}
+                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                           <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-nebula-cyan group-hover:text-obsidian transition-all group-hover:scale-110 shadow-xl">
+                              <Play size={24} fill="currentColor" className="ml-1" />
+                           </div>
                          </div>
                        </div>
                        <div>

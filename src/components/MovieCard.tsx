@@ -96,12 +96,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
 
         {!isHovered && (
           <div className="absolute bottom-4 left-4 right-4 z-20">
-            <p className="text-[10px] text-dim font-extrabold uppercase tracking-widest mb-1">{movie.genre.split(', ')[0]}</p>
-            {movie.clearLogo ? (
-              <img src={movie.clearLogo} alt={movie.title} className="h-8 object-contain drop-shadow-xl" />
-            ) : (
-              <p className="text-[18px] font-bold leading-tight drop-shadow-lg truncate">{movie.title}</p>
-            )}
+            <div className="mb-2">
+              {movie.clearLogo ? (
+                <img src={movie.clearLogo} alt={movie.title} className="h-8 object-contain drop-shadow-xl" />
+              ) : (
+                <p className="text-[18px] font-bold leading-tight drop-shadow-lg truncate">{movie.title}</p>
+              )}
+            </div>
+            <p className="text-[10px] text-dim font-extrabold uppercase tracking-widest">{movie.genre.split(', ')[0]}</p>
           </div>
         )}
       </motion.div>
