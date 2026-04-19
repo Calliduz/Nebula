@@ -3,6 +3,23 @@ const API_KEY = import.meta.env.VITE_TMDB_API_KEY || 'PLACEHOLDER';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const BACKDROP_BASE_URL = 'https://image.tmdb.org/t/p/original';
 
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
+
+const fetchWithCache = async (key: string, fetcher: () => Promise<any>) => {
+  const cached = localStorage.getItem(key);
+  if (cached) {
+    try {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_TTL) return data;
+    } catch (e) {
+      localStorage.removeItem(key);
+    }
+  }
+  const data = await fetcher();
+  localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+  return data;
+};
+
 export interface NebulaMovie {
   id: number;
   title: string;
@@ -26,18 +43,35 @@ const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = 
 
   const isV4Token = API_KEY.length > 40;
   const query = new URLSearchParams({ language: 'en-US', ...params });
-  if (!isV4Token) {
-    query.append('api_key', API_KEY);
-  }
+  if (!isV4Token) query.append('api_key', API_KEY);
 
-  const headers: HeadersInit = { 'Accept': 'application/json' };
-  if (isV4Token) {
-    headers['Authorization'] = `Bearer ${API_KEY}`;
-  }
+  const key = `tmdb-${endpoint}-${query.toString()}`;
+  return fetchWithCache(key, async () => {
+    const headers: HeadersInit = { 'Accept': 'application/json' };
+    if (isV4Token) headers['Authorization'] = `Bearer ${API_KEY}`;
 
-  const res = await fetch(`${TMDB_BASE_URL}${endpoint}?${query.toString()}`, { headers });
-  if (!res.ok) throw new Error(`TMDB Error: ${res.status}`);
-  return res.json();
+    const res = await fetch(`${TMDB_BASE_URL}${endpoint}?${query.toString()}`, { headers });
+    if (!res.ok) throw new Error(`TMDB Error: ${res.status}`);
+    return res.json();
+  });
+};
+
+export const getMediaDetails = async (id: number, type: 'movie' | 'tv') => {
+  try {
+    const data = await fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'videos,similar,credits' });
+    return {
+      trailers: data.videos?.results.filter((v: any) => v.type === 'Trailer' || v.type === 'Teaser') || [],
+      similar: data.similar?.results.map((m: any) => normalizeMovie(m, type)) || [],
+      cast: data.credits?.cast.slice(0, 10).map((c: any) => ({
+        name: c.name,
+        role: c.character,
+        avatar: c.profile_path ? proxyImage(`${IMAGE_BASE_URL}${c.profile_path}`) : `https://i.pravatar.cc/150?u=${c.name}`
+      })) || []
+    };
+  } catch (err) {
+    console.error(err);
+    return { trailers: [], similar: [], cast: [] };
+  }
 };
 
 const proxyImage = (url: string) => {

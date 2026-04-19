@@ -68,7 +68,11 @@ export const Hero: React.FC<HeroProps> = ({
             {activeHero.clearLogo ? (
               <img src={activeHero.clearLogo} alt={activeHero.title} className="w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] object-contain mb-8 md:mb-10 drop-shadow-2xl" />
             ) : (
-              <h1 className="text-5xl sm:text-6xl md:text-[140px] font-display font-black tracking-tighter leading-[0.85] mb-8 md:mb-10 uppercase text-white drop-shadow-2xl">
+              <h1 className={`font-display font-black tracking-tighter leading-[0.85] mb-8 md:mb-10 uppercase text-white drop-shadow-2xl ${
+                activeHero.title.length > 20 
+                  ? "text-4xl sm:text-5xl md:text-7xl" 
+                  : "text-5xl sm:text-6xl md:text-[140px]"
+              }`}>
                 {activeHero.title.split(':').map((part: string, i: number) => (
                    <span key={`hero-part-${i}`} className={i > 0 ? "block text-[0.4em] md:text-[0.4em] text-white/40 tracking-normal mt-2" : "block"}>{part}</span>
                 ))}

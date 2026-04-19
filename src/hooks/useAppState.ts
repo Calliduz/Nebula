@@ -53,13 +53,17 @@ export function useAppState() {
   const loadMore = () => setVisibleCount(prev => prev + 12);
 
   const getCategoryMovies = () => {
-    const flat = rows.flatMap(r => r.items);
     switch (viewingCategory) {
-      case 'Movies': return flat.filter(m => m.type === 'movie');
-      case 'TV Shows': return flat.filter(m => m.type === 'tv');
+      case 'Movies': return allMovies.filter(m => m.type === 'movie');
+      case 'TV Shows': return allMovies.filter(m => m.type === 'tv');
       case 'Library':
-      case 'My Secure Records': return flat.filter(m => myList.includes(m.id));
-      default: return flat;
+        const libraryIds = new Set([...myList, ...history]);
+        return allMovies.filter(m => libraryIds.has(m.id));
+      case 'My Secure Records': 
+        return allMovies.filter(m => myList.includes(m.id));
+      case 'Watch History':
+        return allMovies.filter(m => history.includes(m.id));
+      default: return rows.flatMap(r => r.items);
     }
   };
 
@@ -68,13 +72,14 @@ export function useAppState() {
       setIsLoading(true);
       try {
         // Fetch Categories
-        const [trending, popMovies, topRated, action, scifi, animation] = await Promise.all([
+        const [trending, popMovies, topRated, action, scifi, animation, tvShows] = await Promise.all([
           getTrending('all'),
           getPopularMovies(),
           getTopRatedMovies(),
           getMoviesByGenre(28),
           getMoviesByGenre(878),
-          getMoviesByGenre(16)
+          getMoviesByGenre(16),
+          getPopularTV()
         ]);
 
         // Enrich Featured
@@ -85,6 +90,7 @@ export function useAppState() {
         const newRows = [
           { title: 'Trending Operations', items: trending },
           { title: 'Popular Field Assets', items: popMovies },
+          { title: 'Trending Transmissions (TV)', items: tvShows },
           { title: 'Top Rated Missions', items: topRated },
           { title: 'Action-Heavy Engagements', items: action },
           { title: 'Sci-Fi Explorations', items: scifi },
@@ -92,7 +98,7 @@ export function useAppState() {
         ];
         
         setRows(newRows);
-        updateGlobalPool([...trending, ...popMovies, ...topRated, ...action, ...scifi, ...animation]);
+        updateGlobalPool([...trending, ...popMovies, ...topRated, ...action, ...scifi, ...animation, ...tvShows]);
 
         // Background Enrichment for row items (Async)
         newRows.forEach(async (row, i) => {

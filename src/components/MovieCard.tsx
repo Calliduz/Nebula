@@ -13,20 +13,12 @@ interface MovieCardProps {
 
 export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSelect, isInList, onToggleList }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   const handleMouseEnter = () => {
     setIsHovered(true);
-    hoverTimerRef.current = setTimeout(() => {
-      setShowVideo(true);
-    }, 500);
   };
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    setShowVideo(false);
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
   };
 
   return (
@@ -49,42 +41,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
         transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
         className="absolute inset-0 rounded-2xl overflow-hidden border border-white/5 hover:border-white/20 group cursor-pointer bg-obsidian origin-center"
       >
-        <AnimatePresence mode="wait">
-          {!showVideo ? (
-            <motion.img
-              key="poster"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              src={movie.image}
-              alt={movie.title}
-              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-700"
-              referrerPolicy="no-referrer" onError={handleImageError}
-              loading="lazy"
-            />
-          ) : (
-            <motion.div
-              key="video"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute inset-0 bg-black"
-            >
-              <img 
-                src={movie.backdrop || movie.image} 
-                className="w-full h-full object-cover scale-110" 
-                referrerPolicy="no-referrer" onError={handleImageError} 
-              />
-              <div className="absolute inset-0 bg-nebula-cyan/5 flex items-center justify-center">
-                 <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
-                    <div className="flex gap-1">
-                       <span className="w-1 h-3 bg-nebula-cyan animate-pulse" />
-                       <span className="w-1 h-3 bg-nebula-cyan animate-pulse delay-75" />
-                       <span className="w-1 h-3 bg-nebula-cyan animate-pulse delay-150" />
-                    </div>
-                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <motion.img
+          key="poster"
+          src={movie.image}
+          alt={movie.title}
+          className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-700"
+          referrerPolicy="no-referrer" onError={handleImageError}
+          loading="lazy"
+        />
 
         <div className="absolute top-3 right-3 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md border border-white/10 text-[8px] font-bold text-nebula-cyan tracking-widest uppercase z-20">
           {movie.quality}

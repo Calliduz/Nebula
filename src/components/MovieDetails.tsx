@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Star, Clock, Calendar, Shield, AudioWaveform as Waveform, Sparkles, Maximize, Play, X, Plus } from 'lucide-react';
-import { ALL_MOVIES } from '../data/movies';
 import { handleImageError } from '../utils/helpers';
+import { getMediaDetails } from '../services/tmdb';
 
 interface MovieDetailsProps {
   movie: any;
@@ -15,17 +15,33 @@ interface MovieDetailsProps {
 
 export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPlay, onSelectMovie, isInList, onToggleList }) => {
   const [activeTab, setActiveTab] = useState('Overview');
-  const [isAudioFadingIn, setIsAudioFadingIn] = useState(false);
-  const accentColor = movie.accent || '#00E5FF';
+  const [deepDetails, setDeepDetails] = useState<{trailers: any[], similar: any[], cast: any[]}>({
+    trailers: [],
+    similar: [],
+    cast: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsAudioFadingIn(true);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchDeep = async () => {
+      setIsLoading(true);
+      const details = await getMediaDetails(movie.id, movie.type);
+      setDeepDetails(details);
+      setIsLoading(false);
+    };
+    fetchDeep();
+  }, [movie.id, movie.type]);
 
+  const accentColor = movie.accent || '#00E5FF';
   const TABS = ['Overview', 'Trailers & Extras', 'Related Titles'];
+
+  const logoTitle = movie.clearLogo ? (
+    <img src={movie.clearLogo} alt={movie.title} className="h-16 sm:h-24 md:h-32 object-contain mb-8 drop-shadow-2xl" />
+  ) : (
+    <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-accent font-black tracking-tight mb-4 uppercase leading-none break-words">
+      {movie.title}
+    </h1>
+  );
 
   return (
     <motion.div 
@@ -39,7 +55,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-obsidian/60 to-obsidian z-10" />
         <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-obsidian/40 to-transparent z-10" />
         <img 
-          src={movie.backdrop || movie.poster} 
+          src={movie.fanartBackground || movie.backdrop || movie.image} 
           className="w-full h-full object-cover blur-[2px] scale-110 opacity-40 origin-center" 
           alt="" 
           referrerPolicy="no-referrer" onError={handleImageError}
@@ -68,7 +84,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
             transition={{ delay: 0.2 }}
             className="w-full max-w-[300px] sm:max-w-[350px] mx-auto lg:mx-0 aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] relative group shrink-0"
           >
-            <img src={movie.poster} className="w-full h-full object-cover" alt={movie.title} referrerPolicy="no-referrer" onError={handleImageError} />
+            <img src={movie.image} className="w-full h-full object-cover" alt={movie.title} referrerPolicy="no-referrer" onError={handleImageError} />
             <div className="absolute inset-0 border-[1px] border-white/20 rounded-2xl pointer-events-none" />
           </motion.div>
 
@@ -78,40 +94,19 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-accent font-black tracking-tight mb-4 uppercase leading-none break-words">
-                {movie.title}
-              </h1>
+              {logoTitle}
               
               <div className="flex flex-wrap items-center gap-3 sm:gap-6 mb-8 text-xs sm:text-sm font-bold tracking-widest text-dim uppercase">
-                <span className="flex items-center gap-2"><Star size={16} className="text-nebula-cyan fill-nebula-cyan" /> {movie.rating}</span>
+                <span className="flex items-center gap-2"><Star size={16} className="text-nebula-cyan fill-nebula-cyan" /> {movie.imdb || movie.rating}</span>
                 <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                <span className="flex items-center gap-2"><Clock size={16} /> {movie.duration || '2h 12m'}</span>
+                <span className="flex items-center gap-2"><Clock size={16} /> {movie.duration || '124m'}</span>
                 <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                <span className="flex items-center gap-2"><Calendar size={16} /> {movie.year || '2025'}</span>
+                <span className="flex items-center gap-2"><Calendar size={16} /> {movie.year}</span>
               </div>
 
               <p className="text-lg text-white/70 font-light leading-relaxed mb-10 max-w-2xl">
-                {movie.description || 'Experience the next chapter in the Nebula Cinematic Universe. A stunning visual exploration of what lies beyond the edge of our perception.'}
+                {movie.description}
               </p>
-
-              <div className="flex flex-wrap items-center gap-6 sm:gap-10 mb-12 p-4 sm:p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl max-w-fit">
-                <div className="flex flex-col items-center gap-2">
-                   <Shield size={20} className="text-nebula-cyan" />
-                   <span className="text-[10px] font-bold text-white/40 tracking-widest leading-none">4K UHD</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                   <Waveform size={20} className="text-nebula-cyan" />
-                   <span className="text-[10px] font-bold text-white/40 tracking-widest leading-none">ATMOS</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                   <Sparkles size={20} className="text-nebula-cyan" />
-                   <span className="text-[10px] font-bold text-white/40 tracking-widest leading-none">HDR10+</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                   <Maximize size={20} className="text-nebula-cyan" />
-                   <span className="text-[10px] font-bold text-white/40 tracking-widest leading-none">2.39:1</span>
-                </div>
-              </div>
 
               <div className="flex flex-wrap gap-4 sm:gap-6 mb-16">
                 <motion.button 
@@ -164,12 +159,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
                    <div className="w-full">
                      <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4 sm:mb-6">Director's Cut Cast</h3>
                      <div className="flex gap-4 sm:gap-8 overflow-x-auto pb-4 custom-scrollbar">
-                       {(movie.cast || [
-                         { name: 'Aris Thorne', role: 'The Lead', avatar: 'https://i.pravatar.cc/150?u=a' },
-                         { name: 'Sana Veda', role: 'The Pilot', avatar: 'https://i.pravatar.cc/150?u=b' },
-                         { name: 'Marcus Void', role: 'The Villain', avatar: 'https://i.pravatar.cc/150?u=c' },
-                         { name: 'Luna Grey', role: 'Oracle', avatar: 'https://i.pravatar.cc/150?u=d' }
-                       ]).map((person: any, i: number) => (
+                       {deepDetails.cast.length > 0 ? deepDetails.cast.map((person: any, i: number) => (
                          <div key={`${person.name}-${person.role}-${i}`} className="flex flex-col items-center gap-2 sm:gap-3 group cursor-pointer shrink-0">
                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-white/10 p-1 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden">
                              <img src={person.avatar} className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt={person.name} />
@@ -179,20 +169,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
                              <p className="text-[7px] sm:text-[8px] font-bold text-dim uppercase tracking-widest mt-1 truncate">{person.role}</p>
                            </div>
                          </div>
-                       ))}
+                       )) : <p className="text-dim text-xs">Cast protocols unavailable for this record.</p>}
                      </div>
                    </div>
-
-                   {isAudioFadingIn && (
-                     <motion.div 
-                       initial={{ opacity: 0 }}
-                       animate={{ opacity: 1 }}
-                       className="flex items-center gap-3 text-[10px] font-bold text-nebula-cyan tracking-widest uppercase border border-nebula-cyan/20 bg-nebula-cyan/5 px-4 py-2 rounded-full w-fit"
-                     >
-                       <Waveform size={14} className="animate-pulse" />
-                       Atmospheric Audio Stream Active
-                     </motion.div>
-                   )}
                  </motion.div>
               )}
 
@@ -202,31 +181,34 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
                    animate={{ opacity: 1, y: 0 }}
                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                  >
-                   {[...Array(3)].map((_, i) => (
-                     <div key={`trailer-${movie.id}-${i}`} className="space-y-4 group cursor-pointer">
+                   {deepDetails.trailers.length > 0 ? deepDetails.trailers.map((video: any, i: number) => (
+                     <a 
+                       key={`trailer-${video.id}`} 
+                       href={`https://www.youtube.com/watch?v=${video.key}`}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="space-y-4 group cursor-pointer"
+                     >
                        <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 flex items-center justify-center bg-white/5">
                          <img 
-                           src={`https://picsum.photos/seed/trailer-${movie.id}-${i}/800/450`} 
+                           src={`https://img.youtube.com/vi/${video.key}/maxresdefault.jpg`} 
                            className="w-full h-full object-cover opacity-40 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105" 
-                           alt="" 
+                           alt={video.name} 
                            referrerPolicy="no-referrer" onError={handleImageError}
                          />
                          <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all" />
                          <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-nebula-cyan group-hover:text-obsidian transition-all group-hover:scale-110">
                             <Play size={20} fill="currentColor" />
                          </div>
-                         <div className="absolute bottom-3 right-3 px-2 py-1 rounded bg-black/60 text-[10px] font-bold text-white border border-white/10">
-                            2:15
-                         </div>
                        </div>
                        <div>
-                         <h4 className="text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors">
-                            {i === 0 ? 'Official Trailer' : i === 1 ? 'Legacy of the Nebula' : 'Atmospheric Recording'}
+                         <h4 className="text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate">
+                            {video.name}
                          </h4>
-                         <p className="text-[10px] text-dim font-bold mt-1 uppercase tracking-widest">Extra • 4K HDR</p>
+                         <p className="text-[10px] text-dim font-bold mt-1 uppercase tracking-widest">{video.type} • 4K Stream</p>
                        </div>
-                     </div>
-                   ))}
+                     </a>
+                   )) : <p className="text-dim text-xs col-span-full py-10 text-center border border-dashed border-white/10 rounded-2xl">No intercepted trailer signals for this mission.</p>}
                  </motion.div>
               )}
 
@@ -236,19 +218,19 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie, onClose, onPl
                    animate={{ opacity: 1, y: 0 }}
                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
                  >
-                   {ALL_MOVIES.filter(m => m.id !== movie.id && m.genre === movie.genre).slice(0, 4).map((m, i) => (
+                   {deepDetails.similar.length > 0 ? deepDetails.similar.map((m: any, i: number) => (
                      <div 
                        key={`rel-${movie.id}-${m.id}-${i}`} 
                        onClick={() => onSelectMovie?.(m)}
                        className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10 group cursor-pointer relative"
                      >
-                       <img src={m.poster} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-500" referrerPolicy="no-referrer" onError={handleImageError} />
+                       <img src={m.image} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-500" referrerPolicy="no-referrer" onError={handleImageError} />
                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                          <p className="text-[10px] font-bold text-nebula-cyan mb-1 uppercase tracking-widest">{m.genre}</p>
-                          <p className="text-xs font-bold text-white leading-tight">{m.title}</p>
+                          <p className="text-[10px] font-bold text-nebula-cyan mb-1 uppercase tracking-widest truncate">{m.genre}</p>
+                          <p className="text-xs font-bold text-white leading-tight line-clamp-2">{m.title}</p>
                        </div>
                      </div>
-                   ))}
+                   )) : <p className="text-dim text-xs col-span-full py-10 text-center border border-dashed border-white/10 rounded-2xl">No related mission vectors identified.</p>}
                  </motion.div>
               )}
             </div>
