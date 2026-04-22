@@ -155,7 +155,7 @@ function MediaPlayerStub({ actions, state }: any) {
   const { type, id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const movie = state.allMovies.find((m: any) => m.id === parseInt(id || '0')) || state.selectedMovie;
+  const movie = state.allMovies.find((m: any) => m.id.toString() === (id || '0').toString()) || state.selectedMovie;
   
   const season = searchParams.get('season') ? parseInt(searchParams.get('season')!) : undefined;
   const episode = searchParams.get('episode') ? parseInt(searchParams.get('episode')!) : undefined;

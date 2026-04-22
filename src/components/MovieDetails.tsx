@@ -42,25 +42,49 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
 
       if (!currentMovie && tmdbId) {
         // Landing directly on the URL
-        const basic = await getMediaBasicInfo(tmdbId, type);
-        if (basic) {
-          // Enrich with premium assets immediately
-          const enriched = await enrichMoviesWithMetadata([basic]);
-          currentMovie = enriched[0];
-          setMovie(currentMovie);
+        if (typeof tmdbId === 'string' && tmdbId.startsWith('k')) {
+           // It's a KissKH drama! Set placeholder to trigger KissKH fetch
+           currentMovie = { id: tmdbId, type: 'tv', origin: 'kisskh' };
+           setMovie(currentMovie);
+        } else {
+          const basic = await getMediaBasicInfo(tmdbId, type);
+          if (basic) {
+            // Enrich with premium assets immediately
+            const enriched = await enrichMoviesWithMetadata([basic]);
+            currentMovie = enriched[0];
+            setMovie(currentMovie);
+          }
         }
       }
 
       if (currentMovie) {
-        const details = await getMediaDetails(currentMovie.id, currentMovie.type);
-        setDeepDetails(details);
-        
-        if (currentMovie.type === 'tv') {
-          const tvInfo = await getTVDetails(currentMovie.id);
-          if (tvInfo) {
-            setTvDetails(tvInfo);
-            const eps = await getTVSeasonEpisodes(currentMovie.id, 1);
-            setEpisodes(eps);
+        if (currentMovie.origin === 'kisskh') {
+          try {
+            const apiBase = (window as any).nebula_api || 'http://localhost:4000';
+            const r = await fetch(`${apiBase}/api/drama/detail/${currentMovie.id}`);
+            const data = await r.json();
+            if (data) {
+              setMovie({ ...currentMovie, description: data.description || currentMovie.description });
+              setEpisodes(data.episodes || []);
+              setTvDetails({
+                number_of_seasons: 1,
+                seasons: [{ season_number: 1, name: "Season 1", episode_count: data.episodes?.length || 0 }]
+              });
+            }
+          } catch (e) {
+            console.error('Failed to fetch KissKH details', e);
+          }
+        } else {
+          const details = await getMediaDetails(currentMovie.id, currentMovie.type);
+          setDeepDetails(details);
+          
+          if (currentMovie.type === 'tv') {
+            const tvInfo = await getTVDetails(currentMovie.id);
+            if (tvInfo) {
+              setTvDetails(tvInfo);
+              const eps = await getTVSeasonEpisodes(currentMovie.id, 1);
+              setEpisodes(eps);
+            }
           }
         }
       }
@@ -70,7 +94,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
   }, [id, initialMovie?.id]);
 
   useEffect(() => {
-    if (movie?.type === 'tv' && movie?.id) {
+    if (movie?.type === 'tv' && movie?.id && movie?.origin !== 'kisskh') {
       getTVSeasonEpisodes(movie.id, activeSeason).then(setEpisodes);
     }
   }, [activeSeason]);

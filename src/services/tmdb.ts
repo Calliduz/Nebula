@@ -35,7 +35,7 @@ const fetchWithCache = async (key: string, fetcher: () => Promise<any>, releaseY
 };
 
 export interface NebulaMovie {
-  id: number;
+  id: string | number;
   title: string;
   description: string;
   image: string;
@@ -268,14 +268,22 @@ export const getTVSeasonEpisodes = async (tvId: string | number, seasonNumber: n
   try {
     const data = await fetchFromTMDB(`/tv/${tvId}/season/${seasonNumber}`);
     if (!data || !data.episodes) return [];
-    return data.episodes.map((ep: any) => ({
-      episode_number: ep.episode_number,
-      name: ep.name,
-      overview: ep.overview,
-      still_path: ep.still_path ? proxyImage(`${IMAGE_BASE_URL}${ep.still_path}`) : null,
-      air_date: ep.air_date,
-      vote_average: ep.vote_average,
-    }));
+    
+    const now = new Date();
+    return data.episodes
+      .filter((ep: any) => {
+        if (!ep.air_date) return false;
+        const airDate = new Date(ep.air_date);
+        return airDate <= now;
+      })
+      .map((ep: any) => ({
+        episode_number: ep.episode_number,
+        name: ep.name,
+        overview: ep.overview,
+        still_path: ep.still_path ? proxyImage(`${IMAGE_BASE_URL}${ep.still_path}`) : null,
+        air_date: ep.air_date,
+        vote_average: ep.vote_average,
+      }));
   } catch (err) {
     console.error(err);
     return [];

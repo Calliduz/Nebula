@@ -30,9 +30,10 @@ export function useAppState() {
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const [scrolled, setScrolled] = useState(false);
-  const [myList, setMyList] = useLocalStorage<number[]>('nebula-my-list', []);
-  const [history, setHistory] = useLocalStorage<number[]>('nebula-history', []);
+  const [myList, setMyList] = useLocalStorage<any[]>('nebula-my-list', []);
+  const [history, setHistory] = useLocalStorage<any[]>('nebula-history', []);
   const [visibleCount, setVisibleCount] = useState(12);
+  const [dramaPage, setDramaPage] = useState(1);
 
   // Data States
   const [featuredMovies, setFeaturedMovies] = useState<NebulaMovie[]>([]);
@@ -46,29 +47,37 @@ export function useAppState() {
   // Helper to merge new movies into the global pool uniquely
   const updateGlobalPool = (newMovies: NebulaMovie[]) => {
     setAllMovies(prev => {
-      const existingIds = new Set(prev.map(m => m.id));
-      const uniqueNew = newMovies.filter(m => !existingIds.has(m.id));
+      const existingIds = new Set(prev.map(m => m.id.toString()));
+      const uniqueNew = newMovies.filter(m => !existingIds.has(m.id.toString()));
       return [...prev, ...uniqueNew];
     });
   };
 
   useEffect(() => {
     setVisibleCount(12);
-  }, [viewingCategory, activeTab]);
+    setDramaPage(1); // Reset pagination on category/tab change
+  }, [viewingCategory, activeTab, selectedRegion]);
 
-  const loadMore = () => setVisibleCount(prev => prev + 12);
+  const loadMore = () => {
+    if (viewingCategory === 'Dramas') {
+      setDramaPage(prev => prev + 1);
+    }
+    setVisibleCount(prev => prev + 12);
+  };
 
   const getCategoryMovies = () => {
     switch (viewingCategory) {
       case 'Movies': return allMovies.filter(m => m.type === 'movie');
       case 'TV Shows': return allMovies.filter(m => m.type === 'tv');
       case 'Library':
-        const libraryIds = new Set([...myList, ...history]);
-        return allMovies.filter(m => libraryIds.has(m.id));
+        const libraryIds = new Set([...myList, ...history].map(id => id.toString()));
+        return allMovies.filter(m => libraryIds.has(m.id.toString()));
       case 'My Secure Records': 
-        return allMovies.filter(m => myList.includes(m.id));
+        const myListIds = new Set(myList.map(id => id.toString()));
+        return allMovies.filter(m => myListIds.has(m.id.toString()));
       case 'Watch History':
-        return allMovies.filter(m => history.includes(m.id));
+        const historyIds = new Set(history.map(id => id.toString()));
+        return allMovies.filter(m => historyIds.has(m.id.toString()));
       case 'Dramas':
         return allMovies.filter(m => (m as any).isDrama);
       default: return rows.flatMap(r => r.items);
@@ -91,10 +100,10 @@ export function useAppState() {
         ]);
 
         const hardDedupe = (arr: any[]) => {
-          const seen = new Set<number>();
+          const seen = new Set<string>();
           const results = [];
           for (const m of arr) {
-            const id = Number(m.tmdbId || m.id);
+            const id = (m.tmdbId || m.id).toString();
             if (id && !seen.has(id)) {
               seen.add(id);
               results.push(m);
@@ -111,20 +120,20 @@ export function useAppState() {
         const pinoyDramas = (pinoyRes.results || []).filter((p: any) => !topDramas.some((t: any) => t.id === p.id));
 
         // 2. Global Deduplication logic (Exclusive rows)
-        const globalShown = new Set<number>();
+        const globalShown = new Set<string>();
         const topTenItems = trending.slice(0, 10);
-        topTenItems.forEach(m => globalShown.add(Number(m.tmdbId || m.id)));
+        topTenItems.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
 
-        const filteredTrending = trending.filter(m => !globalShown.has(Number(m.tmdbId || m.id))).slice(0, 20);
-        filteredTrending.forEach(m => globalShown.add(Number(m.tmdbId || m.id)));
+        const filteredTrending = trending.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
+        filteredTrending.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
 
-        const filteredPop = popMovies.filter(m => !globalShown.has(Number(m.tmdbId || m.id))).slice(0, 20);
-        filteredPop.forEach(m => globalShown.add(Number(m.tmdbId || m.id)));
+        const filteredPop = popMovies.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
+        filteredPop.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
 
-        const filteredTV = tvShows.filter(m => !globalShown.has(Number(m.tmdbId || m.id))).slice(0, 20);
-        filteredTV.forEach(m => globalShown.add(Number(m.tmdbId || m.id)));
+        const filteredTV = tvShows.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
+        filteredTV.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
 
-        const filteredTop = topRated.filter(m => !globalShown.has(Number(m.tmdbId || m.id))).slice(0, 20);
+        const filteredTop = topRated.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
 
         const initialRows = [
           { title: 'Trending Operations', items: filteredTrending },
@@ -188,8 +197,16 @@ export function useAppState() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  const toggleMyList = (movieId: number) => {
-    setMyList(prev => prev.includes(movieId) ? prev.filter(id => id !== movieId) : [...prev, movieId]);
+  const toggleMyList = (movieId: any) => {
+    const mid = movieId.toString();
+    setMyList(prev => {
+      const isAlreadyIn = prev.some(id => id.toString() === mid);
+      if (isAlreadyIn) {
+        return prev.filter(id => id.toString() !== mid);
+      } else {
+        return [...prev, mid];
+      }
+    });
   };
 
   useEffect(() => {
@@ -227,7 +244,8 @@ export function useAppState() {
     } else if (path.startsWith('/movie/') || path.startsWith('/tv/')) {
        const parts = path.split('/');
        const type = parts[1];
-       const id = parseInt(parts[2]);
+       const rawId = parts[2];
+       const id = rawId.startsWith('k') ? rawId : parseInt(rawId);
        
        if (!selectedMovie || selectedMovie.id !== id) {
           const found = allMovies.find(m => m.id === id && m.type === type);
@@ -254,7 +272,7 @@ export function useAppState() {
         setIsLoading(true);
         try {
           const apiBase = (window as any).nebula_api || 'http://localhost:4000';
-          const r = await fetch(`${apiBase}/api/drama/list?page=1&country=${selectedRegion}&order=2`);
+          const r = await fetch(`${apiBase}/api/drama/list?page=${dramaPage}&country=${selectedRegion}&order=2`);
           const data = await r.json();
           if (data.results) {
             updateGlobalPool(data.results);
@@ -267,7 +285,7 @@ export function useAppState() {
       };
       fetchRegionalDramas();
     }
-  }, [viewingCategory, selectedRegion]);
+  }, [viewingCategory, selectedRegion, dramaPage]);
 
   const filteredMovies = useMemo(() => {
     const source = viewingCategory ? getCategoryMovies() : rows[0]?.items || [];
