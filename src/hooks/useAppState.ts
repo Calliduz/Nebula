@@ -79,58 +79,72 @@ export function useAppState() {
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        // Fetch Categories
-        const [trending, popMovies, topRated, action, scifi, animation, tvShows] = await Promise.all([
+        // 1. Fetch all raw data in parallel
+        const apiBase = (window as any).nebula_api || 'http://localhost:4000';
+        const [rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes] = await Promise.all([
           getTrending('all'),
           getPopularMovies(),
           getTopRatedMovies(),
-          getMoviesByGenre(28),
-          getMoviesByGenre(878),
-          getMoviesByGenre(16),
-          getPopularTV()
+          getPopularTV(),
+          fetch(`${apiBase}/api/drama/list?page=1&order=2`).then(r => r.json()).catch(() => ({results:[]})),
+          fetch(`${apiBase}/api/drama/list?page=1&country=8`).then(r => r.json()).catch(() => ({results:[]}))
         ]);
 
-        // Enrich Featured
-        const enrichedFeatured = await enrichMoviesWithMetadata(trending.slice(0, 5));
-        setFeaturedMovies(enrichedFeatured);
-
-        // Prepare Rows
-        const newRows = [
-          { title: 'Trending Operations', items: trending },
-          { title: 'Popular Field Assets', items: popMovies },
-          { title: 'Asian Drama Transmission', items: [] }, // Will be filled below
-          { title: 'Pinoy Operations (PH)', items: [] },    // Will be filled below
-          { title: 'Trending Transmissions (TV)', items: tvShows },
-          { title: 'Top Rated Missions', items: topRated },
-        ];
-        
-        setRows(newRows);
-        updateGlobalPool([...trending, ...popMovies, ...tvShows, ...topRated, ...action, ...scifi, ...animation]);
-
-        // Fetch KissKH specialized rows (Direct from server)
-        const fetchDramas = async () => {
-          try {
-            const apiBase = (window as any).nebula_api || 'http://localhost:4000';
-            const [topDramas, pinoyDramas] = await Promise.all([
-               fetch(`${apiBase}/api/drama/list?page=1&order=2`).then(r => r.json()),
-               fetch(`${apiBase}/api/drama/list?page=1&country=8`).then(r => r.json())
-            ]);
-
-            setRows(prev => {
-              const updated = [...prev];
-              updated[2] = { ...updated[2], items: topDramas.results || [] };
-              updated[3] = { ...updated[3], items: pinoyDramas.results || [] };
-              return updated;
-            });
-            updateGlobalPool([...(topDramas.results || []), ...(pinoyDramas.results || [])]);
-          } catch (e) {
-            console.error('Failed to fetch KissKH drama rows', e);
+        const hardDedupe = (arr: any[]) => {
+          const seen = new Set<number>();
+          const results = [];
+          for (const m of arr) {
+            const id = Number(m.tmdbId || m.id);
+            if (id && !seen.has(id)) {
+              seen.add(id);
+              results.push(m);
+            }
           }
+          return results;
         };
-        fetchDramas();
 
-        // Background Enrichment for row items (Async)
-        newRows.forEach(async (row, i) => {
+        const trending = hardDedupe(rawTrending);
+        const popMovies = hardDedupe(rawPop);
+        const topRated = hardDedupe(rawTop);
+        const tvShows = hardDedupe(rawTV);
+        const topDramas = dramaRes.results || [];
+        const pinoyDramas = (pinoyRes.results || []).filter((p: any) => !topDramas.some((t: any) => t.id === p.id));
+
+        // 2. Global Deduplication logic (Exclusive rows)
+        const globalShown = new Set<number>();
+        const topTenItems = trending.slice(0, 10);
+        topTenItems.forEach(m => globalShown.add(Number(m.tmdbId || m.id)));
+
+        const filteredTrending = trending.filter(m => !globalShown.has(Number(m.tmdbId || m.id))).slice(0, 20);
+        filteredTrending.forEach(m => globalShown.add(Number(m.tmdbId || m.id)));
+
+        const filteredPop = popMovies.filter(m => !globalShown.has(Number(m.tmdbId || m.id))).slice(0, 20);
+        filteredPop.forEach(m => globalShown.add(Number(m.tmdbId || m.id)));
+
+        const filteredTV = tvShows.filter(m => !globalShown.has(Number(m.tmdbId || m.id))).slice(0, 20);
+        filteredTV.forEach(m => globalShown.add(Number(m.tmdbId || m.id)));
+
+        const filteredTop = topRated.filter(m => !globalShown.has(Number(m.tmdbId || m.id))).slice(0, 20);
+
+        const initialRows = [
+          { title: 'Trending Operations', items: filteredTrending },
+          { title: 'Popular Field Assets', items: filteredPop },
+          { title: 'Asian Drama Transmission', items: topDramas }, 
+          { title: 'Pinoy Operations (PH)', items: pinoyDramas },    
+          { title: 'Trending Transmissions (TV)', items: filteredTV },
+          { title: 'Top Rated Missions', items: filteredTop },
+        ];
+
+        // 3. Set Initial State
+        setRows(initialRows);
+
+        // 4. Enrich Top 10 immediately for logos
+        const enrichedTop = await enrichMoviesWithMetadata(topTenItems);
+        const finalPool = hardDedupe([...enrichedTop, ...trending, ...popMovies, ...tvShows, ...topRated, ...topDramas, ...pinoyDramas]);
+        setAllMovies(finalPool);
+
+        // 5. Background enrichment for all rows
+        initialRows.forEach(async (row, i) => {
            if (row.items.length === 0) return;
            const enriched = await enrichMoviesWithMetadata(row.items.slice(0, 10));
            setRows(prev => {
@@ -138,7 +152,6 @@ export function useAppState() {
               updated[i] = { ...updated[i], items: [...enriched, ...row.items.slice(10)] };
               return updated;
            });
-           updateGlobalPool(enriched);
         });
 
       } catch (err) {
@@ -228,6 +241,27 @@ export function useAppState() {
     return () => clearInterval(interval);
   }, [isHoveringHero, isPlaying, isSearchOpen, featuredMovies.length, currentHeroIndex]); // Reset on index change
 
+  useEffect(() => {
+    if (viewingCategory === 'Dramas' && selectedRegion !== 'All') {
+      const fetchRegionalDramas = async () => {
+        setIsLoading(true);
+        try {
+          const apiBase = (window as any).nebula_api || 'http://localhost:4000';
+          const r = await fetch(`${apiBase}/api/drama/list?page=1&country=${selectedRegion}&order=2`);
+          const data = await r.json();
+          if (data.results) {
+            updateGlobalPool(data.results);
+          }
+        } catch (e) {
+          console.error('Failed to fetch regional dramas', e);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchRegionalDramas();
+    }
+  }, [viewingCategory, selectedRegion]);
+
   const filteredMovies = useMemo(() => {
     const source = viewingCategory ? getCategoryMovies() : rows[0]?.items || [];
     return source
@@ -235,7 +269,8 @@ export function useAppState() {
         const matchesGenre = selectedGenre === 'All' || m.genre.includes(selectedGenre);
         const matchesMood = activeMood === 'All Moods' || m.genre.toLowerCase().includes(activeMood.toLowerCase().split(' ')[0]);
         // Regional filter for Dramas
-        const matchesRegion = selectedRegion === 'All' || (m as any).countryId === parseInt(selectedRegion);
+        const mRegion = (m as any).countryId?.toString();
+        const matchesRegion = selectedRegion === 'All' || mRegion === selectedRegion;
         
         if (activeTab === 'my-list') return myList.includes(m.id);
         return matchesGenre && matchesMood && matchesRegion;
@@ -244,7 +279,7 @@ export function useAppState() {
         if (sortBy === 'IMDB Rating') return (b.imdb || 0) - (a.imdb || 0);
         return sortBy === 'Release Date' ? b.year - a.year : 0;
       });
-  }, [selectedGenre, activeMood, activeTab, myList, sortBy, rows, viewingCategory]);
+  }, [selectedGenre, activeMood, activeTab, myList, sortBy, rows, viewingCategory, selectedRegion, allMovies]);
 
   const recommendations = useMemo(() => {
     const flat = rows.flatMap(r => r.items);

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Hls from 'hls.js';
-import { X, Pause, Play, RotateCcw, RotateCw, VolumeX, Volume2, Maximize, Settings, Gauge, Loader2, Subtitles, ChevronRight, List, Search } from 'lucide-react';
+import { X, Pause, Play, RotateCcw, RotateCw, VolumeX, Volume2, Maximize, Settings, Gauge, Loader2, Subtitles, ChevronRight, List, Search, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
@@ -65,6 +65,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     setActiveMirror(0);
 
     let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
+    if (movie.origin) url += `&origin=${movie.origin}`;
     if (season !== undefined) url += `&season=${season}`;
     if (episode !== undefined) url += `&episode=${episode}`;
 
@@ -114,6 +115,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
     try {
       let url = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}`;
+      if (movie.origin) url += `&origin=${movie.origin}`;
       if (season !== undefined) url += `&season=${season}`;
       if (episode !== undefined) url += `&episode=${episode}`;
 
