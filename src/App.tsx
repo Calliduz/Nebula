@@ -62,6 +62,7 @@ export default function App() {
                     viewingCategory={state.viewingCategory} setViewingCategory={actions.setViewingCategory} setActiveTab={actions.setActiveTab}
                     onSelectMovie={actions.setSelectedMovie} myList={state.myList} toggleMyList={actions.toggleMyList} history={state.history}
                     startPlayback={actions.startPlayback} getCategoryMovies={actions.getCategoryMovies} visibleCount={state.visibleCount} loadMore={actions.loadMore}
+                    allMovies={state.allMovies} selectedRegion={state.selectedRegion} setSelectedRegion={actions.setSelectedRegion}
                   />
                 )
               } />

@@ -1,10 +1,11 @@
-import { Home, Search, Clapperboard, Tv, Library } from 'lucide-react';
+import { Home, Search, Clapperboard, Tv, Library, Theater } from 'lucide-react';
 
 export const NAV_ITEMS = [
   { id: 'home', icon: Home, label: 'Home' },
   { id: 'search', icon: Search, label: 'Search' },
   { id: 'movies', icon: Clapperboard, label: 'Movies' },
   { id: 'tv', icon: Tv, label: 'TV Shows' },
+  { id: 'drama', icon: Theater, label: 'Dramas' },
   { id: 'library', icon: Library, label: 'Library' },
 ];
 

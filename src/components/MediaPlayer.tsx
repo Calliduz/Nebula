@@ -46,6 +46,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const [tvDetails, setTvDetails] = useState<any>(null);
   const [qualityTag, setQualityTag] = useState<string>(''); // CAM | WEBDL | WEBRIP | BLURAY | etc.
   const [resolution, setResolution] = useState<string>('');
+  const [mirrors, setMirrors]     = useState<any[]>([]);
+  const [activeMirror, setActiveMirror] = useState<number>(0);
   const navigate = useNavigate();
 
   const videoRef    = useRef<HTMLVideoElement>(null);
@@ -59,6 +61,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     setLoading(true);
     setError('');
     setStreamUrl(null);
+    setMirrors([]);
+    setActiveMirror(0);
 
     let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
     if (season !== undefined) url += `&season=${season}`;
@@ -68,11 +72,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
-        if (data.streamUrl) {
-          // Route through proxy to bypass CDN CORS/Referer lockdown
+        if (data.mirrors && data.mirrors.length > 0) {
+          const proxiedMirrors = data.mirrors.map((m: any) => ({
+            ...m,
+            url: `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`
+          }));
+          setMirrors(proxiedMirrors);
+          setStreamUrl(proxiedMirrors[0].url);
+          setActiveMirror(0);
+          
+          if (data.qualityTag) setQualityTag(data.qualityTag);
+          if (data.resolution) setResolution(data.resolution);
+          if (data.subtitles) setSubtitles(data.subtitles);
+        } else if (data.streamUrl) {
           setStreamUrl(`${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
+          if (data.subtitles) setSubtitles(data.subtitles);
         } else {
           setError(data.error || 'No stream found.');
         }
@@ -110,6 +126,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       setFetchingSubtitles(false);
     }
   };
+
+  // ── Auto-select first subtitle ───────────────────────────────────────────
+  useEffect(() => {
+    if (subtitles.length > 0 && activeSubtitle === -1) {
+      setActiveSubtitle(0);
+      if (videoRef.current) {
+        // Wait a frame for the tracks to be added
+        setTimeout(() => {
+          if (videoRef.current && videoRef.current.textTracks.length > 0) {
+            videoRef.current.textTracks[0].mode = 'showing';
+          }
+        }, 100);
+      }
+    }
+  }, [subtitles]);
 
   // ── Fetch TV Details for Drawer (via backend proxy — no API key in frontend) ──
   useEffect(() => {
@@ -247,7 +278,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     const v = videoRef.current;
-    if (!v) return;
+    if (!v || !isFinite(v.duration)) return;
     const r = e.currentTarget.getBoundingClientRect();
     v.currentTime = ((e.clientX - r.left) / r.width) * v.duration;
   };
@@ -304,7 +335,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     >
       {/* ── Loading state ── */}
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-20 bg-black">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-[100] bg-black">
           {/* Blurred backdrop */}
           {(movie.fanartBackground || movie.backdrop) && (
             <img
@@ -349,7 +380,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
             {/* Cancel button */}
             <button
-              onClick={onClose}
+              onClick={safeClose}
               className="text-white/20 hover:text-white/60 text-xs underline transition-colors tracking-widest uppercase"
             >
               Cancel
@@ -369,7 +400,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
       {/* ── Error state ── */}
       {error && !loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-20 px-8 text-center">
+        <div className="absolute inset-0 z-[500] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500 pointer-events-none">
           {movie.backdrop && (
             <img
               src={movie.backdrop}
@@ -377,14 +408,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               alt=""
             />
           )}
-          <p className="text-white font-semibold">No stream found</p>
-          <p className="text-white/50 text-sm max-w-sm">{error}</p>
-          <button
-            onClick={onClose}
-            className="mt-2 px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm transition-colors"
-          >
-            Go back
-          </button>
+          <div className="relative z-10 flex flex-col items-center pointer-events-auto">
+            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-6 border border-red-500/50">
+               <Info className="text-red-500" size={32} />
+            </div>
+            <h3 className="text-2xl font-display font-black text-white mb-2 uppercase tracking-tighter">No signal detected</h3>
+            <p className="text-white/40 max-w-sm mb-8 font-light text-sm">The requested data stream is unreachable from this sector. Try another mirror or origin point.</p>
+            <button 
+              onClick={safeClose}
+              className="px-8 py-3 bg-white text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-nebula-cyan transition-colors"
+            >
+              Abort Mission
+            </button>
+          </div>
         </div>
       )}
 
@@ -578,7 +614,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                 <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-60 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2">
                   <div className="mb-2">
                     <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1">Speed</p>
-                    <div className="grid grid-cols-3 gap-1 px-2">
+                    <div className="grid grid-cols-4 gap-1 px-2">
                       {[0.5, 1, 1.5, 2].map(s => (
                         <button
                           key={s}
@@ -590,6 +626,27 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                       ))}
                     </div>
                   </div>
+
+                  {mirrors.length > 1 && (
+                    <div className="mb-2">
+                      <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">Servers</p>
+                      <div className="flex flex-col px-2 gap-0.5">
+                        {mirrors.map((m, i) => (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              setActiveMirror(i);
+                              setStreamUrl(m.url);
+                            }}
+                            className={`w-full text-left px-2 py-2 text-[11px] rounded-md transition-colors flex items-center justify-between ${activeMirror === i ? 'text-white bg-white/10 font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                          >
+                            <span className="truncate pr-2">{m.source}</span>
+                            <span className="text-[9px] opacity-40 shrink-0">{m.quality}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {qualities.length > 0 && (
                     <div className="mb-2">

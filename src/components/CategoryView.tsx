@@ -12,11 +12,21 @@ interface CategoryViewProps {
   toggleMyList: (id: number) => void;
   history: number[];
   startPlayback: (movie: any) => void;
-  getCategoryMovies: () => any[];
   visibleCount: number;
   loadMore: () => void;
   allMovies: any[];
+  selectedRegion?: string;
+  setSelectedRegion?: (region: string) => void;
 }
+
+const REGIONS = [
+  { id: 'All', name: 'All Regions' },
+  { id: '1', name: 'South Korea' },
+  { id: '2', name: 'China' },
+  { id: '8', name: 'Philippines' },
+  { id: '7', name: 'Thailand' },
+  { id: '4', name: 'Japan' },
+];
 
 export const CategoryView: React.FC<CategoryViewProps> = ({
   viewingCategory,
@@ -30,8 +40,11 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   getCategoryMovies,
   visibleCount,
   loadMore,
-  allMovies
+  allMovies,
+  selectedRegion,
+  setSelectedRegion
 }) => {
+  const isDramaOrTV = viewingCategory === 'Dramas' || viewingCategory === 'TV Shows';
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -57,6 +70,24 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
           </div>
         )}
       </div>
+
+      {isDramaOrTV && setSelectedRegion && (
+        <div className="flex flex-wrap gap-3 mb-10 overflow-x-auto pb-4 no-scrollbar">
+          {REGIONS.map(region => (
+            <button
+              key={region.id}
+              onClick={() => setSelectedRegion(region.id)}
+              className={`px-5 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all ${
+                selectedRegion === region.id 
+                  ? 'bg-nebula-cyan border-nebula-cyan text-obsidian' 
+                  : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {region.name}
+            </button>
+          ))}
+        </div>
+      )}
       
       {viewingCategory === 'Library' ? (
         <div className="space-y-16">
@@ -110,7 +141,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 md:gap-x-6 gap-y-12">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-x-3 md:gap-x-4 gap-y-10">
             {getCategoryMovies().slice(0, visibleCount).map((movie, i) => (
               <MovieCard key={`cat-grid-${viewingCategory}-${movie.id}-${i}`} movie={movie} onSelect={onSelectMovie} isInList={myList.includes(movie.id)} onToggleList={() => toggleMyList(movie.id)} />
             ))}

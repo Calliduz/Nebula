@@ -25,6 +25,7 @@ export function useAppState() {
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState('Recently Added');
   const [activeMood, setActiveMood] = useState('All Moods');
+  const [selectedRegion, setSelectedRegion] = useState('All');
   const [selectedMovie, setSelectedMovie] = useState<any>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -68,6 +69,8 @@ export function useAppState() {
         return allMovies.filter(m => myList.includes(m.id));
       case 'Watch History':
         return allMovies.filter(m => history.includes(m.id));
+      case 'Dramas':
+        return allMovies.filter(m => (m as any).isDrama);
       default: return rows.flatMap(r => r.items);
     }
   };
@@ -95,18 +98,40 @@ export function useAppState() {
         const newRows = [
           { title: 'Trending Operations', items: trending },
           { title: 'Popular Field Assets', items: popMovies },
+          { title: 'Asian Drama Transmission', items: [] }, // Will be filled below
+          { title: 'Pinoy Operations (PH)', items: [] },    // Will be filled below
           { title: 'Trending Transmissions (TV)', items: tvShows },
           { title: 'Top Rated Missions', items: topRated },
-          { title: 'Action-Heavy Engagements', items: action },
-          { title: 'Sci-Fi Explorations', items: scifi },
-          { title: 'Animated Protocols', items: animation },
         ];
         
         setRows(newRows);
-        updateGlobalPool([...trending, ...popMovies, ...topRated, ...action, ...scifi, ...animation, ...tvShows]);
+        updateGlobalPool([...trending, ...popMovies, ...tvShows, ...topRated, ...action, ...scifi, ...animation]);
+
+        // Fetch KissKH specialized rows (Direct from server)
+        const fetchDramas = async () => {
+          try {
+            const apiBase = (window as any).nebula_api || 'http://localhost:4000';
+            const [topDramas, pinoyDramas] = await Promise.all([
+               fetch(`${apiBase}/api/drama/list?page=1&order=2`).then(r => r.json()),
+               fetch(`${apiBase}/api/drama/list?page=1&country=8`).then(r => r.json())
+            ]);
+
+            setRows(prev => {
+              const updated = [...prev];
+              updated[2] = { ...updated[2], items: topDramas.results || [] };
+              updated[3] = { ...updated[3], items: pinoyDramas.results || [] };
+              return updated;
+            });
+            updateGlobalPool([...(topDramas.results || []), ...(pinoyDramas.results || [])]);
+          } catch (e) {
+            console.error('Failed to fetch KissKH drama rows', e);
+          }
+        };
+        fetchDramas();
 
         // Background Enrichment for row items (Async)
         newRows.forEach(async (row, i) => {
+           if (row.items.length === 0) return;
            const enriched = await enrichMoviesWithMetadata(row.items.slice(0, 10));
            setRows(prev => {
               const updated = [...prev];
@@ -209,8 +234,11 @@ export function useAppState() {
       .filter(m => {
         const matchesGenre = selectedGenre === 'All' || m.genre.includes(selectedGenre);
         const matchesMood = activeMood === 'All Moods' || m.genre.toLowerCase().includes(activeMood.toLowerCase().split(' ')[0]);
+        // Regional filter for Dramas
+        const matchesRegion = selectedRegion === 'All' || (m as any).countryId === parseInt(selectedRegion);
+        
         if (activeTab === 'my-list') return myList.includes(m.id);
-        return matchesGenre && matchesMood;
+        return matchesGenre && matchesMood && matchesRegion;
       })
       .sort((a, b) => {
         if (sortBy === 'IMDB Rating') return (b.imdb || 0) - (a.imdb || 0);
@@ -249,6 +277,7 @@ export function useAppState() {
       setActiveTab(id);
       if (id === 'movies') setViewingCategory('Movies');
       else if (id === 'tv') setViewingCategory('TV Shows');
+      else if (id === 'drama') setViewingCategory('Dramas');
       else if (id === 'library') setViewingCategory('Library');
       else setViewingCategory(null);
     }
@@ -285,7 +314,8 @@ export function useAppState() {
       allMovies,
       featuredMovies,
       rows,
-      isTransitioning
+      isTransitioning,
+      selectedRegion
     },
     actions: {
       setActiveTab,
@@ -299,6 +329,7 @@ export function useAppState() {
       setSelectedMovie: wrappedSetSelectedMovie,
       setSortBy,
       setActiveMood,
+      setSelectedRegion,
       toggleMyList,
       loadMore,
       getCategoryMovies,
