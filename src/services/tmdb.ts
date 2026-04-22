@@ -107,7 +107,10 @@ const GENRE_MAP: Record<number, string> = {
 export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promise<NebulaMovie[]> => {
   if (!normalized.length) return normalized;
   
-  const comboIds = normalized.map(m => `${m.id}:${m.type || 'movie'}`).sort().join(',');
+  const targetMovies = normalized.filter(m => !(m as any).isDrama && (m as any).origin !== 'kisskh');
+  if (!targetMovies.length) return normalized;
+
+  const comboIds = targetMovies.map(m => `${m.id}:${m.type || 'movie'}`).sort().join(',');
 
   // Check per-item cache (only trust entries WITH logos — never cache nulls permanently)
   const allCached = normalized.every(m => {

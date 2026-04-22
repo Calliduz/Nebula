@@ -82,10 +82,10 @@ export function useAppState() {
         // 1. Fetch all raw data in parallel
         const apiBase = (window as any).nebula_api || 'http://localhost:4000';
         const [rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes] = await Promise.all([
-          getTrending('all'),
-          getPopularMovies(),
-          getTopRatedMovies(),
-          getPopularTV(),
+          getTrending('all').catch(() => []),
+          getPopularMovies().catch(() => []),
+          getTopRatedMovies().catch(() => []),
+          getPopularTV().catch(() => []),
           fetch(`${apiBase}/api/drama/list?page=1&order=2`).then(r => r.json()).catch(() => ({results:[]})),
           fetch(`${apiBase}/api/drama/list?page=1&country=8`).then(r => r.json()).catch(() => ({results:[]}))
         ]);
@@ -129,23 +129,30 @@ export function useAppState() {
         const initialRows = [
           { title: 'Trending Operations', items: filteredTrending },
           { title: 'Popular Field Assets', items: filteredPop },
-          { title: 'Asian Drama Transmission', items: topDramas }, 
-          { title: 'Pinoy Operations (PH)', items: pinoyDramas },    
+          { title: 'Asian Drama Transmission', items: topDramas, isDramaRow: true }, 
+          { title: 'Pinoy Operations (PH)', items: pinoyDramas, isDramaRow: true },    
           { title: 'Trending Transmissions (TV)', items: filteredTV },
           { title: 'Top Rated Missions', items: filteredTop },
         ];
 
         // 3. Set Initial State
+        const initialFeatured = trending.slice(0, 5);
+        setFeaturedMovies(initialFeatured);
         setRows(initialRows);
 
-        // 4. Enrich Top 10 immediately for logos
-        const enrichedTop = await enrichMoviesWithMetadata(topTenItems);
-        const finalPool = hardDedupe([...enrichedTop, ...trending, ...popMovies, ...tvShows, ...topRated, ...topDramas, ...pinoyDramas]);
+        // 4. Enrich Spotlight & Top 10 immediately for logos
+        const [enrichedTop, enrichedFeatured] = await Promise.all([
+          enrichMoviesWithMetadata(topTenItems),
+          enrichMoviesWithMetadata(initialFeatured)
+        ]);
+        
+        setFeaturedMovies(enrichedFeatured);
+        const finalPool = hardDedupe([...enrichedTop, ...enrichedFeatured, ...trending, ...popMovies, ...tvShows, ...topRated, ...topDramas, ...pinoyDramas]);
         setAllMovies(finalPool);
 
-        // 5. Background enrichment for all rows
+        // 5. Background enrichment for all rows (Skip Dramas as requested)
         initialRows.forEach(async (row, i) => {
-           if (row.items.length === 0) return;
+           if (row.items.length === 0 || row.isDramaRow) return;
            const enriched = await enrichMoviesWithMetadata(row.items.slice(0, 10));
            setRows(prev => {
               const updated = [...prev];

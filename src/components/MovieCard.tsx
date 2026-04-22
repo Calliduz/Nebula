@@ -7,18 +7,21 @@ interface MovieCardProps {
   onSelect?: (m: any) => void;
   isInList?: boolean;
   onToggleList?: () => void;
+  aspect?: 'portrait' | 'landscape';
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSelect }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSelect, aspect = 'portrait' }) => {
+  const isLandscape = aspect === 'landscape' || movie.isDrama;
+
   return (
     <div 
-      className={`group/card relative min-w-[200px] md:min-w-[280px] aspect-[2/3] transition-all duration-300 ${snap ? 'snap-start' : ''}`}
+      className={`group/card relative w-[160px] md:w-[280px] shrink-0 ${isLandscape ? 'aspect-video' : 'aspect-[2/3]'} transition-all duration-300 ${snap ? 'snap-start' : ''}`}
       onContextMenu={(e) => e.preventDefault()}
       onClick={() => onSelect?.(movie)}
       style={{ willChange: 'transform' }}
     >
       <div 
-        className="absolute inset-0 rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 hover:scale-[1.02] transform-gpu shadow-2xl"
+        className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 hover:scale-[1.02] transform-gpu shadow-2xl"
       >
         <img
           src={movie.image}

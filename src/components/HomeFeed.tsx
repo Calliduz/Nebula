@@ -42,7 +42,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       <TopTenShelf data={allMovies} onSelect={setSelectedMovie} />
 
-      {rows.map((row, rowIndex) => (
+      {rows.map((row: any, rowIndex) => (
         <MovieRow 
           key={`row-v3-${row.title}-${rowIndex}`} 
           title={row.title}
@@ -51,11 +51,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           {isLoading ? (
             [...Array(6)].map((_, i) => <MovieSkeleton key={`sk-${rowIndex}-${i}`} />)
           ) : (
-            row.items.map((m, i) => (
+            row.items.map((m: any, i: number) => (
               <MovieCard 
                 key={`card-${rowIndex}-${m.id}-${i}`} 
                 movie={m} 
                 snap 
+                aspect={row.isDramaRow ? 'landscape' : 'portrait'}
                 onSelect={setSelectedMovie} 
                 isInList={myList.includes(m.id)} 
                 onToggleList={() => toggleMyList(m.id)} 

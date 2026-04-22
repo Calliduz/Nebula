@@ -15,6 +15,8 @@ interface CategoryViewProps {
   visibleCount: number;
   loadMore: () => void;
   allMovies: any[];
+  data: any[];
+  getCategoryMovies: () => any[];
   selectedRegion?: string;
   setSelectedRegion?: (region: string) => void;
 }
@@ -37,6 +39,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   toggleMyList,
   history,
   startPlayback,
+  data,
   getCategoryMovies,
   visibleCount,
   loadMore,
@@ -141,12 +144,19 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-6 gap-y-12">
-            {getCategoryMovies().slice(0, visibleCount).map((movie, i) => (
-              <MovieCard key={`cat-grid-${viewingCategory}-${movie.id}-${i}`} movie={movie} onSelect={onSelectMovie} isInList={myList.includes(movie.id)} onToggleList={() => toggleMyList(movie.id)} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 sm:gap-x-6 gap-y-10 sm:gap-y-12">
+            {data.slice(0, visibleCount).map((movie: any, i: number) => (
+              <MovieCard 
+                key={`cat-grid-${viewingCategory}-${movie.id}-${i}`} 
+                movie={movie} 
+                aspect={movie.isDrama ? 'landscape' : 'portrait'}
+                onSelect={onSelectMovie} 
+                isInList={myList.includes(movie.id)} 
+                onToggleList={() => toggleMyList(movie.id)} 
+              />
             ))}
           </div>
-          {getCategoryMovies().length > visibleCount && (
+          {data.length > visibleCount && (
             <div className="mt-16 flex justify-center">
               <button 
                 onClick={loadMore}
