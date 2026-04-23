@@ -60,7 +60,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
       if (currentMovie) {
         if (currentMovie.origin === 'kisskh') {
           try {
-            const apiBase = (window as any).nebula_api || 'http://localhost:4000';
+            const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+            const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
             const r = await fetch(`${apiBase}/api/drama/detail/${currentMovie.id}`);
             const data = await r.json();
             if (data) {

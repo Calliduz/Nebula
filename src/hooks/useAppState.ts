@@ -89,7 +89,8 @@ export function useAppState() {
       setIsLoading(true);
       try {
         // 1. Fetch all raw data in parallel
-        const apiBase = (window as any).nebula_api || 'http://localhost:4000';
+        const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+        const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
         const [rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes] = await Promise.all([
           getTrending('all').catch(() => []),
           getPopularMovies().catch(() => []),
@@ -271,7 +272,8 @@ export function useAppState() {
       const fetchRegionalDramas = async () => {
         setIsLoading(true);
         try {
-          const apiBase = (window as any).nebula_api || 'http://localhost:4000';
+          const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+          const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
           const r = await fetch(`${apiBase}/api/drama/list?page=${dramaPage}&country=${selectedRegion}&order=2`);
           const data = await r.json();
           if (data.results) {
