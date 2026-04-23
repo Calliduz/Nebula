@@ -4,7 +4,16 @@ import { X, Pause, Play, RotateCcw, RotateCw, VolumeX, Volume2, Maximize, Settin
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
-const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+let rawApi = import.meta.env.VITE_API_BASE_URL;
+if (!rawApi) {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    rawApi = 'http://localhost:4000';
+  } else if (window.location.hostname === 'nebula.clev.studio') {
+    rawApi = 'https://nebula-server-qbp6.onrender.com';
+  } else {
+    rawApi = `${window.location.origin}/api`;
+  }
+}
 const API = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
 
 interface MediaPlayerProps {
@@ -84,12 +93,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
           
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
-          if (data.subtitles) setSubtitles(data.subtitles);
+          if (data.subtitles) {
+            const normalized = data.subtitles.map((s: any) => ({
+              ...s,
+              url: s.url.startsWith('/') ? `${API}${s.url}` : s.url
+            }));
+            setSubtitles(normalized);
+          }
         } else if (data.streamUrl) {
           setStreamUrl(`${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
-          if (data.subtitles) setSubtitles(data.subtitles);
+          if (data.subtitles) {
+            const normalized = data.subtitles.map((s: any) => ({
+              ...s,
+              url: s.url.startsWith('/') ? `${API}${s.url}` : s.url
+            }));
+            setSubtitles(normalized);
+          }
         } else {
           setError(data.error || 'No stream found.');
         }
@@ -121,7 +142,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
       const r = await fetch(url);
       const data = await r.json();
-      if (data.subtitles) setSubtitles(data.subtitles);
+      if (data.subtitles) {
+        const normalized = data.subtitles.map((s: any) => ({
+          ...s,
+          url: s.url.startsWith('/') ? `${API}${s.url}` : s.url
+        }));
+        setSubtitles(normalized);
+      }
     } catch (e) {
       console.error("Subtitle aggregation failed", e);
     } finally {

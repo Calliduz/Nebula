@@ -90,7 +90,16 @@ export const getMediaDetails = async (id: number, type: 'movie' | 'tv', releaseY
 
 const proxyImage = (url: string) => {
   if (!url) return '';
-  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+  let rawApi = import.meta.env.VITE_API_BASE_URL;
+  if (!rawApi) {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      rawApi = 'http://localhost:4000';
+    } else if (window.location.hostname === 'nebula.clev.studio') {
+      rawApi = 'https://nebula-server-qbp6.onrender.com';
+    } else {
+      rawApi = `${window.location.origin}/api`;
+    }
+  }
   const baseUrl = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
   return `${baseUrl}/api/image?url=${encodeURIComponent(url)}`;
 };
@@ -134,7 +143,16 @@ export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promi
   }
 
   try {
-    const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+    let rawApi = import.meta.env.VITE_API_BASE_URL;
+    if (!rawApi) {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        rawApi = 'http://localhost:4000';
+      } else if (window.location.hostname === 'nebula.clev.studio') {
+        rawApi = 'https://nebula-server-qbp6.onrender.com';
+      } else {
+        rawApi = `${window.location.origin}/api`;
+      }
+    }
     const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
     const res = await fetch(`${apiBase}/api/metadata?batch=${comboIds}`);
     if (!res.ok) throw new Error('Metadata fetch failed');

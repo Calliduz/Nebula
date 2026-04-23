@@ -89,7 +89,17 @@ export function useAppState() {
       setIsLoading(true);
       try {
         // 1. Fetch all raw data in parallel
-        const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+        // Detect API base. If missing, warn the user about environment variables.
+        let rawApi = import.meta.env.VITE_API_BASE_URL;
+        if (!rawApi) {
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            rawApi = 'http://localhost:4000';
+          } else if (window.location.hostname === 'nebula.clev.studio') {
+            rawApi = 'https://nebula-server-qbp6.onrender.com';
+          } else {
+            rawApi = `${window.location.origin}/api`;
+          }
+        }
         const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
         const [rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes] = await Promise.all([
           getTrending('all').catch(() => []),
