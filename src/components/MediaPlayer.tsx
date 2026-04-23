@@ -187,11 +187,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        backBufferLength: 60,
-        maxBufferLength: 60,
-        maxMaxBufferLength: 120,
+        maxBufferLength: 30, // Limit buffer to 30s to save memory
+        maxMaxBufferLength: 60,
+        backBufferLength: 10,
+        fragLoadingMaxRetry: 3,
+        manifestLoadingMaxRetry: 3,
+        startLevel: -1,
+        capLevelToPlayerSize: true,
       });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
