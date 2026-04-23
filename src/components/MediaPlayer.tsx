@@ -83,10 +83,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       .then(data => {
         if (cancelled) return;
         if (data.mirrors && data.mirrors.length > 0) {
-          const proxiedMirrors = data.mirrors.map((m: any) => ({
-            ...m,
-            url: `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`
-          }));
+          const proxiedMirrors = data.mirrors.map((m: any) => {
+            const proxiedUrl = `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`;
+            console.log(`[PLAYER] Proxied mirror: ${m.name} -> ${proxiedUrl.substring(0, 100)}...`);
+            return { ...m, url: proxiedUrl };
+          });
           setMirrors(proxiedMirrors);
           setStreamUrl(proxiedMirrors[0].url);
           setActiveMirror(0);
