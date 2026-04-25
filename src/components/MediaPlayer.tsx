@@ -186,6 +186,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   useEffect(() => {
     if (!streamUrl || !videoRef.current) return;
     const video = videoRef.current;
+    
+    // Show buffering indicator while HLS fetches/rewrites the manifest
+    setIsBuffering(true);
 
     if (Hls.isSupported()) {
       const hls = new Hls({
