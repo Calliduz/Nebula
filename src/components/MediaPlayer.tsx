@@ -41,6 +41,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const [progress, setProgress]     = useState(0);
   const [volume, setVolume]         = useState(80);
   const [isMuted, setIsMuted]       = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [showUi, setShowUi]         = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [speed, setSpeed]           = useState(1);
@@ -241,16 +242,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     const onDuration = () => setDuration(formatTime(video.duration));
     const onPlay     = () => setIsPaused(false);
     const onPause    = () => setIsPaused(true);
+    const onWaiting  = () => setIsBuffering(true);
+    const onPlaying  = () => setIsBuffering(false);
+    const onCanPlay  = () => setIsBuffering(false);
 
     video.addEventListener('timeupdate', onTime);
     video.addEventListener('durationchange', onDuration);
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
+    video.addEventListener('waiting', onWaiting);
+    video.addEventListener('playing', onPlaying);
+    video.addEventListener('canplay', onCanPlay);
     return () => {
       video.removeEventListener('timeupdate', onTime);
       video.removeEventListener('durationchange', onDuration);
       video.removeEventListener('play', onPlay);
       video.removeEventListener('pause', onPause);
+      video.removeEventListener('waiting', onWaiting);
+      video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('canplay', onCanPlay);
     };
   }, [streamUrl]);
 
@@ -452,6 +462,29 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
             >
               Abort Mission
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Buffering state ── */}
+      {isBuffering && !loading && !error && (
+        <div className="absolute inset-0 flex items-center justify-center z-[150] pointer-events-none bg-black/20 backdrop-blur-sm transition-all duration-300">
+          <div className="flex flex-col items-center gap-4">
+            {movie.clearLogo ? (
+              <img
+                src={movie.clearLogo}
+                alt="Loading..."
+                className="h-16 md:h-24 w-auto object-contain drop-shadow-2xl animate-pulse opacity-80"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="relative">
+                <Loader2 size={48} className="animate-spin text-nebula-cyan opacity-80" />
+              </div>
+            )}
+            <p className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-bold animate-pulse">
+              Buffering Signal...
+            </p>
           </div>
         </div>
       )}
