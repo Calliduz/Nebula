@@ -52,31 +52,51 @@ export const Hero: React.FC<HeroProps> = ({
           transition={{ duration: 0.8 }}
           className="absolute inset-0 z-0"
         >
+          {/* PC Landscape Image */}
           <img 
             src={activeHero.fanartBackground || activeHero.backdrop || activeHero.image} 
             alt={activeHero.title}
-            className="w-full h-full object-cover"
+            className="hidden md:block w-full h-full object-cover"
             referrerPolicy="no-referrer" 
             onError={handleImageError}
           />
+          {/* Mobile Blurred Background */}
+          <img 
+            src={activeHero.image || activeHero.fanartBackground || activeHero.backdrop} 
+            alt={activeHero.title}
+            className="block md:hidden absolute inset-0 w-full h-full object-cover opacity-20 blur-2xl scale-110"
+            referrerPolicy="no-referrer" 
+            onError={handleImageError}
+          />
+          {/* Mobile Portrait Poster Image */}
+          <div className="absolute inset-0 md:hidden flex items-start justify-center pt-20 px-12 pb-[14rem] z-0">
+            <img 
+              src={activeHero.image || activeHero.fanartBackground || activeHero.backdrop} 
+              alt={activeHero.title}
+              className="w-full h-full object-cover rounded-xl shadow-2xl border border-white/10"
+              referrerPolicy="no-referrer" 
+              onError={handleImageError}
+            />
+          </div>
           <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/40 to-transparent z-10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-transparent to-transparent z-10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-transparent to-transparent z-10 hidden md:block" />
         </motion.div>
       </AnimatePresence>
 
-      <div className="absolute inset-0 z-20 flex items-center px-4 sm:px-6 md:px-12 pt-10 pointer-events-none">
-        <div className="max-w-3xl pointer-events-auto mt-20">
+      <div className="absolute inset-0 z-20 flex items-end md:items-center px-4 sm:px-6 md:px-12 pb-24 md:pb-0 md:pt-10 pointer-events-none">
+        <div className="max-w-3xl pointer-events-auto md:mt-20 w-full">
           <motion.div
             key={`hero-content-${activeHero.id || currentHeroIndex}`}
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col items-center md:items-start text-center md:text-left"
           >
             
             {activeHero.clearLogo ? (
-              <img src={activeHero.clearLogo} alt={activeHero.title} className="w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] h-32 md:h-44 object-contain object-left mb-8 md:mb-10 drop-shadow-2xl" />
+              <img src={activeHero.clearLogo} alt={activeHero.title} className="hidden md:block w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] h-32 md:h-44 object-contain object-left mb-8 md:mb-10 drop-shadow-2xl" />
             ) : (
-              <h1 className={`font-display font-black tracking-tighter leading-[0.85] mb-8 md:mb-10 uppercase text-white drop-shadow-2xl ${
+              <h1 className={`hidden md:block font-display font-black tracking-tighter leading-[0.85] mb-8 md:mb-10 uppercase text-white drop-shadow-2xl ${
                 activeHero.title.length > 20 
                   ? "text-4xl sm:text-5xl md:text-7xl" 
                   : "text-5xl sm:text-6xl md:text-[140px]"
@@ -87,7 +107,7 @@ export const Hero: React.FC<HeroProps> = ({
               </h1>
             )}
             
-            <div className="flex flex-wrap items-center gap-3 sm:gap-6 mb-8 md:mb-10 text-[11px] md:text-[13px] font-bold text-white/50 tracking-[0.2em] uppercase">
+            <div className="hidden md:flex flex-wrap items-center gap-3 sm:gap-6 mb-8 md:mb-10 text-[11px] md:text-[13px] font-bold text-white/50 tracking-[0.2em] uppercase">
               <span className="text-nebula-cyan font-black border-2 border-nebula-cyan/30 px-3 py-1 rounded leading-none">{activeHero.rating || '8.4'}</span>
               <span>{activeHero.year}</span>
               <div className="w-1.5 h-1.5 rounded-full bg-nebula-red animate-pulse hidden sm:block" />
@@ -96,28 +116,28 @@ export const Hero: React.FC<HeroProps> = ({
               <span className="flex items-center gap-2"><Sparkles size={16} className="text-nebula-cyan" /> 4K ULTRA HD</span>
             </div>
 
-            <p className="text-lg md:text-2xl text-white/60 font-light leading-relaxed mb-10 md:mb-12 max-w-2xl drop-shadow-md line-clamp-3">
+            <p className="hidden md:block text-lg md:text-2xl text-white/60 font-light leading-relaxed mb-10 md:mb-12 max-w-2xl drop-shadow-md line-clamp-3">
               {activeHero.description}
             </p>
 
-            <div className="flex flex-wrap gap-4 md:gap-6 text-obsidian pb-10 md:pb-0">
+            <div className="flex w-full justify-center md:justify-start gap-4 md:gap-6 text-obsidian pb-0">
               <motion.button 
                 whileHover={{ scale: 1.05, backgroundColor: '#FFFFFF' }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => startPlayback(activeHero)}
-                className="bg-white text-obsidian px-6 sm:px-12 py-4 sm:py-5 rounded-lg font-black text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center gap-2 sm:gap-4 shadow-[0_20px_40px_rgba(255,255,255,0.1)] transition-all flex-1 sm:flex-none justify-center"
+                className="bg-white text-obsidian px-6 sm:px-12 py-3 md:py-5 rounded-lg font-black text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center gap-2 sm:gap-4 shadow-[0_20px_40px_rgba(255,255,255,0.1)] transition-all flex-1 md:flex-none justify-center"
               >
-                <Play size={24} fill="currentColor" /> Play Mission
+                <Play size={20} className="md:w-6 md:h-6" fill="currentColor" /> Play
               </motion.button>
               <motion.button 
                 whileHover={{ backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)' }}
-                className={`border backdrop-blur-3xl px-6 sm:px-12 py-4 sm:py-5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 sm:gap-4 transition-all flex-1 sm:flex-none ${myList.includes(activeHero.id) ? 'bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan' : 'bg-white/5 border-white/10 text-white'}`}
+                className={`border backdrop-blur-3xl px-6 sm:px-12 py-3 md:py-5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 sm:gap-4 transition-all flex-1 md:flex-none ${myList.includes(activeHero.id) ? 'bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan' : 'bg-white/5 border-white/10 text-white'}`}
                 onClick={() => toggleMyList(activeHero.id)}
               >
                 {myList.includes(activeHero.id) ? (
-                   <><X size={24} /> Remove</>
+                   <><X size={20} className="md:w-6 md:h-6" /> Remove</>
                 ) : (
-                  <><Plus size={24} /> Registry</>
+                  <><Plus size={20} className="md:w-6 md:h-6" /> My List</>
                 )}
               </motion.button>
               <motion.button 
@@ -132,7 +152,7 @@ export const Hero: React.FC<HeroProps> = ({
         </div>
       </div>
 
-      <div className="absolute bottom-20 md:bottom-20 left-4 right-4 md:left-auto md:right-12 flex flex-row md:flex-col justify-center gap-3 md:gap-4 z-30">
+      <div className="hidden absolute bottom-20 right-12 md:flex flex-col justify-center gap-4 z-30">
         {featuredMovies.map((movie, i) => (
           <button 
             key={`hero-thumb-${movie.id || i}`} 

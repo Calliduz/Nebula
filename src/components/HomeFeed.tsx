@@ -1,6 +1,5 @@
 import React from 'react';
 import { DiscoveryBar } from './DiscoveryBar';
-import { GenreBar } from './GenreBar';
 import { TopTenShelf } from './TopTenShelf';
 import { MovieRow } from './MovieRow';
 import { MovieCard } from './MovieCard';
@@ -37,8 +36,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         activeMood={activeMood} setActiveMood={setActiveMood} 
         onRandomize={onRandomize} 
       />
-
-      <GenreBar selectedGenre={selectedGenre} setSelectedGenre={setSelectedGenre} />
 
       <TopTenShelf data={allMovies} onSelect={setSelectedMovie} />
 

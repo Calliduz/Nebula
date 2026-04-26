@@ -329,8 +329,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   };
 
   const handleFullscreen = () => {
-    if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
-    else document.exitFullscreen();
+    const video = videoRef.current as any;
+    if (video && video.webkitEnterFullscreen) {
+      video.webkitEnterFullscreen();
+    } else {
+      if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
+      else document.exitFullscreen();
+    }
   };
 
   const setPlaybackSpeed = (s: number) => {
@@ -498,7 +503,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         className="w-full h-full object-contain"
         crossOrigin="anonymous"
         playsInline
-        onClick={togglePlay}
+        onClick={resetHideTimer}
       >
         {subtitles.map((sub, idx) => (
           <track 
