@@ -234,8 +234,29 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     const video = videoRef.current;
     if (!video) return;
 
+    const onLoadedMetadata = () => {
+      const savedProgress = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
+      if (savedProgress[movie.id]) {
+        video.currentTime = savedProgress[movie.id];
+      }
+    };
+
     const onTime = () => {
-      if (video.duration > 0) setProgress((video.currentTime / video.duration) * 100);
+      if (video.duration > 0) {
+        setProgress((video.currentTime / video.duration) * 100);
+        
+        // Save progress to local storage (only if played more than 10s and not within 10s of end)
+        if (video.currentTime > 10 && video.duration - video.currentTime > 10) {
+          const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
+          p[movie.id] = video.currentTime;
+          localStorage.setItem('nebula-progress', JSON.stringify(p));
+        } else if (video.duration - video.currentTime <= 10) {
+          // Clear progress if finished
+          const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
+          delete p[movie.id];
+          localStorage.setItem('nebula-progress', JSON.stringify(p));
+        }
+      }
       setCurrentTime(formatTime(video.currentTime));
       // buffered %
       if (video.buffered.length > 0) {
@@ -249,6 +270,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     const onPlaying  = () => setIsBuffering(false);
     const onCanPlay  = () => setIsBuffering(false);
 
+    video.addEventListener('loadedmetadata', onLoadedMetadata);
     video.addEventListener('timeupdate', onTime);
     video.addEventListener('durationchange', onDuration);
     video.addEventListener('play', onPlay);
@@ -257,6 +279,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     video.addEventListener('playing', onPlaying);
     video.addEventListener('canplay', onCanPlay);
     return () => {
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
       video.removeEventListener('timeupdate', onTime);
       video.removeEventListener('durationchange', onDuration);
       video.removeEventListener('play', onPlay);
@@ -265,7 +288,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('canplay', onCanPlay);
     };
-  }, [streamUrl]);
+  }, [streamUrl, movie.id]);
 
   // ── Volume sync ───────────────────────────────────────────────────────────
   useEffect(() => {

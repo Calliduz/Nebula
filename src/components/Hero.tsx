@@ -25,8 +25,19 @@ export const Hero: React.FC<HeroProps> = ({
   featuredMovies
 }) => {
   const [isFocusing, setIsFocusing] = React.useState<number | null>(null);
+  const [touchStart, setTouchStart] = React.useState<number | null>(null);
 
   if (!featuredMovies || featuredMovies.length === 0) return <HeroSkeleton />;
+  
+  const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.targetTouches[0].clientX);
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+    if (diff > 50) setCurrentHeroIndex((currentHeroIndex + 1) % featuredMovies.length);
+    else if (diff < -50) setCurrentHeroIndex(currentHeroIndex === 0 ? featuredMovies.length - 1 : currentHeroIndex - 1);
+    setTouchStart(null);
+  };
   
   const handleThumbClick = (index: number) => {
     if (index === currentHeroIndex) return;
@@ -41,7 +52,11 @@ export const Hero: React.FC<HeroProps> = ({
   const activeHero = featuredMovies[currentHeroIndex];
 
   return (
-    <section className="relative h-[85vh] md:h-[95vh] overflow-hidden">
+    <section 
+      className="relative h-[85vh] md:h-[95vh] overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       
       <AnimatePresence mode="wait">
         <motion.div
@@ -77,6 +92,13 @@ export const Hero: React.FC<HeroProps> = ({
               referrerPolicy="no-referrer" 
               onError={handleImageError}
             />
+            {/* Mobile Branding Text */}
+            <div className="absolute top-6 left-0 right-0 z-40 flex justify-center md:hidden pointer-events-none">
+              <div className="flex items-center gap-2 drop-shadow-lg">
+                <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-nebula-cyan to-nebula-cyan/50 rotate-45" />
+                <span className="font-display font-black tracking-widest text-xl uppercase text-white">NEBULA</span>
+              </div>
+            </div>
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/40 to-transparent z-10" />
           <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-transparent to-transparent z-10 hidden md:block" />
@@ -119,36 +141,36 @@ export const Hero: React.FC<HeroProps> = ({
             <p className="hidden md:block text-lg md:text-2xl text-white/60 font-light leading-relaxed mb-10 md:mb-12 max-w-2xl drop-shadow-md line-clamp-3">
               {activeHero.description}
             </p>
-
-            <div className="flex w-full justify-center md:justify-start gap-4 md:gap-6 text-obsidian pb-0">
-              <motion.button 
-                whileHover={{ scale: 1.05, backgroundColor: '#FFFFFF' }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => startPlayback(activeHero)}
-                className="bg-white text-obsidian px-6 sm:px-12 py-3 md:py-5 rounded-lg font-black text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center gap-2 sm:gap-4 shadow-[0_20px_40px_rgba(255,255,255,0.1)] transition-all flex-1 md:flex-none justify-center"
-              >
-                <Play size={20} className="md:w-6 md:h-6" fill="currentColor" /> Play
-              </motion.button>
-              <motion.button 
-                whileHover={{ backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)' }}
-                className={`border backdrop-blur-3xl px-6 sm:px-12 py-3 md:py-5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 sm:gap-4 transition-all flex-1 md:flex-none ${myList.includes(activeHero.id) ? 'bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan' : 'bg-white/5 border-white/10 text-white'}`}
-                onClick={() => toggleMyList(activeHero.id)}
-              >
-                {myList.includes(activeHero.id) ? (
-                   <><X size={20} className="md:w-6 md:h-6" /> Remove</>
-                ) : (
-                  <><Plus size={20} className="md:w-6 md:h-6" /> My List</>
-                )}
-              </motion.button>
-              <motion.button 
-                whileHover={{ backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)' }}
-                className="bg-white/5 border border-white/10 backdrop-blur-3xl px-4 sm:px-6 py-4 sm:py-5 rounded-lg text-white transition-all shrink-0 hidden md:flex"
-                onClick={() => setSelectedMovie(activeHero)}
-              >
-                <Info size={24} />
-              </motion.button>
-            </div>
           </motion.div>
+
+          <div className="flex w-full justify-center md:justify-start gap-4 md:gap-6 text-obsidian pb-0 pointer-events-auto">
+            <motion.button 
+              whileHover={{ scale: 1.05, backgroundColor: '#FFFFFF' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => startPlayback(activeHero)}
+              className="bg-white text-obsidian px-6 sm:px-12 py-3 md:py-5 rounded-lg font-black text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center gap-2 sm:gap-4 shadow-[0_20px_40px_rgba(255,255,255,0.1)] transition-all flex-1 md:flex-none justify-center"
+            >
+              <Play size={20} className="md:w-6 md:h-6" fill="currentColor" /> Play
+            </motion.button>
+            <motion.button 
+              whileHover={{ backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)' }}
+              className={`border backdrop-blur-3xl px-6 sm:px-12 py-3 md:py-5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 sm:gap-4 transition-all flex-1 md:flex-none ${myList.includes(activeHero.id) ? 'bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan' : 'bg-white/5 border-white/10 text-white'}`}
+              onClick={() => toggleMyList(activeHero.id)}
+            >
+              {myList.includes(activeHero.id) ? (
+                 <><X size={20} className="md:w-6 md:h-6" /> Remove</>
+              ) : (
+                <><Plus size={20} className="md:w-6 md:h-6" /> My List</>
+              )}
+            </motion.button>
+            <motion.button 
+              whileHover={{ backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)' }}
+              className="bg-white/5 border border-white/10 backdrop-blur-3xl px-4 sm:px-6 py-4 sm:py-5 rounded-lg text-white transition-all shrink-0 hidden md:flex"
+              onClick={() => setSelectedMovie(activeHero)}
+            >
+              <Info size={24} />
+            </motion.button>
+          </div>
         </div>
       </div>
 
