@@ -51,6 +51,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const [qualities, setQualities]   = useState<{height: number, levelId: number}[]>([]);
   const [activeQuality, setActiveQuality] = useState<number>(-1); // -1 = Auto
   const [activeSubtitle, setActiveSubtitle] = useState<number>(-1); // -1 = Off
+  const [subtitleOffset, setSubtitleOffset] = useState<number>(0);
   const [fetchingSubtitles, setFetchingSubtitles] = useState(false);
   const [showEpisodeDrawer, setShowEpisodeDrawer] = useState(false);
   const [tvDetails, setTvDetails] = useState<any>(null);
@@ -58,6 +59,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const [resolution, setResolution] = useState<string>('');
   const [mirrors, setMirrors]     = useState<any[]>([]);
   const [activeMirror, setActiveMirror] = useState<number>(0);
+  const [vttBlobUrl, setVttBlobUrl] = useState<string | null>(null);
+  const hasAutoSelectedSub = useRef(false);
   const navigate = useNavigate();
 
   const videoRef    = useRef<HTMLVideoElement>(null);
@@ -73,6 +76,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     setStreamUrl(null);
     setMirrors([]);
     setActiveMirror(0);
+    setSubtitles([]);
+    setActiveSubtitle(-1);
+    hasAutoSelectedSub.current = false;
+    if (vttBlobUrl) {
+      URL.revokeObjectURL(vttBlobUrl);
+      setVttBlobUrl(null);
+    }
 
     let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
     if (movie.origin) url += `&origin=${movie.origin}`;
@@ -96,22 +106,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
           if (data.subtitles) {
-            const normalized = data.subtitles.map((s: any) => ({
-              ...s,
-              url: s.url.startsWith('/') ? `${API}${s.url}` : s.url
-            }));
-            setSubtitles(normalized);
+            setSubtitles(processSubtitles(data.subtitles, []));
           }
         } else if (data.streamUrl) {
           setStreamUrl(`${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
           if (data.subtitles) {
-            const normalized = data.subtitles.map((s: any) => ({
-              ...s,
-              url: s.url.startsWith('/') ? `${API}${s.url}` : s.url
-            }));
-            setSubtitles(normalized);
+            setSubtitles(processSubtitles(data.subtitles, []));
           }
         } else {
           setError(data.error || 'No stream found.');
@@ -130,50 +132,182 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     };
   }, [movie.id, season, episode]); 
 
-  // ── Fetch subtitles manually ──────────────────────────────────────────────
-  const aggregateSubtitles = async () => {
-    if (fetchingSubtitles) return;
+  // ── Auto-fetch external subtitles in the background ─────────────────────
+  useEffect(() => {
+    if (!streamUrl) return;
+
+    let cancelled = false;
     setFetchingSubtitles(true);
-    setSubtitles([]);
 
-    try {
-      let url = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}`;
-      if (movie.origin) url += `&origin=${movie.origin}`;
-      if (season !== undefined) url += `&season=${season}`;
-      if (episode !== undefined) url += `&episode=${episode}`;
+    const fetchSubs = async () => {
+      try {
+        let url = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}`;
+        if (movie.origin) url += `&origin=${movie.origin}`;
+        if (season !== undefined) url += `&season=${season}`;
+        if (episode !== undefined) url += `&episode=${episode}`;
 
-      const r = await fetch(url);
-      const data = await r.json();
-      if (data.subtitles) {
-        const normalized = data.subtitles.map((s: any) => ({
-          ...s,
-          url: s.url.startsWith('/') ? `${API}${s.url}` : s.url
-        }));
-        setSubtitles(normalized);
+        const r = await fetch(url);
+        const data = await r.json();
+        if (cancelled) return;
+
+        if (data.subtitles && data.subtitles.length > 0) {
+          setSubtitles(prev => processSubtitles(data.subtitles, prev));
+        }
+      } catch (e) {
+        console.error("Subtitle auto-fetch failed", e);
+      } finally {
+        if (!cancelled) setFetchingSubtitles(false);
       }
-    } catch (e) {
-      console.error("Subtitle aggregation failed", e);
-    } finally {
-      setFetchingSubtitles(false);
-    }
-  };
+    };
+
+    fetchSubs();
+
+    return () => { cancelled = true; };
+  }, [streamUrl, movie.id, movie.type, season, episode]);
+
+    const handleSubtitleChange = (index: number) => {
+      setActiveSubtitle(index);
+      setSubtitleOffset(0);
+      if (index === -1) hasAutoSelectedSub.current = true; // User manually turned off
+    };
+
+    const adjustSubtitleDelay = (delta: number) => {
+      if (activeSubtitle === -1) return;
+      setSubtitleOffset(prev => prev + delta);
+    };
+
+    // ── VTT Timestamp Shifter ──
+    const shiftVttTimestamps = (vttText: string, offsetMs: number) => {
+      if (offsetMs === 0) return vttText;
+      // More flexible regex: HH:MM:SS.mmm or MM:SS.mmm, also handles , instead of .
+      const timestampRegex = /(\d{1,2}:)?\d{1,2}:\d{1,2}[\.,]\d{1,3}/g;
+      
+      return vttText.replace(timestampRegex, (match) => {
+        const [time, msPart] = match.split(/[\.,]/);
+        const timeParts = time.split(':');
+        let h = 0, m = 0, s = 0;
+        
+        if (timeParts.length === 3) {
+          h = parseInt(timeParts[0]);
+          m = parseInt(timeParts[1]);
+          s = parseInt(timeParts[2]);
+        } else {
+          m = parseInt(timeParts[0]);
+          s = parseInt(timeParts[1]);
+        }
+        
+        // Normalize ms to 3 digits (e.g. "5" -> 500, "50" -> 500, "500" -> 500)
+        const ms = parseInt(msPart.padEnd(3, '0').substring(0, 3));
+        
+        let totalMs = h * 3600000 + m * 60000 + s * 1000 + ms + (offsetMs * 1000);
+        if (totalMs < 0) totalMs = 0;
+        
+        const newH = Math.floor(totalMs / 3600000);
+        totalMs %= 3600000;
+        const newM = Math.floor(totalMs / 60000);
+        totalMs %= 60000;
+        const newS = Math.floor(totalMs / 1000);
+        const newMs = totalMs % 1000;
+        
+        return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}:${newS.toString().padStart(2, '0')}.${newMs.toString().padStart(3, '0')}`;
+      });
+    };
+
+    // ── Production-Grade Sync Effect (Blob Based) ──
+    useEffect(() => {
+      if (activeSubtitle === -1 || !subtitles[activeSubtitle]) {
+        if (vttBlobUrl) URL.revokeObjectURL(vttBlobUrl);
+        setVttBlobUrl(null);
+        return;
+      }
+
+      let cancelled = false;
+      const sub = subtitles[activeSubtitle];
+
+      const processSub = async () => {
+        try {
+          const r = await fetch(sub.url);
+          const text = await r.text();
+          if (cancelled) return;
+
+          const shiftedText = shiftVttTimestamps(text, subtitleOffset);
+          const blob = new Blob([shiftedText], { type: 'text/vtt' });
+          const newUrl = URL.createObjectURL(blob);
+          
+          setVttBlobUrl(prev => {
+            if (prev) URL.revokeObjectURL(prev);
+            return newUrl;
+          });
+        } catch (e) {
+          console.error("VTT processing failed", e);
+        }
+      };
+
+      processSub();
+      return () => { cancelled = true; };
+    }, [activeSubtitle, subtitles, subtitleOffset]);
 
   // ── Auto-select first subtitle ───────────────────────────────────────────
   useEffect(() => {
-    if (subtitles.length > 0 && activeSubtitle === -1) {
+    if (subtitles.length > 0 && activeSubtitle === -1 && !hasAutoSelectedSub.current) {
       setActiveSubtitle(0);
-      if (videoRef.current) {
-        // Wait a frame for the tracks to be added
-        setTimeout(() => {
-          if (videoRef.current && videoRef.current.textTracks.length > 0) {
-            videoRef.current.textTracks[0].mode = 'showing';
-          }
-        }, 100);
-      }
+      hasAutoSelectedSub.current = true;
     }
   }, [subtitles]);
 
-  // ── Fetch TV Details for Drawer (via backend proxy — no API key in frontend) ──
+  const getProgressKey = useCallback(() => {
+    if (movie.type === 'tv' && season !== undefined && episode !== undefined) {
+      return `${movie.id}-S${season}E${episode}`;
+    }
+    return movie.id;
+  }, [movie.id, movie.type, season, episode]);
+
+  const processSubtitles = useCallback((newSubs: any[], existingSubs: any[]) => {
+    const combined = [...existingSubs];
+    newSubs.forEach(ns => {
+      const normalizedUrl = ns.url.startsWith('/') ? `${API}${ns.url}` : ns.url;
+      if (!combined.some(ps => ps.url === normalizedUrl)) {
+        combined.push({ ...ns, url: normalizedUrl });
+      }
+    });
+
+    // 1. Separate VidLink from others
+    const vidlinkSubs = combined.filter(s => s.source === 'VidLink');
+    const otherSubs = combined.filter(s => s.source !== 'VidLink');
+
+    // 2. Global deduplication by language
+    const finalSubs: any[] = [];
+    const seenLangs = new Set();
+
+    // VidLink always comes first and always kept (if multiple per lang, keep first)
+    vidlinkSubs.forEach(s => {
+      if (!seenLangs.has(s.lang)) {
+        finalSubs.push(s);
+        seenLangs.add(s.lang);
+      }
+    });
+
+    // Others only kept if lang not already covered by VidLink
+    otherSubs.forEach(s => {
+      if (!seenLangs.has(s.lang)) {
+        finalSubs.push(s);
+        seenLangs.add(s.lang);
+      }
+    });
+
+    // 3. Label Auto
+    const engVidIdx = finalSubs.findIndex(s => 
+      s.source === 'VidLink' && 
+      (s.lang?.startsWith('en') || s.languageName?.toLowerCase().includes('english'))
+    );
+    if (engVidIdx !== -1) {
+      finalSubs[engVidIdx].languageName = "English (Auto)";
+    }
+
+    return finalSubs;
+  }, [API]);
+
+  // ── Fetch TV Details ──────────────────────────────────────────────────────
   useEffect(() => {
     if (movie.type !== 'tv') return;
     fetch(`${API}/api/tv-details/${movie.id}`)
@@ -186,13 +320,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   useEffect(() => {
     if (!streamUrl || !videoRef.current) return;
     const video = videoRef.current;
-    
-    // Show buffering indicator while HLS fetches/rewrites the manifest
     setIsBuffering(true);
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        maxBufferLength: 30, // Limit buffer to 30s to save memory
+        maxBufferLength: 30,
         maxMaxBufferLength: 60,
         backBufferLength: 10,
         fragLoadingMaxRetry: 3,
@@ -205,7 +337,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-        setQualities(data.levels.map((l, i) => ({ height: l.height, levelId: i })).reverse()); // descending order
+        setQualities(data.levels.map((l, i) => ({ height: l.height, levelId: i })).reverse());
         video.volume = isMuted ? 0 : volume / 100;
         video.play().catch(() => setIsPaused(true));
       });
@@ -213,7 +345,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (!d.fatal) return;
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          hls.startLoad(); // try recovering
+          hls.startLoad();
         } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
           hls.recoverMediaError();
         } else {
@@ -223,7 +355,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
       return () => { hls.destroy(); hlsRef.current = null; };
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS
       video.src = streamUrl;
       video.play().catch(() => setIsPaused(true));
     }
@@ -236,29 +367,27 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
     const onLoadedMetadata = () => {
       const savedProgress = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
-      if (savedProgress[movie.id]) {
-        video.currentTime = savedProgress[movie.id];
+      const key = getProgressKey();
+      if (savedProgress[key]) {
+        video.currentTime = savedProgress[key];
       }
     };
 
     const onTime = () => {
       if (video.duration > 0) {
         setProgress((video.currentTime / video.duration) * 100);
-        
-        // Save progress to local storage (only if played more than 10s and not within 10s of end)
+        const key = getProgressKey();
         if (video.currentTime > 10 && video.duration - video.currentTime > 10) {
           const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
-          p[movie.id] = video.currentTime;
+          p[key] = video.currentTime;
           localStorage.setItem('nebula-progress', JSON.stringify(p));
         } else if (video.duration - video.currentTime <= 10) {
-          // Clear progress if finished
           const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
-          delete p[movie.id];
+          delete p[key];
           localStorage.setItem('nebula-progress', JSON.stringify(p));
         }
       }
       setCurrentTime(formatTime(video.currentTime));
-      // buffered %
       if (video.buffered.length > 0) {
         setBuffered((video.buffered.end(video.buffered.length - 1) / video.duration) * 100);
       }
@@ -290,12 +419,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     };
   }, [streamUrl, movie.id]);
 
-  // ── Volume sync ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (videoRef.current) videoRef.current.volume = isMuted ? 0 : volume / 100;
   }, [volume, isMuted]);
 
-  // ── UI hide timer ─────────────────────────────────────────────────────────
   const resetHideTimer = useCallback(() => {
     setShowUi(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -313,7 +440,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     };
   }, [resetHideTimer]);
 
-  // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const v = videoRef.current;
@@ -337,7 +463,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, showSettings]);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
@@ -384,13 +509,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
   const handleNextEpisode = () => {
     if (movie.type !== 'tv' || season === undefined || episode === undefined) return;
-    // Simple increment logic; UI will handle navigation through route Params
     navigate(`/watch/tv/${movie.id}?season=${season}&episode=${episode + 1}`);
   };
 
   const safeClose = () => {
     onClose();
-    // Fallback if onClose (navigate -1) fails
     setTimeout(() => {
       if (window.location.pathname.includes('/watch/')) {
         navigate('/');
@@ -398,7 +521,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     }, 100);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
       ref={containerRef}
@@ -406,10 +528,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       onMouseMove={resetHideTimer}
       style={{ cursor: showUi ? 'default' : 'none' }}
     >
-      {/* ── Loading state ── */}
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-[100] bg-black">
-          {/* Blurred backdrop */}
           {(movie.fanartBackground || movie.backdrop) && (
             <img
               src={movie.fanartBackground || movie.backdrop}
@@ -417,13 +537,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               alt=""
             />
           )}
-          {/* Scanline texture */}
           <div
             className="absolute inset-0 pointer-events-none opacity-[0.04]"
             style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.3) 2px, rgba(255,255,255,0.3) 3px)' }}
           />
-
-          {/* ClearLogo or title */}
           <div className="relative flex flex-col items-center gap-8">
             {movie.clearLogo ? (
               <img
@@ -437,8 +554,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                 {movie.title}
               </h1>
             )}
-
-            {/* Animated progress bar */}
             <div className="flex flex-col items-center gap-3 w-64">
               <div className="w-full h-px bg-white/10 rounded-full overflow-hidden">
                 <div
@@ -450,8 +565,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                 Locating Secure Stream…
               </p>
             </div>
-
-            {/* Cancel button */}
             <button
               onClick={safeClose}
               className="text-white/20 hover:text-white/60 text-xs underline transition-colors tracking-widest uppercase"
@@ -459,7 +572,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               Cancel
             </button>
           </div>
-
           <style>{`
             @keyframes stream-progress {
               0%   { width: 0%; opacity: 1; }
@@ -471,7 +583,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         </div>
       )}
 
-      {/* ── Error state ── */}
       {error && !loading && (
         <div className="absolute inset-0 z-[500] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500 pointer-events-none">
           {movie.backdrop && (
@@ -497,7 +608,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         </div>
       )}
 
-      {/* ── Buffering state ── */}
       {isBuffering && !loading && !error && (
         <div className="absolute inset-0 flex items-center justify-center z-[150] pointer-events-none bg-black/20 backdrop-blur-sm transition-all duration-300">
           <div className="flex flex-col items-center gap-4">
@@ -520,7 +630,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         </div>
       )}
 
-      {/* ── Video element ── */}
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
@@ -528,24 +637,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         playsInline
         onClick={resetHideTimer}
       >
-        {subtitles.map((sub, idx) => (
-          <track 
-            key={idx}
+        {vttBlobUrl && (
+          <track
+            key={vttBlobUrl}
             kind="subtitles"
-            src={sub.url}
-            srcLang={sub.lang}
-            label={sub.languageName}
-            default={idx === activeSubtitle}
+            src={vttBlobUrl}
+            srcLang={subtitles[activeSubtitle]?.lang || 'en'}
+            label={subtitles[activeSubtitle]?.languageName || 'Active'}
+            default
           />
-        ))}
+        )}
       </video>
 
-      {/* ── Controls overlay ── */}
       <div
         className="absolute inset-0 flex flex-col justify-between z-10 pointer-events-none"
         style={{ opacity: showUi ? 1 : 0, transition: 'opacity 0.2s' }}
       >
-        {/* Top bar */}
         <div className="flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
           <button
             onClick={safeClose}
@@ -585,9 +692,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
           </div>
         </div>
 
-        {/* Bottom controls */}
         <div className="px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 bg-gradient-to-t from-black/90 to-transparent pointer-events-auto">
-          {/* Progress bar — taller touch area on mobile */}
           <div
             className="relative w-full rounded-full mb-3 sm:mb-4 cursor-pointer group"
             onClick={handleSeek}
@@ -603,10 +708,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
             </div>
           </div>
 
-          {/* Control row */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 sm:gap-5">
-              {/* Rewind */}
               <button
                 onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10); }}
                 className="text-white/70 hover:text-white transition-colors p-1"
@@ -614,8 +717,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               >
                 <RotateCcw size={18} />
               </button>
-
-              {/* Play/Pause */}
               <button
                 onClick={togglePlay}
                 className="text-white hover:text-white/80 transition-colors p-1"
@@ -623,8 +724,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               >
                 {isPaused ? <Play size={26} fill="currentColor" /> : <Pause size={26} fill="currentColor" />}
               </button>
-
-              {/* Forward */}
               <button
                 onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10); }}
                 className="text-white/70 hover:text-white transition-colors p-1"
@@ -632,8 +731,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               >
                 <RotateCw size={18} />
               </button>
-
-              {/* Next Episode — icon only on mobile */}
               {movie.type === 'tv' && (
                 <button
                   onClick={handleNextEpisode}
@@ -644,8 +741,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                   <ChevronRight size={16} />
                 </button>
               )}
-
-              {/* Volume — hidden on mobile (use device volume buttons) */}
               <div className="hidden sm:flex items-center gap-2 group/vol">
                 <button onClick={() => setIsMuted(p => !p)} className="text-white/70 hover:text-white transition-colors">
                   {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
@@ -658,15 +753,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                   className="w-20 accent-white cursor-pointer opacity-0 group-hover/vol:opacity-100 transition-opacity"
                 />
               </div>
-
-              {/* Time */}
               <span className="text-white/50 text-[10px] sm:text-xs tabular-nums">
                 {currentTime} <span className="text-white/20">/</span> {duration}
               </span>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4 relative">
-              {/* Episodes Button */}
               {movie.type === 'tv' && (
                 <button
                   onClick={() => setShowEpisodeDrawer(true)}
@@ -676,17 +768,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                   <span className="hidden sm:inline">EPISODES</span>
                 </button>
               )}
-
-              {/* Search Subs */}
-              <button
-                onClick={aggregateSubtitles}
-                disabled={fetchingSubtitles}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all text-xs font-bold border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 ${fetchingSubtitles ? 'animate-pulse' : ''}`}
-              >
-                {fetchingSubtitles ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                <span className="hidden sm:inline">{subtitles.length > 0 ? 'SUBS' : 'SUBS'}</span>
-              </button>
-
               {/* Settings */}
               <button
                 onClick={() => setShowSettings(p => !p)}
@@ -695,8 +776,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               >
                 <Settings size={16} />
               </button>
-
-              {/* Fullscreen — icon only */}
               <button
                 onClick={handleFullscreen}
                 className="text-white/50 hover:text-white transition-colors p-1"
@@ -704,8 +783,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               >
                 <Maximize size={16} />
               </button>
-
-              {/* Settings panel */}
               {showSettings && (
                 <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-60 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2">
                   <div className="mb-2">
@@ -722,7 +799,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                       ))}
                     </div>
                   </div>
-
                   {mirrors.length > 1 && (
                     <div className="mb-2">
                       <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">Servers</p>
@@ -736,14 +812,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                             }}
                             className={`w-full text-left px-2 py-2 text-[11px] rounded-md transition-colors flex items-center justify-between ${activeMirror === i ? 'text-white bg-white/10 font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                           >
-                            <span className="truncate pr-2">{m.source}</span>
+                            <span className="truncate">{m.source}</span>
                             <span className="text-[9px] opacity-40 shrink-0">{m.quality}</span>
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
-
                   {qualities.length > 0 && (
                     <div className="mb-2">
                       <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">Quality</p>
@@ -766,17 +841,34 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                       </div>
                     </div>
                   )}
-
                   {(subtitles.length > 0 || fetchingSubtitles) && (
                     <div>
                       <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10 flex items-center gap-2">
                         <Subtitles size={12}/> 
                         Subtitles {fetchingSubtitles && <Loader2 size={10} className="animate-spin text-nebula-cyan" />}
                       </p>
+                      {activeSubtitle !== -1 && !fetchingSubtitles && (
+                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/5 mb-1 bg-white/5">
+                          <span className="text-[9px] text-white/50 uppercase tracking-wider">Sync</span>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => adjustSubtitleDelay(-0.5)}
+                              className="w-6 h-6 flex items-center justify-center text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded font-bold text-xs"
+                            >-</button>
+                            <span className="text-[10px] text-white/80 w-10 text-center font-mono">
+                              {subtitleOffset > 0 ? '+' : ''}{subtitleOffset.toFixed(1)}s
+                            </span>
+                            <button 
+                              onClick={() => adjustSubtitleDelay(0.5)}
+                              className="w-6 h-6 flex items-center justify-center text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded font-bold text-xs"
+                            >+</button>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex flex-col px-2">
                         {!fetchingSubtitles && (
                           <button
-                            onClick={() => toggleSubtitles(-1)}
+                            onClick={() => handleSubtitleChange(-1)}
                             className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${activeSubtitle === -1 ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                           >
                             Off
@@ -790,10 +882,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                           subtitles.map((sub, i) => (
                             <button
                               key={i}
-                              onClick={() => toggleSubtitles(i)}
-                              className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${activeSubtitle === i ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                              onClick={() => handleSubtitleChange(i)}
+                              className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors flex items-center justify-between ${activeSubtitle === i ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                             >
-                              {sub.languageName}
+                              <span className="truncate">{sub.languageName}</span>
+                              {sub.source && <span className="opacity-40 text-[9px] shrink-0">{sub.source}</span>}
                             </button>
                           ))
                         )}
