@@ -373,18 +373,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       }
     };
 
+    const lastSaveTime = { current: 0 };
     const onTime = () => {
       if (video.duration > 0) {
-        setProgress((video.currentTime / video.duration) * 100);
-        const key = getProgressKey();
-        if (video.currentTime > 10 && video.duration - video.currentTime > 10) {
-          const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
-          p[key] = video.currentTime;
-          localStorage.setItem('nebula-progress', JSON.stringify(p));
-        } else if (video.duration - video.currentTime <= 10) {
-          const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
-          delete p[key];
-          localStorage.setItem('nebula-progress', JSON.stringify(p));
+        const cur = video.currentTime;
+        setProgress((cur / video.duration) * 100);
+        
+        // Throttle progress saving to every 5 seconds
+        if (Date.now() - lastSaveTime.current > 5000) {
+          const key = getProgressKey();
+          if (cur > 10 && video.duration - cur > 10) {
+            const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
+            p[key] = cur;
+            localStorage.setItem('nebula-progress', JSON.stringify(p));
+            lastSaveTime.current = Date.now();
+          } else if (video.duration - cur <= 10) {
+            const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
+            delete p[key];
+            localStorage.setItem('nebula-progress', JSON.stringify(p));
+            lastSaveTime.current = Date.now();
+          }
         }
       }
       setCurrentTime(formatTime(video.currentTime));
