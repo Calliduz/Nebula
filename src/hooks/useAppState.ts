@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { 
   getTrending, searchMedia, getPopularMovies, getPopularTV, 
-  getTopRatedMovies, getMoviesByGenre, enrichMoviesWithMetadata, NebulaMovie 
+  getTopRatedMovies, getMoviesByGenre, enrichMoviesWithMetadata, NebulaMovie,
+  discoverMedia, getSimilarMedia, getMediaBasicInfo
 } from '../services/tmdb';
 
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -101,13 +102,26 @@ export function useAppState() {
           }
         }
         const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
-        const [rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes] = await Promise.all([
+        const [
+          rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes,
+          sciFi2010s, criticallyAcclaimed, leoMovies
+        ] = await Promise.all([
           getTrending('all').catch(() => []),
           getPopularMovies().catch(() => []),
           getTopRatedMovies().catch(() => []),
           getPopularTV().catch(() => []),
           fetch(`${apiBase}/api/drama/list?page=1&order=2`).then(r => r.json()).catch(() => ({results:[]})),
-          fetch(`${apiBase}/api/drama/list?page=1&country=8`).then(r => r.json()).catch(() => ({results:[]}))
+          fetch(`${apiBase}/api/drama/list?page=1&country=8`).then(r => r.json()).catch(() => ({results:[]})),
+          discoverMedia('movie', { 
+            with_genres: '878', 
+            'primary_release_date.gte': '2010-01-01', 
+            'primary_release_date.lte': '2019-12-31' 
+          }).catch(() => []),
+          discoverMedia('movie', { 
+            'vote_average.gte': '8.0', 
+            'vote_count.gte': '1000' 
+          }).catch(() => []),
+          discoverMedia('movie', { with_cast: '114' }).catch(() => [])
         ]);
 
         const hardDedupe = (arr: any[]) => {
@@ -138,6 +152,42 @@ export function useAppState() {
         const filteredTrending = trending.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
         filteredTrending.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
 
+        // 3. Dynamic "Because You Watched" row
+        let similarRow = null;
+        if (history.length > 0) {
+          const lastId = history[history.length - 1];
+          // Try to find in pool first
+          let lastMovie = allMovies.find(m => m.id.toString() === lastId.toString()) || 
+                          trending.find(m => m.id.toString() === lastId.toString());
+          
+          if (!lastMovie) {
+            lastMovie = await getMediaBasicInfo(lastId, 'movie');
+          }
+
+          if (lastMovie) {
+            const similar = await getSimilarMedia(lastId, lastMovie.type || 'movie').catch(() => []);
+            if (similar.length > 0) {
+              const filteredSimilar = similar.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+              if (filteredSimilar.length > 0) {
+                similarRow = { 
+                  title: `Because you watched ${lastMovie.title}`, 
+                  items: filteredSimilar 
+                };
+                filteredSimilar.forEach(m => globalShown.add(m.id.toString()));
+              }
+            }
+          }
+        }
+
+        const sciFiFiltered = sciFi2010s.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+        sciFiFiltered.forEach(m => globalShown.add(m.id.toString()));
+
+        const acclaimedFiltered = criticallyAcclaimed.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+        acclaimedFiltered.forEach(m => globalShown.add(m.id.toString()));
+
+        const leoFiltered = leoMovies.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+        leoFiltered.forEach(m => globalShown.add(m.id.toString()));
+
         const filteredPop = popMovies.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
         filteredPop.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
 
@@ -148,6 +198,10 @@ export function useAppState() {
 
         const initialRows = [
           { title: 'Trending Operations', items: filteredTrending },
+          ...(similarRow ? [similarRow] : []),
+          { title: 'Archived Files: 2010s Sci-Fi', items: sciFiFiltered },
+          { title: 'Critical Intel: High-Rated Missions', items: acclaimedFiltered },
+          { title: 'HVT Spotlight: Leonardo DiCaprio', items: leoFiltered },
           { title: 'Popular Field Assets', items: filteredPop },
           { title: 'Asian Drama Transmission', items: topDramas, isDramaRow: true }, 
           { title: 'Pinoy Operations (PH)', items: pinoyDramas, isDramaRow: true },    
@@ -155,22 +209,25 @@ export function useAppState() {
           { title: 'Top Rated Missions', items: filteredTop },
         ];
 
-        // 3. Set Initial State
+        // 4. Set Initial State
         const initialFeatured = trending.slice(0, 5);
         setFeaturedMovies(initialFeatured);
         setRows(initialRows);
 
-        // 4. Enrich Spotlight & Top 10 immediately for logos
+        // 5. Enrich Spotlight & Top 10 immediately for logos
         const [enrichedTop, enrichedFeatured] = await Promise.all([
           enrichMoviesWithMetadata(topTenItems),
           enrichMoviesWithMetadata(initialFeatured)
         ]);
         
         setFeaturedMovies(enrichedFeatured);
-        const finalPool = hardDedupe([...enrichedTop, ...enrichedFeatured, ...trending, ...popMovies, ...tvShows, ...topRated, ...topDramas, ...pinoyDramas]);
+        const finalPool = hardDedupe([
+          ...enrichedTop, ...enrichedFeatured, ...trending, ...popMovies, ...tvShows, 
+          ...topRated, ...topDramas, ...pinoyDramas, ...sciFi2010s, ...criticallyAcclaimed, ...leoMovies
+        ]);
         setAllMovies(finalPool);
 
-        // 5. Background enrichment for all rows (Skip Dramas as requested)
+        // 6. Background enrichment for all rows (Skip Dramas as requested)
         initialRows.forEach(async (row, i) => {
            if (row.items.length === 0 || row.isDramaRow) return;
            const enriched = await enrichMoviesWithMetadata(row.items.slice(0, 10));

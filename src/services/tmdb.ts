@@ -257,6 +257,26 @@ export const getMoviesByGenre = async (genreId: number): Promise<NebulaMovie[]> 
   }
 };
 
+export const discoverMedia = async (type: 'movie' | 'tv', params: Record<string, string>): Promise<NebulaMovie[]> => {
+  try {
+    const data = await fetchFromTMDB(`/discover/${type}`, { ...params, sort_by: 'popularity.desc' });
+    return data.results.map((m: any) => normalizeMovie(m, type));
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
+export const getSimilarMedia = async (id: number | string, type: 'movie' | 'tv'): Promise<NebulaMovie[]> => {
+  try {
+    const data = await fetchFromTMDB(`/${type}/${id}/similar`);
+    return data.results.map((m: any) => normalizeMovie(m, type));
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
 export const getMediaBasicInfo = async (id: string | number, type: 'movie' | 'tv'): Promise<NebulaMovie | null> => {
   try {
     const data = await fetchFromTMDB(`/${type}/${id}`);
