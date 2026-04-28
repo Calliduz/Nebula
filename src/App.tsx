@@ -90,6 +90,7 @@ export default function App() {
       <SearchOverlay 
         isOpen={state.isSearchOpen} onClose={() => actions.setIsSearchOpen(false)} searchQuery={state.searchQuery} setSearchQuery={actions.setSearchQuery}
         searchResults={state.searchResults} onSelectMovie={actions.setSelectedMovie} searchInputRef={refs.searchInputRef}
+        isLoading={state.isLoading}
       />
 
       {/* The Player and Details now render via Routes, the following are kept for backward-compat and manual transitions if needed */}

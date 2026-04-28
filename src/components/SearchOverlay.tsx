@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search } from 'lucide-react';
+import { Search, Loader2, X, ArrowRight } from 'lucide-react';
 import { topSearches } from '../data/constants';
 import { handleImageError } from '../utils/helpers';
 
@@ -12,6 +12,7 @@ interface SearchOverlayProps {
   searchResults: any[];
   onSelectMovie: (movie: any) => void;
   searchInputRef: React.RefObject<HTMLInputElement>;
+  isLoading?: boolean;
 }
 
 export const SearchOverlay: React.FC<SearchOverlayProps> = ({
@@ -21,8 +22,18 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   setSearchQuery,
   searchResults,
   onSelectMovie,
-  searchInputRef
+  searchInputRef,
+  isLoading
 }) => {
+  
+  // Auto-focus logic is handled in hook, but let's ensure it's robust
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -31,92 +42,150 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] bg-obsidian/80 backdrop-blur-[40px] flex flex-col items-center pt-[5vh] sm:pt-[10vh] overflow-y-auto custom-scrollbar"
+          className="fixed inset-0 z-[500] bg-obsidian/95 backdrop-blur-3xl flex flex-col items-center pt-[2vh] sm:pt-[10vh] overflow-y-auto custom-scrollbar"
         >
-          <div className="w-full max-w-[900px] px-4 sm:px-6 pb-32">
-            <div className="relative mb-8 sm:mb-12">
-              <Search size={24} className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-nebula-cyan sm:w-[28px] sm:h-[28px]" />
-              <input 
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search for movies, actors, or genres..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 sm:py-6 pl-12 sm:pl-20 pr-16 sm:pr-24 text-lg sm:text-2xl font-light placeholder:text-dim focus:outline-none focus:border-nebula-cyan/50 transition-all caret-nebula-cyan shadow-[0_0_50px_rgba(0,0,0,0.5)]"
-              />
+          <div className="w-full max-w-[1200px] px-4 sm:px-8 pb-32">
+            {/* Search Input Area */}
+            <div className="relative mb-8 sm:mb-16 group flex items-center gap-4">
+              <div className="relative flex-1">
+                <div className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 flex items-center gap-4">
+                  {isLoading ? (
+                    <Loader2 size={24} className="animate-spin text-nebula-cyan" />
+                  ) : (
+                    <Search size={24} className="text-nebula-cyan sm:w-[32px] sm:h-[32px]" />
+                  )}
+                </div>
+                
+                <input 
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white/5 border-b-2 border-white/10 py-6 sm:py-10 pl-14 sm:pl-24 pr-14 sm:pr-32 text-xl sm:text-5xl font-black placeholder:text-white/20 focus:outline-none focus:border-nebula-cyan transition-all caret-nebula-cyan uppercase tracking-tighter italic"
+                />
+
+                <div className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 flex items-center gap-4">
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="text-white/30 hover:text-white transition-colors">
+                        <X size={20} className="sm:w-6 sm:h-6" />
+                    </button>
+                  )}
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-[10px] font-black text-white/40 tracking-widest uppercase">
+                    ESC
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Cancel Button */}
               <button 
                 onClick={onClose}
-                className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 px-2 sm:px-3 py-1 bg-white/10 rounded border border-white/10 text-[8px] sm:text-[10px] uppercase font-bold text-dim hover:text-white transition-colors flex items-center justify-center shrink-0"
+                className="sm:hidden text-nebula-cyan font-black text-[10px] uppercase tracking-[0.2em] italic pr-2"
               >
-                ESC
+                Cancel
               </button>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-12 lg:gap-16">
+            <div className="flex flex-col xl:flex-row gap-12 sm:gap-20">
+              {/* Results Grid */}
               <div className="flex-1">
-                <h3 className="text-[12px] font-bold text-dim uppercase tracking-[0.2em] mb-8">
-                  {searchQuery ? `Instant Results (${searchResults.length})` : 'Type to start Mission Search'}
-                </h3>
+                <div className="flex items-center justify-between mb-8 sm:mb-10">
+                  <h3 className="text-[11px] sm:text-[13px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-3">
+                    {searchQuery ? (
+                      <>
+                        <span className="w-8 h-px bg-white/10" />
+                        Search Results <span className="text-nebula-cyan">({searchResults.length})</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-8 h-px bg-white/10" />
+                        Awaiting Signal
+                      </>
+                    )}
+                  </h3>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
                   {searchQuery && searchResults.length > 0 ? (
                     searchResults.map((movie, i) => (
                       <motion.div 
                         key={`search-res-${movie.id}-${i}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.05 }}
                         onClick={() => {
                           onSelectMovie(movie);
                           onClose();
                         }}
-                        className="flex gap-4 p-3 rounded-xl hover:bg-white/5 cursor-pointer group transition-all"
+                        className="group cursor-pointer"
                       >
-                        <div className="w-20 aspect-[2/3] rounded-lg overflow-hidden border border-white/10 flex-shrink-0">
-                          <img src={movie.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" referrerPolicy="no-referrer" onError={handleImageError} />
-                        </div>
-                        <div className="py-2">
-                           {movie.clearLogo ? (
-                             <img src={movie.clearLogo} alt={movie.title} className="h-4 object-contain mb-1" />
-                           ) : (
-                             <h4 className="font-bold text-white group-hover:text-nebula-cyan transition-colors">{movie.title}</h4>
-                           )}
-                           <p className="text-[10px] text-dim uppercase mt-1 tracking-widest">{movie.genre.split(', ')[0]}</p>
-                           <div className="flex items-center gap-2 mt-2">
-                              <span className="px-1.5 py-0.5 rounded bg-white/10 text-[8px] border border-white/10 text-white/50">{movie.quality || '4K'}</span>
-                              <span className="text-[10px] text-nebula-cyan font-bold leading-none">{movie.imdb} Rating</span>
-                           </div>
+                        <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-500 group-hover:scale-105 group-hover:border-nebula-cyan/50">
+                          <img 
+                            src={movie.image} 
+                            alt={movie.title}
+                            className="w-full h-full object-cover transition-all duration-700 group-hover:blur-[2px] group-hover:scale-110" 
+                            referrerPolicy="no-referrer" 
+                            onError={handleImageError} 
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity" />
+                          
+                          {/* Hover Info Overlay */}
+                          <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
+                            <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-tighter line-clamp-2 mb-2 italic">{movie.title}</h4>
+                            <div className="flex items-center gap-2">
+                               <span className="text-[9px] font-bold text-nebula-cyan border border-nebula-cyan/30 px-1.5 py-0.5 rounded uppercase">{movie.type}</span>
+                               <span className="text-[9px] font-bold text-white/60">{movie.year}</span>
+                            </div>
+                          </div>
                         </div>
                       </motion.div>
                     ))
-                  ) : searchQuery ? (
-                    <div className="col-span-2 py-20 text-center">
-                      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-6 text-dim opacity-30">
-                         <Search size={32} />
-                      </div>
-                      <h4 className="text-xl font-bold mb-2">No data streams found</h4>
-                      <p className="text-dim font-light">Try searching for generic terms like "Sci-Fi" or "Nova".</p>
+                  ) : searchQuery && !isLoading ? (
+                    <div className="col-span-full py-20 flex flex-col items-center">
+                       <div className="relative mb-8">
+                         <div className="absolute inset-0 bg-nebula-red/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                         <Search size={64} className="text-white/10 relative z-10" />
+                       </div>
+                       <h4 className="text-2xl font-black text-white uppercase tracking-tighter italic mb-2">No Transmission Found</h4>
+                       <p className="text-white/40 text-sm font-medium tracking-wide">The Nebula signal could not locate "{searchQuery}"</p>
                     </div>
-                  ) : (
-                    <div className="col-span-2 py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
-                      <p className="text-dim italic font-light">The Nebula library is vast... start your query.</p>
+                  ) : !searchQuery && (
+                    <div className="col-span-full py-24 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center gap-6">
+                       <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-white/20">
+                          <Search size={32} />
+                       </div>
+                       <div className="text-center">
+                         <h4 className="text-lg font-black text-white/30 uppercase tracking-[0.2em] mb-2">Enter Navigation Coordinates</h4>
+                         <p className="text-white/10 text-xs uppercase tracking-widest">Search for movies, TV series, or actors</p>
+                       </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="w-full lg:w-[200px] border-t lg:border-t-0 lg:border-l border-white/5 pt-8 lg:pt-0 lg:pl-12">
-                <h3 className="text-[12px] font-bold text-dim uppercase tracking-[0.2em] mb-8">Top Searches</h3>
-                <div className="flex flex-row overflow-x-auto lg:flex-col gap-6 hide-scrollbar">
-                  {topSearches.map((term, i) => (
-                    <div 
-                      key={`search-term-${i}-${term}`} 
-                      onClick={() => setSearchQuery(term)}
-                      className="flex gap-4 items-center group cursor-pointer whitespace-nowrap lg:whitespace-normal"
-                    >
-                       <span className="text-2xl font-display font-light text-white/10 group-hover:text-nebula-cyan/30 transition-colors">0{i+1}</span>
-                       <span className="text-[13px] font-bold text-white/70 group-hover:text-white transition-colors leading-tight">{term}</span>
-                    </div>
-                  ))}
+              {/* Sidebar: Top Searches */}
+              <div className="w-full xl:w-[280px] shrink-0">
+                <div className="sticky top-10">
+                  <h3 className="text-[11px] sm:text-[13px] font-black text-white/40 uppercase tracking-[0.3em] mb-10 flex items-center gap-3">
+                    <span className="w-8 h-px bg-white/10" />
+                    Top Missions
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
+                    {topSearches.map((term, i) => (
+                      <button 
+                        key={`top-search-${i}`}
+                        onClick={() => setSearchQuery(term)}
+                        className="group flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-nebula-cyan/30 hover:bg-white/10 transition-all text-left"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className="text-xl font-display font-black text-white/10 group-hover:text-nebula-cyan/50 transition-colors">0{i + 1}</span>
+                          <span className="text-sm font-bold text-white/70 group-hover:text-white transition-colors uppercase tracking-tight italic">{term}</span>
+                        </div>
+                        <ArrowRight size={16} className="text-white/0 group-hover:text-nebula-cyan transition-all -translate-x-2 group-hover:translate-x-0" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
