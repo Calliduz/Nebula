@@ -13,6 +13,7 @@ import { Hero } from './components/Hero';
 import { SearchOverlay } from './components/SearchOverlay';
 import { CategoryView } from './components/CategoryView';
 import { HomeFeed } from './components/HomeFeed';
+import { NotFound } from './components/NotFound';
 
 import { Routes, Route, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
@@ -83,6 +84,9 @@ export default function App() {
               
               {/* Standalone Player Route */}
               <Route path="/watch/:type/:id" element={<MediaPlayerStub actions={actions} state={state} />} />
+              
+              {/* Catch-all 404 */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
         </main>

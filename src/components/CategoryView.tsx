@@ -25,9 +25,12 @@ const REGIONS = [
   { id: 'All', name: 'All Regions' },
   { id: '1', name: 'South Korea' },
   { id: '2', name: 'China' },
-  { id: '8', name: 'Philippines' },
-  { id: '7', name: 'Thailand' },
   { id: '4', name: 'Japan' },
+  { id: '7', name: 'Thailand' },
+  { id: '8', name: 'Philippines' },
+  { id: '5', name: 'Taiwan' },
+  { id: '6', name: 'Hong Kong' },
+  { id: '3', name: 'Vietnam' },
 ];
 
 export const CategoryView: React.FC<CategoryViewProps> = ({
