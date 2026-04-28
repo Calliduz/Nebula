@@ -104,7 +104,7 @@ export function useAppState() {
         const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
         const [
           rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes,
-          sciFi2010s, criticallyAcclaimed, leoMovies
+          sciFiRaw, acclaimedRaw, actionRaw, comedyRaw, horrorRaw, mysteryRaw, docRaw, animationRaw, leoRaw
         ] = await Promise.all([
           getTrending('all').catch(() => []),
           getPopularMovies().catch(() => []),
@@ -117,11 +117,14 @@ export function useAppState() {
             'primary_release_date.gte': '2010-01-01', 
             'primary_release_date.lte': '2019-12-31' 
           }).catch(() => []),
-          discoverMedia('movie', { 
-            'vote_average.gte': '8.0', 
-            'vote_count.gte': '1000' 
-          }).catch(() => []),
-          discoverMedia('movie', { with_cast: '114' }).catch(() => [])
+          discoverMedia('movie', { 'vote_average.gte': '8.0', 'vote_count.gte': '1000' }).catch(() => []),
+          discoverMedia('movie', { with_genres: '28' }).catch(() => []), // Action
+          discoverMedia('movie', { with_genres: '35' }).catch(() => []), // Comedy
+          discoverMedia('movie', { with_genres: '27' }).catch(() => []), // Horror
+          discoverMedia('movie', { with_genres: '9648' }).catch(() => []), // Mystery
+          discoverMedia('movie', { with_genres: '99' }).catch(() => []), // Documentary
+          discoverMedia('movie', { with_genres: '16' }).catch(() => []), // Animation
+          discoverMedia('movie', { with_cast: '6193' }).catch(() => []) // Leonardo DiCaprio
         ]);
 
         const hardDedupe = (arr: any[]) => {
@@ -141,6 +144,15 @@ export function useAppState() {
         const popMovies = hardDedupe(rawPop);
         const topRated = hardDedupe(rawTop);
         const tvShows = hardDedupe(rawTV);
+        const sciFiMovies = hardDedupe(sciFiRaw);
+        const acclaimedMovies = hardDedupe(acclaimedRaw);
+        const actionMovies = hardDedupe(actionRaw);
+        const comedyMovies = hardDedupe(comedyRaw);
+        const horrorMovies = hardDedupe(horrorRaw);
+        const mysteryMovies = hardDedupe(mysteryRaw);
+        const documentaryMovies = hardDedupe(docRaw);
+        const animationMovies = hardDedupe(animationRaw);
+        const leoMovies = hardDedupe(leoRaw);
         const topDramas = dramaRes.results || [];
         const pinoyDramas = (pinoyRes.results || []).filter((p: any) => !topDramas.some((t: any) => t.id === p.id));
 
@@ -179,14 +191,47 @@ export function useAppState() {
           }
         }
 
-        const sciFiFiltered = sciFi2010s.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-        sciFiFiltered.forEach(m => globalShown.add(m.id.toString()));
+        // 3b. Second "Because You Watched" row if history is long enough
+        let similarRow2 = null;
+        if (history.length > 1) {
+          const secondLastId = history[history.length - 2];
+          let secondLastMovie = allMovies.find(m => m.id.toString() === secondLastId.toString()) || 
+                                trending.find(m => m.id.toString() === secondLastId.toString());
+          
+          if (!secondLastMovie) {
+            secondLastMovie = await getMediaBasicInfo(secondLastId, 'movie');
+          }
 
-        const acclaimedFiltered = criticallyAcclaimed.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-        acclaimedFiltered.forEach(m => globalShown.add(m.id.toString()));
+          if (secondLastMovie) {
+            const similar = await getSimilarMedia(secondLastId, secondLastMovie.type || 'movie').catch(() => []);
+            if (similar.length > 0) {
+              const filteredSimilar = similar.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+              if (filteredSimilar.length > 0) {
+                similarRow2 = { 
+                  title: `More like ${secondLastMovie.title}`, 
+                  items: filteredSimilar 
+                };
+                filteredSimilar.forEach(m => globalShown.add(m.id.toString()));
+              }
+            }
+          }
+        }
 
-        const leoFiltered = leoMovies.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-        leoFiltered.forEach(m => globalShown.add(m.id.toString()));
+        const filterRow = (items: any[]) => {
+          const filtered = items.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+          filtered.forEach(m => globalShown.add(m.id.toString()));
+          return filtered;
+        };
+
+        const sciFiFiltered = filterRow(sciFiMovies);
+        const acclaimedFiltered = filterRow(acclaimedMovies);
+        const actionFiltered = filterRow(actionMovies);
+        const comedyFiltered = filterRow(comedyMovies);
+        const horrorFiltered = filterRow(horrorMovies);
+        const mysteryFiltered = filterRow(mysteryMovies);
+        const docFiltered = filterRow(documentaryMovies);
+        const animationFiltered = filterRow(animationMovies);
+        const leoFiltered = filterRow(leoMovies);
 
         const filteredPop = popMovies.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
         filteredPop.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
@@ -197,16 +242,23 @@ export function useAppState() {
         const filteredTop = topRated.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
 
         const initialRows = [
-          { title: 'Trending Operations', items: filteredTrending },
+          { title: 'Trending Now', items: filteredTrending },
           ...(similarRow ? [similarRow] : []),
-          { title: 'Archived Files: 2010s Sci-Fi', items: sciFiFiltered },
-          { title: 'Critical Intel: High-Rated Missions', items: acclaimedFiltered },
-          { title: 'HVT Spotlight: Leonardo DiCaprio', items: leoFiltered },
-          { title: 'Popular Field Assets', items: filteredPop },
-          { title: 'Asian Drama Transmission', items: topDramas, isDramaRow: true }, 
-          { title: 'Pinoy Operations (PH)', items: pinoyDramas, isDramaRow: true },    
-          { title: 'Trending Transmissions (TV)', items: filteredTV },
-          { title: 'Top Rated Missions', items: filteredTop },
+          ...(similarRow2 ? [similarRow2] : []),
+          { title: 'Popular Asian Dramas', items: topDramas, isDramaRow: true }, 
+          { title: 'Action Packed Missions', items: actionFiltered },
+          { title: 'Critically Acclaimed Movies', items: acclaimedFiltered },
+          { title: 'Actor Spotlight: Leonardo DiCaprio', items: leoFiltered },
+          { title: 'Comedy Gold', items: comedyFiltered },
+          { title: 'Scary Nights (Horror)', items: horrorFiltered },
+          { title: 'Mystery & Suspense', items: mysteryFiltered },
+          { title: 'Popular Movies', items: filteredPop },
+          { title: 'Animation Favorites', items: animationFiltered },
+          { title: '2010s Sci-Fi Movies', items: sciFiFiltered },
+          { title: 'Documentary Collection', items: docFiltered },
+          { title: 'Pinoy Movies & TV', items: pinoyDramas, isDramaRow: true },    
+          { title: 'Trending TV Shows', items: filteredTV },
+          { title: 'Top Rated Movies', items: filteredTop },
         ];
 
         // 4. Set Initial State
@@ -223,7 +275,8 @@ export function useAppState() {
         setFeaturedMovies(enrichedFeatured);
         const finalPool = hardDedupe([
           ...enrichedTop, ...enrichedFeatured, ...trending, ...popMovies, ...tvShows, 
-          ...topRated, ...topDramas, ...pinoyDramas, ...sciFi2010s, ...criticallyAcclaimed, ...leoMovies
+          ...topRated, ...topDramas, ...pinoyDramas, ...sciFiMovies, ...acclaimedMovies, ...leoMovies,
+          ...actionMovies, ...comedyMovies, ...horrorMovies, ...mysteryMovies, ...documentaryMovies, ...animationMovies
         ]);
         setAllMovies(finalPool);
 
