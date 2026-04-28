@@ -95,7 +95,7 @@ export const Hero: React.FC<HeroProps> = ({
             {/* Mobile Branding Text */}
             <div className="absolute top-6 left-0 right-0 z-40 flex justify-center md:hidden pointer-events-none">
               <div className="flex items-center gap-2 drop-shadow-lg">
-                <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-nebula-cyan to-nebula-cyan/50 rotate-45" />
+                <img src="/nebula-icon.png" alt="Nebula Logo" className="w-8 h-8 object-contain" />
                 <span className="font-display font-black tracking-widest text-xl uppercase text-white">NEBULA</span>
               </div>
             </div>

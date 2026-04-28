@@ -14,8 +14,8 @@ export const TopNav = ({ activeTab, onTabChange, scrolled, onSearchClick, viewin
           onClick={() => onTabChange('home')}
           className="cursor-pointer group flex items-center gap-2"
         >
-          <div className="w-8 h-8 md:w-10 md:h-10 logo-gradient rounded-lg rotate-45 shadow-lg flex items-center justify-center overflow-hidden">
-            <div className="w-3 h-3 bg-obsidian/30 rounded-sm" />
+          <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
+            <img src="/nebula-icon.png" alt="Nebula Logo" className="w-full h-full object-contain" />
           </div>
           <span className="text-[14px] md:text-xl font-black tracking-tighter uppercase text-white group-hover:text-nebula-cyan transition-colors hidden sm:block">Nebula</span>
         </div>

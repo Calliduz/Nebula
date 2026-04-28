@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /watch/ # Prevent crawlers from trying to play videos (saves bandwidth/resources)
+Disallow: /api/
+
+# Host
+Host: https://nebula.dev.studio
+
+# Sitemap
+Sitemap: https://nebula.dev.studio/sitemap.xml
