@@ -30,7 +30,19 @@ const fetchWithCache = async (key: string, fetcher: () => Promise<any>, releaseY
     }
   }
   const data = await fetcher();
-  localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
+  try {
+    localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch (e) {
+    console.warn('[Storage] Quota exceeded. Purging old cache...');
+    // Clear all keys with current version prefix to make room
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(CACHE_VERSION)) localStorage.removeItem(k);
+    });
+    // Try one more time
+    try {
+      localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
+    } catch (e2) {}
+  }
   return data;
 };
 
@@ -47,6 +59,7 @@ export interface NebulaMovie {
   type: 'movie' | 'tv';
   clearLogo?: string | null;
   fanartBackground?: string | null;
+  quality?: string;
 }
 
 const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = {}, releaseYear?: number) => {
@@ -56,6 +69,18 @@ const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = 
   }
 
   const isV4Token = API_KEY.length > 40;
+  
+  // Safety check: Prevent fetching KissKH IDs from TMDB
+  const endpointStr = endpoint.toString();
+  if (endpointStr.includes('/k') || endpointStr.includes('k')) {
+    const parts = endpointStr.split('/');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart.startsWith('k')) {
+      console.log(`[TMDB] Skipping external fetch for native ID: ${lastPart}`);
+      return { results: [] }; // Return empty structure instead of null to prevent downstream crashes
+    }
+  }
+
   const query = new URLSearchParams({ language: 'en-US', ...params });
   if (!isV4Token) query.append('api_key', API_KEY);
 
@@ -168,11 +193,15 @@ export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promi
           // Only write to localStorage if we got a logo (skip caching null results)
           if (meta.logoUrl) {
             const key = `v1.1-meta-single-${meta.id}:${normalized[index].type}`;
-            localStorage.setItem(key, JSON.stringify({
-              logoUrl: meta.logoUrl,
-              backgroundUrl: meta.backgroundUrl,
-              ts: Date.now()
-            }));
+            try {
+              localStorage.setItem(key, JSON.stringify({
+                logoUrl: meta.logoUrl,
+                backgroundUrl: meta.backgroundUrl,
+                ts: Date.now()
+              }));
+            } catch (e) {
+              // If quota exceeded here, just skip caching this individual meta
+            }
           }
         }
       });
@@ -278,6 +307,21 @@ export const getSimilarMedia = async (id: number | string, type: 'movie' | 'tv')
 };
 
 export const getMediaBasicInfo = async (id: string | number, type: 'movie' | 'tv'): Promise<NebulaMovie | null> => {
+  if (id.toString().startsWith('k')) {
+    // For native KissKH items, we don't fetch from TMDB.
+    // They are enriched by the backend or Drawer.
+    return {
+      id: id.toString(),
+      tmdbId: id.toString(),
+      title: "Loading Operation...",
+      type: type,
+      year: 0,
+      genre: "Drama",
+      rating: 0,
+      poster: "",
+      isDrama: true
+    } as any;
+  }
   try {
     const data = await fetchFromTMDB(`/${type}/${id}`);
     if (!data || data.status_code === 34) return null;

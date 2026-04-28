@@ -39,7 +39,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       <TopTenShelf data={allMovies} onSelect={setSelectedMovie} />
 
-      {rows.map((row: any, rowIndex) => (
+      {rows.map((row: any, rowIndex) => row.items.length > 0 && (
         <MovieRow 
           key={`row-v3-${row.title}-${rowIndex}`} 
           title={row.title}

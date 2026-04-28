@@ -9,6 +9,19 @@ import {
 
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
+const SPOTLIGHT_POOL = [
+  { name: 'Leonardo DiCaprio', id: '6193' },
+  { name: 'Johnny Depp', id: '85' },
+  { name: 'Tom Cruise', id: '500' },
+  { name: 'Scarlett Johansson', id: '1245' },
+  { name: 'Christopher Nolan', id: '525' },
+  { name: 'Cillian Murphy', id: '2037' },
+  { name: 'Robert Downey Jr.', id: '3223' },
+  { name: 'Florence Pugh', id: '1373733' },
+  { name: 'Zendaya', id: '505710' },
+  { name: 'Keanu Reeves', id: '6384' }
+];
+
 export function useAppState() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -104,7 +117,9 @@ export function useAppState() {
         const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
         const [
           rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes,
-          sciFi2010s, criticallyAcclaimed, leoMovies
+          sciFiRaw, acclaimedRaw, actionRaw, comedyRaw, horrorRaw, mysteryRaw, docRaw, animationRaw,
+          awardRaw, newRaw, gemsRaw,
+          leoRaw
         ] = await Promise.all([
           getTrending('all').catch(() => []),
           getPopularMovies().catch(() => []),
@@ -112,16 +127,24 @@ export function useAppState() {
           getPopularTV().catch(() => []),
           fetch(`${apiBase}/api/drama/list?page=1&order=2`).then(r => r.json()).catch(() => ({results:[]})),
           fetch(`${apiBase}/api/drama/list?page=1&country=8`).then(r => r.json()).catch(() => ({results:[]})),
-          discoverMedia('movie', { 
-            with_genres: '878', 
-            'primary_release_date.gte': '2010-01-01', 
-            'primary_release_date.lte': '2019-12-31' 
-          }).catch(() => []),
-          discoverMedia('movie', { 
-            'vote_average.gte': '8.0', 
-            'vote_count.gte': '1000' 
-          }).catch(() => []),
-          discoverMedia('movie', { with_cast: '114' }).catch(() => [])
+          discoverMedia('movie', { with_genres: '878', sort_by: 'vote_count.desc' }).catch(() => []),
+          discoverMedia('movie', { 'vote_average.gte': '8.0', 'vote_count.gte': '1000' }).catch(() => []),
+          discoverMedia('movie', { with_genres: '28' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '35' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '27' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '9648' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '99' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '16' }).catch(() => []), 
+          discoverMedia('movie', { 'vote_average.gte': '8.5', 'vote_count.gte': '500' }).catch(() => []), 
+          discoverMedia('movie', { 'primary_release_year': '2025' }).catch(() => []), 
+          discoverMedia('movie', { 'vote_average.gte': '7.5', 'vote_count.lte': '1000', 'vote_count.gte': '100' }).catch(() => []),
+          (() => {
+            const randomSpotlight = SPOTLIGHT_POOL[Math.floor(Math.random() * SPOTLIGHT_POOL.length)];
+            return discoverMedia('movie', { with_cast: randomSpotlight.id }).then(res => ({
+              actor: randomSpotlight.name,
+              results: res
+            }));
+          })().catch(() => ({ actor: 'Leonardo DiCaprio', results: [] }))
         ]);
 
         const hardDedupe = (arr: any[]) => {
@@ -141,6 +164,20 @@ export function useAppState() {
         const popMovies = hardDedupe(rawPop);
         const topRated = hardDedupe(rawTop);
         const tvShows = hardDedupe(rawTV);
+        const sciFiMovies = hardDedupe(sciFiRaw);
+        const acclaimedMovies = hardDedupe(acclaimedRaw);
+        const actionMovies = hardDedupe(actionRaw);
+        const comedyMovies = hardDedupe(comedyRaw);
+        const horrorMovies = hardDedupe(horrorRaw);
+        const mysteryMovies = hardDedupe(mysteryRaw);
+        const documentaryMovies = hardDedupe(docRaw);
+        const animationMovies = hardDedupe(animationRaw);
+        const awardMovies = hardDedupe(awardRaw);
+        const newMovies = hardDedupe(newRaw);
+        const gemMovies = hardDedupe(gemsRaw);
+        const spotlightData = leoRaw as any;
+        const spotlightMovies = hardDedupe(spotlightData.results || []);
+        const spotlightActor = spotlightData.actor || 'Leonardo DiCaprio';
         const topDramas = dramaRes.results || [];
         const pinoyDramas = (pinoyRes.results || []).filter((p: any) => !topDramas.some((t: any) => t.id === p.id));
 
@@ -152,41 +189,45 @@ export function useAppState() {
         const filteredTrending = trending.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
         filteredTrending.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
 
-        // 3. Dynamic "Because You Watched" row
-        let similarRow = null;
-        if (history.length > 0) {
-          const lastId = history[history.length - 1];
-          // Try to find in pool first
-          let lastMovie = allMovies.find(m => m.id.toString() === lastId.toString()) || 
-                          trending.find(m => m.id.toString() === lastId.toString());
+        // 3. Multi-Item Personalized Recommendation Rows
+        const recommendationRows: any[] = [];
+        const historyIds = [...history].reverse().slice(0, 3); // Take last 3 watched items
+        
+        for (const histId of historyIds) {
+          let movie = allMovies.find(m => m.id.toString() === histId.toString());
+          if (!movie) movie = await getMediaBasicInfo(histId, 'movie');
           
-          if (!lastMovie) {
-            lastMovie = await getMediaBasicInfo(lastId, 'movie');
-          }
-
-          if (lastMovie) {
-            const similar = await getSimilarMedia(lastId, lastMovie.type || 'movie').catch(() => []);
-            if (similar.length > 0) {
-              const filteredSimilar = similar.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-              if (filteredSimilar.length > 0) {
-                similarRow = { 
-                  title: `Because you watched ${lastMovie.title}`, 
-                  items: filteredSimilar 
-                };
-                filteredSimilar.forEach(m => globalShown.add(m.id.toString()));
-              }
+          if (movie) {
+            const similar = await getSimilarMedia(histId, movie.type || 'movie').catch(() => []);
+            const filtered = similar.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+            if (filtered.length > 5) {
+               recommendationRows.push({
+                 title: historyIds.indexOf(histId) === 0 ? `Since you watched ${movie.title}` : `More like ${movie.title}`,
+                 items: filtered
+               });
+               // Optional: don't dedupe to keep personalization strong
             }
           }
         }
 
-        const sciFiFiltered = sciFi2010s.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-        sciFiFiltered.forEach(m => globalShown.add(m.id.toString()));
+        const filterRow = (items: any[]) => {
+          const filtered = items.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+          filtered.forEach(m => globalShown.add(m.id.toString()));
+          return filtered;
+        };
 
-        const acclaimedFiltered = criticallyAcclaimed.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-        acclaimedFiltered.forEach(m => globalShown.add(m.id.toString()));
-
-        const leoFiltered = leoMovies.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-        leoFiltered.forEach(m => globalShown.add(m.id.toString()));
+        const sciFiFiltered = filterRow(sciFiMovies);
+        const acclaimedFiltered = filterRow(acclaimedMovies);
+        const actionFiltered = filterRow(actionMovies);
+        const comedyFiltered = filterRow(comedyMovies);
+        const horrorFiltered = filterRow(horrorMovies);
+        const mysteryFiltered = filterRow(mysteryMovies);
+        const docFiltered = filterRow(documentaryMovies);
+        const animationFiltered = filterRow(animationMovies);
+        const awardFiltered = filterRow(awardMovies);
+        const newFiltered = filterRow(newMovies);
+        const gemFiltered = filterRow(gemMovies);
+        const spotlightFiltered = filterRow(spotlightMovies);
 
         const filteredPop = popMovies.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
         filteredPop.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
@@ -196,17 +237,30 @@ export function useAppState() {
 
         const filteredTop = topRated.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
 
+        // 3c. My List Row
+        const myListItems = allMovies.filter(m => myList.includes(m.id.toString())).slice(0, 20);
+
         const initialRows = [
-          { title: 'Trending Operations', items: filteredTrending },
-          ...(similarRow ? [similarRow] : []),
-          { title: 'Archived Files: 2010s Sci-Fi', items: sciFiFiltered },
-          { title: 'Critical Intel: High-Rated Missions', items: acclaimedFiltered },
-          { title: 'HVT Spotlight: Leonardo DiCaprio', items: leoFiltered },
-          { title: 'Popular Field Assets', items: filteredPop },
-          { title: 'Asian Drama Transmission', items: topDramas, isDramaRow: true }, 
-          { title: 'Pinoy Operations (PH)', items: pinoyDramas, isDramaRow: true },    
-          { title: 'Trending Transmissions (TV)', items: filteredTV },
-          { title: 'Top Rated Missions', items: filteredTop },
+          { title: 'Trending Missions', items: filteredTrending },
+          ...(myListItems.length > 0 ? [{ title: 'My Secure Records', items: myListItems }] : []),
+          ...recommendationRows,
+          { title: 'Popular Asian Dramas', items: topDramas, isDramaRow: true }, 
+          { title: 'Critically Acclaimed: Missions', items: acclaimedFiltered },
+          { title: 'New Intel: 2025 Releases', items: newFiltered },
+          { title: 'Award-Winning Hits', items: awardFiltered },
+          { title: 'Action Packed Missions', items: actionFiltered },
+          { title: `Actor Spotlight: ${spotlightActor}`, items: spotlightFiltered },
+          { title: 'Hidden Gems', items: gemFiltered },
+          { title: 'Comedy Gold', items: comedyFiltered },
+          { title: 'Scary Nights (Horror)', items: horrorFiltered },
+          { title: 'Mystery & Suspense', items: mysteryFiltered },
+          { title: 'Popular Movies', items: filteredPop },
+          { title: 'Animation Favorites', items: animationFiltered },
+          { title: 'Sci-Fi Spectacles', items: sciFiFiltered },
+          { title: 'Documentary Collection', items: docFiltered },
+          { title: 'Pinoy Movies & TV', items: pinoyDramas, isDramaRow: true },    
+          { title: 'Trending TV Shows', items: filteredTV },
+          { title: 'Top Rated Movies', items: filteredTop },
         ];
 
         // 4. Set Initial State
@@ -223,7 +277,9 @@ export function useAppState() {
         setFeaturedMovies(enrichedFeatured);
         const finalPool = hardDedupe([
           ...enrichedTop, ...enrichedFeatured, ...trending, ...popMovies, ...tvShows, 
-          ...topRated, ...topDramas, ...pinoyDramas, ...sciFi2010s, ...criticallyAcclaimed, ...leoMovies
+          ...topRated, ...topDramas, ...pinoyDramas, ...sciFiMovies, ...acclaimedMovies, ...spotlightMovies,
+          ...actionMovies, ...comedyMovies, ...horrorMovies, ...mysteryMovies, ...documentaryMovies, ...animationMovies,
+          ...awardMovies, ...newMovies, ...gemMovies
         ]);
         setAllMovies(finalPool);
 
@@ -335,13 +391,14 @@ export function useAppState() {
   }, [isHoveringHero, isPlaying, isSearchOpen, featuredMovies.length, currentHeroIndex]); // Reset on index change
 
   useEffect(() => {
-    if (viewingCategory === 'Dramas' && selectedRegion !== 'All') {
+    if (viewingCategory === 'Dramas') {
       const fetchRegionalDramas = async () => {
         setIsLoading(true);
         try {
           const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
           const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
-          const r = await fetch(`${apiBase}/api/drama/list?page=${dramaPage}&country=${selectedRegion}&order=2`);
+          const countryParam = selectedRegion !== 'All' ? `&country=${selectedRegion}` : '';
+          const r = await fetch(`${apiBase}/api/drama/list?page=${dramaPage}${countryParam}&order=2`);
           const data = await r.json();
           if (data.results) {
             updateGlobalPool(data.results);

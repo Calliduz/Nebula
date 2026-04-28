@@ -25,9 +25,12 @@ const REGIONS = [
   { id: 'All', name: 'All Regions' },
   { id: '1', name: 'South Korea' },
   { id: '2', name: 'China' },
-  { id: '8', name: 'Philippines' },
-  { id: '7', name: 'Thailand' },
   { id: '4', name: 'Japan' },
+  { id: '7', name: 'Thailand' },
+  { id: '8', name: 'Philippines' },
+  { id: '5', name: 'Taiwan' },
+  { id: '6', name: 'Hong Kong' },
+  { id: '3', name: 'Vietnam' },
 ];
 
 export const CategoryView: React.FC<CategoryViewProps> = ({
@@ -144,7 +147,11 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 sm:gap-x-6 gap-y-10 sm:gap-y-12">
+          <div className={`grid ${
+            viewingCategory === 'Dramas' 
+              ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
+              : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+          } gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12`}>
             {data.slice(0, visibleCount).map((movie: any, i: number) => (
               <MovieCard 
                 key={`cat-grid-${viewingCategory}-${movie.id}-${i}`} 
