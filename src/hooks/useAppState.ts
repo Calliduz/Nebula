@@ -9,6 +9,19 @@ import {
 
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
+const SPOTLIGHT_POOL = [
+  { name: 'Leonardo DiCaprio', id: '6193' },
+  { name: 'Johnny Depp', id: '85' },
+  { name: 'Tom Cruise', id: '500' },
+  { name: 'Scarlett Johansson', id: '1245' },
+  { name: 'Christopher Nolan', id: '525' },
+  { name: 'Cillian Murphy', id: '2037' },
+  { name: 'Robert Downey Jr.', id: '3223' },
+  { name: 'Florence Pugh', id: '1373733' },
+  { name: 'Zendaya', id: '505710' },
+  { name: 'Keanu Reeves', id: '6384' }
+];
+
 export function useAppState() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -104,7 +117,9 @@ export function useAppState() {
         const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
         const [
           rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes,
-          sciFiRaw, acclaimedRaw, actionRaw, comedyRaw, horrorRaw, mysteryRaw, docRaw, animationRaw, leoRaw
+          sciFiRaw, acclaimedRaw, actionRaw, comedyRaw, horrorRaw, mysteryRaw, docRaw, animationRaw,
+          awardRaw, newRaw, gemsRaw,
+          leoRaw
         ] = await Promise.all([
           getTrending('all').catch(() => []),
           getPopularMovies().catch(() => []),
@@ -112,19 +127,24 @@ export function useAppState() {
           getPopularTV().catch(() => []),
           fetch(`${apiBase}/api/drama/list?page=1&order=2`).then(r => r.json()).catch(() => ({results:[]})),
           fetch(`${apiBase}/api/drama/list?page=1&country=8`).then(r => r.json()).catch(() => ({results:[]})),
-          discoverMedia('movie', { 
-            with_genres: '878', 
-            'primary_release_date.gte': '2010-01-01', 
-            'primary_release_date.lte': '2019-12-31' 
-          }).catch(() => []),
+          discoverMedia('movie', { with_genres: '878', sort_by: 'vote_count.desc' }).catch(() => []),
           discoverMedia('movie', { 'vote_average.gte': '8.0', 'vote_count.gte': '1000' }).catch(() => []),
-          discoverMedia('movie', { with_genres: '28' }).catch(() => []), // Action
-          discoverMedia('movie', { with_genres: '35' }).catch(() => []), // Comedy
-          discoverMedia('movie', { with_genres: '27' }).catch(() => []), // Horror
-          discoverMedia('movie', { with_genres: '9648' }).catch(() => []), // Mystery
-          discoverMedia('movie', { with_genres: '99' }).catch(() => []), // Documentary
-          discoverMedia('movie', { with_genres: '16' }).catch(() => []), // Animation
-          discoverMedia('movie', { with_cast: '6193' }).catch(() => []) // Leonardo DiCaprio
+          discoverMedia('movie', { with_genres: '28' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '35' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '27' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '9648' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '99' }).catch(() => []), 
+          discoverMedia('movie', { with_genres: '16' }).catch(() => []), 
+          discoverMedia('movie', { 'vote_average.gte': '8.5', 'vote_count.gte': '500' }).catch(() => []), 
+          discoverMedia('movie', { 'primary_release_year': '2025' }).catch(() => []), 
+          discoverMedia('movie', { 'vote_average.gte': '7.5', 'vote_count.lte': '1000', 'vote_count.gte': '100' }).catch(() => []),
+          (() => {
+            const randomSpotlight = SPOTLIGHT_POOL[Math.floor(Math.random() * SPOTLIGHT_POOL.length)];
+            return discoverMedia('movie', { with_cast: randomSpotlight.id }).then(res => ({
+              actor: randomSpotlight.name,
+              results: res
+            }));
+          })().catch(() => ({ actor: 'Leonardo DiCaprio', results: [] }))
         ]);
 
         const hardDedupe = (arr: any[]) => {
@@ -152,7 +172,12 @@ export function useAppState() {
         const mysteryMovies = hardDedupe(mysteryRaw);
         const documentaryMovies = hardDedupe(docRaw);
         const animationMovies = hardDedupe(animationRaw);
-        const leoMovies = hardDedupe(leoRaw);
+        const awardMovies = hardDedupe(awardRaw);
+        const newMovies = hardDedupe(newRaw);
+        const gemMovies = hardDedupe(gemsRaw);
+        const spotlightData = leoRaw as any;
+        const spotlightMovies = hardDedupe(spotlightData.results || []);
+        const spotlightActor = spotlightData.actor || 'Leonardo DiCaprio';
         const topDramas = dramaRes.results || [];
         const pinoyDramas = (pinoyRes.results || []).filter((p: any) => !topDramas.some((t: any) => t.id === p.id));
 
@@ -164,55 +189,23 @@ export function useAppState() {
         const filteredTrending = trending.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
         filteredTrending.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
 
-        // 3. Dynamic "Because You Watched" row
-        let similarRow = null;
-        if (history.length > 0) {
-          const lastId = history[history.length - 1];
-          // Try to find in pool first
-          let lastMovie = allMovies.find(m => m.id.toString() === lastId.toString()) || 
-                          trending.find(m => m.id.toString() === lastId.toString());
+        // 3. Multi-Item Personalized Recommendation Rows
+        const recommendationRows: any[] = [];
+        const historyIds = [...history].reverse().slice(0, 3); // Take last 3 watched items
+        
+        for (const histId of historyIds) {
+          let movie = allMovies.find(m => m.id.toString() === histId.toString());
+          if (!movie) movie = await getMediaBasicInfo(histId, 'movie');
           
-          if (!lastMovie) {
-            lastMovie = await getMediaBasicInfo(lastId, 'movie');
-          }
-
-          if (lastMovie) {
-            const similar = await getSimilarMedia(lastId, lastMovie.type || 'movie').catch(() => []);
-            if (similar.length > 0) {
-              const filteredSimilar = similar.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-              if (filteredSimilar.length > 0) {
-                similarRow = { 
-                  title: `Because you watched ${lastMovie.title}`, 
-                  items: filteredSimilar 
-                };
-                filteredSimilar.forEach(m => globalShown.add(m.id.toString()));
-              }
-            }
-          }
-        }
-
-        // 3b. Second "Because You Watched" row if history is long enough
-        let similarRow2 = null;
-        if (history.length > 1) {
-          const secondLastId = history[history.length - 2];
-          let secondLastMovie = allMovies.find(m => m.id.toString() === secondLastId.toString()) || 
-                                trending.find(m => m.id.toString() === secondLastId.toString());
-          
-          if (!secondLastMovie) {
-            secondLastMovie = await getMediaBasicInfo(secondLastId, 'movie');
-          }
-
-          if (secondLastMovie) {
-            const similar = await getSimilarMedia(secondLastId, secondLastMovie.type || 'movie').catch(() => []);
-            if (similar.length > 0) {
-              const filteredSimilar = similar.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
-              if (filteredSimilar.length > 0) {
-                similarRow2 = { 
-                  title: `More like ${secondLastMovie.title}`, 
-                  items: filteredSimilar 
-                };
-                filteredSimilar.forEach(m => globalShown.add(m.id.toString()));
-              }
+          if (movie) {
+            const similar = await getSimilarMedia(histId, movie.type || 'movie').catch(() => []);
+            const filtered = similar.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
+            if (filtered.length > 5) {
+               recommendationRows.push({
+                 title: historyIds.indexOf(histId) === 0 ? `Since you watched ${movie.title}` : `More like ${movie.title}`,
+                 items: filtered
+               });
+               // Optional: don't dedupe to keep personalization strong
             }
           }
         }
@@ -231,7 +224,10 @@ export function useAppState() {
         const mysteryFiltered = filterRow(mysteryMovies);
         const docFiltered = filterRow(documentaryMovies);
         const animationFiltered = filterRow(animationMovies);
-        const leoFiltered = filterRow(leoMovies);
+        const awardFiltered = filterRow(awardMovies);
+        const newFiltered = filterRow(newMovies);
+        const gemFiltered = filterRow(gemMovies);
+        const spotlightFiltered = filterRow(spotlightMovies);
 
         const filteredPop = popMovies.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
         filteredPop.forEach(m => globalShown.add((m.tmdbId || m.id).toString()));
@@ -241,20 +237,26 @@ export function useAppState() {
 
         const filteredTop = topRated.filter(m => !globalShown.has((m.tmdbId || m.id).toString())).slice(0, 20);
 
+        // 3c. My List Row
+        const myListItems = allMovies.filter(m => myList.includes(m.id.toString())).slice(0, 20);
+
         const initialRows = [
-          { title: 'Trending Now', items: filteredTrending },
-          ...(similarRow ? [similarRow] : []),
-          ...(similarRow2 ? [similarRow2] : []),
+          { title: 'Trending Missions', items: filteredTrending },
+          ...(myListItems.length > 0 ? [{ title: 'My Secure Records', items: myListItems }] : []),
+          ...recommendationRows,
           { title: 'Popular Asian Dramas', items: topDramas, isDramaRow: true }, 
+          { title: 'Critically Acclaimed: Missions', items: acclaimedFiltered },
+          { title: 'New Intel: 2025 Releases', items: newFiltered },
+          { title: 'Award-Winning Hits', items: awardFiltered },
           { title: 'Action Packed Missions', items: actionFiltered },
-          { title: 'Critically Acclaimed Movies', items: acclaimedFiltered },
-          { title: 'Actor Spotlight: Leonardo DiCaprio', items: leoFiltered },
+          { title: `Actor Spotlight: ${spotlightActor}`, items: spotlightFiltered },
+          { title: 'Hidden Gems', items: gemFiltered },
           { title: 'Comedy Gold', items: comedyFiltered },
           { title: 'Scary Nights (Horror)', items: horrorFiltered },
           { title: 'Mystery & Suspense', items: mysteryFiltered },
           { title: 'Popular Movies', items: filteredPop },
           { title: 'Animation Favorites', items: animationFiltered },
-          { title: '2010s Sci-Fi Movies', items: sciFiFiltered },
+          { title: 'Sci-Fi Spectacles', items: sciFiFiltered },
           { title: 'Documentary Collection', items: docFiltered },
           { title: 'Pinoy Movies & TV', items: pinoyDramas, isDramaRow: true },    
           { title: 'Trending TV Shows', items: filteredTV },
@@ -275,8 +277,9 @@ export function useAppState() {
         setFeaturedMovies(enrichedFeatured);
         const finalPool = hardDedupe([
           ...enrichedTop, ...enrichedFeatured, ...trending, ...popMovies, ...tvShows, 
-          ...topRated, ...topDramas, ...pinoyDramas, ...sciFiMovies, ...acclaimedMovies, ...leoMovies,
-          ...actionMovies, ...comedyMovies, ...horrorMovies, ...mysteryMovies, ...documentaryMovies, ...animationMovies
+          ...topRated, ...topDramas, ...pinoyDramas, ...sciFiMovies, ...acclaimedMovies, ...spotlightMovies,
+          ...actionMovies, ...comedyMovies, ...horrorMovies, ...mysteryMovies, ...documentaryMovies, ...animationMovies,
+          ...awardMovies, ...newMovies, ...gemMovies
         ]);
         setAllMovies(finalPool);
 

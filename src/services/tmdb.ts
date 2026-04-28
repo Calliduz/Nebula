@@ -30,7 +30,19 @@ const fetchWithCache = async (key: string, fetcher: () => Promise<any>, releaseY
     }
   }
   const data = await fetcher();
-  localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
+  try {
+    localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch (e) {
+    console.warn('[Storage] Quota exceeded. Purging old cache...');
+    // Clear all keys with current version prefix to make room
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(CACHE_VERSION)) localStorage.removeItem(k);
+    });
+    // Try one more time
+    try {
+      localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
+    } catch (e2) {}
+  }
   return data;
 };
 
@@ -47,6 +59,7 @@ export interface NebulaMovie {
   type: 'movie' | 'tv';
   clearLogo?: string | null;
   fanartBackground?: string | null;
+  quality?: string;
 }
 
 const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = {}, releaseYear?: number) => {
@@ -58,12 +71,13 @@ const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = 
   const isV4Token = API_KEY.length > 40;
   
   // Safety check: Prevent fetching KissKH IDs from TMDB
-  if (endpoint.includes('/k') || endpoint.includes('k')) {
-    const parts = endpoint.split('/');
+  const endpointStr = endpoint.toString();
+  if (endpointStr.includes('/k') || endpointStr.includes('k')) {
+    const parts = endpointStr.split('/');
     const lastPart = parts[parts.length - 1];
     if (lastPart.startsWith('k')) {
       console.log(`[TMDB] Skipping external fetch for native ID: ${lastPart}`);
-      return null;
+      return { results: [] }; // Return empty structure instead of null to prevent downstream crashes
     }
   }
 
@@ -179,11 +193,15 @@ export const enrichMoviesWithMetadata = async (normalized: NebulaMovie[]): Promi
           // Only write to localStorage if we got a logo (skip caching null results)
           if (meta.logoUrl) {
             const key = `v1.1-meta-single-${meta.id}:${normalized[index].type}`;
-            localStorage.setItem(key, JSON.stringify({
-              logoUrl: meta.logoUrl,
-              backgroundUrl: meta.backgroundUrl,
-              ts: Date.now()
-            }));
+            try {
+              localStorage.setItem(key, JSON.stringify({
+                logoUrl: meta.logoUrl,
+                backgroundUrl: meta.backgroundUrl,
+                ts: Date.now()
+              }));
+            } catch (e) {
+              // If quota exceeded here, just skip caching this individual meta
+            }
           }
         }
       });
