@@ -15,7 +15,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
 
   return (
     <div 
-      className={`group/card relative w-[160px] md:w-[280px] shrink-0 ${isLandscape ? 'aspect-video' : 'aspect-[2/3]'} transition-all duration-300 ${snap ? 'snap-start' : ''}`}
+      className={`group/card relative ${isLandscape ? 'w-[220px]' : 'w-[160px]'} md:w-[280px] shrink-0 ${isLandscape ? 'aspect-video' : 'aspect-[2/3]'} transition-all duration-300 ${snap ? 'snap-start' : ''}`}
       onContextMenu={(e) => e.preventDefault()}
       onClick={() => onSelect?.(movie)}
       style={{ willChange: 'transform' }}
@@ -34,6 +34,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
         <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-90" />
         
         {/* Info Overlay (Persistent) */}
+        <div className="absolute top-3 left-3 z-30">
+          {isLandscape && (
+            <div className="px-2 py-0.5 rounded-md bg-nebula-cyan/20 border border-nebula-cyan/30 backdrop-blur-md">
+              <p className="text-[8px] font-black text-nebula-cyan uppercase tracking-widest italic">Series</p>
+            </div>
+          )}
+        </div>
+
         <div className="absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 group-hover/card:bottom-6">
           <div className="mb-2">
             {movie.clearLogo ? (

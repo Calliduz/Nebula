@@ -56,6 +56,17 @@ const fetchFromTMDB = async (endpoint: string, params: Record<string, string> = 
   }
 
   const isV4Token = API_KEY.length > 40;
+  
+  // Safety check: Prevent fetching KissKH IDs from TMDB
+  if (endpoint.includes('/k') || endpoint.includes('k')) {
+    const parts = endpoint.split('/');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart.startsWith('k')) {
+      console.log(`[TMDB] Skipping external fetch for native ID: ${lastPart}`);
+      return null;
+    }
+  }
+
   const query = new URLSearchParams({ language: 'en-US', ...params });
   if (!isV4Token) query.append('api_key', API_KEY);
 
@@ -278,6 +289,21 @@ export const getSimilarMedia = async (id: number | string, type: 'movie' | 'tv')
 };
 
 export const getMediaBasicInfo = async (id: string | number, type: 'movie' | 'tv'): Promise<NebulaMovie | null> => {
+  if (id.toString().startsWith('k')) {
+    // For native KissKH items, we don't fetch from TMDB.
+    // They are enriched by the backend or Drawer.
+    return {
+      id: id.toString(),
+      tmdbId: id.toString(),
+      title: "Loading Operation...",
+      type: type,
+      year: 0,
+      genre: "Drama",
+      rating: 0,
+      poster: "",
+      isDrama: true
+    } as any;
+  }
   try {
     const data = await fetchFromTMDB(`/${type}/${id}`);
     if (!data || data.status_code === 34) return null;

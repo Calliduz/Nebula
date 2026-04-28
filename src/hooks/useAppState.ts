@@ -388,13 +388,14 @@ export function useAppState() {
   }, [isHoveringHero, isPlaying, isSearchOpen, featuredMovies.length, currentHeroIndex]); // Reset on index change
 
   useEffect(() => {
-    if (viewingCategory === 'Dramas' && selectedRegion !== 'All') {
+    if (viewingCategory === 'Dramas') {
       const fetchRegionalDramas = async () => {
         setIsLoading(true);
         try {
           const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
           const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
-          const r = await fetch(`${apiBase}/api/drama/list?page=${dramaPage}&country=${selectedRegion}&order=2`);
+          const countryParam = selectedRegion !== 'All' ? `&country=${selectedRegion}` : '';
+          const r = await fetch(`${apiBase}/api/drama/list?page=${dramaPage}${countryParam}&order=2`);
           const data = await r.json();
           if (data.results) {
             updateGlobalPool(data.results);
