@@ -197,14 +197,29 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
               </p>
 
               <div className="flex flex-wrap gap-4 sm:gap-6 mb-16">
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => onPlay(movie.type === 'tv' ? 1 : undefined, movie.type === 'tv' ? 1 : undefined)}
-                  className="bg-white text-obsidian px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm glow-white flex items-center justify-center gap-3 transition-all hover:bg-nebula-cyan flex-1 sm:flex-none"
-                >
-                  <Play size={20} fill="currentColor" /> <span>Watch Now</span>
-                </motion.button>
+                {(() => {
+                  const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
+                  const key = movie.id.toString();
+                  const entry = Object.entries(p).find(([k]) => k === key || k.startsWith(`${key}-S`));
+                  let resumeData: any = null;
+                  if (entry) {
+                    const [k, val]: [string, any] = entry;
+                    const tvMatch = k.match(/-S(\d+)E(\d+)/);
+                    resumeData = tvMatch ? { season: parseInt(tvMatch[1]), episode: parseInt(tvMatch[2]), ...val } : val;
+                  }
+
+                  return (
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => onPlay(resumeData?.season, resumeData?.episode)}
+                      className="bg-white text-obsidian px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm glow-white flex items-center justify-center gap-3 transition-all hover:bg-nebula-cyan flex-1 sm:flex-none"
+                    >
+                      <Play size={20} fill="currentColor" /> 
+                      <span>{resumeData ? 'Resume Watching' : 'Watch Now'}</span>
+                    </motion.button>
+                  );
+                })()}
                 <motion.button 
                   whileHover={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
                   onClick={onToggleList}
