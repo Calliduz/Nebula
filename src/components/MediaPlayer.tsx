@@ -68,6 +68,53 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const containerRef = useRef<HTMLDivElement>(null);
   const hideTimer   = useRef<NodeJS.Timeout | null>(null);
 
+  // ── Auto Fullscreen & Landscape ───────────────────────────────────────────
+  useEffect(() => {
+    const handleAutoFullscreen = async () => {
+      // Only trigger auto-fullscreen/orientation for mobile devices
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      if (!isMobile) return;
+
+      try {
+        if (containerRef.current) {
+          // Standard Fullscreen API
+          if (containerRef.current.requestFullscreen) {
+            await containerRef.current.requestFullscreen();
+          } else if ((containerRef.current as any).webkitRequestFullscreen) {
+            await (containerRef.current as any).webkitRequestFullscreen();
+          } else if ((containerRef.current as any).mozRequestFullScreen) {
+            await (containerRef.current as any).mozRequestFullScreen();
+          } else if ((containerRef.current as any).msRequestFullscreen) {
+            await (containerRef.current as any).msRequestFullscreen();
+          }
+        }
+
+        // Screen Orientation API (Mobile)
+        // Note: Orientation lock usually requires being in fullscreen first
+        if (window.screen && window.screen.orientation && (window.screen.orientation as any).lock) {
+          await (window.screen.orientation as any).lock('landscape').catch((e: any) => {
+            console.warn('Orientation lock failed:', e);
+          });
+        }
+      } catch (err) {
+        console.warn('Auto-fullscreen/orientation failed:', err);
+      }
+    };
+
+    // Delay slightly to ensure component is fully mounted and animation is settled
+    const timer = setTimeout(handleAutoFullscreen, 300);
+    
+    return () => {
+      clearTimeout(timer);
+      // Unlock orientation when player closes
+      if (window.screen && window.screen.orientation && (window.screen.orientation as any).unlock) {
+        try {
+          (window.screen.orientation as any).unlock();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
   // ── Fetch stream ──────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
