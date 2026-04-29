@@ -20,14 +20,16 @@ interface HomeFeedProps {
   toggleMyList: (id: number) => void;
   setViewingCategory: (category: string | null) => void;
   onRandomize: () => void;
-  rows: {title: string, items: any[]}[];
   allMovies: any[];
+  removeFromHistory: (id: number) => void;
+  removeFromProgress: (id: string) => void;
 }
 
 export const HomeFeed: React.FC<HomeFeedProps> = ({
   sortBy, setSortBy, activeMood, setActiveMood, selectedGenre, setSelectedGenre,
   setSelectedMovie, isLoading, filteredMovies, recommendations, myList,
-  toggleMyList, setViewingCategory, onRandomize, rows, allMovies
+  toggleMyList, setViewingCategory, onRandomize, rows, allMovies,
+  removeFromHistory, removeFromProgress
 }) => {
   return (
     <div className="px-4 sm:px-6 md:px-12 mt-6 md:-mt-10 pb-20 relative z-30 flex flex-col gap-8">
@@ -57,6 +59,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 onSelect={setSelectedMovie} 
                 isInList={myList.includes(m.id)} 
                 onToggleList={() => toggleMyList(m.id)} 
+                onRemove={
+                  row.title === 'Continue Watching' ? () => removeFromProgress(m.id.toString()) :
+                  row.title === 'My Secure Records' ? () => toggleMyList(m.id) :
+                  undefined
+                }
               />
             ))
           )}

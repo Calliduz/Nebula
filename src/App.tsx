@@ -66,6 +66,8 @@ export default function App() {
                       onRandomize={actions.handleRandomize}
                       rows={state.rows}
                       allMovies={state.allMovies}
+                      removeFromHistory={actions.removeFromHistory}
+                      removeFromProgress={actions.removeFromProgress}
                     />
                   </>
                 ) : (
@@ -74,6 +76,9 @@ export default function App() {
                     onSelectMovie={actions.setSelectedMovie} myList={state.myList} toggleMyList={actions.toggleMyList} history={state.history}
                     startPlayback={actions.startPlayback} getCategoryMovies={actions.getCategoryMovies} visibleCount={state.visibleCount} loadMore={actions.loadMore}
                     allMovies={state.allMovies} data={state.filteredMovies} selectedRegion={state.selectedRegion} setSelectedRegion={actions.setSelectedRegion}
+                    removeFromHistory={actions.removeFromHistory} removeFromProgress={actions.removeFromProgress}
+                    clearHistory={actions.clearHistory} clearMyList={actions.clearMyList}
+                    isLoading={state.isLoading}
                   />
                 )
               } />
