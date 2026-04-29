@@ -20,6 +20,8 @@ interface CategoryViewProps {
   setSelectedRegion?: (region: string) => void;
   removeFromHistory: (id: number) => void;
   removeFromProgress: (id: string) => void;
+  clearHistory: () => void;
+  clearMyList: () => void;
 }
 
 const REGIONS = [
@@ -51,7 +53,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   selectedRegion,
   setSelectedRegion,
   removeFromHistory,
-  removeFromProgress
+  removeFromProgress,
+  clearHistory,
+  clearMyList
 }) => {
   const isDramaOrTV = viewingCategory === 'Dramas' || viewingCategory === 'TV Shows';
   return (
@@ -101,11 +105,16 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       {viewingCategory === 'Library' ? (
         <div className="space-y-16">
           <section>
-             <h3 className="text-2xl font-display font-medium tracking-tight text-white mb-8">My Secure Records</h3>
+             <div className="flex justify-between items-center mb-8">
+               <h3 className="text-2xl font-display font-medium tracking-tight text-white">My Secure Records</h3>
+               {myList.length > 0 && (
+                 <button onClick={clearMyList} className="text-xs font-bold uppercase tracking-widest text-nebula-cyan/70 hover:text-nebula-cyan transition-colors px-4 py-1.5 rounded-full border border-nebula-cyan/30 hover:bg-nebula-cyan/10">Clear All</button>
+               )}
+             </div>
              {(allMovies || []).length > 0 && myList.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
                   {(allMovies || []).filter(m => myList.includes(m.id)).map((movie, i) => (
-                      <MovieCard key={`lib-my-${movie.id}-${i}`} movie={movie} onSelect={onSelectMovie} isInList={true} onToggleList={() => toggleMyList(movie.id)} onRemove={() => toggleMyList(movie.id)} />
+                      <MovieCard key={`lib-my-${movie.id}-${i}`} movie={movie} isGrid={true} onSelect={onSelectMovie} isInList={true} onToggleList={() => toggleMyList(movie.id)} onRemove={() => toggleMyList(movie.id)} />
                   ))}
                 </div>
              ) : (
@@ -120,19 +129,27 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
           </section>
           
           <section>
-             <h3 className="text-2xl font-display font-medium tracking-tight text-white mb-8">Operational History</h3>
+             <div className="flex justify-between items-center mb-8">
+               <h3 className="text-2xl font-display font-medium tracking-tight text-white">Operational History</h3>
+               {history.length > 0 && (
+                 <button onClick={clearHistory} className="text-xs font-bold uppercase tracking-widest text-nebula-cyan/70 hover:text-nebula-cyan transition-colors px-4 py-1.5 rounded-full border border-nebula-cyan/30 hover:bg-nebula-cyan/10">Clear All</button>
+               )}
+             </div>
              {(allMovies || []).length > 0 && history.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
-                  {history.slice().reverse().map(id => (allMovies || []).find(m => m.id === id)).filter(Boolean).map((movie: any, i) => (
-                    <div key={`lib-hist-${movie.id}-${i}`} className="relative group">
-                      <MovieCard movie={movie} onSelect={onSelectMovie} isInList={myList.includes(movie.id)} onToggleList={() => toggleMyList(movie.id)} onRemove={() => removeFromHistory(movie.id)} />
+                  {history.slice().reverse().map(id => {
+                    const m = (allMovies || []).find(m => m.id === id);
+                    if (!m) return null;
+                    const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
+                    const progKey = Object.keys(p).find(k => k.startsWith(id.toString()));
+                    return { ...m, progress: progKey ? p[progKey] : null };
+                  }).filter(Boolean).map((movie: any, i) => (
+                    <div key={`lib-hist-${movie.id}-${i}`} className="relative group w-full h-full">
+                      <MovieCard movie={movie} isGrid={true} onSelect={onSelectMovie} isInList={myList.includes(movie.id)} onToggleList={() => toggleMyList(movie.id)} onRemove={() => removeFromHistory(movie.id)} />
                      <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                        <button onClick={() => startPlayback(movie)} className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center pointer-events-auto border border-white/50 hover:bg-white hover:text-black transition-colors pl-1">
                          <Play size={20} fill="currentColor" />
                        </button>
-                     </div>
-                     <div className="absolute bottom-0 inset-x-0 h-1 bg-white/10 z-40 rounded-b-2xl overflow-hidden pointer-events-none">
-                       <div className="h-full bg-nebula-cyan w-3/4" />
                      </div>
                    </div>
                  ))}
@@ -160,6 +177,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                 key={`cat-grid-${viewingCategory}-${movie.id}-${i}`} 
                 movie={movie} 
                 aspect={movie.isDrama ? 'landscape' : 'portrait'}
+                isGrid={true}
                 onSelect={onSelectMovie} 
                 isInList={myList.includes(movie.id)} 
                 onToggleList={() => toggleMyList(movie.id)} 

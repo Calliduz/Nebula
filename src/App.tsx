@@ -77,6 +77,7 @@ export default function App() {
                     startPlayback={actions.startPlayback} getCategoryMovies={actions.getCategoryMovies} visibleCount={state.visibleCount} loadMore={actions.loadMore}
                     allMovies={state.allMovies} data={state.filteredMovies} selectedRegion={state.selectedRegion} setSelectedRegion={actions.setSelectedRegion}
                     removeFromHistory={actions.removeFromHistory} removeFromProgress={actions.removeFromProgress}
+                    clearHistory={actions.clearHistory} clearMyList={actions.clearMyList}
                   />
                 )
               } />

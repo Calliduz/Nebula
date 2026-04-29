@@ -426,6 +426,19 @@ export function useAppState() {
     fetchInitialData();
   };
 
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem('nebula-history');
+    localStorage.removeItem('nebula-progress');
+    fetchInitialData();
+  };
+
+  const clearMyList = () => {
+    setMyList([]);
+    localStorage.removeItem('nebula-my-list');
+  };
+
+
   const clearFinishedProgress = () => {
     const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
     Object.keys(p).forEach(key => {
@@ -670,6 +683,8 @@ export function useAppState() {
       setActiveMood,
       setSelectedRegion,
       toggleMyList,
+      clearHistory,
+      clearMyList,
       loadMore,
       getCategoryMovies,
       startPlayback,

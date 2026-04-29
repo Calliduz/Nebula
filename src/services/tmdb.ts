@@ -308,8 +308,39 @@ export const getSimilarMedia = async (id: number | string, type: 'movie' | 'tv')
 
 export const getMediaBasicInfo = async (id: string | number, type: 'movie' | 'tv'): Promise<NebulaMovie | null> => {
   if (id.toString().startsWith('k')) {
-    // For native KissKH items, we don't fetch from TMDB.
-    // They are enriched by the backend or Drawer.
+    try {
+      let rawApi = import.meta.env.VITE_API_BASE_URL;
+      if (!rawApi) {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          rawApi = 'http://localhost:4000';
+        } else if (window.location.hostname === 'nebula.clev.studio') {
+          rawApi = 'https://nebula-server-qbp6.onrender.com';
+        } else {
+          rawApi = `${window.location.origin}/api`;
+        }
+      }
+      const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
+      const numId = id.toString().replace('k', '');
+      const r = await fetch(`${apiBase}/api/drama/detail/${numId}`);
+      if (r.ok) {
+        const data = await r.json();
+        return {
+          id: id.toString(),
+          tmdbId: id.toString(),
+          title: data.title || "Unknown Mission",
+          type: 'movie',
+          year: 0,
+          genre: "Drama",
+          rating: 0,
+          image: data.image || "",
+          isDrama: true
+        } as any;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    
+    // Fallback
     return {
       id: id.toString(),
       tmdbId: id.toString(),
@@ -318,7 +349,7 @@ export const getMediaBasicInfo = async (id: string | number, type: 'movie' | 'tv
       year: 0,
       genre: "Drama",
       rating: 0,
-      poster: "",
+      image: "",
       isDrama: true
     } as any;
   }

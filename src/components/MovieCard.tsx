@@ -9,14 +9,15 @@ interface MovieCardProps {
   onToggleList?: () => void;
   onRemove?: () => void;
   aspect?: 'portrait' | 'landscape';
+  isGrid?: boolean;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSelect, aspect = 'portrait', onRemove }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSelect, aspect = 'portrait', onRemove, isGrid = false }) => {
   const isLandscape = aspect === 'landscape' || movie.isDrama;
 
   return (
     <div 
-      className={`group/card relative ${isLandscape ? 'w-[220px]' : 'w-[160px]'} md:w-[280px] shrink-0 ${isLandscape ? 'aspect-video' : 'aspect-[2/3]'} transition-all duration-300 ${snap ? 'snap-start' : ''}`}
+      className={`group/card relative ${isGrid ? 'w-full' : (isLandscape ? 'w-[220px] md:w-[280px]' : 'w-[160px] md:w-[280px]')} shrink-0 ${isLandscape ? 'aspect-video' : 'aspect-[2/3]'} transition-all duration-300 ${snap ? 'snap-start' : ''}`}
       onContextMenu={(e) => e.preventDefault()}
       onClick={() => onSelect?.(movie)}
       style={{ willChange: 'transform' }}
