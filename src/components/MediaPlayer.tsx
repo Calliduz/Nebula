@@ -141,7 +141,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
     const fetchSubs = async () => {
       try {
-        let url = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}`;
+        let url = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || '')}`;
         if (movie.origin) url += `&origin=${movie.origin}`;
         if (season !== undefined) url += `&season=${season}`;
         if (episode !== undefined) url += `&episode=${episode}`;
@@ -275,34 +275,32 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     const vidlinkSubs = combined.filter(s => s.source === 'VidLink');
     const otherSubs = combined.filter(s => s.source !== 'VidLink');
 
-    // 2. Global deduplication by language
     const finalSubs: any[] = [];
-    const seenLangs = new Set();
+    const langCount: Record<string, number> = {};
 
-    // VidLink always comes first and always kept (if multiple per lang, keep first)
+    // 2. Add all VidLink subtitles first (they are usually best)
     vidlinkSubs.forEach(s => {
-      if (!seenLangs.has(s.lang)) {
-        finalSubs.push(s);
-        seenLangs.add(s.lang);
-      }
+      const lang = s.lang || 'unk';
+      langCount[lang] = (langCount[lang] || 0) + 1;
+      
+      const isEnglish = lang.startsWith('en') || s.languageName?.toLowerCase().includes('english');
+      let name = s.languageName;
+      if (isEnglish && langCount[lang] === 1) name = "English (Recommended)";
+      
+      finalSubs.push({ ...s, languageName: name });
     });
 
-    // Others only kept if lang not already covered by VidLink
+    // 3. Add other sources (OpenSubtitles) but keep up to 3 per language total
     otherSubs.forEach(s => {
-      if (!seenLangs.has(s.lang)) {
-        finalSubs.push(s);
-        seenLangs.add(s.lang);
+      const lang = s.lang || 'unk';
+      const count = langCount[lang] || 0;
+      
+      if (count < 3) {
+        langCount[lang] = count + 1;
+        const name = `${s.languageName} #${langCount[lang]} (External)`;
+        finalSubs.push({ ...s, languageName: name });
       }
     });
-
-    // 3. Label Auto
-    const engVidIdx = finalSubs.findIndex(s => 
-      s.source === 'VidLink' && 
-      (s.lang?.startsWith('en') || s.languageName?.toLowerCase().includes('english'))
-    );
-    if (engVidIdx !== -1) {
-      finalSubs[engVidIdx].languageName = "English (Auto)";
-    }
 
     return finalSubs;
   }, [API]);
