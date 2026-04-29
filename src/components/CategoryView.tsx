@@ -16,9 +16,10 @@ interface CategoryViewProps {
   loadMore: () => void;
   allMovies: any[];
   data: any[];
-  getCategoryMovies: () => any[];
   selectedRegion?: string;
   setSelectedRegion?: (region: string) => void;
+  removeFromHistory: (id: number) => void;
+  removeFromProgress: (id: string) => void;
 }
 
 const REGIONS = [
@@ -48,7 +49,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   loadMore,
   allMovies,
   selectedRegion,
-  setSelectedRegion
+  setSelectedRegion,
+  removeFromHistory,
+  removeFromProgress
 }) => {
   const isDramaOrTV = viewingCategory === 'Dramas' || viewingCategory === 'TV Shows';
   return (
@@ -100,11 +103,11 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
           <section>
              <h3 className="text-2xl font-display font-medium tracking-tight text-white mb-8">My Secure Records</h3>
              {(allMovies || []).length > 0 && myList.length > 0 ? (
-               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
-                 {(allMovies || []).filter(m => myList.includes(m.id)).map((movie, i) => (
-                     <MovieCard key={`lib-my-${movie.id}-${i}`} movie={movie} onSelect={onSelectMovie} isInList={true} onToggleList={() => toggleMyList(movie.id)} />
-                 ))}
-               </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
+                  {(allMovies || []).filter(m => myList.includes(m.id)).map((movie, i) => (
+                      <MovieCard key={`lib-my-${movie.id}-${i}`} movie={movie} onSelect={onSelectMovie} isInList={true} onToggleList={() => toggleMyList(movie.id)} onRemove={() => toggleMyList(movie.id)} />
+                  ))}
+                </div>
              ) : (
                <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
                  <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-8 border border-white/10">
@@ -119,10 +122,10 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
           <section>
              <h3 className="text-2xl font-display font-medium tracking-tight text-white mb-8">Operational History</h3>
              {(allMovies || []).length > 0 && history.length > 0 ? (
-               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
-                 {history.slice().reverse().map(id => (allMovies || []).find(m => m.id === id)).filter(Boolean).map((movie: any, i) => (
-                   <div key={`lib-hist-${movie.id}-${i}`} className="relative group">
-                     <MovieCard movie={movie} onSelect={onSelectMovie} isInList={myList.includes(movie.id)} onToggleList={() => toggleMyList(movie.id)} />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
+                  {history.slice().reverse().map(id => (allMovies || []).find(m => m.id === id)).filter(Boolean).map((movie: any, i) => (
+                    <div key={`lib-hist-${movie.id}-${i}`} className="relative group">
+                      <MovieCard movie={movie} onSelect={onSelectMovie} isInList={myList.includes(movie.id)} onToggleList={() => toggleMyList(movie.id)} onRemove={() => removeFromHistory(movie.id)} />
                      <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                        <button onClick={() => startPlayback(movie)} className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center pointer-events-auto border border-white/50 hover:bg-white hover:text-black transition-colors pl-1">
                          <Play size={20} fill="currentColor" />

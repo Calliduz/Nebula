@@ -367,7 +367,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       const savedProgress = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
       const key = getProgressKey();
       if (savedProgress[key]) {
-        video.currentTime = savedProgress[key];
+        const val = savedProgress[key];
+        video.currentTime = typeof val === 'object' ? val.time : val;
       }
     };
 
@@ -382,7 +383,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
           const key = getProgressKey();
           if (cur > 10 && video.duration - cur > 10) {
             const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
-            p[key] = cur;
+            p[key] = { time: cur, duration: video.duration };
             localStorage.setItem('nebula-progress', JSON.stringify(p));
             lastSaveTime.current = Date.now();
           } else if (video.duration - cur <= 10) {
