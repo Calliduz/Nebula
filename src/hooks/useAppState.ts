@@ -741,7 +741,10 @@ export function useAppState() {
         }
 
         if (config) {
-          setIsLoading(true);
+          // Only show loading state if we don't have any data yet for this category
+          const existingData = getCategoryMovies();
+          if (existingData.length === 0) setIsLoading(true);
+          
           try {
             let more: NebulaMovie[] = [];
             if (config.type === 'recommendations' && config.targetId) {
