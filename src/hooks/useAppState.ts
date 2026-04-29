@@ -312,6 +312,7 @@ export function useAppState() {
           const recs = await getRecommendations(histId, movie.type || 'movie').catch(() => []);
           const filtered = recs.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
           if (filtered.length > 5) {
+            filtered.forEach(m => globalShown.add(m.id.toString()));
             const label = historyIds.indexOf(histId) === 0 ? `Since you watched ${movie.title}` : `More like ${movie.title}`;
             recommendationRows.push({ 
               title: label, 
