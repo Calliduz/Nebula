@@ -57,8 +57,8 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
   },
   'Critically Acclaimed: Missions': {
     mediaType: 'movie',
-    discoverParams: { 'vote_average.gte': '8.0', 'vote_count.gte': '1000', sort_by: 'vote_average.desc' },
-    filterFn: m => (m.imdb ?? 0) >= 8.0,
+    discoverParams: { 'vote_average.gte': '7.5', 'vote_count.gte': '300', sort_by: 'vote_average.desc' },
+    filterFn: m => (m.imdb ?? 0) >= 7.5,
   },
   'New Intel: 2025 Releases': {
     mediaType: 'movie',
@@ -67,13 +67,13 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
   },
   'Cinematic Masterpieces': {
     mediaType: 'movie',
-    discoverParams: { sort_by: 'vote_average.desc', 'vote_count.gte': '5000' },
-    filterFn: m => (m.imdb ?? 0) >= 8.0 && m.type === 'movie',
+    discoverParams: { sort_by: 'vote_average.desc', 'vote_count.gte': '500' },
+    filterFn: m => (m.imdb ?? 0) >= 7.5 && m.type === 'movie',
   },
   'Award-Winning Hits': {
     mediaType: 'movie',
-    discoverParams: { 'vote_average.gte': '8.5', 'vote_count.gte': '500', sort_by: 'vote_average.desc' },
-    filterFn: m => (m.imdb ?? 0) >= 8.5,
+    discoverParams: { 'vote_average.gte': '7.5', 'vote_count.gte': '200', sort_by: 'vote_average.desc' },
+    filterFn: m => (m.imdb ?? 0) >= 7.5,
   },
   'Action Packed Missions': {
     mediaType: 'movie',
@@ -122,8 +122,8 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
   },
   'Top Rated Movies': {
     mediaType: 'movie',
-    discoverParams: { sort_by: 'vote_average.desc', 'vote_count.gte': '2000' },
-    filterFn: m => m.type === 'movie' && (m.imdb ?? 0) >= 7.5,
+    discoverParams: { sort_by: 'vote_average.desc', 'vote_count.gte': '1000' },
+    filterFn: m => m.type === 'movie' && (m.imdb ?? 0) >= 7.0,
   },
 };
 
