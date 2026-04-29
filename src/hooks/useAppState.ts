@@ -6,6 +6,7 @@ import {
   getTopRatedMovies, enrichMoviesWithMetadata, NebulaMovie,
   discoverMedia, getRecommendations, getMediaBasicInfo,
   getMediaDetails, getPersonMovies, getPopularActors,
+  GENRE_MAP
 } from '../services/tmdb';
 
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -39,6 +40,8 @@ export interface RowConfig {
   mediaType: 'movie' | 'tv' | 'all';
   discoverParams: Record<string, string>; // TMDB discover params
   filterFn: (m: NebulaMovie) => boolean;  // client-side filter for getCategoryMovies
+  type?: 'recommendations' | 'similar' | 'discover'; // Pagination fetch type
+  targetId?: string | number; // For recommendations
 }
 
 export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
@@ -124,6 +127,19 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
   },
 };
 
+const hardDedupe = (arr: any[]) => {
+  const seen = new Set<string>();
+  const results = [];
+  for (const m of arr) {
+    const id = (m.tmdbId || m.id).toString();
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      results.push(m);
+    }
+  }
+  return results;
+};
+
 export function useAppState() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -153,7 +169,7 @@ export function useAppState() {
 
   // Data States
   const [featuredMovies, setFeaturedMovies] = useState<NebulaMovie[]>([]);
-  const [rows, setRows] = useState<{title: string, items: NebulaMovie[]}[]>([]);
+  const [rows, setRows] = useState<{title: string, items: NebulaMovie[], config?: RowConfig}[]>([]);
   const [searchResults, setSearchResults] = useState<NebulaMovie[]>([]);
 
   const [allMovies, setAllMovies] = useState<NebulaMovie[]>([]); 
@@ -250,23 +266,11 @@ export function useAppState() {
 
           return discoverMedia('movie', { with_cast: actorToUse.id }).then(res => ({
             actor: actorToUse.name,
+            actorId: actorToUse.id,
             results: res
           }));
-        })().catch(() => ({ actor: 'Leonardo DiCaprio', results: [] }))
+        })().catch(() => ({ actor: 'Leonardo DiCaprio', actorId: '6193', results: [] }))
       ]);
-
-      const hardDedupe = (arr: any[]) => {
-        const seen = new Set<string>();
-        const results = [];
-        for (const m of arr) {
-          const id = (m.tmdbId || m.id).toString();
-          if (id && !seen.has(id)) {
-            seen.add(id);
-            results.push(m);
-          }
-        }
-        return results;
-      };
 
       const trending = hardDedupe(rawTrending);
       const popMovies = hardDedupe(rawPop);
@@ -286,6 +290,7 @@ export function useAppState() {
       const spotlightData = leoRaw as any;
       const spotlightMovies = hardDedupe(spotlightData.results || []);
       const spotlightActor = spotlightData.actor || 'Leonardo DiCaprio';
+      const spotlightActorId = spotlightData.actorId || '6193';
       const topDramas = dramaRes.results || [];
       const pinoyDramas = (pinoyRes.results || []).filter((p: any) => !topDramas.some((t: any) => t.id === p.id));
 
@@ -308,7 +313,17 @@ export function useAppState() {
           const filtered = recs.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
           if (filtered.length > 5) {
             const label = historyIds.indexOf(histId) === 0 ? `Since you watched ${movie.title}` : `More like ${movie.title}`;
-            recommendationRows.push({ title: label, items: filtered });
+            recommendationRows.push({ 
+              title: label, 
+              items: filtered,
+              config: {
+                mediaType: movie.type || 'movie',
+                type: 'recommendations',
+                targetId: histId,
+                discoverParams: {},
+                filterFn: (m: any) => m.type === (movie?.type || 'movie')
+              }
+            });
           }
         }
       }
@@ -392,14 +407,33 @@ export function useAppState() {
         ...recommendationRows,
         { title: 'Watch It Again', items: history.map(id => allMovies.find(m => m.id.toString() === id.toString())).filter(Boolean).slice(0, 10).sort(() => Math.random() - 0.5) },
         { title: 'Popular Asian Dramas', items: topDramas, isDramaRow: true }, 
-        ...topGenres.map(g => ({ title: `Because you like ${g}`, items: allMovies.filter(m => m.genre.includes(g) && !globalShown.has(m.id.toString())).slice(0, 20) })),
+        ...topGenres.map(g => {
+          const gId = Object.entries(GENRE_MAP).find(([_, name]) => name === g)?.[0];
+          return { 
+            title: `Because you like ${g}`, 
+            items: allMovies.filter(m => m.genre.includes(g) && !globalShown.has(m.id.toString())).slice(0, 20),
+            config: gId ? {
+              mediaType: 'movie',
+              discoverParams: { with_genres: gId, sort_by: 'popularity.desc' },
+              filterFn: (m: any) => m.genre.includes(g)
+            } : undefined
+          };
+        }),
         { title: 'Trending in your Sector: Philippines', items: pinoyDramas.slice(0, 10), isDramaRow: true },
         { title: 'Critically Acclaimed: Missions', items: acclaimedFiltered },
         { title: 'New Intel: 2025 Releases', items: newFiltered },
         { title: 'Cinematic Masterpieces', items: filteredTop.slice(0, 15) },
         { title: 'Award-Winning Hits', items: awardFiltered },
         { title: 'Action Packed Missions', items: actionFiltered },
-        { title: `Actor Spotlight: ${spotlightActor}`, items: spotlightFiltered },
+        { 
+          title: `Actor Spotlight: ${spotlightActor}`, 
+          items: spotlightFiltered,
+          config: {
+            mediaType: 'movie',
+            discoverParams: { with_cast: spotlightActorId, sort_by: 'popularity.desc' },
+            filterFn: () => true
+          }
+        },
         { title: 'Bingeworthy TV Shows', items: filteredTV },
         { title: 'Hidden Gems', items: gemFiltered },
         { title: 'Comedy Gold', items: comedyFiltered },
@@ -550,20 +584,19 @@ export function useAppState() {
     });
   };
 
-  const removeFromHistory = (id: number) => {
-    const newHistory = history.filter(hid => hid !== id);
-    setHistory(newHistory);
-    localStorage.setItem('nebula-history', JSON.stringify(newHistory));
+  const removeFromHistory = (id: string | number) => {
+    setHistory(prev => prev.filter(h => h.toString() !== id.toString()));
+    fetchInitialData();
   };
 
-  const removeFromProgress = (id: string) => {
+  const removeFromProgress = (id: string | number) => {
     const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
-    // Remove all keys starting with this ID (to handle S1E1 etc)
     Object.keys(p).forEach(key => {
-      if (key.startsWith(id)) delete p[key];
+      if (key.includes(id.toString())) {
+        delete p[key];
+      }
     });
     localStorage.setItem('nebula-progress', JSON.stringify(p));
-    // Trigger a refresh of rows to remove it from UI
     fetchInitialData();
   };
 
@@ -686,18 +719,39 @@ export function useAppState() {
       fetchRegionalDramas();
     } else if (!['Movies', 'TV Shows', 'Library', 'My Secure Records', 'Watch History'].includes(viewingCategory)) {
       const fetchMoreForCategory = async () => {
-        const config = ROW_FETCH_CONFIG[viewingCategory];
+        let config = ROW_FETCH_CONFIG[viewingCategory];
+        if (!config) {
+          // Look for dynamic config attached to the row (e.g. Recommendations)
+          const dynamicRow = rows.find(r => r.title === viewingCategory);
+          if (dynamicRow?.config) config = dynamicRow.config;
+        }
+
         if (config) {
-          // Standard row: use exact same params as initial fetch, just bump page
-          if (config.mediaType === 'all') {
-            const more = await getTrending('all', dramaPage.toString());
-            updateGlobalPool(more);
-          } else {
-            const more = await discoverMedia(
-              config.mediaType,
-              { ...config.discoverParams, page: dramaPage.toString() }
-            );
-            updateGlobalPool(more);
+          setIsLoading(true);
+          try {
+            let more: NebulaMovie[] = [];
+            if (config.type === 'recommendations' && config.targetId) {
+              more = await getRecommendations(config.targetId, config.mediaType as any, dramaPage.toString());
+            } else if (config.mediaType === 'all') {
+              more = await getTrending('all', dramaPage.toString());
+            } else {
+              more = await discoverMedia(
+                config.mediaType,
+                { ...config.discoverParams, page: dramaPage.toString() }
+              );
+            }
+
+            if (more.length > 0) {
+              updateGlobalPool(more);
+              // For dynamic rows, also update the row state so getCategoryMovies/CategoryView sees them
+              setRows(prev => prev.map(r => 
+                r.title === viewingCategory 
+                  ? { ...r, items: hardDedupe([...r.items, ...more]) } 
+                  : r
+              ));
+            }
+          } finally {
+            setIsLoading(false);
           }
           return;
         }
@@ -813,6 +867,8 @@ export function useAppState() {
       toggleMyList,
       clearHistory,
       clearMyList,
+      removeFromHistory,
+      removeFromProgress,
       loadMore,
       getCategoryMovies,
       startPlayback,

@@ -508,7 +508,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const toggleSubtitles = (index: number) => {
     setActiveSubtitle(index);
     if (videoRef.current) {
-      Array.from(videoRef.current.textTracks).forEach((track, idx) => {
+      const tracks = Array.from(videoRef.current.textTracks) as TextTrack[];
+      tracks.forEach((track, idx) => {
         track.mode = idx === index ? 'showing' : 'hidden';
       });
     }

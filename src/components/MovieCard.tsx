@@ -26,7 +26,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
         className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 hover:scale-[1.02] transform-gpu shadow-2xl"
       >
         <img
-          src={movie.image}
+          src={movie.image || null}
           alt={movie.title}
           className="w-full h-full object-cover opacity-80 group-hover/card:opacity-70 transition-opacity duration-300"
           referrerPolicy="no-referrer" onError={handleImageError}

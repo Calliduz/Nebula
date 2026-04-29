@@ -109,7 +109,7 @@ const proxyImage = (url: string): string => {
   return `${getApiBase()}/api/image?url=${encodeURIComponent(url)}`;
 };
 
-const GENRE_MAP: Record<number, string> = {
+export const GENRE_MAP: Record<number, string> = {
   28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
   99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History',
   27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi',
@@ -241,14 +241,15 @@ export const searchMedia = async (query: string): Promise<NebulaMovie[]> => {
 // TMDB /recommendations uses collaborative filtering — much more relevant than /similar
 export const getRecommendations = async (
   id: number | string,
-  type: 'movie' | 'tv'
+  type: 'movie' | 'tv',
+  page = '1'
 ): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB(`/${type}/${id}/recommendations`, {}, TTL.DETAILS);
+    const data = await fetchFromTMDB(`/${type}/${id}/recommendations`, { page }, TTL.DETAILS);
     const results = (data.results || []).map((m: any) => normalizeMovie(m, type));
     if (results.length >= 5) return results;
     // Fallback: /similar if recommendations are sparse
-    const fallback = await fetchFromTMDB(`/${type}/${id}/similar`, {}, TTL.DETAILS);
+    const fallback = await fetchFromTMDB(`/${type}/${id}/similar`, { page }, TTL.DETAILS);
     return (fallback.results || []).map((m: any) => normalizeMovie(m, type));
   } catch { return []; }
 };
