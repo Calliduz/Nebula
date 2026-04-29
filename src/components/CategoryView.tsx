@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Play, Search, Plus } from 'lucide-react';
 import { MovieCard } from './MovieCard';
+import { ROW_FETCH_CONFIG } from '../hooks/useAppState';
 
 interface CategoryViewProps {
   viewingCategory: string;
@@ -22,6 +23,7 @@ interface CategoryViewProps {
   removeFromProgress: (id: string) => void;
   clearHistory: () => void;
   clearMyList: () => void;
+  isLoading: boolean;
 }
 
 const REGIONS = [
@@ -55,7 +57,8 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   removeFromHistory,
   removeFromProgress,
   clearHistory,
-  clearMyList
+  clearMyList,
+  isLoading
 }) => {
   const isDramaOrTV = viewingCategory === 'Dramas' || viewingCategory === 'TV Shows';
   return (
@@ -184,7 +187,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               />
             ))}
           </div>
-          {data.length > visibleCount && (
+          {(data.length > visibleCount || ['Dramas', 'Trending Operations', 'Movies', 'TV Shows', 'Trending Missions: Global Feed'].includes(viewingCategory || '') || ROW_FETCH_CONFIG[viewingCategory || '']) && viewingCategory !== 'Library' && (
             <div className="mt-16 flex justify-center">
               <button 
                 onClick={loadMore}
@@ -197,7 +200,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         </>
       )}
 
-      {viewingCategory === 'Trending Operations' && visibleCount >= getCategoryMovies().length && (
+      {viewingCategory && (ROW_FETCH_CONFIG[viewingCategory] || viewingCategory === 'Dramas') && visibleCount >= data.length && isLoading && (
         <div className="py-20 text-center">
           <div className="w-10 h-10 border-2 border-nebula-cyan border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-dim text-sm font-light">Decrypting more data streams from the fringe...</p>
