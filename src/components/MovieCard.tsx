@@ -53,7 +53,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
         </div>
 
         <div className="absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 group-hover/card:bottom-6">
-          <div className="mb-2">
+          <div className="mb-2 hidden md:block">
             {movie.clearLogo ? (
               <img 
                 src={movie.clearLogo} 
