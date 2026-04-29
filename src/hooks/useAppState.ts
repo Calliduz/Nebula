@@ -125,6 +125,16 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     discoverParams: { sort_by: 'vote_average.desc', 'vote_count.gte': '1000' },
     filterFn: m => m.type === 'movie' && (m.imdb ?? 0) >= 7.0,
   },
+  'Movies': {
+    mediaType: 'movie',
+    discoverParams: { sort_by: 'popularity.desc' },
+    filterFn: m => m.type === 'movie',
+  },
+  'TV Shows': {
+    mediaType: 'tv',
+    discoverParams: { sort_by: 'popularity.desc' },
+    filterFn: m => m.type === 'tv',
+  },
 };
 
 const hardDedupe = (arr: any[]) => {
@@ -511,8 +521,10 @@ export function useAppState() {
 
   const getCategoryMovies = () => {
     switch (viewingCategory) {
-      case 'Movies': return allMovies.filter(m => m.type === 'movie');
-      case 'TV Shows': return allMovies.filter(m => m.type === 'tv');
+      case 'Movies': 
+      case 'TV Shows':
+        // Now handled by ROW_FETCH_CONFIG below for pagination support
+        break;
       case 'Library':
         const libraryIds = new Set([...myList, ...history].map(id => id.toString()));
         return allMovies.filter(m => libraryIds.has(m.id.toString()));
@@ -524,31 +536,32 @@ export function useAppState() {
         return allMovies.filter(m => historyIds.has(m.id.toString()));
       case 'Dramas':
         return allMovies.filter(m => (m as any).isDrama);
-      default: {
-        // Use ROW_FETCH_CONFIG for all standard rows — single source of truth
-        const config = ROW_FETCH_CONFIG[viewingCategory || ''];
-        if (config) {
-          const matches = allMovies.filter(config.filterFn);
-          if (matches.length > 0) return matches;
-        }
-        // Fallback: row items or genre match
-        const row = rows.find(r => r.title === viewingCategory);
-        if (row) {
-          // "Because you like X" rows
-          const genreMatch = row.title.match(/Because you like (.+)/i);
-          if (genreMatch) {
-            const g = genreMatch[1];
-            return allMovies.filter(m => m.genre.toLowerCase().includes(g.toLowerCase()));
-          }
-          // Actor spotlight rows
-          const actorMatch = row.title.match(/Actor Spotlight: (.+)/i);
-          if (actorMatch) return row.items;
-          // Rec rows ("Since you watched X", "More like X")
-          return row.items;
-        }
-        return allMovies;
-      }
     }
+
+    // Default strategy for discovery rows
+    const row = rows.find(r => r.title === viewingCategory);
+    const config = ROW_FETCH_CONFIG[viewingCategory || ''];
+    
+    if (config) {
+      const matches = allMovies.filter(config.filterFn);
+      if (row) {
+        // Netflix Style: Ensure items from the row stay at the top of the grid
+        return hardDedupe([...row.items, ...matches]);
+      }
+      return matches;
+    }
+
+    if (row) {
+      // Dynamic recommendation fallback
+      const genreMatch = row.title.match(/Because you like (.+)/i);
+      if (genreMatch) {
+        const g = genreMatch[1];
+        return allMovies.filter(m => m.genre.toLowerCase().includes(g.toLowerCase()));
+      }
+      return row.items;
+    }
+    
+    return allMovies;
   };
 
   useEffect(() => {
@@ -718,7 +731,7 @@ export function useAppState() {
         }
       };
       fetchRegionalDramas();
-    } else if (!['Movies', 'TV Shows', 'Library', 'My Secure Records', 'Watch History'].includes(viewingCategory)) {
+    } else if (!['Library', 'My Secure Records', 'Watch History'].includes(viewingCategory)) {
       const fetchMoreForCategory = async () => {
         let config = ROW_FETCH_CONFIG[viewingCategory];
         if (!config) {

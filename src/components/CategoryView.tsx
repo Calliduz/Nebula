@@ -48,7 +48,6 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   history,
   startPlayback,
   data,
-  getCategoryMovies,
   visibleCount,
   loadMore,
   allMovies,
@@ -60,6 +59,10 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   clearMyList,
   isLoading
 }) => {
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [viewingCategory]);
+
   const isDramaOrTV = viewingCategory === 'Dramas' || viewingCategory === 'TV Shows';
   return (
     <motion.div
