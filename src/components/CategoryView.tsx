@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Play, Search, Plus } from 'lucide-react';
+import { ArrowLeft, Play, Search, Plus, Shield } from 'lucide-react';
 import { MovieCard } from './MovieCard';
 import { ROW_FETCH_CONFIG } from '../hooks/useAppState';
 
@@ -105,6 +105,18 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               {region.name}
             </button>
           ))}
+        </div>
+      )}
+      
+      {viewingCategory === 'Dramas' && (
+        <div className="mb-10 p-4 sm:p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
+           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+              <Shield className="text-amber-500" size={20} />
+           </div>
+           <div>
+              <h4 className="text-amber-500 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-1">Sector Under Maintenance</h4>
+              <p className="text-white/60 text-xs sm:text-sm font-light leading-relaxed">The Drama relay station is currently being upgraded to support deep-space signal processing. Some frequency bands may be unstable or unavailable during this operation.</p>
+           </div>
         </div>
       )}
       
