@@ -69,7 +69,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="min-h-screen pt-32 px-4 sm:px-6 md:px-12 pb-32"
+      className="min-h-screen pt-12 px-4 sm:px-6 md:px-12 pb-32"
     >
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
