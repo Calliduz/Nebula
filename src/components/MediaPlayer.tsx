@@ -60,6 +60,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const [mirrors, setMirrors]     = useState<any[]>([]);
   const [activeMirror, setActiveMirror] = useState<number>(0);
   const [vttBlobUrl, setVttBlobUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragProgress, setDragProgress] = useState(0);
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [hoverX, setHoverX] = useState(0);
+  const [showSubtitles, setShowSubtitles] = useState(false);
+  const [showMobileVolume, setShowMobileVolume] = useState(false);
   const hasAutoSelectedSub = useRef(false);
   const navigate = useNavigate();
 
@@ -384,13 +390,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        backBufferLength: 10,
-        fragLoadingMaxRetry: 3,
-        manifestLoadingMaxRetry: 3,
-        startLevel: -1,
+        maxBufferLength: 45,
+        maxMaxBufferLength: 90,
+        backBufferLength: 30,
+        fragLoadingMaxRetry: 15,
+        manifestLoadingMaxRetry: 15,
+        enableWorker: true,
+        nudgeOffset: 0.2,
+        nudgeMaxRetry: 30,
+        maxFragLookUpTolerance: 0.1,
         capLevelToPlayerSize: true,
+        enableSoftwareAES: true,
       });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
@@ -538,11 +548,57 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     v.paused ? v.play() : v.pause();
   };
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleSliderMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isDragging) return;
+    const slider = document.getElementById('progress-slider');
+    if (!slider) return;
+    const r = slider.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const p = Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100));
+    setDragProgress(p);
+  }, [isDragging]);
+
+  const handleSliderUp = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    const v = videoRef.current;
+    if (v && isFinite(v.duration)) {
+      v.currentTime = (dragProgress / 100) * v.duration;
+    }
+  }, [isDragging, dragProgress]);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleSliderMove);
+      window.addEventListener('mouseup', handleSliderUp);
+      window.addEventListener('touchmove', handleSliderMove);
+      window.addEventListener('touchend', handleSliderUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleSliderMove);
+      window.removeEventListener('mouseup', handleSliderUp);
+      window.removeEventListener('touchmove', handleSliderMove);
+      window.removeEventListener('touchend', handleSliderUp);
+    };
+  }, [isDragging, handleSliderMove, handleSliderUp]);
+
+  const handleSliderDown = (e: React.MouseEvent | React.TouchEvent) => {
+    const v = videoRef.current;
+    if (!v || !isFinite(v.duration)) return;
+    setIsDragging(true);
+    const r = e.currentTarget.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const p = Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100));
+    setDragProgress(p);
+  };
+
+  const handleSliderHover = (e: React.MouseEvent) => {
     const v = videoRef.current;
     if (!v || !isFinite(v.duration)) return;
     const r = e.currentTarget.getBoundingClientRect();
-    v.currentTime = ((e.clientX - r.left) / r.width) * v.duration;
+    const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    setHoverTime(p * v.duration);
+    setHoverX(e.clientX - r.left);
   };
 
   const handleFullscreen = () => {
@@ -764,16 +820,40 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
         <div className="px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 bg-gradient-to-t from-black/90 to-transparent pointer-events-auto">
           <div
-            className="relative w-full rounded-full mb-3 sm:mb-4 cursor-pointer group"
-            onClick={handleSeek}
-            style={{ height: '20px', display: 'flex', alignItems: 'center' }}
+            id="progress-slider"
+            className="relative w-full rounded-full mb-3 sm:mb-4 cursor-pointer group flex items-center h-5"
+            onMouseDown={handleSliderDown}
+            onTouchStart={handleSliderDown}
+            onMouseMove={handleSliderHover}
+            onMouseLeave={() => setHoverTime(null)}
           >
+            {/* Hover Tooltip */}
+            {hoverTime !== null && !isDragging && (
+              <div 
+                className="absolute bottom-full mb-3 -translate-x-1/2 px-2.5 py-1.5 bg-black/90 backdrop-blur-md border border-white/20 text-white rounded-lg text-[10px] font-bold pointer-events-none z-50 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+                style={{ left: `${(hoverTime / (videoRef.current?.duration || 1)) * 100}%` }}
+              >
+                {formatTime(hoverTime)}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-black/90" />
+              </div>
+            )}
+            
+            {/* Drag Tooltip */}
+            {isDragging && (
+              <div 
+                className="absolute bottom-full mb-2 -translate-x-1/2 px-2 py-1 bg-nebula-cyan text-black rounded text-xs font-bold pointer-events-none z-50"
+                style={{ left: `${dragProgress}%` }}
+              >
+                {formatTime((dragProgress / 100) * (videoRef.current?.duration || 0))}
+              </div>
+            )}
+
             <div className="absolute inset-x-0 rounded-full bg-white/20" style={{ height: '3px' }}>
               <div className="absolute inset-y-0 left-0 bg-white/30 rounded-full" style={{ width: `${buffered}%` }} />
-              <div className="absolute inset-y-0 left-0 bg-white rounded-full" style={{ width: `${progress}%` }} />
+              <div className="absolute inset-y-0 left-0 bg-white rounded-full transition-all duration-75" style={{ width: `${isDragging ? dragProgress : progress}%` }} />
               <div
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg"
-                style={{ left: `${progress}%` }}
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg group-hover:scale-125 transition-transform"
+                style={{ left: `${isDragging ? dragProgress : progress}%` }}
               />
             </div>
           </div>
@@ -811,17 +891,47 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                   <ChevronRight size={16} />
                 </button>
               )}
-              <div className="hidden sm:flex items-center gap-2 group/vol">
-                <button onClick={() => setIsMuted(p => !p)} className="text-white/70 hover:text-white transition-colors">
+              <div className="flex items-center gap-2 group/vol relative">
+                <button 
+                  onClick={() => {
+                    if (window.innerWidth < 768) {
+                      setShowMobileVolume(!showMobileVolume);
+                    } else {
+                      setIsMuted(!isMuted);
+                    }
+                  }}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
                   {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
-                <input
-                  type="range"
-                  min={0} max={100}
-                  value={isMuted ? 0 : volume}
-                  onChange={e => { setVolume(+e.target.value); setIsMuted(false); }}
-                  className="w-20 accent-white cursor-pointer opacity-0 group-hover/vol:opacity-100 transition-opacity"
-                />
+                <div className={`${showMobileVolume ? 'h-32 opacity-100 translate-y-0' : 'h-0 opacity-0 translate-y-4'} transition-all duration-300 overflow-hidden flex flex-col items-center absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-[#111]/90 backdrop-blur-xl p-3 rounded-2xl border border-white/10 z-50 shadow-2xl md:hidden`}>
+                  <div className="relative h-24 w-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div 
+                      className="absolute bottom-0 inset-x-0 bg-white rounded-full transition-all"
+                      style={{ height: `${isMuted ? 0 : volume}%` }}
+                    />
+                    <input
+                      type="range"
+                      min={0} max={100}
+                      orient="vertical"
+                      value={isMuted ? 0 : volume}
+                      onChange={e => { setVolume(+e.target.value); setIsMuted(false); }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-slider-vertical"
+                    />
+                  </div>
+                  <span className="text-[10px] text-white/40 mt-2 font-mono">{isMuted ? 0 : volume}%</span>
+                </div>
+
+                {/* Desktop Volume Slider */}
+                <div className="hidden md:flex w-0 group-hover/vol:w-24 transition-all duration-300 overflow-hidden items-center ml-2">
+                  <input
+                    type="range"
+                    min={0} max={100}
+                    value={isMuted ? 0 : volume}
+                    onChange={e => { setVolume(+e.target.value); setIsMuted(false); }}
+                    className="w-20 accent-white cursor-pointer h-1 rounded-full appearance-none bg-white/20"
+                  />
+                </div>
               </div>
               <span className="text-white/50 text-[10px] sm:text-xs tabular-nums">
                 {currentTime} <span className="text-white/20">/</span> {duration}
@@ -838,9 +948,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                   <span className="hidden sm:inline">EPISODES</span>
                 </button>
               )}
+              {/* Subtitles Button */}
+              <button
+                onClick={() => { setShowSubtitles(p => !p); setShowSettings(false); }}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSubtitles ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
+                title="Subtitles"
+              >
+                <Subtitles size={16} />
+              </button>
+
               {/* Settings */}
               <button
-                onClick={() => setShowSettings(p => !p)}
+                onClick={() => { setShowSettings(p => !p); setShowSubtitles(false); }}
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
                 title="Settings"
               >
@@ -853,8 +972,49 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
               >
                 <Maximize size={16} />
               </button>
+
+              {/* Subtitles Menu */}
+              {showSubtitles && (
+                <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2 animate-in slide-in-from-bottom-2 duration-200">
+                  <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 flex items-center justify-between">
+                    <span>Subtitles</span>
+                    {fetchingSubtitles && <Loader2 size={10} className="animate-spin text-nebula-cyan" />}
+                  </p>
+                  
+                  {activeSubtitle !== -1 && !fetchingSubtitles && (
+                    <div className="mx-2 mb-2 p-2 bg-white/5 rounded-lg border border-white/5">
+                      <p className="text-[9px] text-white/40 uppercase tracking-widest mb-2">Sync Offset</p>
+                      <div className="flex items-center justify-between">
+                        <button onClick={() => adjustSubtitleDelay(-0.5)} className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded transition-colors">-0.5s</button>
+                        <span className="text-[10px] text-nebula-cyan font-mono font-bold">{subtitleOffset > 0 ? '+' : ''}{subtitleOffset.toFixed(1)}s</span>
+                        <button onClick={() => adjustSubtitleDelay(0.5)} className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded transition-colors">+0.5s</button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      onClick={() => handleSubtitleChange(-1)}
+                      className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors ${activeSubtitle === -1 ? 'text-black bg-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                    >
+                      Off
+                    </button>
+                    {subtitles.map((sub, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleSubtitleChange(i)}
+                        className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${activeSubtitle === i ? 'text-black bg-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                      >
+                        <span className="truncate pr-2">{sub.languageName}</span>
+                        {sub.source && <span className={`text-[8px] px-1 rounded uppercase font-black ${activeSubtitle === i ? 'bg-black/20 text-black/60' : 'bg-white/5 text-white/30'}`}>{sub.source}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {showSettings && (
-                <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-60 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2">
+                <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-60 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2 animate-in slide-in-from-bottom-2 duration-200">
                   <div className="mb-2">
                     <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1">Speed</p>
                     <div className="grid grid-cols-4 gap-1 px-2">
@@ -908,58 +1068,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                             {q.height}p
                           </button>
                         ))}
-                      </div>
-                    </div>
-                  )}
-                  {(subtitles.length > 0 || fetchingSubtitles) && (
-                    <div>
-                      <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10 flex items-center gap-2">
-                        <Subtitles size={12}/> 
-                        Subtitles {fetchingSubtitles && <Loader2 size={10} className="animate-spin text-nebula-cyan" />}
-                      </p>
-                      {activeSubtitle !== -1 && !fetchingSubtitles && (
-                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/5 mb-1 bg-white/5">
-                          <span className="text-[9px] text-white/50 uppercase tracking-wider">Sync</span>
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={() => adjustSubtitleDelay(-0.5)}
-                              className="w-6 h-6 flex items-center justify-center text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded font-bold text-xs"
-                            >-</button>
-                            <span className="text-[10px] text-white/80 w-10 text-center font-mono">
-                              {subtitleOffset > 0 ? '+' : ''}{subtitleOffset.toFixed(1)}s
-                            </span>
-                            <button 
-                              onClick={() => adjustSubtitleDelay(0.5)}
-                              className="w-6 h-6 flex items-center justify-center text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded font-bold text-xs"
-                            >+</button>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex flex-col px-2">
-                        {!fetchingSubtitles && (
-                          <button
-                            onClick={() => handleSubtitleChange(-1)}
-                            className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${activeSubtitle === -1 ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                          >
-                            Off
-                          </button>
-                        )}
-                        {fetchingSubtitles ? (
-                          <div className="px-2 py-3 text-[10px] text-white/40 italic flex items-center gap-2">
-                            <Loader2 size={12} className="animate-spin" /> Establishing track link...
-                          </div>
-                        ) : (
-                          subtitles.map((sub, i) => (
-                            <button
-                              key={i}
-                              onClick={() => handleSubtitleChange(i)}
-                              className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors flex items-center justify-between ${activeSubtitle === i ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                            >
-                              <span className="truncate">{sub.languageName}</span>
-                              {sub.source && <span className="opacity-40 text-[9px] shrink-0">{sub.source}</span>}
-                            </button>
-                          ))
-                        )}
                       </div>
                     </div>
                   )}
