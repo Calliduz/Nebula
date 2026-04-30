@@ -388,10 +388,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   // ── Fetch TV Details ──────────────────────────────────────────────────────
   useEffect(() => {
     if (movie.type !== 'tv') return;
-    fetch(`${API}/api/tv-details/${movie.id}`)
+    const controller = new AbortController();
+    fetch(`${API}/api/tv-details/${movie.id}`, { signal: controller.signal })
       .then(r => r.json())
       .then(data => setTvDetails(data))
-      .catch(console.error);
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
+    return () => controller.abort();
   }, [movie.id]);
 
   // ── HLS setup ─────────────────────────────────────────────────────────────
