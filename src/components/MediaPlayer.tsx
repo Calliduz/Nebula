@@ -35,6 +35,7 @@ function formatTime(s: number) {
 export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode, onClose }) => {
   const [streamUrl, setStreamUrl]   = useState<string | null>(null);
   const [subtitles, setSubtitles]   = useState<any[]>([]);
+  const [isEmbed, setIsEmbed]       = useState(false);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
   const [isPaused, setIsPaused]     = useState(false);
@@ -130,6 +131,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     setLoading(true);
     setError('');
     setStreamUrl(null);
+    setIsEmbed(false);
     setMirrors([]);
     setActiveMirror(0);
     mirrorsRef.current = [];
@@ -152,14 +154,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       .then(data => {
         if (cancelled) return;
         if (data.mirrors && data.mirrors.length > 0) {
-          const proxiedMirrors = data.mirrors.map((m: any) => {
+          const processedMirrors = data.mirrors.map((m: any) => {
+            if (m.type === 'embed') return m;
             const proxiedUrl = `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`;
-            console.log(`[PLAYER] Proxied mirror: ${m.name} -> ${proxiedUrl.substring(0, 100)}...`);
             return { ...m, url: proxiedUrl };
           });
-          setMirrors(proxiedMirrors);
-          mirrorsRef.current = proxiedMirrors;
-          setStreamUrl(proxiedMirrors[0].url);
+          setMirrors(processedMirrors);
+          mirrorsRef.current = processedMirrors;
+          setStreamUrl(processedMirrors[0].url);
+          setIsEmbed(processedMirrors[0].type === 'embed');
           setActiveMirror(0);
           activeMirrorRef.current = 0;
           
@@ -169,7 +172,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
             setSubtitles(processSubtitles(data.subtitles, []));
           }
         } else if (data.streamUrl) {
-          setStreamUrl(`${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
+          const isEmb = data.type === 'embed';
+          setStreamUrl(isEmb ? data.streamUrl : `${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
+          setIsEmbed(isEmb);
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
           if (data.subtitles) {
@@ -391,7 +396,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
   // ── HLS setup ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!streamUrl || !videoRef.current) return;
+    if (!streamUrl || !videoRef.current || isEmbed) return;
     const video = videoRef.current;
     setIsBuffering(true);
 
@@ -513,7 +518,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   // ── Video event listeners ─────────────────────────────────────────────────
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || isEmbed) return;
 
     const onLoadedMetadata = () => {
       const savedProgress = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
@@ -887,19 +892,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                     .then(r => r.json())
                     .then(data => {
                       if (data.mirrors && data.mirrors.length > 0) {
-                        const proxiedMirrors = data.mirrors.map((m: any) => ({
-                          ...m,
-                          url: `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`,
-                        }));
-                        setMirrors(proxiedMirrors);
-                        mirrorsRef.current = proxiedMirrors;
-                        setStreamUrl(proxiedMirrors[0].url);
+                        const processedMirrors = data.mirrors.map((m: any) => {
+                          if (m.type === 'embed') return m;
+                          const proxiedUrl = `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`;
+                          return { ...m, url: proxiedUrl };
+                        });
+                        setMirrors(processedMirrors);
+                        mirrorsRef.current = processedMirrors;
+                        setStreamUrl(processedMirrors[0].url);
+                        setIsEmbed(processedMirrors[0].type === 'embed');
                         setActiveMirror(0);
                         activeMirrorRef.current = 0;
                         if (data.qualityTag) setQualityTag(data.qualityTag);
                         if (data.resolution) setResolution(data.resolution);
                       } else if (data.streamUrl) {
-                        setStreamUrl(`${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
+                        const isEmb = data.type === 'embed';
+                        setStreamUrl(isEmb ? data.streamUrl : `${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
+                        setIsEmbed(isEmb);
                         if (data.qualityTag) setQualityTag(data.qualityTag);
                         if (data.resolution) setResolution(data.resolution);
                       } else {
@@ -921,6 +930,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                     setActiveMirror(nextIdx);
                     activeMirrorRef.current = nextIdx;
                     setStreamUrl(mirrors[nextIdx].url);
+                    setIsEmbed(mirrors[nextIdx].type === 'embed');
                   }}
                   className="px-8 py-3 bg-white/10 text-white rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-white/20 transition-colors border border-white/10"
                 >
@@ -960,30 +970,44 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         </div>
       )}
 
-      <video
-        ref={videoRef}
-        className="w-full h-full object-contain"
-        crossOrigin="anonymous"
-        playsInline
-        onClick={resetHideTimer}
-      >
-        {vttBlobUrl && (
-          <track
-            key={vttBlobUrl}
-            kind="subtitles"
-            src={vttBlobUrl}
-            srcLang={subtitles[activeSubtitle]?.lang || 'en'}
-            label={subtitles[activeSubtitle]?.languageName || 'Active'}
-            default
-          />
-        )}
-      </video>
+      {isEmbed ? (
+        <iframe
+          src={streamUrl!}
+          className="w-full h-full border-0 bg-black absolute inset-0 z-0"
+          allowFullScreen
+          allow="autoplay; encrypted-media; picture-in-picture"
+          title="Nebula Secure Mirror"
+          onLoad={() => {
+            setLoading(false);
+            setIsBuffering(false);
+          }}
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          className="w-full h-full object-contain"
+          crossOrigin="anonymous"
+          playsInline
+          onClick={resetHideTimer}
+        >
+          {vttBlobUrl && (
+            <track
+              key={vttBlobUrl}
+              kind="subtitles"
+              src={vttBlobUrl}
+              srcLang={subtitles[activeSubtitle]?.lang || 'en'}
+              label={subtitles[activeSubtitle]?.languageName || 'Active'}
+              default
+            />
+          )}
+        </video>
+      )}
 
       <div
         className="absolute inset-0 flex flex-col justify-between z-10 pointer-events-none"
         style={{ opacity: showUi ? 1 : 0, transition: 'opacity 0.2s' }}
       >
-        <div className="flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
+        <div className={`flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 ${!isEmbed ? 'bg-gradient-to-b from-black/80 to-transparent' : ''} pointer-events-auto`}>
           <button
             onClick={safeClose}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 border border-white/5 shrink-0"
@@ -991,100 +1015,108 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
           >
             <X size={18} />
           </button>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-sm sm:text-base font-semibold truncate leading-tight flex items-center gap-2">
-              {movie.title}
-              {season !== undefined && episode !== undefined && (
-                <span className="text-nebula-cyan font-display italic text-xs sm:text-sm">S{season}E{episode}</span>
-              )}
-            </h2>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <p className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest">{movie.type === 'tv' ? 'TV Link' : 'Movie Link'} — {movie.year}</p>
-              {qualityTag && qualityTag !== 'UNKNOWN' && (
-                <div className="flex items-center gap-1">
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
-                    qualityTag === 'CAM' || qualityTag === 'TC'
-                      ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
-                      : qualityTag === 'BLURAY'
-                      ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
-                      : 'bg-nebula-cyan/10 border-nebula-cyan/30 text-nebula-cyan'
-                  }`}>
-                    {qualityTag === 'WEBDL' ? 'WEB-DL' : qualityTag === 'WEBRIP' ? 'WEBRip' : qualityTag}
-                  </span>
-                  {resolution && resolution !== 'UNKNOWN' && (
-                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-white/50">
-                      {resolution}
+          {!isEmbed && (
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm sm:text-base font-semibold truncate leading-tight flex items-center gap-2">
+                {movie.title}
+                {season !== undefined && episode !== undefined && (
+                  <span className="text-nebula-cyan font-display italic text-xs sm:text-sm">S{season}E{episode}</span>
+                )}
+              </h2>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <p className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest">{movie.type === 'tv' ? 'TV Link' : 'Movie Link'} — {movie.year}</p>
+                {qualityTag && qualityTag !== 'UNKNOWN' && (
+                  <div className="flex items-center gap-1">
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
+                      qualityTag === 'CAM' || qualityTag === 'TC'
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                        : qualityTag === 'BLURAY'
+                        ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                        : 'bg-nebula-cyan/10 border-nebula-cyan/30 text-nebula-cyan'
+                    }`}>
+                      {qualityTag === 'WEBDL' ? 'WEB-DL' : qualityTag === 'WEBRIP' ? 'WEBRip' : qualityTag}
                     </span>
-                  )}
-                </div>
-              )}
+                    {resolution && resolution !== 'UNKNOWN' && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-white/50">
+                        {resolution}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        <div className="px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 bg-gradient-to-t from-black/90 to-transparent pointer-events-auto">
-          <div
-            id="progress-slider"
-            className="relative w-full rounded-full mb-3 sm:mb-4 cursor-pointer group flex items-center h-5"
-            onMouseDown={handleSliderDown}
-            onTouchStart={handleSliderDown}
-            onMouseMove={handleSliderHover}
-            onMouseLeave={() => setHoverTime(null)}
-          >
-            {/* Hover Tooltip */}
-            {hoverTime !== null && !isDragging && (
-              <div 
-                className="absolute bottom-full mb-3 -translate-x-1/2 px-2.5 py-1.5 bg-black/90 backdrop-blur-md border border-white/20 text-white rounded-lg text-[10px] font-bold pointer-events-none z-50 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
-                style={{ left: `${(hoverTime / (videoRef.current?.duration || 1)) * 100}%` }}
-              >
-                {formatTime(hoverTime)}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-black/90" />
-              </div>
-            )}
-            
-            {/* Drag Tooltip */}
-            {isDragging && (
-              <div 
-                className="absolute bottom-full mb-2 -translate-x-1/2 px-2 py-1 bg-nebula-cyan text-black rounded text-xs font-bold pointer-events-none z-50"
-                style={{ left: `${dragProgress}%` }}
-              >
-                {formatTime((dragProgress / 100) * (videoRef.current?.duration || 0))}
-              </div>
-            )}
+        <div className={`px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 ${!isEmbed ? 'bg-gradient-to-t from-black/90 to-transparent' : ''} pointer-events-auto`}>
+          {!isEmbed && (
+            <div
+              id="progress-slider"
+              className="relative w-full rounded-full mb-3 sm:mb-4 cursor-pointer group flex items-center h-5"
+              onMouseDown={handleSliderDown}
+              onTouchStart={handleSliderDown}
+              onMouseMove={handleSliderHover}
+              onMouseLeave={() => setHoverTime(null)}
+            >
+              {/* Hover Tooltip */}
+              {hoverTime !== null && !isDragging && (
+                <div 
+                  className="absolute bottom-full mb-3 -translate-x-1/2 px-2.5 py-1.5 bg-black/90 backdrop-blur-md border border-white/20 text-white rounded-lg text-[10px] font-bold pointer-events-none z-50 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+                  style={{ left: `${(hoverTime / (videoRef.current?.duration || 1)) * 100}%` }}
+                >
+                  {formatTime(hoverTime)}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-black/90" />
+                </div>
+              )}
+              
+              {/* Drag Tooltip */}
+              {isDragging && (
+                <div 
+                  className="absolute bottom-full mb-2 -translate-x-1/2 px-2 py-1 bg-nebula-cyan text-black rounded text-xs font-bold pointer-events-none z-50"
+                  style={{ left: `${dragProgress}%` }}
+                >
+                  {formatTime((dragProgress / 100) * (videoRef.current?.duration || 0))}
+                </div>
+              )}
 
-            <div className="absolute inset-x-0 rounded-full bg-white/20" style={{ height: '3px' }}>
-              <div className="absolute inset-y-0 left-0 bg-white/30 rounded-full" style={{ width: `${buffered}%` }} />
-              <div className="absolute inset-y-0 left-0 bg-white rounded-full transition-all duration-75" style={{ width: `${isDragging ? dragProgress : progress}%` }} />
-              <div
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg group-hover:scale-125 transition-transform"
-                style={{ left: `${isDragging ? dragProgress : progress}%` }}
-              />
+              <div className="absolute inset-x-0 rounded-full bg-white/20" style={{ height: '3px' }}>
+                <div className="absolute inset-y-0 left-0 bg-white/30 rounded-full" style={{ width: `${buffered}%` }} />
+                <div className="absolute inset-y-0 left-0 bg-white rounded-full transition-all duration-75" style={{ width: `${isDragging ? dragProgress : progress}%` }} />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg group-hover:scale-125 transition-transform"
+                  style={{ left: `${isDragging ? dragProgress : progress}%` }}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 sm:gap-5">
-              <button
-                onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10); }}
-                className="text-white/70 hover:text-white transition-colors p-1"
-                title="–10s (J)"
-              >
-                <RotateCcw size={18} />
-              </button>
-              <button
-                onClick={togglePlay}
-                className="text-white hover:text-white/80 transition-colors p-1"
-                title="Play/Pause (Space)"
-              >
-                {isPaused ? <Play size={26} fill="currentColor" /> : <Pause size={26} fill="currentColor" />}
-              </button>
-              <button
-                onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10); }}
-                className="text-white/70 hover:text-white transition-colors p-1"
-                title="+10s (L)"
-              >
-                <RotateCw size={18} />
-              </button>
+              {!isEmbed && (
+                <>
+                  <button
+                    onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10); }}
+                    className="text-white/70 hover:text-white transition-colors p-1"
+                    title="–10s (J)"
+                  >
+                    <RotateCcw size={18} />
+                  </button>
+                  <button
+                    onClick={togglePlay}
+                    className="text-white hover:text-white/80 transition-colors p-1"
+                    title="Play/Pause (Space)"
+                  >
+                    {isPaused ? <Play size={26} fill="currentColor" /> : <Pause size={26} fill="currentColor" />}
+                  </button>
+                  <button
+                    onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10); }}
+                    className="text-white/70 hover:text-white transition-colors p-1"
+                    title="+10s (L)"
+                  >
+                    <RotateCw size={18} />
+                  </button>
+                </>
+              )}
               {movie.type === 'tv' && (
                 <button
                   onClick={handleNextEpisode}
@@ -1095,51 +1127,55 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                   <ChevronRight size={16} />
                 </button>
               )}
-              <div className="flex items-center gap-2 group/vol relative">
-                <button 
-                  onClick={() => {
-                    if (window.innerWidth < 768) {
-                      setShowMobileVolume(!showMobileVolume);
-                    } else {
-                      setIsMuted(!isMuted);
-                    }
-                  }}
-                  className="text-white/70 hover:text-white transition-colors"
-                >
-                  {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                </button>
-                <div className={`${showMobileVolume ? 'h-32 opacity-100 translate-y-0' : 'h-0 opacity-0 translate-y-4'} transition-all duration-300 overflow-hidden flex flex-col items-center absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-[#111]/90 backdrop-blur-xl p-3 rounded-2xl border border-white/10 z-50 shadow-2xl md:hidden`}>
-                  <div className="relative h-24 w-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div 
-                      className="absolute bottom-0 inset-x-0 bg-white rounded-full transition-all"
-                      style={{ height: `${isMuted ? 0 : volume}%` }}
-                    />
-                    <input
-                      type="range"
-                      min={0} max={100}
-                      orient="vertical"
-                      value={isMuted ? 0 : volume}
-                      onChange={e => { setVolume(+e.target.value); setIsMuted(false); }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-slider-vertical"
-                    />
-                  </div>
-                  <span className="text-[10px] text-white/40 mt-2 font-mono">{isMuted ? 0 : volume}%</span>
-                </div>
+              {!isEmbed && (
+                <>
+                  <div className="flex items-center gap-2 group/vol relative">
+                    <button 
+                      onClick={() => {
+                        if (window.innerWidth < 768) {
+                          setShowMobileVolume(!showMobileVolume);
+                        } else {
+                          setIsMuted(!isMuted);
+                        }
+                      }}
+                      className="text-white/70 hover:text-white transition-colors"
+                    >
+                      {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                    </button>
+                    <div className={`${showMobileVolume ? 'h-32 opacity-100 translate-y-0' : 'h-0 opacity-0 translate-y-4'} transition-all duration-300 overflow-hidden flex flex-col items-center absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-[#111]/90 backdrop-blur-xl p-3 rounded-2xl border border-white/10 z-50 shadow-2xl md:hidden`}>
+                      <div className="relative h-24 w-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div 
+                          className="absolute bottom-0 inset-x-0 bg-white rounded-full transition-all"
+                          style={{ height: `${isMuted ? 0 : volume}%` }}
+                        />
+                        <input
+                          type="range"
+                          min={0} max={100}
+                          orient="vertical"
+                          value={isMuted ? 0 : volume}
+                          onChange={e => { setVolume(+e.target.value); setIsMuted(false); }}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-slider-vertical"
+                        />
+                      </div>
+                      <span className="text-[10px] text-white/40 mt-2 font-mono">{isMuted ? 0 : volume}%</span>
+                    </div>
 
-                {/* Desktop Volume Slider */}
-                <div className="hidden md:flex w-0 group-hover/vol:w-24 transition-all duration-300 overflow-hidden items-center ml-2">
-                  <input
-                    type="range"
-                    min={0} max={100}
-                    value={isMuted ? 0 : volume}
-                    onChange={e => { setVolume(+e.target.value); setIsMuted(false); }}
-                    className="w-20 accent-white cursor-pointer h-1 rounded-full appearance-none bg-white/20"
-                  />
-                </div>
-              </div>
-              <span className="text-white/50 text-[10px] sm:text-xs tabular-nums">
-                {currentTime} <span className="text-white/20">/</span> {duration}
-              </span>
+                    {/* Desktop Volume Slider */}
+                    <div className="hidden md:flex w-0 group-hover/vol:w-24 transition-all duration-300 overflow-hidden items-center ml-2">
+                      <input
+                        type="range"
+                        min={0} max={100}
+                        value={isMuted ? 0 : volume}
+                        onChange={e => { setVolume(+e.target.value); setIsMuted(false); }}
+                        className="w-20 accent-white cursor-pointer h-1 rounded-full appearance-none bg-white/20"
+                      />
+                    </div>
+                  </div>
+                  <span className="text-white/50 text-[10px] sm:text-xs tabular-nums">
+                    {currentTime} <span className="text-white/20">/</span> {duration}
+                  </span>
+                </>
+              )}
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4 relative">
@@ -1152,23 +1188,27 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                   <span className="hidden sm:inline">EPISODES</span>
                 </button>
               )}
-              {/* Subtitles Button */}
-              <button
-                onClick={() => { setShowSubtitles(p => !p); setShowSettings(false); }}
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSubtitles ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
-                title="Subtitles"
-              >
-                <Subtitles size={16} />
-              </button>
+              {!isEmbed && (
+                <>
+                  {/* Subtitles Button */}
+                  <button
+                    onClick={() => { setShowSubtitles(p => !p); setShowSettings(false); }}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSubtitles ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
+                    title="Subtitles"
+                  >
+                    <Subtitles size={16} />
+                  </button>
 
-              {/* Settings */}
-              <button
-                onClick={() => { setShowSettings(p => !p); setShowSubtitles(false); }}
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
-                title="Settings"
-              >
-                <Settings size={16} />
-              </button>
+                  {/* Settings */}
+                  <button
+                    onClick={() => { setShowSettings(p => !p); setShowSubtitles(false); }}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 text-white/50 hover:text-white'}`}
+                    title="Settings"
+                  >
+                    <Settings size={16} />
+                  </button>
+                </>
+              )}
               <button
                 onClick={handleFullscreen}
                 className="text-white/50 hover:text-white transition-colors p-1"

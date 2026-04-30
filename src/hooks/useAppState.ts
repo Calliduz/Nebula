@@ -740,7 +740,7 @@ export function useAppState() {
        const parts = path.split('/');
        const type = parts[1];
        const rawId = parts[2];
-       const id = rawId.startsWith('k') ? rawId : parseInt(rawId);
+       const id = (type === 'tv' && isNaN(parseInt(rawId))) ? rawId : parseInt(rawId);
        
        if (!selectedMovie || selectedMovie.id !== id) {
           const found = allMovies.find(m => m.id === id && m.type === type);

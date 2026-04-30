@@ -55,7 +55,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 key={`card-${rowIndex}-${m.id}-${i}`} 
                 movie={m} 
                 snap 
-                aspect={row.isDramaRow ? 'landscape' : 'portrait'}
+                aspect="portrait"
                 onSelect={setSelectedMovie} 
                 isInList={myList.includes(m.id)} 
                 onToggleList={() => toggleMyList(m.id)} 

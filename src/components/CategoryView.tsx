@@ -108,17 +108,6 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         </div>
       )}
       
-      {viewingCategory === 'Dramas' && (
-        <div className="mb-10 p-4 sm:p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
-           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
-              <Shield className="text-amber-500" size={20} />
-           </div>
-           <div>
-              <h4 className="text-amber-500 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-1">Sector Under Maintenance</h4>
-              <p className="text-white/60 text-xs sm:text-sm font-light leading-relaxed">The Drama relay station is currently being upgraded to support deep-space signal processing. Some frequency bands may be unstable or unavailable during this operation.</p>
-           </div>
-        </div>
-      )}
       
       {viewingCategory === 'Library' ? (
         <div className="space-y-16">
@@ -185,16 +174,12 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         </div>
       ) : (
         <>
-          <div className={`grid ${
-            viewingCategory === 'Dramas' 
-              ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
-              : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
-          } gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12`}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
             {data.slice(0, visibleCount).map((movie: any, i: number) => (
               <MovieCard 
                 key={`cat-grid-${viewingCategory}-${movie.id}-${i}`} 
                 movie={movie} 
-                aspect={movie.isDrama ? 'landscape' : 'portrait'}
+                aspect="portrait"
                 isGrid={true}
                 onSelect={onSelectMovie} 
                 isInList={myList.includes(movie.id)} 

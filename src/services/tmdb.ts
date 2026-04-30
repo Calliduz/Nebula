@@ -340,7 +340,7 @@ export const enrichMoviesWithMetadata = async (
   if (!normalized.length) return normalized;
 
   const targetMovies = normalized.filter(
-    m => !(m as any).isDrama && (m as any).origin !== 'kisskh'
+    m => !(m as any).isDrama && (m as any).origin !== 'kisskh' && (m as any).origin !== 'dramacool'
   );
   if (!targetMovies.length) return normalized;
 

@@ -42,12 +42,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
 
       if (!currentMovie && tmdbId) {
         // Landing directly on the URL
-        if (typeof tmdbId === 'string' && tmdbId.startsWith('k')) {
-           // It's a KissKH drama! Set placeholder to trigger KissKH fetch
-           currentMovie = { id: tmdbId, type: 'tv', origin: 'kisskh' };
+        if (typeof tmdbId === 'string' && isNaN(parseInt(tmdbId))) {
+           // It's a Drama slug! Set placeholder to trigger fetch
+           currentMovie = { id: tmdbId, type: 'tv', origin: 'dramacool', isDrama: true };
            setMovie(currentMovie);
         } else {
-          const basic = await getMediaBasicInfo(tmdbId, type);
+          const basic = await getMediaBasicInfo(tmdbId as any, type);
           if (basic) {
             // Enrich with premium assets immediately
             const enriched = await enrichMoviesWithMetadata([basic]);
@@ -58,7 +58,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
       }
 
       if (currentMovie) {
-        if (currentMovie.origin === 'kisskh') {
+        if (currentMovie.origin === 'dramacool' || currentMovie.origin === 'kisskh' || currentMovie.isDrama) {
           try {
             let rawApi = import.meta.env.VITE_API_BASE_URL;
             if (!rawApi) {
@@ -104,7 +104,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
   }, [id, initialMovie?.id]);
 
   useEffect(() => {
-    if (movie?.type === 'tv' && movie?.id && movie?.origin !== 'kisskh') {
+    if (movie?.type === 'tv' && movie?.id && movie?.origin !== 'kisskh' && movie?.origin !== 'dramacool' && !movie?.isDrama) {
       getTVSeasonEpisodes(movie.id, activeSeason).then(setEpisodes);
     }
   }, [activeSeason]);

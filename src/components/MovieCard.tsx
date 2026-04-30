@@ -13,7 +13,7 @@ interface MovieCardProps {
 }
 
 export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSelect, aspect = 'portrait', onRemove, isGrid = false }) => {
-  const isLandscape = aspect === 'landscape' || movie.isDrama;
+  const isLandscape = aspect === 'landscape';
 
   return (
     <div 
