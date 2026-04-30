@@ -125,6 +125,31 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     discoverParams: { sort_by: 'vote_average.desc', 'vote_count.gte': '1000' },
     filterFn: m => m.type === 'movie' && (m.imdb ?? 0) >= 7.0,
   },
+  'Epic Fantasy Worlds': {
+    mediaType: 'movie',
+    discoverParams: { with_genres: '14', 'primary_release_date.gte': '2000-01-01', sort_by: 'popularity.desc' },
+    filterFn: m => m.genre.includes('Fantasy'),
+  },
+  'Feel-Good Romance': {
+    mediaType: 'movie',
+    discoverParams: { with_genres: '10749', 'primary_release_date.gte': '2000-01-01', sort_by: 'popularity.desc' },
+    filterFn: m => m.genre.includes('Romance'),
+  },
+  'Crime & Investigation': {
+    mediaType: 'movie',
+    discoverParams: { with_genres: '80', 'primary_release_date.gte': '2000-01-01', sort_by: 'popularity.desc' },
+    filterFn: m => m.genre.includes('Crime'),
+  },
+  'Historical Epics': {
+    mediaType: 'movie',
+    discoverParams: { with_genres: '36', 'primary_release_date.gte': '1990-01-01', sort_by: 'vote_count.desc' },
+    filterFn: m => m.genre.includes('History'),
+  },
+  'Family Movie Night': {
+    mediaType: 'movie',
+    discoverParams: { with_genres: '10751', 'primary_release_date.gte': '2010-01-01', sort_by: 'popularity.desc' },
+    filterFn: m => m.genre.includes('Family'),
+  },
   'Movies': {
     mediaType: 'movie',
     discoverParams: { sort_by: 'popularity.desc' },
@@ -232,7 +257,7 @@ export function useAppState() {
       const [
         rawTrending, rawPop, rawTop, rawTV, dramaRes, pinoyRes,
         sciFiRaw, acclaimedRaw, actionRaw, comedyRaw, horrorRaw, mysteryRaw, docRaw, animationRaw,
-        awardRaw, newRaw, gemsRaw,
+        awardRaw, newRaw, gemsRaw, fantasyRaw, romanceRaw, crimeRaw, historyRaw, familyRaw,
         leoRaw
       ] = await Promise.all([
         getTrending('all').catch(() => []),
@@ -250,8 +275,13 @@ export function useAppState() {
         discoverMedia('movie', { with_genres: '99' }).catch(() => []), 
         discoverMedia('movie', { with_genres: '16' }).catch(() => []), 
         discoverMedia('movie', { 'vote_average.gte': '8.5', 'vote_count.gte': '500' }).catch(() => []), 
-        discoverMedia('movie', { 'primary_release_year': '2025' }).catch(() => []), 
+        discoverMedia('movie', { 'primary_release_year': new Date().getFullYear().toString() }).catch(() => []), 
         discoverMedia('movie', { 'vote_average.gte': '7.5', 'vote_count.lte': '1000', 'vote_count.gte': '100' }).catch(() => []),
+        discoverMedia('movie', { with_genres: '14' }).catch(() => []), 
+        discoverMedia('movie', { with_genres: '10749' }).catch(() => []), 
+        discoverMedia('movie', { with_genres: '80' }).catch(() => []), 
+        discoverMedia('movie', { with_genres: '36', sort_by: 'vote_count.desc' }).catch(() => []), 
+        discoverMedia('movie', { with_genres: '10751' }).catch(() => []), 
         (async () => {
           let actorToUse = SPOTLIGHT_POOL[Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % SPOTLIGHT_POOL.length];
           
@@ -297,6 +327,11 @@ export function useAppState() {
       const awardMovies = hardDedupe(awardRaw);
       const newMovies = hardDedupe(newRaw);
       const gemMovies = hardDedupe(gemsRaw);
+      const fantasyMovies = hardDedupe(fantasyRaw);
+      const romanceMovies = hardDedupe(romanceRaw);
+      const crimeMovies = hardDedupe(crimeRaw);
+      const historyMovies = hardDedupe(historyRaw);
+      const familyMovies = hardDedupe(familyRaw);
       const spotlightData = leoRaw as any;
       const spotlightMovies = hardDedupe(spotlightData.results || []);
       const spotlightActor = spotlightData.actor || 'Leonardo DiCaprio';
@@ -367,6 +402,11 @@ export function useAppState() {
       const awardFiltered = filterRow(awardMovies);
       const newFiltered = filterRow(newMovies);
       const gemFiltered = filterRow(gemMovies);
+      const fantasyFiltered = filterRow(fantasyMovies);
+      const romanceFiltered = filterRow(romanceMovies);
+      const crimeFiltered = filterRow(crimeMovies);
+      const historyFiltered = filterRow(historyMovies);
+      const familyFiltered = filterRow(familyMovies);
       const spotlightFiltered = filterRow(spotlightMovies);
 
       const filteredPop = filterRow(popMovies);
@@ -411,6 +451,26 @@ export function useAppState() {
       });
       const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).map(e => e[0]).slice(0, 2);
 
+      const dynamicGenreRows = [
+        { title: 'Critically Acclaimed: Missions', items: acclaimedFiltered },
+        { title: 'Cinematic Masterpieces', items: filteredTop.slice(0, 15) },
+        { title: 'Award-Winning Hits', items: awardFiltered },
+        { title: 'Action Packed Missions', items: actionFiltered },
+        { title: 'Hidden Gems', items: gemFiltered },
+        { title: 'Comedy Gold', items: comedyFiltered },
+        { title: 'Scary Nights (Horror)', items: horrorFiltered },
+        { title: 'Mystery & Suspense', items: mysteryFiltered },
+        { title: 'Animation Favorites', items: animationFiltered },
+        { title: 'Sci-Fi Spectacles', items: sciFiFiltered },
+        { title: 'Documentary Collection', items: docFiltered },
+        { title: 'Epic Fantasy Worlds', items: fantasyFiltered },
+        { title: 'Feel-Good Romance', items: romanceFiltered },
+        { title: 'Crime & Investigation', items: crimeFiltered },
+        { title: 'Historical Epics', items: historyFiltered },
+        { title: 'Family Movie Night', items: familyFiltered },
+        { title: 'Top Rated Movies', items: filteredTop.slice(15) },
+      ].filter(r => r.items.length > 0).sort(() => Math.random() - 0.5);
+
       const initialRows = [
         ...(continueWatchingItems.length > 0 ? [{ title: 'Continue Watching', items: continueWatchingItems }] : []),
         { title: 'Trending Missions: Global Feed', items: filteredTrending },
@@ -431,11 +491,7 @@ export function useAppState() {
           };
         }),
         { title: 'Trending in your Sector: Philippines', items: pinoyDramas.slice(0, 10), isDramaRow: true },
-        { title: 'Critically Acclaimed: Missions', items: acclaimedFiltered },
         { title: 'New Intel: 2025 Releases', items: newFiltered },
-        { title: 'Cinematic Masterpieces', items: filteredTop.slice(0, 15) },
-        { title: 'Award-Winning Hits', items: awardFiltered },
-        { title: 'Action Packed Missions', items: actionFiltered },
         { 
           title: `Actor Spotlight: ${spotlightActor}`, 
           items: spotlightFiltered,
@@ -446,17 +502,10 @@ export function useAppState() {
           }
         },
         { title: 'Bingeworthy TV Shows', items: filteredTV },
-        { title: 'Hidden Gems', items: gemFiltered },
-        { title: 'Comedy Gold', items: comedyFiltered },
-        { title: 'Scary Nights (Horror)', items: horrorFiltered },
-        { title: 'Mystery & Suspense', items: mysteryFiltered },
         { title: 'Popular Movies', items: filteredPop },
-        { title: 'Animation Favorites', items: animationFiltered },
-        { title: 'Sci-Fi Spectacles', items: sciFiFiltered },
-        { title: 'Documentary Collection', items: docFiltered },
-        { title: 'Pinoy Movies & TV', items: pinoyDramas.slice(10, 30), isDramaRow: true },    
-        { title: 'Top Rated Movies', items: filteredTop.slice(15) },
-      ].filter(r => r.items.length > 0);
+        ...dynamicGenreRows,
+        { title: 'Pinoy Movies & TV', items: pinoyDramas.slice(10, 30), isDramaRow: true },
+      ].filter(r => r.items?.length > 0);
 
       // 4. Set Initial State
       const initialFeatured = trending.slice(0, 5);
@@ -474,17 +523,20 @@ export function useAppState() {
         ...enrichedTop, ...enrichedFeatured, ...trending, ...popMovies, ...tvShows, 
         ...topRated, ...topDramas, ...pinoyDramas, ...sciFiMovies, ...acclaimedMovies, ...spotlightMovies,
         ...actionMovies, ...comedyMovies, ...horrorMovies, ...mysteryMovies, ...documentaryMovies, ...animationMovies,
-        ...awardMovies, ...newMovies, ...gemMovies
+        ...awardMovies, ...newMovies, ...gemMovies, ...fantasyMovies, ...romanceMovies, ...crimeMovies, ...historyMovies, ...familyMovies
       ]);
       setAllMovies(finalPool);
 
       // 6. Background enrichment for all rows (Skip Dramas as requested)
-      initialRows.forEach(async (row, i) => {
+      initialRows.forEach(async (row) => {
          if (row.items.length === 0 || row.isDramaRow) return;
          const enriched = await enrichMoviesWithMetadata(row.items.slice(0, 10));
          setRows(prev => {
             const updated = [...prev];
-            updated[i] = { ...updated[i], items: [...enriched, ...row.items.slice(10)] };
+            const targetIndex = updated.findIndex(r => r.title === row.title);
+            if (targetIndex !== -1) {
+              updated[targetIndex] = { ...updated[targetIndex], items: [...enriched, ...row.items.slice(10)] };
+            }
             return updated;
          });
       });
