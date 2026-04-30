@@ -23,6 +23,19 @@ export default function App() {
   const navigate = useNavigate();
   const isWatching = location.pathname.includes('/watch/');
 
+  // Force portrait mode globally unless watching a video
+  React.useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if (isMobile && window.screen && window.screen.orientation && (window.screen.orientation as any).lock) {
+      if (!isWatching) {
+        (window.screen.orientation as any).lock('portrait').catch((e: any) => {
+          // Ignore: Some browsers require fullscreen to lock orientation, or user interaction
+          console.warn('Could not lock to portrait:', e);
+        });
+      }
+    }
+  }, [isWatching]);
+
   return (
     <div className="flex min-h-screen bg-obsidian font-sans overflow-x-hidden">
         {!isWatching && (
