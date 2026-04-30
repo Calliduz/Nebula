@@ -410,11 +410,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         enableWorker: true,
         lowLatencyMode: false,
         startFragPrefetch: true,
-        progressive: true,
-        nudgeOffset: 0.2,
+        nudgeOffset: 0.1,
         nudgeMaxRetry: 50,
-        maxBufferHole: 2.5,
-        maxFragLookUpTolerance: 0.5,
+        maxBufferHole: 0.5,
+        maxFragLookUpTolerance: 0.2,
         capLevelToPlayerSize: true,
         enableSoftwareAES: true,
         abrEwmaDefaultEstimate: 5000000,
@@ -590,7 +589,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       }
     };
 
-    // ── Stall watchdog: detect playback freeze (currentTime not advancing) ──
+    // ── Stall watchdog: recover from permanent freezes without forcing seeks ──
     let lastWatchdogTime = video.currentTime;
     let stallCount = 0;
     const watchdog = setInterval(() => {
@@ -601,15 +600,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       }
       if (Math.abs(video.currentTime - lastWatchdogTime) < 0.05) {
         stallCount++;
-        if (stallCount >= 3) {
-          // Playback frozen for ~3s while supposedly playing
-          console.warn(`[PLAYER] Watchdog: playback frozen at ${video.currentTime.toFixed(1)}s for ~${stallCount}s. Nudging...`);
+        if (stallCount >= 5) { // 5 seconds of frozen currentTime
+          console.warn(`[PLAYER] Watchdog: playback permanently frozen. Attempting HLS recovery...`);
           setIsBuffering(true);
-          // Nudge forward by a tiny amount to skip past a potential gap
-          if (isFinite(video.duration) && video.duration > 0) {
-            video.currentTime = Math.min(video.currentTime + 0.3, video.duration - 1);
+          // Instead of forcing currentTime (which breaks A/V sync), we tell HLS to recover the media buffer
+          if (hlsRef.current) {
+            hlsRef.current.recoverMediaError();
+            hlsRef.current.startLoad();
           }
-          if (hlsRef.current) hlsRef.current.startLoad();
           stallCount = 0;
         }
       } else {
