@@ -82,7 +82,7 @@ export const MovieRow: React.FC<MovieRowProps> = ({
         <div
           ref={rowRef}
           onScroll={updateArrows}
-          className="flex gap-1 sm:gap-6 overflow-x-auto py-4 -my-4 px-4 -mx-4 custom-scrollbar snap-x snap-mandatory scroll-smooth"
+          className="flex gap-1 sm:gap-6 overflow-x-auto overflow-y-hidden py-4 -my-4 px-4 -mx-4 custom-scrollbar snap-x snap-mandatory scroll-smooth"
         >
           {children}
         </div>

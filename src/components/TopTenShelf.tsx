@@ -72,16 +72,16 @@ export const TopTenShelf = ({
         <div 
           ref={rowRef}
           onScroll={updateArrows}
-          className="flex gap-4 sm:gap-6 overflow-x-auto py-8 -my-8 px-4 sm:px-0 custom-scrollbar snap-x snap-mandatory scroll-smooth"
+          className="flex gap-4 sm:gap-6 overflow-x-auto overflow-y-hidden py-8 -my-8 px-4 sm:px-0 custom-scrollbar snap-x snap-mandatory scroll-smooth"
         >
           {topMovies.map((movie, i) => (
             <div
               key={`top-shelf-${movie.id}-${i}`}
-              className="flex-shrink-0 relative group cursor-pointer snap-start flex items-end pl-[24px] sm:pl-[40px]"
+              className="flex-shrink-0 relative group/card cursor-pointer snap-start flex items-end pl-[24px] sm:pl-[40px]"
               onClick={() => onSelect(movie)}
             >
               <span
-                className="absolute left-0 bottom-[-10px] sm:bottom-[-20px] text-[100px] sm:text-[160px] leading-[0.8] font-display font-black transition-all duration-500 group-hover:-translate-x-2 z-20 tracking-tighter"
+                className="absolute left-0 bottom-[-10px] sm:bottom-[-20px] text-[100px] sm:text-[160px] leading-[0.8] font-display font-black transition-all duration-500 group-hover/card:-translate-x-2 z-20 tracking-tighter"
                 style={{
                   color: "#0b0f19",
                   WebkitTextStroke: "2px rgba(255,255,255,0.7)",
@@ -90,10 +90,10 @@ export const TopTenShelf = ({
               >
                 {i + 1}
               </span>
-              <div className="w-[120px] sm:w-[180px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:border-nebula-cyan/50 group-hover:shadow-[0_20px_60px_rgba(0,229,255,0.2)] group-hover:z-30 z-10 origin-bottom relative">
+              <div className="w-[120px] sm:w-[180px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/50 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.2)] group-hover/card:z-30 z-10 origin-bottom relative">
                 <img
                   src={movie.image}
-                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                  className="w-full h-full object-cover opacity-80 group-hover/card:opacity-100 transition-opacity"
                   alt={movie.title}
                   referrerPolicy="no-referrer"
                   onError={handleImageError}
