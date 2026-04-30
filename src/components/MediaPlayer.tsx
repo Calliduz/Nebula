@@ -73,6 +73,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const hlsRef      = useRef<Hls | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hideTimer   = useRef<NodeJS.Timeout | null>(null);
+  // Refs to track latest mirror state for use inside HLS error closures
+  const mirrorsRef = useRef<any[]>([]);
+  const activeMirrorRef = useRef<number>(0);
 
   // ── Auto Fullscreen & Landscape ───────────────────────────────────────────
   useEffect(() => {
@@ -129,6 +132,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     setStreamUrl(null);
     setMirrors([]);
     setActiveMirror(0);
+    mirrorsRef.current = [];
+    activeMirrorRef.current = 0;
     setSubtitles([]);
     setActiveSubtitle(-1);
     hasAutoSelectedSub.current = false;
@@ -153,8 +158,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
             return { ...m, url: proxiedUrl };
           });
           setMirrors(proxiedMirrors);
+          mirrorsRef.current = proxiedMirrors;
           setStreamUrl(proxiedMirrors[0].url);
           setActiveMirror(0);
+          activeMirrorRef.current = 0;
           
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
@@ -394,15 +401,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         maxMaxBufferLength: 120,
         backBufferLength: 30,
         fragLoadingMaxRetry: 20,
+        fragLoadingRetryDelay: 500,
+        fragLoadingMaxRetryTimeout: 8000,
         manifestLoadingMaxRetry: 20,
+        manifestLoadingRetryDelay: 500,
+        levelLoadingMaxRetry: 10,
+        levelLoadingRetryDelay: 500,
         enableWorker: true,
-        nudgeOffset: 0.1,
-        nudgeMaxRetry: 30,
-        maxBufferHole: 2.0,
-        maxFragLookUpTolerance: 0.25,
+        lowLatencyMode: false,
+        startFragPrefetch: true,
+        progressive: true,
+        nudgeOffset: 0.2,
+        nudgeMaxRetry: 50,
+        maxBufferHole: 2.5,
+        maxFragLookUpTolerance: 0.5,
         capLevelToPlayerSize: true,
         enableSoftwareAES: true,
         abrEwmaDefaultEstimate: 5000000,
+        highBufferWatchdogPeriod: 3,
       });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
@@ -414,15 +430,78 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         video.play().catch(() => setIsPaused(true));
       });
 
+      // ── Robust error recovery with retry + mirror fallback ──
+      let networkRetries = 0;
+      const MAX_NETWORK_RETRIES = 4;
+      let mediaRecoveryAttempt = 0;
+
       hls.on(Hls.Events.ERROR, (_, d) => {
+        // Handle non-fatal fragment errors: nudge past stuck fragments
+        if (!d.fatal && d.details === 'fragLoadError') {
+          console.warn(`[HLS] Non-fatal frag load error on frag ${d.frag?.sn}. Nudging forward...`);
+          if (video.duration > 0 && video.currentTime < video.duration - 1) {
+            video.currentTime = video.currentTime + 0.5;
+          }
+          return;
+        }
         if (!d.fatal) return;
+
+        console.error(`[HLS] Fatal error: type=${d.type} details=${d.details}`);
+
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          hls.startLoad();
+          networkRetries++;
+          if (networkRetries <= MAX_NETWORK_RETRIES) {
+            const delay = Math.min(1000 * Math.pow(2, networkRetries - 1), 8000);
+            console.warn(`[HLS] Network retry ${networkRetries}/${MAX_NETWORK_RETRIES} in ${delay}ms...`);
+            setTimeout(() => {
+              if (hlsRef.current === hls) hls.startLoad();
+            }, delay);
+          } else {
+            // Exhausted retries — try next mirror if available (use refs for latest state)
+            console.error(`[HLS] Network retries exhausted. Attempting mirror fallback...`);
+            const nextIdx = activeMirrorRef.current + 1;
+            if (nextIdx < mirrorsRef.current.length) {
+              console.log(`[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`);
+              setActiveMirror(nextIdx);
+              activeMirrorRef.current = nextIdx;
+              setStreamUrl(mirrorsRef.current[nextIdx].url);
+            } else {
+              setError('Stream connection lost. All mirrors exhausted.');
+            }
+          }
         } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          hls.recoverMediaError();
+          mediaRecoveryAttempt++;
+          if (mediaRecoveryAttempt === 1) {
+            console.warn('[HLS] Media error — attempting recoverMediaError()...');
+            hls.recoverMediaError();
+          } else if (mediaRecoveryAttempt === 2) {
+            console.warn('[HLS] Media error persists — attempting swapAudioCodec() + recover...');
+            hls.swapAudioCodec();
+            hls.recoverMediaError();
+          } else {
+            // Last resort — try next mirror (use refs for latest state)
+            const nextIdx = activeMirrorRef.current + 1;
+            if (nextIdx < mirrorsRef.current.length) {
+              console.log(`[HLS] Media recovery failed. Switching to mirror ${nextIdx}...`);
+              setActiveMirror(nextIdx);
+              activeMirrorRef.current = nextIdx;
+              setStreamUrl(mirrorsRef.current[nextIdx].url);
+            } else {
+              setError(`Stream decode failed: ${d.details}`);
+            }
+          }
         } else {
           setError(`Stream failed: ${d.details}`);
         }
+      });
+
+      // Reset retry counters on successful fragment load
+      hls.on(Hls.Events.FRAG_LOADED, () => {
+        if (networkRetries > 0) {
+          console.log(`[HLS] Fragment loaded successfully. Resetting retry counter (was ${networkRetries}).`);
+          networkRetries = 0;
+        }
+        mediaRecoveryAttempt = 0;
       });
 
       return () => { hls.destroy(); hlsRef.current = null; };
@@ -479,6 +558,65 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     const onWaiting  = () => setIsBuffering(true);
     const onPlaying  = () => setIsBuffering(false);
     const onCanPlay  = () => setIsBuffering(false);
+    const onCanPlayThrough = () => setIsBuffering(false);
+
+    // ── Stall recovery: detect frozen playback and nudge forward ──
+    const onStalled = () => {
+      console.warn('[PLAYER] Stalled event — data delivery halted.');
+      setIsBuffering(true);
+      // If HLS is active, prod it to resume loading
+      if (hlsRef.current) hlsRef.current.startLoad();
+    };
+
+    // Suspend fires frequently on mobile — debounce to avoid spamming startLoad()
+    let suspendTimer: NodeJS.Timeout | null = null;
+    const onSuspend = () => {
+      if (suspendTimer) return;
+      suspendTimer = setTimeout(() => {
+        suspendTimer = null;
+        if (!video.paused && hlsRef.current) {
+          hlsRef.current.startLoad();
+        }
+      }, 2000);
+    };
+
+    const onVideoError = () => {
+      const err = video.error;
+      console.error(`[PLAYER] Video element error: code=${err?.code} msg=${err?.message}`);
+      // MEDIA_ERR_NETWORK (2) or MEDIA_ERR_DECODE (3): try HLS recovery
+      if (err && (err.code === 2 || err.code === 3) && hlsRef.current) {
+        console.warn('[PLAYER] Attempting HLS media error recovery from video element error...');
+        hlsRef.current.recoverMediaError();
+      }
+    };
+
+    // ── Stall watchdog: detect playback freeze (currentTime not advancing) ──
+    let lastWatchdogTime = video.currentTime;
+    let stallCount = 0;
+    const watchdog = setInterval(() => {
+      if (video.paused || video.ended || video.seeking) {
+        lastWatchdogTime = video.currentTime;
+        stallCount = 0;
+        return;
+      }
+      if (Math.abs(video.currentTime - lastWatchdogTime) < 0.05) {
+        stallCount++;
+        if (stallCount >= 3) {
+          // Playback frozen for ~3s while supposedly playing
+          console.warn(`[PLAYER] Watchdog: playback frozen at ${video.currentTime.toFixed(1)}s for ~${stallCount}s. Nudging...`);
+          setIsBuffering(true);
+          // Nudge forward by a tiny amount to skip past a potential gap
+          if (isFinite(video.duration) && video.duration > 0) {
+            video.currentTime = Math.min(video.currentTime + 0.3, video.duration - 1);
+          }
+          if (hlsRef.current) hlsRef.current.startLoad();
+          stallCount = 0;
+        }
+      } else {
+        stallCount = 0;
+      }
+      lastWatchdogTime = video.currentTime;
+    }, 1000);
 
     video.addEventListener('loadedmetadata', onLoadedMetadata);
     video.addEventListener('timeupdate', onTime);
@@ -488,7 +626,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
     video.addEventListener('waiting', onWaiting);
     video.addEventListener('playing', onPlaying);
     video.addEventListener('canplay', onCanPlay);
+    video.addEventListener('canplaythrough', onCanPlayThrough);
+    video.addEventListener('stalled', onStalled);
+    video.addEventListener('suspend', onSuspend);
+    video.addEventListener('error', onVideoError);
     return () => {
+      clearInterval(watchdog);
+      if (suspendTimer) clearTimeout(suspendTimer);
       video.removeEventListener('loadedmetadata', onLoadedMetadata);
       video.removeEventListener('timeupdate', onTime);
       video.removeEventListener('durationchange', onDuration);
@@ -497,6 +641,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('canplay', onCanPlay);
+      video.removeEventListener('canplaythrough', onCanPlayThrough);
+      video.removeEventListener('stalled', onStalled);
+      video.removeEventListener('suspend', onSuspend);
+      video.removeEventListener('error', onVideoError);
     };
   }, [streamUrl, movie.id]);
 
@@ -726,12 +874,68 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
             </div>
             <h3 className="text-2xl font-display font-black text-white mb-2 uppercase tracking-tighter">No signal detected</h3>
             <p className="text-white/40 max-w-sm mb-8 font-light text-sm">The requested data stream is unreachable from this sector. Try another mirror or origin point.</p>
-            <button 
-              onClick={safeClose}
-              className="px-8 py-3 bg-white text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-nebula-cyan transition-colors"
-            >
-              Abort Mission
-            </button>
+            <div className="flex items-center gap-3 flex-wrap justify-center">
+              <button 
+                onClick={() => {
+                  setError('');
+                  setLoading(true);
+                  // Re-trigger the stream fetch by bumping streamUrl state
+                  setStreamUrl(null);
+                  let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
+                  if (movie.origin) url += `&origin=${movie.origin}`;
+                  if (season !== undefined) url += `&season=${season}`;
+                  if (episode !== undefined) url += `&episode=${episode}`;
+                  fetch(url)
+                    .then(r => r.json())
+                    .then(data => {
+                      if (data.mirrors && data.mirrors.length > 0) {
+                        const proxiedMirrors = data.mirrors.map((m: any) => ({
+                          ...m,
+                          url: `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`,
+                        }));
+                        setMirrors(proxiedMirrors);
+                        mirrorsRef.current = proxiedMirrors;
+                        setStreamUrl(proxiedMirrors[0].url);
+                        setActiveMirror(0);
+                        activeMirrorRef.current = 0;
+                        if (data.qualityTag) setQualityTag(data.qualityTag);
+                        if (data.resolution) setResolution(data.resolution);
+                      } else if (data.streamUrl) {
+                        setStreamUrl(`${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`);
+                        if (data.qualityTag) setQualityTag(data.qualityTag);
+                        if (data.resolution) setResolution(data.resolution);
+                      } else {
+                        setError(data.error || 'No stream found on retry.');
+                      }
+                    })
+                    .catch(e => setError(e.message))
+                    .finally(() => setLoading(false));
+                }}
+                className="px-8 py-3 bg-nebula-cyan text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-white transition-colors"
+              >
+                Retry Stream
+              </button>
+              {mirrors.length > 1 && activeMirror < mirrors.length - 1 && (
+                <button
+                  onClick={() => {
+                    setError('');
+                    const nextIdx = activeMirror + 1;
+                    setActiveMirror(nextIdx);
+                    activeMirrorRef.current = nextIdx;
+                    setStreamUrl(mirrors[nextIdx].url);
+                  }}
+                  className="px-8 py-3 bg-white/10 text-white rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-white/20 transition-colors border border-white/10"
+                >
+                  Try Next Mirror
+                </button>
+              )}
+              <button 
+                onClick={safeClose}
+                className="px-8 py-3 bg-white text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-nebula-cyan transition-colors"
+              >
+                Abort Mission
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1040,6 +1244,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
                             key={i}
                             onClick={() => {
                               setActiveMirror(i);
+                              activeMirrorRef.current = i;
                               setStreamUrl(m.url);
                             }}
                             className={`w-full text-left px-2 py-2 text-[11px] rounded-md transition-colors flex items-center justify-between ${activeMirror === i ? 'text-white bg-white/10 font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
