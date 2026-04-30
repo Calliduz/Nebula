@@ -318,38 +318,53 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       }
     });
 
-    // 1. Separate VidLink from others
-    const vidlinkSubs = combined.filter(s => s.source === 'VidLink');
-    const otherSubs = combined.filter(s => s.source !== 'VidLink');
-
-    const finalSubs: any[] = [];
-    const langCount: Record<string, number> = {};
-
-    // 2. Add all VidLink subtitles first (they are usually best)
-    vidlinkSubs.forEach(s => {
-      const lang = s.lang || 'unk';
-      langCount[lang] = (langCount[lang] || 0) + 1;
-      
-      const isEnglish = lang.startsWith('en') || s.languageName?.toLowerCase().includes('english');
-      let name = s.languageName;
-      if (isEnglish && langCount[lang] === 1) name = "English (Recommended)";
-      
-      finalSubs.push({ ...s, languageName: name });
+    const englishSubs: any[] = [];
+    const otherLangSubs: any[] = [];
+    
+    // Group subtitles by language priority
+    combined.forEach(s => {
+      const isEnglish = (s.lang || '').startsWith('en') || s.languageName?.toLowerCase().includes('english');
+      if (isEnglish) englishSubs.push(s);
+      else otherLangSubs.push(s);
     });
 
-    // 3. Add other sources (OpenSubtitles) but keep up to 3 per language total
-    otherSubs.forEach(s => {
-      const lang = s.lang || 'unk';
-      const count = langCount[lang] || 0;
+    const processGroup = (group: any[]) => {
+      const vidlink = group.filter(s => s.source === 'VidLink');
+      const external = group.filter(s => s.source !== 'VidLink');
       
-      if (count < 3) {
-        langCount[lang] = count + 1;
-        const name = `${s.languageName} #${langCount[lang]} (External)`;
-        finalSubs.push({ ...s, languageName: name });
-      }
-    });
+      const processed: any[] = [];
+      const extCount: Record<string, number> = {};
+      const vidCount: Record<string, number> = {};
 
-    return finalSubs;
+      vidlink.forEach(s => {
+        const lang = s.lang || 'unk';
+        vidCount[lang] = (vidCount[lang] || 0) + 1;
+        const isEnglish = lang.startsWith('en') || s.languageName?.toLowerCase().includes('english');
+        
+        let name = s.languageName;
+        if (isEnglish) {
+          name = `English (Vidlink)${vidCount[lang] > 1 ? ` #${vidCount[lang]}` : ''}`;
+        } else {
+          name = `${s.languageName} (Vidlink)${vidCount[lang] > 1 ? ` #${vidCount[lang]}` : ''}`;
+        }
+        processed.push({ ...s, languageName: name });
+      });
+
+      external.forEach(s => {
+        const lang = s.lang || 'unk';
+        const count = extCount[lang] || 0;
+        if (count < 3) {
+          extCount[lang] = count + 1;
+          const sourceSuffix = s.source === 'OpenSubtitles' ? ' (OpenSubtitles)' : '';
+          const name = `${s.languageName} #${extCount[lang]} (External)${sourceSuffix}`;
+          processed.push({ ...s, languageName: name });
+        }
+      });
+
+      return processed;
+    };
+
+    return [...processGroup(englishSubs), ...processGroup(otherLangSubs)];
   }, [API]);
 
   // ── Fetch TV Details ──────────────────────────────────────────────────────
