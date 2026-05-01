@@ -406,27 +406,58 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        maxBufferLength: 60,
-        maxMaxBufferLength: 120,
-        backBufferLength: 30,
-        fragLoadingMaxRetry: 20,
-        fragLoadingRetryDelay: 500,
-        fragLoadingMaxRetryTimeout: 8000,
-        manifestLoadingMaxRetry: 20,
-        manifestLoadingRetryDelay: 500,
-        levelLoadingMaxRetry: 10,
-        levelLoadingRetryDelay: 500,
+        // ── Buffer ──────────────────────────────────────────────────────────
+        // 30s forward buffer is the Netflix/YouTube standard.
+        // 60s was over-buffering: hls.js stalls waiting to fill the full
+        // 60s window when the CDN can't deliver that fast, causing freezes.
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        backBufferLength: 15,          // Keep 15s behind for seek-back
+
+        // ── Fragment loading ─────────────────────────────────────────────
+        fragLoadingMaxRetry: 6,        // 6 retries (was 20 — bloated retry storm)
+        fragLoadingRetryDelay: 1000,   // 1s base delay before each retry
+        fragLoadingMaxRetryTimeout: 16000,
+        manifestLoadingMaxRetry: 5,
+        manifestLoadingRetryDelay: 1000,
+        levelLoadingMaxRetry: 5,
+        levelLoadingRetryDelay: 1000,
+
+        // ── ABR (Adaptive Bitrate) ───────────────────────────────────────
+        // Start ABR at 1.5 Mbps, not 5 Mbps.
+        // 5 Mbps caused instant 1080p selection before bandwidth was measured,
+        // leading to the first ~10 segments stalling the buffer.
+        abrEwmaDefaultEstimate: 1_500_000,
+        capLevelToPlayerSize: true,    // Never load quality higher than display size
+
+        // ── Sync / Stall recovery ────────────────────────────────────────
+        // Smaller hole = HLS patches discontinuities sooner (less stall time)
+        maxBufferHole: 0.3,
+        maxFragLookUpTolerance: 0.2,
+        // Nudge: 0.3s push with max 8 retries = 2.4s total before giving up.
+        // Old: 0.1s × 50 retries = 50 tiny seeks flooding the proxy.
+        nudgeOffset: 0.3,
+        nudgeMaxRetry: 8,
+        highBufferWatchdogPeriod: 2,   // Check buffer health every 2s (was 3)
+
+        // ── Performance ─────────────────────────────────────────────────
         enableWorker: true,
         lowLatencyMode: false,
         startFragPrefetch: true,
-        nudgeOffset: 0.1,
-        nudgeMaxRetry: 50,
-        maxBufferHole: 0.5,
-        maxFragLookUpTolerance: 0.2,
-        capLevelToPlayerSize: true,
         enableSoftwareAES: true,
-        abrEwmaDefaultEstimate: 5000000,
-        highBufferWatchdogPeriod: 3,
+
+        // ── XHR setup: route ALL HLS fragment requests through our proxy ─
+        // This ensures every .ts segment request uses our keepAlive agent
+        // with proper CDN headers. Without this, hls.js can fall back to
+        // direct CDN requests that get rate-limited or geo-blocked.
+        xhrSetup: (xhr, url) => {
+          // Already proxied (manifest rewriter added /api/proxy/segment)
+          if (url.includes('/api/proxy/segment') || url.includes('/api/proxy/stream')) return;
+          // Direct CDN segment — route through proxy
+          if (url.includes('.ts') || url.includes('/seg') || url.includes('/frag') || url.includes('.aac') || url.includes('.mp4')) {
+            xhr.open('GET', `${API}/api/proxy/segment?url=${encodeURIComponent(url)}`, true);
+          }
+        },
       });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
@@ -598,9 +629,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       }
     };
 
-    // ── Stall watchdog: recover from permanent freezes without forcing seeks ──
+    // ── A/V Sync watchdog: detect frozen playback and recover without seek ──
+    // Strategy:
+    //   1–5s frozen: just call startLoad() — lightweight, no stall
+    //   6–10s frozen: recoverMediaError() — re-initializes the codec
+    //   >10s frozen: try next mirror
+    // We never force video.currentTime = x+N because that causes the
+    // exact A/V desync the user is experiencing (player clock advances
+    // while decoder is reset, audio tracks drift apart).
     let lastWatchdogTime = video.currentTime;
     let stallCount = 0;
+    let recoveryCount = 0;
     const watchdog = setInterval(() => {
       if (video.paused || video.ended || video.seeking) {
         lastWatchdogTime = video.currentTime;
@@ -609,18 +648,39 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       }
       if (Math.abs(video.currentTime - lastWatchdogTime) < 0.05) {
         stallCount++;
-        if (stallCount >= 5) { // 5 seconds of frozen currentTime
-          console.warn(`[PLAYER] Watchdog: playback permanently frozen. Attempting HLS recovery...`);
+        if (stallCount === 5) {
+          // 5 seconds frozen — light recovery
+          console.warn('[WATCHDOG] 5s freeze detected. Calling startLoad()...');
           setIsBuffering(true);
-          // Instead of forcing currentTime (which breaks A/V sync), we tell HLS to recover the media buffer
+          if (hlsRef.current) hlsRef.current.startLoad();
+          recoveryCount++;
+        } else if (stallCount === 10) {
+          // 10 seconds frozen — escalate to media error recovery
+          console.warn('[WATCHDOG] 10s freeze — escalating to recoverMediaError()...');
           if (hlsRef.current) {
             hlsRef.current.recoverMediaError();
             hlsRef.current.startLoad();
           }
+          recoveryCount++;
+        } else if (stallCount === 15 && recoveryCount >= 2) {
+          // 15 seconds frozen and recovery already tried twice — switch mirror
+          console.error('[WATCHDOG] Permanent freeze — switching to next mirror...');
+          const nextIdx = activeMirrorRef.current + 1;
+          if (nextIdx < mirrorsRef.current.length) {
+            setActiveMirror(nextIdx);
+            activeMirrorRef.current = nextIdx;
+            setStreamUrl(mirrorsRef.current[nextIdx].url);
+          }
           stallCount = 0;
+          recoveryCount = 0;
         }
       } else {
-        stallCount = 0;
+        if (stallCount > 0) {
+          console.log(`[WATCHDOG] Playback resumed after ${stallCount}s stall.`);
+          stallCount = 0;
+          recoveryCount = 0;
+          setIsBuffering(false);
+        }
       }
       lastWatchdogTime = video.currentTime;
     }, 1000);
