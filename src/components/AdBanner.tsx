@@ -28,14 +28,20 @@ export const AdBanner: React.FC<AdBannerProps> = ({ label = "Sponsorship Intelli
             <div className="w-1 h-1 rounded-full bg-nebula-cyan" />
           </div>
 
-          {/* Placeholder for the actual Ad code */}
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-white/40 text-xs font-display italic">
-              Commercial Uplink Placeholder
-            </p>
-            <p className="text-[10px] text-white/10 max-w-[280px] uppercase tracking-tighter">
-              Replace this block with your ad network's code snippet to begin earning revenue.
-            </p>
+          {/* Live Ad Integration */}
+          <div className="flex flex-col items-center gap-2 min-h-[90px] w-full overflow-hidden">
+            <iframe 
+              data-aa='2437017' 
+              src='//ad.a-ads.com/2437017/?size=728x90&background_color=transparent&title_color=00E5FF&text_color=FFFFFF&link_color=00E5FF' 
+              style={{ 
+                width: '728px', 
+                height: '90px', 
+                border: '0px', 
+                padding: '0', 
+                overflow: 'hidden', 
+                backgroundColor: 'transparent' 
+              }} 
+            />
           </div>
           
           <div className="mt-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[8px] text-white/30 uppercase tracking-widest group-hover:text-white/60 transition-colors">
