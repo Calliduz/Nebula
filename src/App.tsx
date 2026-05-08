@@ -348,6 +348,7 @@ function MediaPlayerStub({ actions, state }: any) {
         movie={movie}
         season={season}
         episode={episode}
+        onMarkAsWatched={actions.markAsWatched}
         onClose={() => navigate(-1)}
       />
     </div>

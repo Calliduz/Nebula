@@ -20,6 +20,7 @@ interface MediaPlayerProps {
   movie: any;
   season?: number;
   episode?: number;
+  onMarkAsWatched: (id: string | number) => void;
   onClose: () => void;
 }
 
@@ -32,7 +33,7 @@ function formatTime(s: number) {
   return `${m}:${String(sec).padStart(2,'0')}`;
 }
 
-export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode, onClose }) => {
+export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode, onMarkAsWatched, onClose }) => {
   const [streamUrl, setStreamUrl]   = useState<string | null>(null);
   const [subtitles, setSubtitles]   = useState<any[]>([]);
   const [isEmbed, setIsEmbed]       = useState(false);
@@ -68,6 +69,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
   const [showSubtitles, setShowSubtitles] = useState(false);
   const [showMobileVolume, setShowMobileVolume] = useState(false);
   const hasAutoSelectedSub = useRef(false);
+  const hasLoggedHistory = useRef(false);
   const navigate = useNavigate();
 
   const videoRef    = useRef<HTMLVideoElement>(null);
@@ -573,12 +575,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
         // Throttle progress saving to every 5 seconds
         if (Date.now() - lastSaveTime.current > 5000) {
           const key = getProgressKey();
-          if (cur > 10 && video.duration - cur > 10) {
+          
+          // Mark as watched in history after 15 seconds of successful playback
+          if (cur > 15 && !hasLoggedHistory.current) {
+            onMarkAsWatched(movie.id);
+            hasLoggedHistory.current = true;
+          }
+
+          const isNearEnd = (video.duration - cur < 60) || (cur / video.duration > 0.90);
+
+          if (cur > 10 && !isNearEnd) {
             const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
-            p[key] = { time: cur, duration: video.duration };
+            p[key] = { time: cur, duration: video.duration, timestamp: Date.now() };
             localStorage.setItem('nebula-progress', JSON.stringify(p));
             lastSaveTime.current = Date.now();
-          } else if (video.duration - cur <= 10) {
+          } else if (isNearEnd && video.duration > 30) {
+            // Only mark as fully finished if we are near the end AND the video is actually long enough
             const p = JSON.parse(localStorage.getItem('nebula-progress') || '{}');
             delete p[key];
             localStorage.setItem('nebula-progress', JSON.stringify(p));

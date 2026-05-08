@@ -854,9 +854,15 @@ export function useAppState() {
     return [...flat].sort(() => Math.random() - 0.5).slice(0, 20);
   }, [rows]);
 
+  const markAsWatched = (id: string | number) => {
+    setHistory(prev => {
+      const filtered = prev.filter(item => item.toString() !== id.toString());
+      return [id.toString(), ...filtered].slice(0, 100);
+    });
+  };
+
   const startPlayback = (movie: any, s?: number, e?: number) => {
     setIsTransitioning(true);
-    setHistory(prev => [...prev.filter(id => id !== movie.id), movie.id]);
     const target = s !== undefined && e !== undefined 
       ? `/watch/${movie.type}/${movie.id}?season=${s}&episode=${e}`
       : `/watch/${movie.type}/${movie.id}`;
@@ -938,6 +944,7 @@ export function useAppState() {
       clearMyList,
       removeFromHistory,
       removeFromProgress,
+      markAsWatched,
       loadMore,
       getCategoryMovies,
       startPlayback,
