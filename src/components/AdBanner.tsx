@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 
 interface AdBannerProps {
   label?: string;
@@ -7,27 +7,46 @@ interface AdBannerProps {
 
 /**
  * AdBanner Component - Optimized for Adsterra Native Banners
+ * Supports multiple instances by generating unique IDs
  */
 export const AdBanner: React.FC<AdBannerProps> = ({ label = "Sponsorship Intelligence", className = "" }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const adInjected = useRef(false);
+  
+  // Create a unique ID for this specific banner instance
+  const uniqueId = useMemo(() => `container-${Math.random().toString(36).substr(2, 9)}`, []);
 
   useEffect(() => {
     // Only inject once per component mount
     if (adInjected.current || !containerRef.current) return;
     
     try {
-      const script = document.createElement('script');
-      script.async = true;
-      script.setAttribute('data-cfasync', 'false');
-      script.src = 'https://pl29378466.profitablecpmratenetwork.com/871bc81b5a654bd07becd29b01ff006d/invoke.js';
+      // 1. Create the configuration script
+      const configScript = document.createElement('script');
+      configScript.type = 'text/javascript';
+      configScript.innerHTML = `
+        if (!window.atOptions) window.atOptions = [];
+        window.atOptions.push({
+          'key' : '871bc81b5a654bd07becd29b01ff006d',
+          'format' : 'js',
+          'full_width' : true,
+          'container' : '${uniqueId}'
+        });
+      `;
+      containerRef.current.appendChild(configScript);
+
+      // 2. Create the loader script
+      const loaderScript = document.createElement('script');
+      loaderScript.async = true;
+      loaderScript.setAttribute('data-cfasync', 'false');
+      loaderScript.src = 'https://pl29378466.profitablecpmratenetwork.com/871bc81b5a654bd07becd29b01ff006d/invoke.js';
       
-      containerRef.current.appendChild(script);
+      containerRef.current.appendChild(loaderScript);
       adInjected.current = true;
     } catch (e) {
       console.error("Adsterra Injection Failed", e);
     }
-  }, []);
+  }, [uniqueId]);
 
   return (
     <div className={`w-full py-4 ${className}`}>
@@ -41,10 +60,10 @@ export const AdBanner: React.FC<AdBannerProps> = ({ label = "Sponsorship Intelli
             <div className="w-1 h-1 rounded-full bg-nebula-cyan" />
           </div>
 
-          {/* Adsterra Native Banner Container */}
+          {/* Unique Container for this ad instance */}
           <div 
             ref={containerRef}
-            id="container-871bc81b5a654bd07becd29b01ff006d" 
+            id={uniqueId} 
             className="w-full flex justify-center overflow-hidden min-h-[90px]"
           />
           

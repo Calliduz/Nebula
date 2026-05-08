@@ -38,6 +38,8 @@ const REGIONS = [
   { id: '3', name: 'Vietnam' },
 ];
 
+import { AdBanner } from './AdBanner';
+
 export const CategoryView: React.FC<CategoryViewProps> = ({
   viewingCategory,
   setViewingCategory,
@@ -64,6 +66,38 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   }, [viewingCategory]);
 
   const isDramaOrTV = viewingCategory === 'Dramas' || viewingCategory === 'TV Shows';
+  
+  // Helper to render grid with ads every 20 items
+  const renderGridWithAds = () => {
+    const items = data.slice(0, visibleCount);
+    const elements = [];
+    const AD_INTERVAL = 20;
+
+    for (let i = 0; i < items.length; i++) {
+      elements.push(
+        <MovieCard 
+          key={`cat-grid-${viewingCategory}-${items[i].id}-${i}`} 
+          movie={items[i]} 
+          aspect="portrait"
+          isGrid={true}
+          onSelect={onSelectMovie} 
+          isInList={myList.some(id => id.toString() === items[i].id.toString())} 
+          onToggleList={() => toggleMyList(items[i].id)} 
+        />
+      );
+
+      // Inject ad every AD_INTERVAL items
+      if ((i + 1) % AD_INTERVAL === 0 && i !== items.length - 1) {
+        elements.push(
+          <div key={`ad-${i}`} className="col-span-full py-8">
+            <AdBanner label={`${viewingCategory} Sponsorship`} />
+          </div>
+        );
+      }
+    }
+    return elements;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -134,6 +168,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                </div>
              )}
           </section>
+
+          {/* Library Ad Placement */}
+          <AdBanner label="Library Sponsorship" />
           
           <section>
              <div className="flex justify-between items-center mb-8">
@@ -159,8 +196,8 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                        </button>
                      </div>
                    </div>
-                 ))}
-               </div>
+                  ))}
+                </div>
              ) : (
                <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
                  <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-8 border border-white/10">
@@ -175,17 +212,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
-            {data.slice(0, visibleCount).map((movie: any, i: number) => (
-              <MovieCard 
-                key={`cat-grid-${viewingCategory}-${movie.id}-${i}`} 
-                movie={movie} 
-                aspect="portrait"
-                isGrid={true}
-                onSelect={onSelectMovie} 
-                isInList={myList.some(id => id.toString() === movie.id.toString())} 
-                onToggleList={() => toggleMyList(movie.id)} 
-              />
-            ))}
+            {renderGridWithAds()}
           </div>
           {(data.length > visibleCount || ['Dramas', 'Trending Operations', 'Movies', 'TV Shows', 'Trending Missions: Global Feed'].includes(viewingCategory || '') || ROW_FETCH_CONFIG[viewingCategory || '']) && viewingCategory !== 'Library' && (
             <div className="mt-16 flex justify-center">
