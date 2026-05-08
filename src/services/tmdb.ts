@@ -91,6 +91,7 @@ export interface NebulaMovie {
   fanartBackground?: string | null;
   quality?: string;
   isVerified?: boolean;
+  isDead?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -343,6 +344,7 @@ export const getMediaBasicInfo = async (
         const { results } = await res.json();
         if (results && results.length > 0) {
           movie.isVerified = results[0].isVerified;
+          movie.isDead = results[0].isDead;
         }
       }
     } catch { /* ignore */ }
@@ -418,11 +420,15 @@ export const enrichMovies = async (
       fetch(`${apiBase}/api/stream/availability?ids=${simpleIds}`).then(r => r.json()).catch(() => ({ results: [] }))
     ]);
 
-    // Apply Verification Status
+    // Apply Verification & Dead Status
     if (availRes?.results) {
-      const verifiedMap = new Map(availRes.results.map((r: any) => [r.id.toString(), r.isVerified]));
+      const availMap = new Map(availRes.results.map((r: any) => [r.id.toString(), r]));
       normalized.forEach(m => {
-        m.isVerified = verifiedMap.get(m.id.toString()) || false;
+        const info = availMap.get(m.id.toString());
+        if (info) {
+          m.isVerified = info.isVerified || false;
+          m.isDead = info.isDead || false;
+        }
       });
     }
 

@@ -45,17 +45,17 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
             )}
             
             {/* Status Badges */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 md:gap-2">
               {/* Quality Badge */}
               {movie.quality && (
-                <div className={`px-2 py-0.5 rounded-md backdrop-blur-xl border-2 w-fit shadow-2xl ${
+                <div className={`px-1.5 md:px-2 py-0.5 rounded-md backdrop-blur-xl border md:border-2 w-fit shadow-2xl ${
                   movie.quality === 'CAM' 
                     ? 'bg-amber-500/30 border-amber-500/50' 
                     : movie.quality === 'TBA'
                     ? 'bg-red-500/30 border-red-500/50'
                     : 'bg-nebula-cyan/30 border-nebula-cyan/50'
                 }`}>
-                  <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-wider ${
+                  <p className={`text-[8px] md:text-[10px] font-black uppercase tracking-wider ${
                     movie.quality === 'CAM' ? 'text-amber-400' : movie.quality === 'TBA' ? 'text-red-400' : 'text-nebula-cyan'
                   }`}>
                     {movie.quality}
@@ -65,15 +65,35 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
 
               {/* Verified Status Badge */}
               {movie.isVerified ? (
-                <div className="px-2 py-0.5 rounded-md bg-emerald-500/30 border-2 border-emerald-500/50 backdrop-blur-xl w-fit shadow-2xl">
-                  <p className="text-[9px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Verified
+                <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-emerald-500/30 border md:border-2 border-emerald-500/50 backdrop-blur-xl w-fit shadow-2xl">
+                  <p className="text-[8px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="hidden md:inline">Verified</span>
+                    <span className="md:hidden">Live</span>
+                  </p>
+                </div>
+              ) : movie.isDead ? (
+                <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-rose-600/40 border md:border-2 border-rose-500/60 backdrop-blur-xl w-fit shadow-2xl">
+                  <p className="text-[8px] md:text-[10px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-rose-500" />
+                    <span className="hidden md:inline">No Signal</span>
+                    <span className="md:hidden">Dead</span>
                   </p>
                 </div>
               ) : movie.quality !== 'TBA' && (
-                <div className="px-2 py-0.5 rounded-md bg-white/10 border-2 border-white/20 backdrop-blur-xl w-fit shadow-2xl">
-                  <p className="text-[9px] md:text-[10px] font-black text-white/80 uppercase tracking-wider">
-                    {movie.quality === 'CAM' ? 'In Theaters' : 'Searching Mirrors'}
+                <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-white/10 border md:border-2 border-white/20 backdrop-blur-xl w-fit shadow-2xl">
+                  <p className="text-[8px] md:text-[10px] font-black text-white/80 uppercase tracking-wider">
+                    {movie.quality === 'CAM' ? (
+                      <>
+                        <span className="hidden md:inline">In Theaters</span>
+                        <span className="md:hidden">Theater</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="hidden md:inline">Searching Mirrors</span>
+                        <span className="md:hidden">Pending</span>
+                      </>
+                    )}
                   </p>
                 </div>
               )}

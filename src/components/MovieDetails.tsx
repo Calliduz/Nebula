@@ -207,12 +207,30 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
                 
                 {/* Availability Badge */}
                 {movie.isVerified ? (
-                  <div className="px-2 py-0.5 rounded border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> VERIFIED COPY
+                  <div className="px-1.5 md:px-2 py-0.5 rounded border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 flex items-center gap-1.5 md:gap-2 font-black tracking-tighter text-[10px] md:text-xs">
+                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-emerald-400 animate-pulse" /> 
+                    <span className="hidden md:inline">VERIFIED COPY</span>
+                    <span className="md:hidden">VERIFIED</span>
+                  </div>
+                ) : movie.isDead ? (
+                  <div className="px-1.5 md:px-2 py-0.5 rounded border border-rose-500/50 bg-rose-500/10 text-rose-400 flex items-center gap-1.5 md:gap-2 font-black tracking-tighter text-[10px] md:text-xs">
+                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" /> 
+                    <span className="hidden md:inline">NO SIGNAL DETECTED</span>
+                    <span className="md:hidden">DEAD SIGNAL</span>
                   </div>
                 ) : movie.quality !== 'TBA' && (
-                  <div className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-white/50">
-                    {movie.quality === 'CAM' ? 'IN THEATERS' : 'SEARCHING MIRRORS'}
+                  <div className="px-1.5 md:px-2 py-0.5 rounded border border-white/10 bg-white/5 text-white/50 font-black tracking-tighter text-[10px] md:text-xs">
+                    {movie.quality === 'CAM' ? (
+                      <>
+                        <span className="hidden md:inline">IN THEATERS</span>
+                        <span className="md:hidden">THEATER</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="hidden md:inline">SEARCHING MIRRORS</span>
+                        <span className="md:hidden">PENDING</span>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -249,8 +267,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
                         <span>{label}</span>
                       </motion.button>
                       {!movie.isVerified && !isTBA && (
-                        <p className="text-[10px] text-dim font-bold uppercase tracking-wider text-center">
-                          Copy not verified • Search pending
+                        <p className={`text-[10px] font-bold uppercase tracking-wider text-center ${movie.isDead ? 'text-rose-400 animate-pulse' : 'text-dim'}`}>
+                          {movie.isDead ? 'Known Unreachable • Scrapers returned 404' : 'Copy not verified • Search pending'}
                         </p>
                       )}
                     </div>
