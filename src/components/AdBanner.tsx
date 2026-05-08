@@ -10,62 +10,55 @@ interface AdBannerProps {
  * Supports multiple instances by generating unique IDs
  */
 export const AdBanner: React.FC<AdBannerProps> = ({ label = "Sponsorship Intelligence", className = "" }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const adInjected = useRef(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   
-  // Create a unique ID for this specific banner instance
-  const uniqueId = useMemo(() => `container-${Math.random().toString(36).substr(2, 9)}`, []);
+  // Use the specific container ID from the provided snippet
+  const containerId = "container-871bc81b5a654bd07becd29b01ff006d";
 
   useEffect(() => {
-    // Only inject once per component mount
-    if (adInjected.current || !containerRef.current) return;
-    
-    try {
-      // 1. Create the configuration script
-      const configScript = document.createElement('script');
-      configScript.type = 'text/javascript';
-      configScript.innerHTML = `
-        if (!window.atOptions) window.atOptions = [];
-        window.atOptions.push({
-          'key' : '871bc81b5a654bd07becd29b01ff006d',
-          'format' : 'js',
-          'full_width' : true,
-          'container' : '${uniqueId}'
-        });
-      `;
-      containerRef.current.appendChild(configScript);
+    if (!iframeRef.current) return;
 
-      // 2. Create the loader script
-      const loaderScript = document.createElement('script');
-      loaderScript.async = true;
-      loaderScript.setAttribute('data-cfasync', 'false');
-      loaderScript.src = 'https://pl29378466.profitablecpmratenetwork.com/871bc81b5a654bd07becd29b01ff006d/invoke.js';
-      
-      containerRef.current.appendChild(loaderScript);
-      adInjected.current = true;
-    } catch (e) {
-      console.error("Adsterra Injection Failed", e);
-    }
-  }, [uniqueId]);
+    const srcDoc = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { margin: 0; padding: 0; overflow: hidden; background: transparent; display: flex; justify-content: center; }
+            #${containerId} { width: 100%; min-height: 220px; display: flex; justify-content: center; }
+          </style>
+        </head>
+        <body>
+          <div id="${containerId}"></div>
+          <script async="async" data-cfasync="false" src="https://pl29378466.profitablecpmratenetwork.com/871bc81b5a654bd07becd29b01ff006d/invoke.js"></script>
+        </body>
+      </html>
+    `;
+
+    iframeRef.current.srcdoc = srcDoc;
+  }, []);
 
   return (
-    <div className={`w-full py-4 ${className}`}>
-      <div className="relative group overflow-hidden rounded-2xl bg-white/[0.03] border border-white/5 backdrop-blur-md p-4 transition-all hover:bg-white/[0.05] hover:border-white/10">
+    <div className={`w-full py-6 ${className}`}>
+      <div className="relative group overflow-hidden rounded-2xl bg-white/[0.03] border border-white/5 backdrop-blur-md p-6 transition-all hover:bg-white/[0.05] hover:border-white/10">
         <div className="absolute top-0 right-0 w-32 h-32 bg-nebula-cyan/5 blur-3xl -mr-16 -mt-16 rounded-full" />
         
-        <div className="flex flex-col items-center justify-center min-h-[120px] relative z-10 text-center gap-3">
+        <div className="flex flex-col items-center justify-center min-h-[240px] relative z-10 text-center gap-4">
           <div className="flex items-center gap-2 opacity-30">
             <div className="w-1 h-1 rounded-full bg-nebula-cyan" />
             <span className="text-[9px] uppercase tracking-[0.3em] font-black italic">{label}</span>
             <div className="w-1 h-1 rounded-full bg-nebula-cyan" />
           </div>
 
-          {/* Unique Container for this ad instance */}
-          <div 
-            ref={containerRef}
-            id={uniqueId} 
-            className="w-full flex justify-center overflow-hidden min-h-[90px]"
-          />
+          <div className="w-full flex justify-center overflow-hidden min-h-[200px]">
+            <iframe
+              ref={iframeRef}
+              title="Sponsorship Feed"
+              className="w-full border-0 overflow-hidden"
+              style={{ height: '220px' }}
+              scrolling="no"
+              frameBorder="0"
+            />
+          </div>
           
           <div className="mt-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[8px] text-white/30 uppercase tracking-widest group-hover:text-white/60 transition-colors">
             Ad Policy: Non-Intrusive
