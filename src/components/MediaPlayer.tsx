@@ -4,17 +4,8 @@ import { X, Pause, Play, RotateCcw, RotateCw, VolumeX, Volume2, Maximize, Settin
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
-let rawApi = import.meta.env.VITE_API_BASE_URL;
-if (!rawApi) {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    rawApi = 'http://localhost:4000';
-  } else if (window.location.hostname === 'nebula.clev.studio') {
-    rawApi = 'https://nebula-server-qbp6.onrender.com';
-  } else {
-    rawApi = `${window.location.origin}/api`;
-  }
-}
-const API = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
+import { API_BASE_URL } from '../config';
+const API = API_BASE_URL;
 
 interface MediaPlayerProps {
   movie: any;

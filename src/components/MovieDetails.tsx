@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Star, Clock, Calendar, Shield, AudioWaveform as Waveform, Sparkles, Maximize, Play, X, Plus } from 'lucide-react';
 import { AdBanner } from './AdBanner';
+import { API_BASE_URL } from '../config';
 import { handleImageError } from '../utils/helpers';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getMediaDetails, getMediaBasicInfo, enrichMoviesWithMetadata, getTVDetails, getTVSeasonEpisodes } from '../services/tmdb';
@@ -61,17 +62,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
       if (currentMovie) {
         if (currentMovie.origin === 'dramacool' || currentMovie.origin === 'kisskh' || currentMovie.isDrama) {
           try {
-            let rawApi = import.meta.env.VITE_API_BASE_URL;
-            if (!rawApi) {
-              if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                rawApi = 'http://localhost:4000';
-              } else if (window.location.hostname === 'nebula.clev.studio') {
-                rawApi = 'https://nebula-server-qbp6.onrender.com';
-              } else {
-                rawApi = `${window.location.origin}/api`;
-              }
-            }
-            const apiBase = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
+            const apiBase = API_BASE_URL;
             const r = await fetch(`${apiBase}/api/drama/detail/${currentMovie.id}`);
             const data = await r.json();
             if (data) {

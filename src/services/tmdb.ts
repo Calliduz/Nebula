@@ -94,17 +94,10 @@ export interface NebulaMovie {
   isDead?: boolean;
 }
 
+import { API_BASE_URL } from '../config';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const getApiBase = (): string => {
-  let rawApi = import.meta.env.VITE_API_BASE_URL;
-  if (!rawApi) {
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') rawApi = 'http://localhost:4000';
-    else if (host === 'nebula.clev.studio') rawApi = 'https://nebula-server-qbp6.onrender.com';
-    else rawApi = `${window.location.origin}/api`;
-  }
-  return rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
-};
+const getApiBase = (): string => API_BASE_URL;
 
 const proxyImage = (url: string): string => {
   if (!url) return '';
