@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Star, Clock, Calendar, Shield, AudioWaveform as Waveform, Sparkles, Maximize, Play, X, Plus } from 'lucide-react';
+import { AdBanner } from './AdBanner';
 import { handleImageError } from '../utils/helpers';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getMediaDetails, getMediaBasicInfo, enrichMoviesWithMetadata, getTVDetails, getTVSeasonEpisodes } from '../services/tmdb';
@@ -441,7 +442,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
           </div>
         </div>
         
-        {/* Generous bottom padding to fix scrollbar desync bug */}
+        {/* Generous bottom padding with Ad space */}
+        <div className="mt-12 px-8 sm:px-12">
+          <AdBanner label="Intelligence Subsidy" />
+        </div>
         <div className="h-40 w-full pointer-events-none" />
       </div>
     </motion.div>

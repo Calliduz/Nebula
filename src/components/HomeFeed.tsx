@@ -4,6 +4,7 @@ import { TopTenShelf } from './TopTenShelf';
 import { MovieRow } from './MovieRow';
 import { MovieCard } from './MovieCard';
 import { MovieSkeleton } from './MovieSkeleton';
+import { AdBanner } from './AdBanner';
 
 interface HomeFeedProps {
   sortBy: string;
@@ -41,33 +42,39 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       <TopTenShelf data={allMovies} onSelect={setSelectedMovie} />
 
-      {rows.map((row: any, rowIndex) => row.items.length > 0 && (
-        <MovieRow 
-          key={`row-v3-${row.title}-${rowIndex}`} 
-          title={row.title}
-          onTitleClick={() => setViewingCategory(row.title)}
-        >
-          {isLoading ? (
-            [...Array(6)].map((_, i) => <MovieSkeleton key={`sk-${rowIndex}-${i}`} />)
-          ) : (
-            row.items.map((m: any, i: number) => (
-              <MovieCard 
-                key={`card-${rowIndex}-${m.id}-${i}`} 
-                movie={m} 
-                snap 
-                aspect="portrait"
-                onSelect={setSelectedMovie} 
-                isInList={myList.includes(m.id)} 
-                onToggleList={() => toggleMyList(m.id)} 
-                onRemove={
-                  row.title === 'Continue Watching' ? () => removeFromProgress(m.id.toString()) :
-                  row.title === 'My Secure Records' ? () => toggleMyList(m.id) :
-                  undefined
-                }
-              />
-            ))
+      {rows.map((row: any, rowIndex) => (
+        <React.Fragment key={`row-group-${rowIndex}`}>
+          {row.items.length > 0 && (
+            <MovieRow 
+              title={row.title}
+              onTitleClick={() => setViewingCategory(row.title)}
+            >
+              {isLoading ? (
+                [...Array(6)].map((_, i) => <MovieSkeleton key={`sk-${rowIndex}-${i}`} />)
+              ) : (
+                row.items.map((m: any, i: number) => (
+                  <MovieCard 
+                    key={`card-${rowIndex}-${m.id}-${i}`} 
+                    movie={m} 
+                    snap 
+                    aspect="portrait"
+                    onSelect={setSelectedMovie} 
+                    isInList={myList.includes(m.id)} 
+                    onToggleList={() => toggleMyList(m.id)} 
+                    onRemove={
+                      row.title === 'Continue Watching' ? () => removeFromProgress(m.id.toString()) :
+                      row.title === 'My Secure Records' ? () => toggleMyList(m.id) :
+                      undefined
+                    }
+                  />
+                ))
+              )}
+            </MovieRow>
           )}
-        </MovieRow>
+          
+          {/* Inject AdBanner every 4 rows */}
+          {(rowIndex + 1) % 4 === 0 && <AdBanner className="mt-4" />}
+        </React.Fragment>
       ))}
 
       {/* Fallback Recommendation Row if not already in rows */}
