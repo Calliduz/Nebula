@@ -144,7 +144,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({ movie, season, episode
       setVttBlobUrl(null);
     }
 
-    let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
+    let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&releaseDate=${movie.release_date || ''}`;
     if (movie.origin) url += `&origin=${movie.origin}`;
     if (season !== undefined) url += `&season=${season}`;
     if (episode !== undefined) url += `&episode=${episode}`;
