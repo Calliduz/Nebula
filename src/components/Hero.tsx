@@ -6,8 +6,8 @@ import { handleImageError } from '../utils/helpers';
 interface HeroProps {
   currentHeroIndex: number;
   setCurrentHeroIndex: (index: number) => void;
-  myList: number[];
-  toggleMyList: (id: number) => void;
+  myList: any[];
+  toggleMyList: (id: any) => void;
   startPlayback: (movie: any) => void;
   setSelectedMovie: (movie: any) => void;
   featuredMovies: any[];
@@ -154,10 +154,10 @@ export const Hero: React.FC<HeroProps> = ({
             </motion.button>
             <motion.button 
               whileHover={{ backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)' }}
-              className={`border backdrop-blur-3xl px-6 sm:px-12 py-3 md:py-5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 sm:gap-4 transition-all flex-1 md:flex-none ${myList.includes(activeHero.id) ? 'bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan' : 'bg-white/5 border-white/10 text-white'}`}
+              className={`border backdrop-blur-3xl px-6 sm:px-12 py-3 md:py-5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 sm:gap-4 transition-all flex-1 md:flex-none ${myList.some(id => id.toString() === activeHero.id.toString()) ? 'bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan' : 'bg-white/5 border-white/10 text-white'}`}
               onClick={() => toggleMyList(activeHero.id)}
             >
-              {myList.includes(activeHero.id) ? (
+              {myList.some(id => id.toString() === activeHero.id.toString()) ? (
                  <><X size={20} className="md:w-6 md:h-6" /> Remove</>
               ) : (
                 <><Plus size={20} className="md:w-6 md:h-6" /> My List</>

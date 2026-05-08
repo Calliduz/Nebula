@@ -187,7 +187,7 @@ export default function App() {
             onClose={() => actions.setSelectedMovie(null)}
             onPlay={(s, e) => actions.startPlayback(state.selectedMovie, s, e)}
             onSelectMovie={actions.setSelectedMovie}
-            isInList={state.myList.includes(state.selectedMovie.id)}
+            isInList={state.myList.includes(state.selectedMovie.id.toString())}
             onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
           />
         )}

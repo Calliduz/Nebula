@@ -99,6 +99,47 @@ export const TopTenShelf = ({
                   onError={handleImageError}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+                
+                {/* Status Badges Overlay */}
+                <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-40 pointer-events-none">
+                  {/* Quality Badge */}
+                  {movie.quality && (
+                    <div className={`px-1.5 py-0.5 rounded-md backdrop-blur-xl border border-white/20 shadow-2xl ${
+                      movie.quality === 'CAM' ? 'bg-amber-500/30' : movie.quality === 'TBA' ? 'bg-red-500/30' : 'bg-nebula-cyan/30'
+                    }`}>
+                      <p className={`text-[8px] font-black uppercase tracking-wider ${
+                        movie.quality === 'CAM' ? 'text-amber-400' : movie.quality === 'TBA' ? 'text-red-400' : 'text-nebula-cyan'
+                      }`}>
+                        {movie.quality}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Status Indicator */}
+                  {movie.isVerified ? (
+                    <div className="px-1.5 py-0.5 rounded-md bg-emerald-500/30 border border-emerald-500/50 backdrop-blur-xl shadow-2xl">
+                      <p className="text-[8px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="hidden sm:inline">Verified</span>
+                        <span className="sm:hidden">Live</span>
+                      </p>
+                    </div>
+                  ) : movie.isDead ? (
+                    <div className="px-1.5 py-0.5 rounded-md bg-rose-600/40 border border-rose-500/60 backdrop-blur-xl shadow-2xl">
+                      <p className="text-[8px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-rose-500" />
+                        <span className="hidden sm:inline">No Signal</span>
+                        <span className="sm:hidden">Dead</span>
+                      </p>
+                    </div>
+                  ) : movie.quality !== 'TBA' && (
+                    <div className="px-1.5 py-0.5 rounded-md bg-white/10 border border-white/20 backdrop-blur-xl shadow-2xl">
+                      <p className="text-[8px] font-black text-white/80 uppercase tracking-wider">
+                        {movie.quality === 'CAM' ? 'Theater' : 'Pending'}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
