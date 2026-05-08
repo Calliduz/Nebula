@@ -37,11 +37,49 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, snap = false, onSel
         
         {/* Info Overlay (Persistent) */}
         <div className="absolute top-3 left-3 right-3 z-30 flex justify-between items-start">
-          {isLandscape && (
-            <div className="px-2 py-0.5 rounded-md bg-nebula-cyan/20 border border-nebula-cyan/30 backdrop-blur-md">
-              <p className="text-[8px] font-black text-nebula-cyan uppercase tracking-widest italic">Series</p>
+          <div className="flex flex-col gap-1.5">
+            {isLandscape && (
+              <div className="px-2 py-0.5 rounded-md bg-nebula-cyan/20 border border-nebula-cyan/30 backdrop-blur-md w-fit">
+                <p className="text-[8px] font-black text-nebula-cyan uppercase tracking-widest italic">Series</p>
+              </div>
+            )}
+            
+            {/* Status Badges */}
+            <div className="flex flex-wrap gap-2">
+              {/* Quality Badge */}
+              {movie.quality && (
+                <div className={`px-2 py-0.5 rounded-md backdrop-blur-xl border-2 w-fit shadow-2xl ${
+                  movie.quality === 'CAM' 
+                    ? 'bg-amber-500/30 border-amber-500/50' 
+                    : movie.quality === 'TBA'
+                    ? 'bg-red-500/30 border-red-500/50'
+                    : 'bg-nebula-cyan/30 border-nebula-cyan/50'
+                }`}>
+                  <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-wider ${
+                    movie.quality === 'CAM' ? 'text-amber-400' : movie.quality === 'TBA' ? 'text-red-400' : 'text-nebula-cyan'
+                  }`}>
+                    {movie.quality}
+                  </p>
+                </div>
+              )}
+
+              {/* Verified Status Badge */}
+              {movie.isVerified ? (
+                <div className="px-2 py-0.5 rounded-md bg-emerald-500/30 border-2 border-emerald-500/50 backdrop-blur-xl w-fit shadow-2xl">
+                  <p className="text-[9px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Verified
+                  </p>
+                </div>
+              ) : movie.quality !== 'TBA' && (
+                <div className="px-2 py-0.5 rounded-md bg-white/10 border-2 border-white/20 backdrop-blur-xl w-fit shadow-2xl">
+                  <p className="text-[9px] md:text-[10px] font-black text-white/80 uppercase tracking-wider">
+                    {movie.quality === 'CAM' ? 'In Theaters' : 'Searching Mirrors'}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
           {onRemove && (
             <button 
               onClick={(e) => { e.stopPropagation(); onRemove(); }}

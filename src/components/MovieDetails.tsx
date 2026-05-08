@@ -190,6 +190,31 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
                 <span className="flex items-center gap-2"><Clock size={16} /> {movie.duration || '124m'}</span>
                 <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
                 <span className="flex items-center gap-2"><Calendar size={16} /> {movie.year}</span>
+                
+                {/* Quality Badge */}
+                {movie.quality && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
+                    <div className={`px-2 py-0.5 rounded border ${
+                      movie.quality === 'CAM' ? 'border-amber-500/50 bg-amber-500/10 text-amber-500' : 
+                      movie.quality === 'TBA' ? 'border-red-500/50 bg-red-500/10 text-red-500' : 
+                      'border-nebula-cyan/50 bg-nebula-cyan/10 text-nebula-cyan'
+                    }`}>
+                      {movie.quality}
+                    </div>
+                  </>
+                )}
+                
+                {/* Availability Badge */}
+                {movie.isVerified ? (
+                  <div className="px-2 py-0.5 rounded border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> VERIFIED COPY
+                  </div>
+                ) : movie.quality !== 'TBA' && (
+                  <div className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-white/50">
+                    {movie.quality === 'CAM' ? 'IN THEATERS' : 'SEARCHING MIRRORS'}
+                  </div>
+                )}
               </div>
 
               <p className="text-lg text-white/70 font-light leading-relaxed mb-10 max-w-2xl">
@@ -208,16 +233,27 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
                     resumeData = tvMatch ? { season: parseInt(tvMatch[1]), episode: parseInt(tvMatch[2]), ...val } : val;
                   }
 
+                  const isTBA = movie.quality === 'TBA';
+                  const label = isTBA ? 'Coming Soon' : (resumeData ? 'Resume Watching' : 'Watch Now');
+
                   return (
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => onPlay(resumeData?.season, resumeData?.episode)}
-                      className="bg-white text-obsidian px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm glow-white flex items-center justify-center gap-3 transition-all hover:bg-nebula-cyan flex-1 sm:flex-none"
-                    >
-                      <Play size={20} fill="currentColor" /> 
-                      <span>{resumeData ? 'Resume Watching' : 'Watch Now'}</span>
-                    </motion.button>
+                    <div className="flex flex-col gap-2 flex-1 sm:flex-none">
+                      <motion.button 
+                        whileHover={!isTBA ? { scale: 1.05 } : {}}
+                        whileTap={!isTBA ? { scale: 0.95 } : {}}
+                        disabled={isTBA}
+                        onClick={() => !isTBA && onPlay(resumeData?.season, resumeData?.episode)}
+                        className={`${isTBA ? 'bg-white/10 text-white/30 cursor-not-allowed' : 'bg-white text-obsidian glow-white hover:bg-nebula-cyan'} px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none`}
+                      >
+                        {isTBA ? <Clock size={20} /> : <Play size={20} fill="currentColor" />} 
+                        <span>{label}</span>
+                      </motion.button>
+                      {!movie.isVerified && !isTBA && (
+                        <p className="text-[10px] text-dim font-bold uppercase tracking-wider text-center">
+                          Copy not verified • Search pending
+                        </p>
+                      )}
+                    </div>
                   );
                 })()}
                 <motion.button 

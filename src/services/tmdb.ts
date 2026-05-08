@@ -90,6 +90,7 @@ export interface NebulaMovie {
   clearLogo?: string | null;
   fanartBackground?: string | null;
   quality?: string;
+  isVerified?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -168,8 +169,42 @@ const normalizeMovie = (item: any, type: 'movie' | 'tv' = 'movie'): NebulaMovie 
   imdb: item.vote_average ? parseFloat(item.vote_average.toFixed(1)) : undefined,
   type: item.media_type || type,
   duration: item.runtime ? `${item.runtime}m` : undefined,
-  quality: '4K',
+  quality: (() => {
+    if (!item.release_date && !item.first_air_date) return 'HD';
+    const releaseDate = new Date(item.release_date || item.first_air_date);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return 'TBA'; // Not released yet
+    if (type === 'tv') return 'HD'; // TV shows usually HD immediately
+    if (diffDays < 14) return 'CAM'; // Very new movies
+    if (diffDays < 45) return 'HD (Early)'; // Likely early digital or high-quality CAM
+    return 'HD';
+  })(),
 });
+
+/**
+ * Batches a check against the server's StreamCache to verify if we definitely have a copy.
+ */
+export const fetchAvailability = async (movies: NebulaMovie[]): Promise<NebulaMovie[]> => {
+  const ids = movies.map(m => m.id).join(',');
+  if (!ids) return movies;
+
+  try {
+    const response = await fetch(`${getApiBase()}/api/stream/availability?ids=${ids}`);
+    const { results } = await response.json();
+    
+    const verifiedMap = new Map(results.map((r: any) => [r.id, r.isVerified]));
+    
+    return movies.map(m => ({
+      ...m,
+      isVerified: verifiedMap.get(m.id.toString()) || false
+    }));
+  } catch (error) {
+    console.error('[AVAILABILITY ERROR]', error);
+    return movies;
+  }
+};
 
 // ─── Exported API Functions ───────────────────────────────────────────────────
 
@@ -296,10 +331,23 @@ export const getMediaBasicInfo = async (
   }
 
   try {
-    const releaseYear = undefined; // unknown at this point
     const data = await fetchFromTMDB(`/${type}/${id}`, {}, TTL.DETAILS);
     if (!data || data.status_code === 34) return null;
-    return normalizeMovie(data, type);
+    const movie = normalizeMovie(data, type);
+    
+    // Enrich with single availability check
+    try {
+      const apiBase = getApiBase();
+      const res = await fetch(`${apiBase}/api/stream/availability?ids=${id}`);
+      if (res.ok) {
+        const { results } = await res.json();
+        if (results && results.length > 0) {
+          movie.isVerified = results[0].isVerified;
+        }
+      }
+    } catch { /* ignore */ }
+    
+    return movie;
   } catch { return null; }
 };
 
@@ -334,7 +382,7 @@ export const getMediaDetails = async (
   }
 };
 
-export const enrichMoviesWithMetadata = async (
+export const enrichMovies = async (
   normalized: NebulaMovie[]
 ): Promise<NebulaMovie[]> => {
   if (!normalized.length) return normalized;
@@ -344,33 +392,43 @@ export const enrichMoviesWithMetadata = async (
   );
   if (!targetMovies.length) return normalized;
 
-  // Check per-item cache
-  const allCached = normalized.every(m => {
+  // 1. Try to check local cache for logos
+  normalized.forEach(m => {
     const key = `v2.0-meta-${m.id}:${m.type}`;
     const cached = localStorage.getItem(key);
-    if (!cached) return false;
-    try {
-      const { logoUrl, backgroundUrl, ts } = JSON.parse(cached);
-      if (logoUrl && Date.now() - ts < TTL.META) {
-        m.clearLogo = logoUrl;
-        m.fanartBackground = backgroundUrl;
-        return true;
-      }
-    } catch { /* stale */ }
-    return false;
+    if (cached) {
+      try {
+        const { logoUrl, backgroundUrl, ts } = JSON.parse(cached);
+        if (logoUrl && Date.now() - ts < TTL.META) {
+          m.clearLogo = logoUrl;
+          m.fanartBackground = backgroundUrl;
+        }
+      } catch { /* stale */ }
+    }
   });
-
-  if (allCached) return normalized;
 
   try {
     const comboIds = targetMovies.map(m => `${m.id}:${m.type || 'movie'}`).sort().join(',');
+    const simpleIds = targetMovies.map(m => m.id).join(',');
     const apiBase = getApiBase();
-    const res = await fetch(`${apiBase}/api/metadata?batch=${comboIds}`);
-    if (!res.ok) return normalized;
-    const logoData = await res.json();
 
-    if (logoData?.results) {
-      logoData.results.forEach((meta: any) => {
+    // Parallel fetch for Logos and Availability
+    const [metaRes, availRes] = await Promise.all([
+      fetch(`${apiBase}/api/metadata?batch=${comboIds}`).then(r => r.json()).catch(() => ({ results: [] })),
+      fetch(`${apiBase}/api/stream/availability?ids=${simpleIds}`).then(r => r.json()).catch(() => ({ results: [] }))
+    ]);
+
+    // Apply Verification Status
+    if (availRes?.results) {
+      const verifiedMap = new Map(availRes.results.map((r: any) => [r.id.toString(), r.isVerified]));
+      normalized.forEach(m => {
+        m.isVerified = verifiedMap.get(m.id.toString()) || false;
+      });
+    }
+
+    // Apply Logo Data
+    if (metaRes?.results) {
+      metaRes.results.forEach((meta: any) => {
         const index = normalized.findIndex(m => m.id.toString() === meta.id.toString());
         if (index !== -1) {
           normalized[index].clearLogo = meta.logoUrl;
@@ -389,6 +447,9 @@ export const enrichMoviesWithMetadata = async (
   } catch { /* degrade gracefully */ }
   return normalized;
 };
+
+// Backward compat
+export const enrichMoviesWithMetadata = enrichMovies;
 
 export const getTVDetails = async (id: string | number) => {
   try {
