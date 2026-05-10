@@ -188,14 +188,16 @@ export const fetchAvailability = async (movies: NebulaMovie[]): Promise<NebulaMo
     const response = await fetch(`${getApiBase()}/api/stream/availability?ids=${ids}`);
     const { results } = await response.json();
     
-    const verifiedMap = new Map(results.map((r: any) => [r.id, r.isVerified]));
-    
-    return movies.map(m => {
+    const verifiedMap = new Map<string, boolean>(
+      results.map((r: any) => [r.id.toString(), r.isVerified])
+    );
+
+    return movies.map((m) => {
       const isVerified = verifiedMap.get(m.id.toString()) || false;
       return {
         ...m,
         isVerified,
-        quality: (isVerified && m.quality === 'TBA') ? 'HD' : m.quality
+        quality: isVerified && m.quality === "TBA" ? "HD" : m.quality,
       };
     });
   } catch (error) {
@@ -419,8 +421,10 @@ export const enrichMovies = async (
 
     // Apply Verification & Dead Status
     if (availRes?.results) {
-      const availMap = new Map(availRes.results.map((r: any) => [r.id.toString(), r]));
-      normalized.forEach(m => {
+      const availMap = new Map<string, any>(
+        availRes.results.map((r: any) => [r.id.toString(), r])
+      );
+      normalized.forEach((m) => {
         const info = availMap.get(m.id.toString());
         if (info) {
           m.isVerified = info.isVerified || false;

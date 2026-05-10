@@ -25,10 +25,8 @@ import { API_BASE_URL } from "../config";
 const API = API_BASE_URL;
 
 interface MediaPlayerProps {
-  movie: any;
-  season?: number;
   episode?: number;
-  onMarkAsWatched: (id: string | number) => void;
+  onMarkAsWatched: (id: string | number, type: "movie" | "tv") => void;
   onClose: () => void;
 }
 
@@ -77,6 +75,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [tvDetails, setTvDetails] = useState<any>(null);
   const [qualityTag, setQualityTag] = useState<string>(""); // CAM | WEBDL | WEBRIP | BLURAY | etc.
   const [resolution, setResolution] = useState<string>("");
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "error" | "info";
+  } | null>(null);
+
+  const showToast = useCallback(
+    (message: string, type: "error" | "info" = "info") => {
+      setToast({ message, type });
+      setTimeout(() => setToast(null), 4000);
+    },
+    [],
+  );
   const [mirrors, setMirrors] = useState<any[]>([]);
   const [activeMirror, setActiveMirror] = useState<number>(0);
   const [vttBlobUrl, setVttBlobUrl] = useState<string | null>(null);
@@ -88,6 +98,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [showMobileVolume, setShowMobileVolume] = useState(false);
   const hasAutoSelectedSub = useRef(false);
   const hasLoggedHistory = useRef(false);
+  const subTextCache = useRef<Record<string, string>>({}); // Cache for raw VTT text
   const navigate = useNavigate();
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -171,6 +182,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setSubtitles([]);
     setActiveSubtitle(-1);
     hasAutoSelectedSub.current = false;
+    subTextCache.current = {}; // Clear subtitle text cache on stream change
     if (vttBlobUrl) {
       URL.revokeObjectURL(vttBlobUrl);
       setVttBlobUrl(null);
@@ -221,7 +233,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }
       })
       .catch((e) => {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) {
+          setError(e.message);
+          showToast(`Stream Error: ${e.message}`, "error");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -255,11 +270,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const data = await r.json();
         if (cancelled) return;
 
-        if (data.subtitles && data.subtitles.length > 0) {
-          setSubtitles((prev) => processSubtitles(data.subtitles, prev));
+        if (data && data.subtitles && data.subtitles.length > 0) {
+          if (!cancelled)
+            setSubtitles((prev) => processSubtitles(data.subtitles, prev));
+        } else {
+          if (!cancelled) showToast("No external subtitles found", "info");
         }
       } catch (e) {
-        console.error("Subtitle auto-fetch failed", e);
+        if (!cancelled) {
+          console.error("Subtitle fetch error:", e);
+          showToast("Subtitle search failed", "error");
+        }
       } finally {
         if (!cancelled) setFetchingSubtitles(false);
       }
@@ -283,13 +304,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setSubtitleOffset((prev) => prev + delta);
   };
 
-  // ── VTT Timestamp Shifter ──
-  const shiftVttTimestamps = (vttText: string, offsetMs: number) => {
-    if (offsetMs === 0) return vttText;
-    // More flexible regex: HH:MM:SS.mmm or MM:SS.mmm, also handles , instead of .
+  // ── VTT Timestamp Shifter & SRT Converter ──
+  const shiftVttTimestamps = (text: string, offsetMs: number) => {
+    let content = text.trim();
+
+    // 1. Convert SRT to VTT structure if needed
+    if (!content.startsWith("WEBVTT")) {
+      // Replace SRT comma timestamps with VTT dot timestamps
+      content = content.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
+      // Remove SRT cue index numbers (standalone digit lines before timestamps)
+      content = content.replace(/^\d+\n(?=\d{2}:\d{2}:\d{2})/gm, "");
+      content = "WEBVTT\n\n" + content;
+    }
+
+    if (offsetMs === 0) return content;
+
+    // More flexible regex: HH:MM:SS.mmm or MM:SS.mmm
     const timestampRegex = /(\d{1,2}:)?\d{1,2}:\d{1,2}[\.,]\d{1,3}/g;
 
-    return vttText.replace(timestampRegex, (match) => {
+    return content.replace(timestampRegex, (match) => {
       const [time, msPart] = match.split(/[\.,]/);
       const timeParts = time.split(":");
       let h = 0,
@@ -305,7 +338,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         s = parseInt(timeParts[1]);
       }
 
-      // Normalize ms to 3 digits (e.g. "5" -> 500, "50" -> 500, "500" -> 500)
+      // Normalize ms to 3 digits
       const ms = parseInt(msPart.padEnd(3, "0").substring(0, 3));
 
       let totalMs = h * 3600000 + m * 60000 + s * 1000 + ms + offsetMs * 1000;
@@ -335,9 +368,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     const processSub = async () => {
       try {
-        const r = await fetch(sub.url);
-        const text = await r.text();
-        if (cancelled) return;
+        let text = subTextCache.current[sub.url];
+
+        if (!text) {
+          const r = await fetch(sub.url);
+          text = await r.text();
+          if (cancelled) return;
+          // Store in cache for next time
+          subTextCache.current[sub.url] = text;
+        }
 
         const shiftedText = shiftVttTimestamps(text, subtitleOffset);
         const blob = new Blob([shiftedText], { type: "text/vtt" });
@@ -383,7 +422,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       newSubs.forEach((ns) => {
         const normalizedUrl = ns.url.startsWith("/")
           ? `${API}${ns.url}`
-          : ns.url;
+          : ns.url.includes("/api/proxy/subtitle")
+            ? ns.url
+            : `${API}/api/proxy/subtitle?url=${encodeURIComponent(ns.url)}`;
         if (!combined.some((ps) => ps.url === normalizedUrl)) {
           combined.push({ ...ns, url: normalizedUrl });
         }
@@ -504,7 +545,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
         // ── Performance ─────────────────────────────────────────────────
         enableWorker: true,
-        lowLatencyMode: false,
+        lowLatencyMode: true, // Improved recovery on unstable mobile networks
         startFragPrefetch: true,
         enableSoftwareAES: true,
 
@@ -690,7 +731,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
           // Mark as watched in history after 15 seconds of successful playback
           if (cur > 15 && !hasLoggedHistory.current) {
-            onMarkAsWatched(movie.id);
+            onMarkAsWatched(movie.id, movie.type || "movie");
             hasLoggedHistory.current = true;
           }
 
@@ -843,9 +884,28 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     video.addEventListener("stalled", onStalled);
     video.addEventListener("suspend", onSuspend);
     video.addEventListener("error", onVideoError);
+
+    // ── Visibility Change: Handle mobile resume from background ──
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.log("[PLAYER] Tab focused. Checking media state...");
+        const v = videoRef.current;
+        if (hlsRef.current && v) {
+          // If stuck at a buffered boundary or readiness is low
+          if (!v.paused && !v.ended && v.readyState < 2) {
+            console.warn("[PLAYER] Detected stall on resume. Recovering...");
+            hlsRef.current.recoverMediaError();
+            hlsRef.current.startLoad();
+          }
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       clearInterval(watchdog);
       if (suspendTimer) clearTimeout(suspendTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       video.removeEventListener("timeupdate", onTime);
       video.removeEventListener("durationchange", onDuration);
@@ -869,9 +929,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setShowUi(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      if (!isPaused && !showSettings) setShowUi(false);
+      if (!isPaused && !showSettings && !showSubtitles && !showEpisodeDrawer) setShowUi(false);
     }, 3000);
-  }, [isPaused, showSettings]);
+  }, [isPaused, showSettings, showSubtitles, showEpisodeDrawer]);
 
   useEffect(() => {
     resetHideTimer();
@@ -1049,6 +1109,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       onMouseMove={resetHideTimer}
       style={{ cursor: showUi ? "default" : "none" }}
     >
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: -20, x: "-50%" }}
+            className="absolute top-12 left-1/2 z-[600] pointer-events-none"
+          >
+            <div
+              className={`px-6 py-3 rounded-full backdrop-blur-xl border ${
+                toast.type === "error"
+                  ? "bg-red-500/20 border-red-500/50"
+                  : "bg-nebula-cyan/20 border-nebula-cyan/50"
+              } flex items-center gap-3 shadow-2xl shadow-black`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${toast.type === "error" ? "bg-red-500" : "bg-nebula-cyan"} animate-pulse`}
+              />
+              <span className="text-white font-bold text-[10px] uppercase tracking-widest">
+                {toast.message}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-[100] bg-black">
           {(movie.fanartBackground || movie.backdrop) && (
@@ -1125,10 +1210,33 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             <h3 className="text-2xl font-display font-black text-white mb-2 uppercase tracking-tighter">
               No signal detected
             </h3>
-            <p className="text-white/40 max-w-sm mb-8 font-light text-sm">
-              The requested data stream is unreachable from this sector. Try
-              another mirror or origin point.
+            <p className="text-white/40 max-w-sm mb-6 font-light text-sm">
+              The requested data stream is unreachable. This can happen on
+              mobile after being in the background.
             </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-8 py-3 bg-white text-black font-black rounded-full hover:bg-white/80 transition-all uppercase text-[10px] tracking-widest mb-4 pointer-events-auto"
+            >
+              Retry Connection
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  await fetch(`${API}/api/stream/flush`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ tmdbId: movie.id }),
+                  });
+                  window.location.reload();
+                } catch {
+                  window.location.reload();
+                }
+              }}
+              className="px-6 py-2 bg-white/10 text-white/60 font-bold rounded-full hover:bg-white/20 transition-all uppercase text-[8px] tracking-widest pointer-events-auto border border-white/10"
+            >
+              Deep Reset (Clear Cache)
+            </button>
             <div className="flex items-center gap-3 flex-wrap justify-center">
               <button
                 onClick={() => {
@@ -1263,8 +1371,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       )}
 
       <div
-        className="absolute inset-0 flex flex-col justify-between z-10 pointer-events-none"
-        style={{ opacity: showUi ? 1 : 0, transition: "opacity 0.2s" }}
+        className="absolute inset-0 flex flex-col justify-between z-10"
+        style={{ 
+          opacity: showUi ? 1 : 0, 
+          transition: "opacity 0.2s",
+          pointerEvents: showUi ? "auto" : "none"
+        }}
       >
         <div
           className={`flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 ${!isEmbed ? "bg-gradient-to-b from-black/80 to-transparent" : ""} pointer-events-auto`}

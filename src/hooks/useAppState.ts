@@ -339,16 +339,19 @@ export function useAppState() {
 
       // 3. Personalized recommendation rows from watch history
       const recommendationRows: any[] = [];
-      const historyIds = [...history].reverse().slice(0, 3);
-      for (const histId of historyIds) {
-        let movie = allMovies.find(m => m.id.toString() === histId.toString());
-        if (!movie) movie = await getMediaBasicInfo(histId, 'movie') as any;
+      const historyItems = [...history].reverse().slice(0, 3);
+      for (const hist of historyItems) {
+        const histId = typeof hist === 'object' ? hist.id : hist;
+        const histType = typeof hist === 'object' ? hist.type : 'movie';
+
+        let movie = allMovies.find(m => m.id.toString() === histId.toString() && m.type === histType);
+        if (!movie) movie = await getMediaBasicInfo(histId, histType) as any;
         if (movie) {
           const recs = await getRecommendations(histId, movie.type || 'movie').catch(() => []);
           const filtered = recs.filter(m => !globalShown.has(m.id.toString())).slice(0, 20);
           if (filtered.length > 5) {
             filtered.forEach(m => globalShown.add(m.id.toString()));
-            const label = historyIds.indexOf(histId) === 0 ? `Since you watched ${movie.title}` : `More like ${movie.title}`;
+            const label = historyItems.indexOf(hist) === 0 ? `Since you watched ${movie.title}` : `More like ${movie.title}`;
             recommendationRows.push({ 
               title: label, 
               items: filtered,
@@ -431,8 +434,10 @@ export function useAppState() {
 
       // 3d. User Genre Preference Profile
       const genreCounts: Record<string, number> = {};
-      [...history, ...myList].forEach(id => {
-        const m = allMovies.find(item => item.id.toString() === id.toString());
+      [...history, ...myList].forEach(item => {
+        const id = typeof item === 'object' ? item.id : item;
+        const type = typeof item === 'object' ? item.type : 'movie';
+        const m = allMovies.find(item => item.id.toString() === id.toString() && item.type === type);
         if (m?.genre) {
           m.genre.split(', ').forEach(g => {
             genreCounts[g] = (genreCounts[g] || 0) + 1;
@@ -641,7 +646,10 @@ export function useAppState() {
   };
 
   const removeFromHistory = (id: string | number) => {
-    setHistory(prev => prev.filter(h => h.toString() !== id.toString()));
+    setHistory(prev => prev.filter(h => {
+      const hid = typeof h === 'object' ? h.id : h;
+      return hid.toString() !== id.toString();
+    }));
     fetchInitialData();
   };
 
@@ -844,10 +852,13 @@ export function useAppState() {
     return [...flat].sort(() => Math.random() - 0.5).slice(0, 20);
   }, [rows]);
 
-  const markAsWatched = (id: string | number) => {
+  const markAsWatched = (id: string | number, type: 'movie' | 'tv' = 'movie') => {
     setHistory(prev => {
-      const filtered = prev.filter(item => item.toString() !== id.toString());
-      return [id.toString(), ...filtered].slice(0, 100);
+      const filtered = prev.filter(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        return itemId.toString() !== id.toString();
+      });
+      return [{ id: id.toString(), type }, ...filtered].slice(0, 100);
     });
   };
 
