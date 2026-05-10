@@ -244,18 +244,17 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({ movie: initialMovie,
                   }
 
                   const isTBA = movie.quality === 'TBA';
-                  const label = isTBA ? 'Coming Soon' : (resumeData ? 'Resume Watching' : 'Watch Now');
+                  const label = isTBA ? (resumeData ? 'Resume (TBA)' : 'Try Playback') : (resumeData ? 'Resume Watching' : 'Watch Now');
 
                   return (
                     <div className="flex flex-col gap-2 flex-1 sm:flex-none">
                       <motion.button 
-                        whileHover={!isTBA ? { scale: 1.05 } : {}}
-                        whileTap={!isTBA ? { scale: 0.95 } : {}}
-                        disabled={isTBA}
-                        onClick={() => !isTBA && onPlay(resumeData?.season, resumeData?.episode)}
-                        className={`${isTBA ? 'bg-white/10 text-white/30 cursor-not-allowed' : 'bg-white text-obsidian glow-white hover:bg-nebula-cyan'} px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => onPlay(resumeData?.season, resumeData?.episode)}
+                        className={`bg-white text-obsidian glow-white hover:bg-nebula-cyan px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none`}
                       >
-                        {isTBA ? <Clock size={20} /> : <Play size={20} fill="currentColor" />} 
+                        {isTBA ? <Clock size={20} className="text-obsidian/40" /> : <Play size={20} fill="currentColor" />} 
                         <span>{label}</span>
                       </motion.button>
                       {!movie.isVerified && !isTBA && (

@@ -190,10 +190,14 @@ export const fetchAvailability = async (movies: NebulaMovie[]): Promise<NebulaMo
     
     const verifiedMap = new Map(results.map((r: any) => [r.id, r.isVerified]));
     
-    return movies.map(m => ({
-      ...m,
-      isVerified: verifiedMap.get(m.id.toString()) || false
-    }));
+    return movies.map(m => {
+      const isVerified = verifiedMap.get(m.id.toString()) || false;
+      return {
+        ...m,
+        isVerified,
+        quality: (isVerified && m.quality === 'TBA') ? 'HD' : m.quality
+      };
+    });
   } catch (error) {
     console.error('[AVAILABILITY ERROR]', error);
     return movies;
