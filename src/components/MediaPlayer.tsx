@@ -929,7 +929,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setShowUi(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      if (!isPaused && !showSettings && !showSubtitles && !showEpisodeDrawer) setShowUi(false);
+      if (!isPaused && !showSettings && !showSubtitles && !showEpisodeDrawer)
+        setShowUi(false);
     }, 3000);
   }, [isPaused, showSettings, showSubtitles, showEpisodeDrawer]);
 
@@ -1372,10 +1373,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       <div
         className="absolute inset-0 flex flex-col justify-between z-10"
-        style={{ 
-          opacity: showUi ? 1 : 0, 
+        style={{
+          opacity: showUi ? 1 : 0,
           transition: "opacity 0.2s",
-          pointerEvents: showUi ? "auto" : "none"
+          pointerEvents: showUi ? "auto" : "none",
         }}
       >
         <div

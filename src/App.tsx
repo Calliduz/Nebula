@@ -279,9 +279,9 @@ function MediaPlayerStub({ actions, state }: any) {
   const navigate = useNavigate();
   const movie =
     state.allMovies.find(
-      (m: any) => 
-        m.id.toString() === (id || "0").toString() && 
-        (m.type === type || (!m.type && type === 'movie'))
+      (m: any) =>
+        m.id.toString() === (id || "0").toString() &&
+        (m.type === type || (!m.type && type === "movie")),
     ) || state.selectedMovie;
 
   const season = searchParams.get("season")

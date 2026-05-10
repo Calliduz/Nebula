@@ -6,18 +6,18 @@
 const getApiBase = (): string => {
   // 1. Check for explicit environment variable (best practice)
   let rawApi = import.meta.env.VITE_API_BASE_URL;
-  
+
   if (!rawApi) {
     const host = window.location.hostname;
     const protocol = window.location.protocol;
-    
+
     // 2. Local development fallback
-    if (host === 'localhost' || host === '127.0.0.1') {
-      rawApi = 'http://localhost:4000';
-    } 
+    if (host === "localhost" || host === "127.0.0.1") {
+      rawApi = "http://localhost:4000";
+    }
     // 3. Known production fallback (Current Domain)
-    else if (host === 'nebula.clev.studio') {
-      rawApi = 'https://nebula-server-qbp6.onrender.com';
+    else if (host === "nebula.clev.studio") {
+      rawApi = "https://nebula-server-qbp6.onrender.com";
     }
     // 4. Dynamic fallback (assumes API is at the same origin /api)
     else {
@@ -26,7 +26,7 @@ const getApiBase = (): string => {
   }
 
   // Cleanup: ensure it doesn't end with /api or trailing slash
-  return rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
+  return rawApi.replace(/\/api\/?$/, "").replace(/\/$/, "");
 };
 
 export const API_BASE_URL = getApiBase();

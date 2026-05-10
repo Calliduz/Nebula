@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export const MovieSkeleton = () => (
   <div className="min-w-[200px] md:min-w-[280px] aspect-[2/3] rounded-2xl shimmer-bg border border-white/5 snap-start relative">

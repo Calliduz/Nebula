@@ -1,10 +1,10 @@
-import React from 'react';
-import { DiscoveryBar } from './DiscoveryBar';
-import { TopTenShelf } from './TopTenShelf';
-import { MovieRow } from './MovieRow';
-import { MovieCard } from './MovieCard';
-import { MovieSkeleton } from './MovieSkeleton';
-import { AdBanner } from './AdBanner';
+import React from "react";
+import { DiscoveryBar } from "./DiscoveryBar";
+import { TopTenShelf } from "./TopTenShelf";
+import { MovieRow } from "./MovieRow";
+import { MovieCard } from "./MovieCard";
+import { MovieSkeleton } from "./MovieSkeleton";
+import { AdBanner } from "./AdBanner";
 
 interface HomeFeedProps {
   sortBy: string;
@@ -27,17 +27,33 @@ interface HomeFeedProps {
 }
 
 export const HomeFeed: React.FC<HomeFeedProps> = ({
-  sortBy, setSortBy, activeMood, setActiveMood, selectedGenre, setSelectedGenre,
-  setSelectedMovie, isLoading, filteredMovies, recommendations, myList,
-  toggleMyList, setViewingCategory, onRandomize, rows, allMovies,
-  removeFromHistory, removeFromProgress
+  sortBy,
+  setSortBy,
+  activeMood,
+  setActiveMood,
+  selectedGenre,
+  setSelectedGenre,
+  setSelectedMovie,
+  isLoading,
+  filteredMovies,
+  recommendations,
+  myList,
+  toggleMyList,
+  setViewingCategory,
+  onRandomize,
+  rows,
+  allMovies,
+  removeFromHistory,
+  removeFromProgress,
 }) => {
   return (
     <div className="px-4 sm:px-6 md:px-12 mt-6 md:-mt-10 pb-20 relative z-30 flex flex-col gap-8">
-      <DiscoveryBar 
-        sortBy={sortBy} setSortBy={setSortBy} 
-        activeMood={activeMood} setActiveMood={setActiveMood} 
-        onRandomize={onRandomize} 
+      <DiscoveryBar
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        activeMood={activeMood}
+        setActiveMood={setActiveMood}
+        onRandomize={onRandomize}
       />
 
       <TopTenShelf data={allMovies} onSelect={setSelectedMovie} />
@@ -45,51 +61,55 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       {rows.map((row: any, rowIndex) => (
         <React.Fragment key={`row-group-${rowIndex}`}>
           {row.items.length > 0 && (
-            <MovieRow 
+            <MovieRow
               title={row.title}
               onTitleClick={() => setViewingCategory(row.title)}
             >
-              {isLoading ? (
-                [...Array(6)].map((_, i) => <MovieSkeleton key={`sk-${rowIndex}-${i}`} />)
-              ) : (
-                row.items.map((m: any, i: number) => (
-                  <MovieCard 
-                    key={`card-${rowIndex}-${m.id}-${i}`} 
-                    movie={m} 
-                    snap 
-                    aspect="portrait"
-                    onSelect={setSelectedMovie} 
-                    isInList={myList.includes(m.id)} 
-                    onToggleList={() => toggleMyList(m.id)} 
-                    onRemove={
-                      row.title === 'Continue Watching' ? () => removeFromProgress(m.id.toString()) :
-                      row.title === 'My Secure Records' ? () => toggleMyList(m.id) :
-                      undefined
-                    }
-                  />
-                ))
-              )}
+              {isLoading
+                ? [...Array(6)].map((_, i) => (
+                    <MovieSkeleton key={`sk-${rowIndex}-${i}`} />
+                  ))
+                : row.items.map((m: any, i: number) => (
+                    <MovieCard
+                      key={`card-${rowIndex}-${m.id}-${i}`}
+                      movie={m}
+                      snap
+                      aspect="portrait"
+                      onSelect={setSelectedMovie}
+                      isInList={myList.includes(m.id)}
+                      onToggleList={() => toggleMyList(m.id)}
+                      onRemove={
+                        row.title === "Continue Watching"
+                          ? () => removeFromProgress(m.id.toString())
+                          : row.title === "My Secure Records"
+                            ? () => toggleMyList(m.id)
+                            : undefined
+                      }
+                    />
+                  ))}
             </MovieRow>
           )}
-          
+
           {/* Inject AdBanner every 4 rows */}
           {(rowIndex + 1) % 4 === 0 && <AdBanner className="mt-4" />}
         </React.Fragment>
       ))}
 
       {/* Fallback Recommendation Row if not already in rows */}
-      {!rows.some(r => r.title === 'Based on Mission History') && (
+      {!rows.some((r) => r.title === "Based on Mission History") && (
         <MovieRow title="Based on Mission History">
-          {isLoading ? (
-            [...Array(6)].map((_, i) => <MovieSkeleton key={`sk-rec-${i}`} />)
-          ) : (
-            recommendations.map((m, i) => (
-              <MovieCard 
-                key={`m-rec-${m.id}-${i}`} movie={m} snap onSelect={setSelectedMovie} 
-                isInList={myList.includes(m.id)} onToggleList={() => toggleMyList(m.id)} 
-              />
-            ))
-          )}
+          {isLoading
+            ? [...Array(6)].map((_, i) => <MovieSkeleton key={`sk-rec-${i}`} />)
+            : recommendations.map((m, i) => (
+                <MovieCard
+                  key={`m-rec-${m.id}-${i}`}
+                  movie={m}
+                  snap
+                  onSelect={setSelectedMovie}
+                  isInList={myList.includes(m.id)}
+                  onToggleList={() => toggleMyList(m.id)}
+                />
+              ))}
         </MovieRow>
       )}
     </div>

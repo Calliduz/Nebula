@@ -34,13 +34,14 @@ export const TopTenShelf = ({
   const scroll = (direction: "left" | "right") => {
     if (rowRef.current) {
       const { clientWidth } = rowRef.current;
-      const scrollAmount = direction === "left" ? -clientWidth * 0.8 : clientWidth * 0.8;
+      const scrollAmount =
+        direction === "left" ? -clientWidth * 0.8 : clientWidth * 0.8;
       rowRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     }
   };
 
   return (
-    <section 
+    <section
       className="mb-12 relative group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -69,7 +70,7 @@ export const TopTenShelf = ({
           )}
         </AnimatePresence>
 
-        <div 
+        <div
           ref={rowRef}
           onScroll={updateArrows}
           className="flex gap-4 sm:gap-6 overflow-x-auto overflow-y-hidden py-8 -my-8 px-4 sm:px-0 custom-scrollbar snap-x snap-mandatory scroll-smooth"
@@ -99,17 +100,29 @@ export const TopTenShelf = ({
                   onError={handleImageError}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
-                
+
                 {/* Status Badges Overlay */}
                 <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-40 pointer-events-none">
                   {/* Quality Badge */}
                   {movie.quality && (
-                    <div className={`px-1.5 py-0.5 rounded-md backdrop-blur-xl border border-white/20 shadow-2xl ${
-                      movie.quality === 'CAM' ? 'bg-amber-500/30' : movie.quality === 'TBA' ? 'bg-red-500/30' : 'bg-nebula-cyan/30'
-                    }`}>
-                      <p className={`text-[8px] font-black uppercase tracking-wider ${
-                        movie.quality === 'CAM' ? 'text-amber-400' : movie.quality === 'TBA' ? 'text-red-400' : 'text-nebula-cyan'
-                      }`}>
+                    <div
+                      className={`px-1.5 py-0.5 rounded-md backdrop-blur-xl border border-white/20 shadow-2xl ${
+                        movie.quality === "CAM"
+                          ? "bg-amber-500/30"
+                          : movie.quality === "TBA"
+                            ? "bg-red-500/30"
+                            : "bg-nebula-cyan/30"
+                      }`}
+                    >
+                      <p
+                        className={`text-[8px] font-black uppercase tracking-wider ${
+                          movie.quality === "CAM"
+                            ? "text-amber-400"
+                            : movie.quality === "TBA"
+                              ? "text-red-400"
+                              : "text-nebula-cyan"
+                        }`}
+                      >
                         {movie.quality}
                       </p>
                     </div>
@@ -132,12 +145,14 @@ export const TopTenShelf = ({
                         <span className="sm:hidden">Dead</span>
                       </p>
                     </div>
-                  ) : movie.quality !== 'TBA' && (
-                    <div className="px-1.5 py-0.5 rounded-md bg-white/10 border border-white/20 backdrop-blur-xl shadow-2xl">
-                      <p className="text-[8px] font-black text-white/80 uppercase tracking-wider">
-                        {movie.quality === 'CAM' ? 'Theater' : 'Pending'}
-                      </p>
-                    </div>
+                  ) : (
+                    movie.quality !== "TBA" && (
+                      <div className="px-1.5 py-0.5 rounded-md bg-white/10 border border-white/20 backdrop-blur-xl shadow-2xl">
+                        <p className="text-[8px] font-black text-white/80 uppercase tracking-wider">
+                          {movie.quality === "CAM" ? "Theater" : "Pending"}
+                        </p>
+                      </div>
+                    )
                   )}
                 </div>
               </div>

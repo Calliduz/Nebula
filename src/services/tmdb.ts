@@ -1,18 +1,18 @@
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY || 'PLACEHOLDER';
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
-const BACKDROP_BASE_URL = 'https://image.tmdb.org/t/p/original';
+const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY || "PLACEHOLDER";
+const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
+const BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/original";
 
-const CACHE_VERSION = 'v2.0'; // Bump to invalidate all old caches
+const CACHE_VERSION = "v2.0"; // Bump to invalidate all old caches
 
 // ─── TTL Constants ────────────────────────────────────────────────────────────
 const TTL = {
-  TRENDING:  1000 * 60 * 60 * 4,        // 4 hours — changes frequently
-  POPULAR:   1000 * 60 * 60 * 24,       // 24 hours
-  GENRE:     1000 * 60 * 60 * 24,       // 24 hours
-  DETAILS:   1000 * 60 * 60 * 24 * 7,  // 7 days
-  LEGACY:    1000 * 60 * 60 * 24 * 365 * 30, // ~30 years for pre-2000 films
-  META:      1000 * 60 * 60 * 24 * 7,  // 7 days for logos/backdrops
+  TRENDING: 1000 * 60 * 60 * 4, // 4 hours — changes frequently
+  POPULAR: 1000 * 60 * 60 * 24, // 24 hours
+  GENRE: 1000 * 60 * 60 * 24, // 24 hours
+  DETAILS: 1000 * 60 * 60 * 24 * 7, // 7 days
+  LEGACY: 1000 * 60 * 60 * 24 * 365 * 30, // ~30 years for pre-2000 films
+  META: 1000 * 60 * 60 * 24 * 7, // 7 days for logos/backdrops
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -24,7 +24,7 @@ const getCacheSize = (): number => {
   let total = 0;
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith(CACHE_VERSION)) {
-      total += (localStorage.getItem(key) || '').length * 2; // UTF-16
+      total += (localStorage.getItem(key) || "").length * 2; // UTF-16
     }
   }
   return total;
@@ -35,17 +35,23 @@ const evictOldest = () => {
   for (const key of Object.keys(localStorage)) {
     if (!key.startsWith(CACHE_VERSION)) continue;
     try {
-      const { timestamp } = JSON.parse(localStorage.getItem(key) || '{}');
+      const { timestamp } = JSON.parse(localStorage.getItem(key) || "{}");
       entries.push({ key, ts: timestamp || 0 });
-    } catch { entries.push({ key, ts: 0 }); }
+    } catch {
+      entries.push({ key, ts: 0 });
+    }
   }
   // Sort oldest first, remove bottom 25%
   entries.sort((a, b) => a.ts - b.ts);
   const toRemove = entries.slice(0, Math.ceil(entries.length * 0.25));
-  toRemove.forEach(e => localStorage.removeItem(e.key));
+  toRemove.forEach((e) => localStorage.removeItem(e.key));
 };
 
-const fetchWithCache = async (key: string, fetcher: () => Promise<any>, ttl: number): Promise<any> => {
+const fetchWithCache = async (
+  key: string,
+  fetcher: () => Promise<any>,
+  ttl: number,
+): Promise<any> => {
   const versionedKey = `${CACHE_VERSION}-${key}`;
   const cached = localStorage.getItem(versionedKey);
 
@@ -62,12 +68,20 @@ const fetchWithCache = async (key: string, fetcher: () => Promise<any>, ttl: num
 
   try {
     if (getCacheSize() > MAX_CACHE_BYTES) evictOldest();
-    localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
+    localStorage.setItem(
+      versionedKey,
+      JSON.stringify({ data, timestamp: Date.now() }),
+    );
   } catch {
     evictOldest();
     try {
-      localStorage.setItem(versionedKey, JSON.stringify({ data, timestamp: Date.now() }));
-    } catch { /* quota hard-fail: skip caching silently */ }
+      localStorage.setItem(
+        versionedKey,
+        JSON.stringify({ data, timestamp: Date.now() }),
+      );
+    } catch {
+      /* quota hard-fail: skip caching silently */
+    }
   }
 
   return data;
@@ -82,11 +96,11 @@ export interface NebulaMovie {
   backdrop: string;
   genre: string;
   year: number;
-  release_date?: string;   // NEW: full date string for filtering
-  vote_count?: number;     // NEW: for Hidden Gems filter
+  release_date?: string; // NEW: full date string for filtering
+  vote_count?: number; // NEW: for Hidden Gems filter
   duration?: string;
   imdb?: number;
-  type: 'movie' | 'tv';
+  type: "movie" | "tv";
   clearLogo?: string | null;
   fanartBackground?: string | null;
   quality?: string;
@@ -94,102 +108,147 @@ export interface NebulaMovie {
   isDead?: boolean;
 }
 
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from "../config";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getApiBase = (): string => API_BASE_URL;
 
 const proxyImage = (url: string): string => {
-  if (!url) return '';
+  if (!url) return "";
   return `${getApiBase()}/api/image?url=${encodeURIComponent(url)}`;
 };
 
 export const GENRE_MAP: Record<number, string> = {
-  28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
-  99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History',
-  27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi',
-  10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western',
-  10759: 'Action & Adventure', 10762: 'Kids', 10763: 'News', 10764: 'Reality',
-  10765: 'Sci-Fi & Fantasy', 10766: 'Soap', 10767: 'Talk', 10768: 'War & Politics'
+  28: "Action",
+  12: "Adventure",
+  16: "Animation",
+  35: "Comedy",
+  80: "Crime",
+  99: "Documentary",
+  18: "Drama",
+  10751: "Family",
+  14: "Fantasy",
+  36: "History",
+  27: "Horror",
+  10402: "Music",
+  9648: "Mystery",
+  10749: "Romance",
+  878: "Sci-Fi",
+  10770: "TV Movie",
+  53: "Thriller",
+  10752: "War",
+  37: "Western",
+  10759: "Action & Adventure",
+  10762: "Kids",
+  10763: "News",
+  10764: "Reality",
+  10765: "Sci-Fi & Fantasy",
+  10766: "Soap",
+  10767: "Talk",
+  10768: "War & Politics",
 };
 
 // ─── Core TMDB Fetcher ────────────────────────────────────────────────────────
 const fetchFromTMDB = async (
   endpoint: string,
   params: Record<string, string> = {},
-  ttl: number = TTL.DETAILS
+  ttl: number = TTL.DETAILS,
 ): Promise<any> => {
-  if (API_KEY === 'PLACEHOLDER' || !API_KEY) {
-    console.warn('[TMDB] API Key missing.');
+  if (API_KEY === "PLACEHOLDER" || !API_KEY) {
+    console.warn("[TMDB] API Key missing.");
     return { results: [] };
   }
 
   // Safety: never fetch KissKH IDs from TMDB
-  const lastPart = endpoint.split('/').pop() || '';
-  if (lastPart.startsWith('k')) {
+  const lastPart = endpoint.split("/").pop() || "";
+  if (lastPart.startsWith("k")) {
     console.log(`[TMDB] Skipping native ID: ${lastPart}`);
     return { results: [] };
   }
 
   const isV4Token = API_KEY.length > 40;
-  const query = new URLSearchParams({ language: 'en-US', ...params });
-  if (!isV4Token) query.append('api_key', API_KEY);
+  const query = new URLSearchParams({ language: "en-US", ...params });
+  if (!isV4Token) query.append("api_key", API_KEY);
 
   const cacheKey = `tmdb-${endpoint}-${query.toString()}`;
-  return fetchWithCache(cacheKey, async () => {
-    const headers: HeadersInit = { 'Accept': 'application/json' };
-    if (isV4Token) headers['Authorization'] = `Bearer ${API_KEY}`;
-    const res = await fetch(`${TMDB_BASE_URL}${endpoint}?${query}`, { headers });
-    if (!res.ok) throw new Error(`TMDB ${res.status}: ${endpoint}`);
-    return res.json();
-  }, ttl);
+  return fetchWithCache(
+    cacheKey,
+    async () => {
+      const headers: HeadersInit = { Accept: "application/json" };
+      if (isV4Token) headers["Authorization"] = `Bearer ${API_KEY}`;
+      const res = await fetch(`${TMDB_BASE_URL}${endpoint}?${query}`, {
+        headers,
+      });
+      if (!res.ok) throw new Error(`TMDB ${res.status}: ${endpoint}`);
+      return res.json();
+    },
+    ttl,
+  );
 };
 
 // ─── Normalizer ───────────────────────────────────────────────────────────────
-const normalizeMovie = (item: any, type: 'movie' | 'tv' = 'movie'): NebulaMovie => ({
+const normalizeMovie = (
+  item: any,
+  type: "movie" | "tv" = "movie",
+): NebulaMovie => ({
   id: item.id || Math.floor(Math.random() * 1_000_000),
-  title: item.title || item.name || 'Unknown Title',
-  description: item.overview || 'No overview available.',
+  title: item.title || item.name || "Unknown Title",
+  description: item.overview || "No overview available.",
   image: item.poster_path
     ? proxyImage(`${IMAGE_BASE_URL}${item.poster_path}`)
-    : proxyImage('https://picsum.photos/seed/nebula/400/600'),
-  backdrop: item.backdrop_path ? proxyImage(`${BACKDROP_BASE_URL}${item.backdrop_path}`) : '',
+    : proxyImage("https://picsum.photos/seed/nebula/400/600"),
+  backdrop: item.backdrop_path
+    ? proxyImage(`${BACKDROP_BASE_URL}${item.backdrop_path}`)
+    : "",
   genre: item.genre_ids
-    ? item.genre_ids.map((id: number) => GENRE_MAP[id] || 'Unknown').join(', ')
-    : (item.genres ? item.genres.map((g: any) => g.name).join(', ') : 'Unknown Genre'),
-  year: parseInt((item.release_date || item.first_air_date || '2024').substring(0, 4), 10),
+    ? item.genre_ids.map((id: number) => GENRE_MAP[id] || "Unknown").join(", ")
+    : item.genres
+      ? item.genres.map((g: any) => g.name).join(", ")
+      : "Unknown Genre",
+  year: parseInt(
+    (item.release_date || item.first_air_date || "2024").substring(0, 4),
+    10,
+  ),
   release_date: item.release_date || item.first_air_date || undefined,
   vote_count: item.vote_count ?? undefined,
-  imdb: item.vote_average ? parseFloat(item.vote_average.toFixed(1)) : undefined,
+  imdb: item.vote_average
+    ? parseFloat(item.vote_average.toFixed(1))
+    : undefined,
   type: item.media_type || type,
   duration: item.runtime ? `${item.runtime}m` : undefined,
   quality: (() => {
-    if (!item.release_date && !item.first_air_date) return 'HD';
+    if (!item.release_date && !item.first_air_date) return "HD";
     const releaseDate = new Date(item.release_date || item.first_air_date);
     const now = new Date();
-    const diffDays = Math.floor((now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return 'TBA'; // Not released yet
-    if (type === 'tv') return 'HD'; // TV shows usually HD immediately
-    if (diffDays < 14) return 'CAM'; // Very new movies
-    if (diffDays < 45) return 'HD (Early)'; // Likely early digital or high-quality CAM
-    return 'HD';
+    const diffDays = Math.floor(
+      (now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (diffDays < 0) return "TBA"; // Not released yet
+    if (type === "tv") return "HD"; // TV shows usually HD immediately
+    if (diffDays < 14) return "CAM"; // Very new movies
+    if (diffDays < 45) return "HD (Early)"; // Likely early digital or high-quality CAM
+    return "HD";
   })(),
 });
 
 /**
  * Batches a check against the server's StreamCache to verify if we definitely have a copy.
  */
-export const fetchAvailability = async (movies: NebulaMovie[]): Promise<NebulaMovie[]> => {
-  const ids = movies.map(m => m.id).join(',');
+export const fetchAvailability = async (
+  movies: NebulaMovie[],
+): Promise<NebulaMovie[]> => {
+  const ids = movies.map((m) => m.id).join(",");
   if (!ids) return movies;
 
   try {
-    const response = await fetch(`${getApiBase()}/api/stream/availability?ids=${ids}`);
+    const response = await fetch(
+      `${getApiBase()}/api/stream/availability?ids=${ids}`,
+    );
     const { results } = await response.json();
-    
+
     const verifiedMap = new Map<string, boolean>(
-      results.map((r: any) => [r.id.toString(), r.isVerified])
+      results.map((r: any) => [r.id.toString(), r.isVerified]),
     );
 
     return movies.map((m) => {
@@ -201,7 +260,7 @@ export const fetchAvailability = async (movies: NebulaMovie[]): Promise<NebulaMo
       };
     });
   } catch (error) {
-    console.error('[AVAILABILITY ERROR]', error);
+    console.error("[AVAILABILITY ERROR]", error);
     return movies;
   }
 };
@@ -209,84 +268,122 @@ export const fetchAvailability = async (movies: NebulaMovie[]): Promise<NebulaMo
 // ─── Exported API Functions ───────────────────────────────────────────────────
 
 export const getTrending = async (
-  type: 'movie' | 'tv' | 'all' = 'all',
-  page = '1'
+  type: "movie" | "tv" | "all" = "all",
+  page = "1",
 ): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB(`/trending/${type}/day`, { page }, TTL.TRENDING);
-    return data.results.map((m: any) =>
-      normalizeMovie(m, m.media_type || (type === 'all' ? 'movie' : type))
+    const data = await fetchFromTMDB(
+      `/trending/${type}/day`,
+      { page },
+      TTL.TRENDING,
     );
-  } catch { return []; }
+    return data.results.map((m: any) =>
+      normalizeMovie(m, m.media_type || (type === "all" ? "movie" : type)),
+    );
+  } catch {
+    return [];
+  }
 };
 
-export const getPopularMovies = async (page = '1'): Promise<NebulaMovie[]> => {
+export const getPopularMovies = async (page = "1"): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB('/movie/popular', { page }, TTL.POPULAR);
-    return data.results.map((m: any) => normalizeMovie(m, 'movie'));
-  } catch { return []; }
+    const data = await fetchFromTMDB("/movie/popular", { page }, TTL.POPULAR);
+    return data.results.map((m: any) => normalizeMovie(m, "movie"));
+  } catch {
+    return [];
+  }
 };
 
-export const getPopularTV = async (page = '1'): Promise<NebulaMovie[]> => {
+export const getPopularTV = async (page = "1"): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB('/tv/popular', { page }, TTL.POPULAR);
-    return data.results.map((m: any) => normalizeMovie(m, 'tv'));
-  } catch { return []; }
+    const data = await fetchFromTMDB("/tv/popular", { page }, TTL.POPULAR);
+    return data.results.map((m: any) => normalizeMovie(m, "tv"));
+  } catch {
+    return [];
+  }
 };
 
-export const getTopRatedMovies = async (page = '1'): Promise<NebulaMovie[]> => {
+export const getTopRatedMovies = async (page = "1"): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB('/movie/top_rated', { page }, TTL.POPULAR);
-    return data.results.map((m: any) => normalizeMovie(m, 'movie'));
-  } catch { return []; }
+    const data = await fetchFromTMDB("/movie/top_rated", { page }, TTL.POPULAR);
+    return data.results.map((m: any) => normalizeMovie(m, "movie"));
+  } catch {
+    return [];
+  }
 };
 
-export const getMoviesByGenre = async (genreId: number): Promise<NebulaMovie[]> => {
+export const getMoviesByGenre = async (
+  genreId: number,
+): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB('/discover/movie', {
-      with_genres: genreId.toString(),
-      sort_by: 'popularity.desc',
-    }, TTL.GENRE);
-    return data.results.map((m: any) => normalizeMovie(m, 'movie'));
-  } catch { return []; }
+    const data = await fetchFromTMDB(
+      "/discover/movie",
+      {
+        with_genres: genreId.toString(),
+        sort_by: "popularity.desc",
+      },
+      TTL.GENRE,
+    );
+    return data.results.map((m: any) => normalizeMovie(m, "movie"));
+  } catch {
+    return [];
+  }
 };
 
 export const discoverMedia = async (
-  type: 'movie' | 'tv',
+  type: "movie" | "tv",
   params: Record<string, string>,
-  ttl: number = TTL.GENRE
+  ttl: number = TTL.GENRE,
 ): Promise<NebulaMovie[]> => {
   try {
     // Don't force sort_by if caller already specified one
-    const finalParams = params.sort_by ? params : { ...params, sort_by: 'popularity.desc' };
+    const finalParams = params.sort_by
+      ? params
+      : { ...params, sort_by: "popularity.desc" };
     const data = await fetchFromTMDB(`/discover/${type}`, finalParams, ttl);
     return data.results.map((m: any) => normalizeMovie(m, type));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 };
 
 export const searchMedia = async (query: string): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB('/search/multi', { query }, TTL.DETAILS);
+    const data = await fetchFromTMDB("/search/multi", { query }, TTL.DETAILS);
     return data.results
-      .filter((m: any) => m.media_type === 'movie' || m.media_type === 'tv')
+      .filter((m: any) => m.media_type === "movie" || m.media_type === "tv")
       .map((m: any) => normalizeMovie(m, m.media_type));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 };
 
 // TMDB /recommendations uses collaborative filtering — much more relevant than /similar
 export const getRecommendations = async (
   id: number | string,
-  type: 'movie' | 'tv',
-  page = '1'
+  type: "movie" | "tv",
+  page = "1",
 ): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB(`/${type}/${id}/recommendations`, { page }, TTL.DETAILS);
-    const results = (data.results || []).map((m: any) => normalizeMovie(m, type));
+    const data = await fetchFromTMDB(
+      `/${type}/${id}/recommendations`,
+      { page },
+      TTL.DETAILS,
+    );
+    const results = (data.results || []).map((m: any) =>
+      normalizeMovie(m, type),
+    );
     if (results.length >= 5) return results;
     // Fallback: /similar if recommendations are sparse
-    const fallback = await fetchFromTMDB(`/${type}/${id}/similar`, { page }, TTL.DETAILS);
+    const fallback = await fetchFromTMDB(
+      `/${type}/${id}/similar`,
+      { page },
+      TTL.DETAILS,
+    );
     return (fallback.results || []).map((m: any) => normalizeMovie(m, type));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 };
 
 // Keep getSimilarMedia for backward compat — delegates to recommendations now
@@ -294,38 +391,40 @@ export const getSimilarMedia = getRecommendations;
 
 export const getMediaBasicInfo = async (
   id: string | number,
-  type: 'movie' | 'tv'
+  type: "movie" | "tv",
 ): Promise<NebulaMovie | null> => {
   // KissKH native drama IDs
-  if (id.toString().startsWith('k')) {
+  if (id.toString().startsWith("k")) {
     try {
       const apiBase = getApiBase();
-      const numId = id.toString().replace('k', '');
+      const numId = id.toString().replace("k", "");
       const r = await fetch(`${apiBase}/api/drama/detail/${numId}`);
       if (r.ok) {
         const data = await r.json();
         return {
           id: id.toString(),
-          title: data.title || 'Unknown Drama',
-          type: 'movie',
+          title: data.title || "Unknown Drama",
+          type: "movie",
           year: 0,
-          genre: 'Drama',
-          image: data.image || '',
-          backdrop: '',
-          description: '',
+          genre: "Drama",
+          image: data.image || "",
+          backdrop: "",
+          description: "",
           isDrama: true,
         } as any;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return {
       id: id.toString(),
-      title: 'Loading...',
+      title: "Loading...",
       type,
       year: 0,
-      genre: 'Drama',
-      image: '',
-      backdrop: '',
-      description: '',
+      genre: "Drama",
+      image: "",
+      backdrop: "",
+      description: "",
       isDrama: true,
     } as any;
   }
@@ -334,7 +433,7 @@ export const getMediaBasicInfo = async (
     const data = await fetchFromTMDB(`/${type}/${id}`, {}, TTL.DETAILS);
     if (!data || data.status_code === 34) return null;
     const movie = normalizeMovie(data, type);
-    
+
     // Enrich with single availability check
     try {
       const apiBase = getApiBase();
@@ -346,29 +445,37 @@ export const getMediaBasicInfo = async (
           movie.isDead = results[0].isDead;
         }
       }
-    } catch { /* ignore */ }
-    
+    } catch {
+      /* ignore */
+    }
+
     return movie;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 };
 
 export const getMediaDetails = async (
   id: number,
-  type: 'movie' | 'tv',
-  releaseYear?: number
+  type: "movie" | "tv",
+  releaseYear?: number,
 ): Promise<{ trailers: any[]; similar: any[]; cast: any[] }> => {
   try {
-    const ttl = releaseYear && (CURRENT_YEAR - releaseYear) >= 2 ? TTL.LEGACY : TTL.DETAILS;
+    const ttl =
+      releaseYear && CURRENT_YEAR - releaseYear >= 2 ? TTL.LEGACY : TTL.DETAILS;
     const data = await fetchFromTMDB(
       `/${type}/${id}`,
-      { append_to_response: 'videos,recommendations,credits' },
-      ttl
+      { append_to_response: "videos,recommendations,credits" },
+      ttl,
     );
     return {
-      trailers: data.videos?.results.filter(
-        (v: any) => v.type === 'Trailer' || v.type === 'Teaser'
-      ) || [],
-      similar: (data.recommendations?.results || []).map((m: any) => normalizeMovie(m, type)),
+      trailers:
+        data.videos?.results.filter(
+          (v: any) => v.type === "Trailer" || v.type === "Teaser",
+        ) || [],
+      similar: (data.recommendations?.results || []).map((m: any) =>
+        normalizeMovie(m, type),
+      ),
       cast: (data.credits?.cast || []).slice(0, 12).map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -384,17 +491,20 @@ export const getMediaDetails = async (
 };
 
 export const enrichMovies = async (
-  normalized: NebulaMovie[]
+  normalized: NebulaMovie[],
 ): Promise<NebulaMovie[]> => {
   if (!normalized.length) return normalized;
 
   const targetMovies = normalized.filter(
-    m => !(m as any).isDrama && (m as any).origin !== 'kisskh' && (m as any).origin !== 'dramacool'
+    (m) =>
+      !(m as any).isDrama &&
+      (m as any).origin !== "kisskh" &&
+      (m as any).origin !== "dramacool",
   );
   if (!targetMovies.length) return normalized;
 
   // 1. Try to check local cache for logos
-  normalized.forEach(m => {
+  normalized.forEach((m) => {
     const key = `v2.0-meta-${m.id}:${m.type}`;
     const cached = localStorage.getItem(key);
     if (cached) {
@@ -404,25 +514,34 @@ export const enrichMovies = async (
           m.clearLogo = logoUrl;
           m.fanartBackground = backgroundUrl;
         }
-      } catch { /* stale */ }
+      } catch {
+        /* stale */
+      }
     }
   });
 
   try {
-    const comboIds = targetMovies.map(m => `${m.id}:${m.type || 'movie'}`).sort().join(',');
-    const simpleIds = targetMovies.map(m => m.id).join(',');
+    const comboIds = targetMovies
+      .map((m) => `${m.id}:${m.type || "movie"}`)
+      .sort()
+      .join(",");
+    const simpleIds = targetMovies.map((m) => m.id).join(",");
     const apiBase = getApiBase();
 
     // Parallel fetch for Logos and Availability
     const [metaRes, availRes] = await Promise.all([
-      fetch(`${apiBase}/api/metadata?batch=${comboIds}`).then(r => r.json()).catch(() => ({ results: [] })),
-      fetch(`${apiBase}/api/stream/availability?ids=${simpleIds}`).then(r => r.json()).catch(() => ({ results: [] }))
+      fetch(`${apiBase}/api/metadata?batch=${comboIds}`)
+        .then((r) => r.json())
+        .catch(() => ({ results: [] })),
+      fetch(`${apiBase}/api/stream/availability?ids=${simpleIds}`)
+        .then((r) => r.json())
+        .catch(() => ({ results: [] })),
     ]);
 
     // Apply Verification & Dead Status
     if (availRes?.results) {
       const availMap = new Map<string, any>(
-        availRes.results.map((r: any) => [r.id.toString(), r])
+        availRes.results.map((r: any) => [r.id.toString(), r]),
       );
       normalized.forEach((m) => {
         const info = availMap.get(m.id.toString());
@@ -436,7 +555,9 @@ export const enrichMovies = async (
     // Apply Logo Data
     if (metaRes?.results) {
       metaRes.results.forEach((meta: any) => {
-        const index = normalized.findIndex(m => m.id.toString() === meta.id.toString());
+        const index = normalized.findIndex(
+          (m) => m.id.toString() === meta.id.toString(),
+        );
         if (index !== -1) {
           normalized[index].clearLogo = meta.logoUrl;
           normalized[index].fanartBackground = meta.backgroundUrl;
@@ -444,14 +565,22 @@ export const enrichMovies = async (
             try {
               localStorage.setItem(
                 `v2.0-meta-${meta.id}:${normalized[index].type}`,
-                JSON.stringify({ logoUrl: meta.logoUrl, backgroundUrl: meta.backgroundUrl, ts: Date.now() })
+                JSON.stringify({
+                  logoUrl: meta.logoUrl,
+                  backgroundUrl: meta.backgroundUrl,
+                  ts: Date.now(),
+                }),
               );
-            } catch { /* quota: skip */ }
+            } catch {
+              /* quota: skip */
+            }
           }
         }
       });
     }
-  } catch { /* degrade gracefully */ }
+  } catch {
+    /* degrade gracefully */
+  }
   return normalized;
 };
 
@@ -466,12 +595,21 @@ export const getTVDetails = async (id: string | number) => {
       number_of_seasons: data.number_of_seasons,
       seasons: data.seasons,
     };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 };
 
-export const getTVSeasonEpisodes = async (tvId: string | number, seasonNumber: number) => {
+export const getTVSeasonEpisodes = async (
+  tvId: string | number,
+  seasonNumber: number,
+) => {
   try {
-    const data = await fetchFromTMDB(`/tv/${tvId}/season/${seasonNumber}`, {}, TTL.DETAILS);
+    const data = await fetchFromTMDB(
+      `/tv/${tvId}/season/${seasonNumber}`,
+      {},
+      TTL.DETAILS,
+    );
     if (!data?.episodes) return [];
     const now = new Date();
     return data.episodes
@@ -483,38 +621,49 @@ export const getTVSeasonEpisodes = async (tvId: string | number, seasonNumber: n
         episode_number: ep.episode_number,
         name: ep.name,
         overview: ep.overview,
-        still_path: ep.still_path ? proxyImage(`${IMAGE_BASE_URL}${ep.still_path}`) : null,
+        still_path: ep.still_path
+          ? proxyImage(`${IMAGE_BASE_URL}${ep.still_path}`)
+          : null,
         air_date: ep.air_date,
         vote_average: ep.vote_average,
       }));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 };
 
 // ─── Actor/Person helpers ─────────────────────────────────────────────────────
 export const getPersonMovies = async (
   personId: string,
-  type: 'movie' | 'tv' = 'movie'
+  type: "movie" | "tv" = "movie",
 ): Promise<NebulaMovie[]> => {
   try {
-    const endpoint = type === 'movie'
-      ? `/person/${personId}/movie_credits`
-      : `/person/${personId}/tv_credits`;
+    const endpoint =
+      type === "movie"
+        ? `/person/${personId}/movie_credits`
+        : `/person/${personId}/tv_credits`;
     const data = await fetchFromTMDB(endpoint, {}, TTL.DETAILS);
-    const raw = type === 'movie' ? data.cast || [] : data.cast || [];
+    const raw = type === "movie" ? data.cast || [] : data.cast || [];
     return raw
       .filter((m: any) => m.poster_path && (m.vote_count ?? 0) > 50)
       .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0))
       .slice(0, 30)
       .map((m: any) => normalizeMovie(m, type));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 };
 
-export const getPopularActors = async (): Promise<{ id: string; name: string }[]> => {
+export const getPopularActors = async (): Promise<
+  { id: string; name: string }[]
+> => {
   try {
-    const data = await fetchFromTMDB('/person/popular', {}, TTL.POPULAR);
+    const data = await fetchFromTMDB("/person/popular", {}, TTL.POPULAR);
     return (data.results || []).slice(0, 20).map((p: any) => ({
       id: p.id.toString(),
       name: p.name,
     }));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 };
