@@ -958,6 +958,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }, 3000);
   }, [isPaused, showSettings, showSubtitles, showEpisodeDrawer]);
 
+  // Tap on the video/empty area:
+  //  - If controls are hidden  → show them and start the auto-hide timer
+  //  - If controls are visible → hide them immediately (unless a menu is open)
+  const handleTap = useCallback(() => {
+    if (!showUi) {
+      resetHideTimer();
+    } else if (!showSettings && !showSubtitles && !showEpisodeDrawer) {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      setShowUi(false);
+      setShowMobileVolume(false); // dismiss mobile volume popup too
+    }
+  }, [showUi, showSettings, showSubtitles, showEpisodeDrawer, resetHideTimer]);
+
   useEffect(() => {
     resetHideTimer();
     window.addEventListener("mousemove", resetHideTimer);
@@ -1375,12 +1388,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }}
         />
       ) : (
-        <video
+      <video
           ref={videoRef}
           className="w-full h-full object-contain"
           crossOrigin="anonymous"
           playsInline
-          onClick={resetHideTimer}
         >
           {vttBlobUrl && (
             <track
@@ -1395,16 +1407,32 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         </video>
       )}
 
+      {/* ── Transparent tap layer — covers the screen behind the UI chrome ─────
+           On mobile: tap hides/shows controls without triggering play/pause.
+           Sits above the video (z-10) but below the controls UI (z-20).
+           pointer-events always on so taps are captured even when UI is hidden. */}
+      {!isEmbed && (
+        <div
+          className="absolute inset-0 z-10"
+          style={{ cursor: showUi ? "default" : "none" }}
+          onClick={handleTap}
+        />
+      )}
+
       <div
-        className="absolute inset-0 flex flex-col justify-between z-10"
+        className="absolute inset-0 flex flex-col justify-between z-20"
         style={{
           opacity: showUi ? 1 : 0,
-          transition: "opacity 0.2s",
+          transition: "opacity 0.25s",
+          // When hidden, block NO pointer events at all — the tap layer above
+          // handles show/hide. When visible, each bar controls its own events.
           pointerEvents: showUi ? "auto" : "none",
         }}
       >
         <div
-          className={`flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 ${!isEmbed ? "bg-gradient-to-b from-black/80 to-transparent" : ""} pointer-events-auto`}
+          className={`flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 ${!isEmbed ? "bg-gradient-to-b from-black/80 to-transparent" : ""}`}
+          // Stop taps on the top bar from bubbling to the tap layer
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={safeClose}
@@ -1458,7 +1486,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         </div>
 
         <div
-          className={`px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 ${!isEmbed ? "bg-gradient-to-t from-black/90 to-transparent" : ""} pointer-events-auto`}
+          className={`px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 ${!isEmbed ? "bg-gradient-to-t from-black/90 to-transparent" : ""}`}
+          // Stop taps on the bottom bar from bubbling to the tap layer
+          onClick={(e) => e.stopPropagation()}
         >
           {!isEmbed && (
             <div
