@@ -510,12 +510,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (Hls.isSupported()) {
       const hls = new Hls({
         // ── Buffer ──────────────────────────────────────────────────────────
-        // 30s forward buffer is the Netflix/YouTube standard.
-        // 60s was over-buffering: hls.js stalls waiting to fill the full
-        // 60s window when the CDN can't deliver that fast, causing freezes.
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        backBufferLength: 15, // Keep 15s behind for seek-back
+        // Netflix-style: large forward buffer so paused sessions don't rebuffer.
+        // maxBufferLength: how much hls.js tries to keep ahead during play.
+        // maxMaxBufferLength: absolute ceiling — allows filling up to 5 min
+        //   ahead when the player is paused (CDN permitting).
+        maxBufferLength: 60,
+        maxMaxBufferLength: 300,
+        backBufferLength: 30, // Keep 30s behind for seek-back
 
         // ── Fragment loading ─────────────────────────────────────────────
         fragLoadingMaxRetry: 6, // 6 retries (was 20 — bloated retry storm)
@@ -527,25 +528,29 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         levelLoadingRetryDelay: 1000,
 
         // ── ABR (Adaptive Bitrate) ───────────────────────────────────────
-        // Start ABR at 8 Mbps.
-        // 8 Mbps allows starting at 720p/1080p immediately on fast connections,
-        // while HLS.js still downscales quickly if it stalls.
-        abrEwmaDefaultEstimate: 8_000_000,
+        // Fix 3: Start at 5 Mbps instead of 8 — lets ABR auto-detect the
+        // actual CDN throughput and avoid immediately locking to 1080p on
+        // a slow CDN edge, which causes the first-segment buffering stall.
+        // abrBandWidthFactor: use only 80% of measured bandwidth for ABR
+        // decisions — conservative margin prevents over-shooting quality.
+        abrEwmaDefaultEstimate: 5_000_000,
+        abrBandWidthFactor: 0.8,
+        abrBandWidthUpFactor: 0.7,
         capLevelToPlayerSize: true, // Never load quality higher than display size
 
         // ── Sync / Stall recovery ────────────────────────────────────────
-        // Smaller hole = HLS patches discontinuities sooner (less stall time)
         maxBufferHole: 0.3,
         maxFragLookUpTolerance: 0.2,
-        // Nudge: 0.3s push with max 8 retries = 2.4s total before giving up.
-        // Old: 0.1s × 50 retries = 50 tiny seeks flooding the proxy.
         nudgeOffset: 0.3,
         nudgeMaxRetry: 8,
-        highBufferWatchdogPeriod: 2, // Check buffer health every 2s (was 3)
+        highBufferWatchdogPeriod: 2,
 
         // ── Performance ─────────────────────────────────────────────────
         enableWorker: true,
-        lowLatencyMode: true, // Improved recovery on unstable mobile networks
+        // Fix 2: lowLatencyMode is designed for LIVE streams — it reduces
+        // buffer targets and changes ABR to optimise for latency over quality.
+        // For VOD movies this is actively harmful; disable it.
+        lowLatencyMode: false,
         startFragPrefetch: true,
         enableSoftwareAES: true,
 
@@ -692,10 +697,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }
         mediaRecoveryAttempt = 0;
       });
+      // Fix 4: clear the browser-cached segments when the player closes
+      // or the tab/browser is closed, so the next session always starts
+      // clean (no stale segments from expired CDN URLs).
+      const clearSegmentCache = () => {
+        if ("caches" in window) {
+          caches.keys().then((keys) => {
+            keys.forEach((key) => caches.delete(key));
+          });
+        }
+      };
+      window.addEventListener("beforeunload", clearSegmentCache);
 
       return () => {
         hls.destroy();
         hlsRef.current = null;
+        clearSegmentCache();
+        window.removeEventListener("beforeunload", clearSegmentCache);
       };
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamUrl;
@@ -784,16 +802,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       if (hlsRef.current) hlsRef.current.startLoad();
     };
 
-    // Suspend fires frequently on mobile — debounce to avoid spamming startLoad()
+    // Suspend fires when the browser stops consuming video data (including on pause).
+    // Fix 1: Netflix-style — keep downloading when paused so the buffer stays full.
+    // We removed the !video.paused gate: hls.js should always load up to
+    // maxMaxBufferLength (300s) regardless of play/pause state.
+    // Debounce to 500ms to avoid spamming startLoad() on rapid pause/play.
     let suspendTimer: NodeJS.Timeout | null = null;
     const onSuspend = () => {
       if (suspendTimer) return;
       suspendTimer = setTimeout(() => {
         suspendTimer = null;
-        if (!video.paused && hlsRef.current) {
+        // Always resume loading — whether paused or playing.
+        // hls.js will self-throttle once maxMaxBufferLength is reached.
+        if (hlsRef.current) {
           hlsRef.current.startLoad();
         }
-      }, 2000);
+      }, 500);
     };
 
     const onVideoError = () => {
