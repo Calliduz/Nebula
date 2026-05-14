@@ -697,23 +697,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }
         mediaRecoveryAttempt = 0;
       });
-      // Fix 4: clear the browser-cached segments when the player closes
-      // or the tab/browser is closed, so the next session always starts
-      // clean (no stale segments from expired CDN URLs).
-      const clearSegmentCache = () => {
-        if ("caches" in window) {
-          caches.keys().then((keys) => {
-            keys.forEach((key) => caches.delete(key));
-          });
-        }
-      };
-      window.addEventListener("beforeunload", clearSegmentCache);
-
       return () => {
         hls.destroy();
         hlsRef.current = null;
-        clearSegmentCache();
-        window.removeEventListener("beforeunload", clearSegmentCache);
+        // Note: HLS.js does NOT use the Cache Storage API — it relies on
+        // the browser's standard HTTP cache, governed by the
+        // Cache-Control: private, max-age=3600 headers set on /api/proxy/segment.
+        // No programmatic cache clearing is needed or correct here.
       };
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamUrl;
