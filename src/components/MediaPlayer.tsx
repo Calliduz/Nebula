@@ -25,7 +25,10 @@ import { API_BASE_URL } from "../config";
 const API = API_BASE_URL;
 
 interface MediaPlayerProps {
+  movie: any;
+  season?: number;
   episode?: number;
+  source?: string;
   onMarkAsWatched: (id: string | number, type: "movie" | "tv") => void;
   onClose: () => void;
 }
@@ -44,6 +47,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   movie,
   season,
   episode,
+  source,
   onMarkAsWatched,
   onClose,
 }) => {
@@ -188,6 +192,41 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setVttBlobUrl(null);
     }
 
+    if (source) {
+      const candidateUrls = source.split("|");
+      const processedMirrors = candidateUrls
+        .map((urlWithHash, idx) => {
+          const [rawUrlPart, hashName] = urlWithHash.split("#");
+          const rawUrl = rawUrlPart.trim();
+
+          if (!rawUrl) {
+            return null;
+          }
+
+          const isEmb = rawUrl.includes("embed") || rawUrl.includes("iframe");
+          const trimmedHashName = hashName?.trim();
+          const name = trimmedHashName || (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
+          const proxiedUrl = isEmb ? rawUrl : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
+          return {
+            source: name,
+            url: proxiedUrl,
+            type: isEmb ? "embed" : "hls"
+          };
+        })
+        .filter((mirror): mirror is { source: string; url: string; type: "embed" | "hls" } => mirror !== null);
+
+      if (processedMirrors.length > 0) {
+        setMirrors(processedMirrors);
+        mirrorsRef.current = processedMirrors;
+        setStreamUrl(processedMirrors[0].url);
+        setIsEmbed(processedMirrors[0].type === "embed");
+        setActiveMirror(0);
+        activeMirrorRef.current = 0;
+        setLoading(false);
+        return;
+      }
+    }
+
     let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&releaseDate=${movie.release_date || ""}`;
     if (movie.origin) url += `&origin=${movie.origin}`;
     if (season !== undefined) url += `&season=${season}`;
@@ -250,7 +289,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         keepalive: true,
       }).catch(() => {});
     };
-  }, [movie.id, season, episode]);
+  }, [movie.id, season, episode, source]);
 
   // ── Auto-fetch external subtitles in the background ─────────────────────
   useEffect(() => {
@@ -270,11 +309,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const data = await r.json();
         if (cancelled) return;
 
-        if (data && data.subtitles && data.subtitles.length > 0) {
-          if (!cancelled)
-            setSubtitles((prev) => processSubtitles(data.subtitles, prev));
-        } else {
-          if (!cancelled) showToast("No external subtitles found", "info");
+        const vrSubUrl = movie.type === "tv"
+          ? `https://cache.vdrk.site/v2/tv/${movie.id}/${season}/${episode}/English.vtt`
+          : `https://cache.vdrk.site/v2/movie/${movie.id}/English.vtt`;
+
+        const fetchedSubs = Array.isArray(data.subtitles) ? [...data.subtitles] : [];
+
+        try {
+          const vrSubResponse = await fetch(vrSubUrl, { method: "HEAD" });
+          if (!cancelled && vrSubResponse.ok) {
+            fetchedSubs.push({
+              url: vrSubUrl,
+              lang: "en",
+              languageName: "English (VidRock Cache)",
+              source: "VidRock"
+            });
+          }
+        } catch (e) {
+          console.warn("VidRock cache subtitle probe failed:", e);
+        }
+
+        if (!cancelled) {
+          if (fetchedSubs.length === 0) {
+            showToast("No external subtitles found", "info");
+          }
+          setSubtitles((prev) => processSubtitles(fetchedSubs, prev));
         }
       } catch (e) {
         if (!cancelled) {

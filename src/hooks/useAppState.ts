@@ -1167,12 +1167,16 @@ export function useAppState() {
     });
   };
 
-  const startPlayback = (movie: any, s?: number, e?: number) => {
+  const startPlayback = (movie: any, s?: number, e?: number, source?: string) => {
     setIsTransitioning(true);
-    const target =
+    let target =
       s !== undefined && e !== undefined
         ? `/watch/${movie.type}/${movie.id}?season=${s}&episode=${e}`
         : `/watch/${movie.type}/${movie.id}`;
+
+    if (source) {
+      target += (target.includes("?") ? "&" : "?") + `source=${encodeURIComponent(source)}`;
+    }
 
     navigate(target);
     setTimeout(() => setIsTransitioning(false), 800);

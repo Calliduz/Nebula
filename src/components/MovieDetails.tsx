@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
   Star,
@@ -12,6 +12,10 @@ import {
   Play,
   X,
   Plus,
+  Zap,
+  Server,
+  Activity,
+  Loader2,
 } from "lucide-react";
 import { AdBanner } from "./AdBanner";
 import { API_BASE_URL } from "../config";
@@ -25,10 +29,254 @@ import {
   getTVSeasonEpisodes,
 } from "../services/tmdb";
 
+interface SourceSelectionModalProps {
+  movie: any;
+  season?: number;
+  episode?: number;
+  onClose: () => void;
+  onSelect: (sourceUrl?: string) => void;
+}
+
+export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
+  movie,
+  season,
+  episode,
+  onClose,
+  onSelect,
+}) => {
+  const [sources, setSources] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+
+    let url = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+    if (season !== undefined) url += `&season=${season}`;
+    if (episode !== undefined) url += `&episode=${episode}`;
+
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan VidRock uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        
+        // Filter out sources that have null url
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name,
+            url: value.url,
+            type: value.type || "hls",
+            language: value.language || "English",
+            flag: value.flag || "us",
+          }));
+
+        setSources(activeSources);
+      })
+      .catch((err) => {
+        if (active) setError(err.message || "Failed to contact proxy.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [movie.id, movie.type, season, episode]);
+
+  // Construct the serialized pipeline for VidRock
+  const vidrockUrl = sources.map(src => `${src.url}#${src.name}`).join("|");
+
+  return (
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
+      {/* Background radial glow */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(0,229,255,0.12)_0%,transparent_60%)] pointer-events-none" />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative z-10 w-full max-w-2xl bg-obsidian/85 border border-white/10 rounded-3xl p-5 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden"
+      >
+        {/* Glow border element */}
+        <div className="absolute inset-0 border border-white/5 rounded-3xl pointer-events-none" />
+
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 z-50 animate-fade-in"
+        >
+          <X size={20} />
+        </button>
+
+        {/* Header */}
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.15em] mb-3 sm:mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse" />
+            Provider Selection
+          </div>
+          <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-tight mb-2">
+            Choose Stream Source
+          </h3>
+          <p className="text-xs text-white/50 max-w-md mx-auto">
+            {movie.title} {season !== undefined && `• Season ${season} Episode ${episode}`}
+          </p>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 gap-4">
+            <div className="relative animate-pulse">
+              <div className="absolute inset-0 bg-nebula-cyan/20 blur-xl rounded-full scale-150" />
+              <Loader2 className="animate-spin text-nebula-cyan relative z-10" size={40} />
+            </div>
+            <div className="text-center">
+              <p className="text-white text-xs font-bold uppercase tracking-widest animate-pulse">
+                Scanning Uplinks...
+              </p>
+              <p className="text-[10px] text-white/40 uppercase mt-1">
+                Decrypting high-speed stream manifests
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Dual Card Choice Layout (Always rendered if loaded) */}
+        {!loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[380px] sm:max-h-none overflow-y-auto pr-1 sm:pr-0 custom-scrollbar">
+            {/* VidRock Card */}
+            <motion.div
+              whileHover={sources.length > 0 ? { scale: 1.02, translateY: -2 } : {}}
+              onClick={() => {
+                if (sources.length > 0) {
+                  onSelect(vidrockUrl);
+                }
+              }}
+              className={`relative flex flex-col justify-between p-5 rounded-2xl border transition-all h-full min-h-[170px] ${
+                sources.length > 0
+                  ? "border-nebula-cyan/35 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.05)] group"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+              }`}
+            >
+              {sources.length > 0 && (
+                <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-nebula-cyan text-obsidian text-[8px] font-black uppercase tracking-wider animate-pulse shadow-[0_0_10px_rgba(0,229,255,0.3)]">
+                  <Sparkles size={8} />
+                  <span>RECOMMENDED</span>
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                    sources.length > 0 ? "bg-nebula-cyan/15 text-nebula-cyan" : "bg-white/5 text-white/20"
+                  }`}>
+                    <Zap size={18} fill={sources.length > 0 ? "currentColor" : "none"} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-white uppercase tracking-tight flex items-center gap-1.5">
+                      VidRock
+                      <span className="text-[8px] font-black px-1 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase">
+                        DEFAULT
+                      </span>
+                    </h4>
+                    <p className="text-[9px] text-white/40 uppercase font-semibold">
+                      High-Speed Uplink
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
+                  Delivers ultra-fast multi-CDN speeds, rich HLS quality, and seamless client-side failover between active mirrors.
+                </p>
+              </div>
+
+              {/* Dynamic Uplinks Footer */}
+              <div className="mt-auto pt-3 border-t border-white/5">
+                {sources.length > 0 ? (
+                  <div>
+                    <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
+                      Active Mirrors (Failover Enabled):
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {sources.map((src) => {
+                        let color = "border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5";
+                        if (src.name === "Atlas") color = "border-amber-500/20 text-amber-400/80 bg-amber-500/5";
+                        if (src.name === "Orion") color = "border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5";
+                        return (
+                          <span key={src.name} className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}>
+                            {src.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[9px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                    {error ? "Uplink currently offline" : "No mirror streams available"}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+
+            {/* VidLink Card (Always Active) */}
+            <motion.div
+              whileHover={{ scale: 1.02, translateY: -2 }}
+              onClick={() => onSelect()}
+              className="relative flex flex-col justify-between p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/8 cursor-pointer group min-h-[170px]"
+            >
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-white/70 group-hover:text-nebula-cyan transition-colors">
+                    <Server size={18} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors uppercase tracking-tight">
+                      VidLink
+                    </h4>
+                    <p className="text-[9px] text-white/40 uppercase font-semibold">
+                      Standard Route
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
+                  Aggregates comprehensive standard indexes across global hosts to ensure robust content availability.
+                </p>
+              </div>
+
+              {/* Status Footer */}
+              <div className="mt-auto pt-3 border-t border-white/5">
+                <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
+                  System Routing:
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
+                    Auto-Failover
+                  </span>
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
+                    Standard DNS
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+};
+
 interface MovieDetailsProps {
   movie?: any;
   onClose: () => void;
-  onPlay: (season?: number, episode?: number) => void;
+  onPlay: (season?: number, episode?: number, source?: string) => void;
   onSelectMovie?: (m: any) => void;
   isInList: boolean;
   onToggleList: () => void;
@@ -64,6 +312,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const [episodes, setEpisodes] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedEpForModal, setSelectedEpForModal] = useState<{ season?: number; episode?: number } | null>(null);
+  const [showSourceModal, setShowSourceModal] = useState(false);
+
+  const handlePlayClick = (s?: number, e?: number) => {
+    setSelectedEpForModal({ season: s, episode: e });
+    setShowSourceModal(true);
+  };
+
+  const handleSelectSource = (sourceUrl?: string) => {
+    setShowSourceModal(false);
+    onPlay(selectedEpForModal?.season, selectedEpForModal?.episode, sourceUrl);
+  };
 
   useEffect(() => {
     const fetchEverything = async () => {
@@ -363,7 +623,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() =>
-                          onPlay(resumeData?.season, resumeData?.episode)
+                          handlePlayClick(resumeData?.season, resumeData?.episode)
                         }
                         className={`bg-white text-obsidian glow-white hover:bg-nebula-cyan px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none`}
                       >
@@ -450,7 +710,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       <div
                         key={ep.episode_number}
                         className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30"
-                        onClick={() => onPlay(activeSeason, ep.episode_number)}
+                        onClick={() => handlePlayClick(activeSeason, ep.episode_number)}
                       >
                         <div className="aspect-video bg-black/50 relative overflow-hidden">
                           {ep.still_path ? (
@@ -640,6 +900,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         </div>
         <div className="h-40 w-full pointer-events-none" />
       </div>
+
+      <AnimatePresence>
+        {showSourceModal && (
+          <SourceSelectionModal
+            movie={movie}
+            season={selectedEpForModal?.season}
+            episode={selectedEpForModal?.episode}
+            onClose={() => setShowSourceModal(false)}
+            onSelect={handleSelectSource}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

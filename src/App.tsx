@@ -185,7 +185,7 @@ export default function App() {
             key="movie-details-modal"
             movie={state.selectedMovie}
             onClose={() => actions.setSelectedMovie(null)}
-            onPlay={(s, e) => actions.startPlayback(state.selectedMovie, s, e)}
+            onPlay={(s, e, src) => actions.startPlayback(state.selectedMovie, s, e, src)}
             onSelectMovie={actions.setSelectedMovie}
             isInList={state.myList.includes(state.selectedMovie.id.toString())}
             onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
@@ -290,6 +290,7 @@ function MediaPlayerStub({ actions, state }: any) {
   const episode = searchParams.get("episode")
     ? parseInt(searchParams.get("episode")!)
     : undefined;
+  const source = searchParams.get("source") || undefined;
 
   // While the global catalog is still loading, show a themed skeleton
   // permanently render the error state for a movie that simply isn't fetched yet.
@@ -348,6 +349,7 @@ function MediaPlayerStub({ actions, state }: any) {
         movie={movie}
         season={season}
         episode={episode}
+        source={source}
         onMarkAsWatched={actions.markAsWatched}
         onClose={() => navigate(-1)}
       />
