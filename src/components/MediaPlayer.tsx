@@ -25,7 +25,10 @@ import { API_BASE_URL } from "../config";
 const API = API_BASE_URL;
 
 interface MediaPlayerProps {
+  movie: any;
+  season?: number;
   episode?: number;
+  source?: string;
   onMarkAsWatched: (id: string | number, type: "movie" | "tv") => void;
   onClose: () => void;
 }
@@ -44,6 +47,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   movie,
   season,
   episode,
+  source,
   onMarkAsWatched,
   onClose,
 }) => {
@@ -188,6 +192,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setVttBlobUrl(null);
     }
 
+    if (source) {
+      const isEmb = source.includes("embed") || source.includes("iframe");
+      const finalUrl = isEmb ? source : `${API}/api/proxy/stream?url=${encodeURIComponent(source)}`;
+      setStreamUrl(finalUrl);
+      setIsEmbed(isEmb);
+      setLoading(false);
+      return;
+    }
+
     let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&releaseDate=${movie.release_date || ""}`;
     if (movie.origin) url += `&origin=${movie.origin}`;
     if (season !== undefined) url += `&season=${season}`;
@@ -250,7 +263,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         keepalive: true,
       }).catch(() => {});
     };
-  }, [movie.id, season, episode]);
+  }, [movie.id, season, episode, source]);
 
   // ── Auto-fetch external subtitles in the background ─────────────────────
   useEffect(() => {
@@ -270,11 +283,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const data = await r.json();
         if (cancelled) return;
 
-        if (data && data.subtitles && data.subtitles.length > 0) {
-          if (!cancelled)
-            setSubtitles((prev) => processSubtitles(data.subtitles, prev));
-        } else {
-          if (!cancelled) showToast("No external subtitles found", "info");
+        const vrSubUrl = movie.type === "tv"
+          ? `https://cache.vdrk.site/v2/tv/${movie.id}_${season}_${episode}/English.vtt`
+          : `https://cache.vdrk.site/v2/movie/${movie.id}/English.vtt`;
+
+        let fetchedSubs = data.subtitles || [];
+        fetchedSubs.push({
+          url: vrSubUrl,
+          lang: "en",
+          languageName: "English (VidRock Cache)",
+          source: "VidRock"
+        });
+
+        if (!cancelled) {
+          setSubtitles((prev) => processSubtitles(fetchedSubs, prev));
         }
       } catch (e) {
         if (!cancelled) {
