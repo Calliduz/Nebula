@@ -193,10 +193,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
 
     if (source) {
-      const isEmb = source.includes("embed") || source.includes("iframe");
-      const finalUrl = isEmb ? source : `${API}/api/proxy/stream?url=${encodeURIComponent(source)}`;
-      setStreamUrl(finalUrl);
-      setIsEmbed(isEmb);
+      const candidateUrls = source.split("|");
+      const processedMirrors = candidateUrls.map((urlWithHash, idx) => {
+        const [rawUrl, hashName] = urlWithHash.split("#");
+        const isEmb = rawUrl.includes("embed") || rawUrl.includes("iframe");
+        const name = hashName || (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
+        const proxiedUrl = isEmb ? rawUrl : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
+        return {
+          source: name,
+          url: proxiedUrl,
+          type: isEmb ? "embed" : "hls"
+        };
+      });
+
+      setMirrors(processedMirrors);
+      mirrorsRef.current = processedMirrors;
+      setStreamUrl(processedMirrors[0].url);
+      setIsEmbed(processedMirrors[0].type === "embed");
+      setActiveMirror(0);
+      activeMirrorRef.current = 0;
       setLoading(false);
       return;
     }
@@ -284,7 +299,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         if (cancelled) return;
 
         const vrSubUrl = movie.type === "tv"
-          ? `https://cache.vdrk.site/v2/tv/${movie.id}_${season}_${episode}/English.vtt`
+          ? `https://cache.vdrk.site/v2/tv/${movie.id}/${season}/${episode}/English.vtt`
           : `https://cache.vdrk.site/v2/movie/${movie.id}/English.vtt`;
 
         let fetchedSubs = data.subtitles || [];

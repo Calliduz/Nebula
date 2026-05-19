@@ -90,6 +90,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     };
   }, [movie.id, movie.type, season, episode]);
 
+  // Construct the serialized pipeline for VidRock
+  const vidrockUrl = sources.map(src => `${src.url}#${src.name}`).join("|");
+
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
       {/* Background radial glow */}
@@ -99,7 +102,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative z-10 w-full max-w-xl bg-obsidian/80 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden"
+        className="relative z-10 w-full max-w-2xl bg-obsidian/85 border border-white/10 rounded-3xl p-5 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden"
       >
         {/* Glow border element */}
         <div className="absolute inset-0 border border-white/5 rounded-3xl pointer-events-none" />
@@ -107,19 +110,19 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5"
+          className="absolute top-4 right-4 w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 z-50 animate-fade-in"
         >
           <X size={20} />
         </button>
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.15em] mb-4">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.15em] mb-3 sm:mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse" />
-            Provider selection
+            Provider Selection
           </div>
           <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-tight mb-2">
-            Select Mirror
+            Choose Stream Source
           </h3>
           <p className="text-xs text-white/50 max-w-md mx-auto">
             {movie.title} {season !== undefined && `• Season ${season} Episode ${episode}`}
@@ -128,7 +131,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
         {/* Loading State */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 gap-4">
             <div className="relative animate-pulse">
               <div className="absolute inset-0 bg-nebula-cyan/20 blur-xl rounded-full scale-150" />
               <Loader2 className="animate-spin text-nebula-cyan relative z-10" size={40} />
@@ -144,123 +147,125 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           </div>
         )}
 
-        {/* Error State */}
-        {!loading && error && (
-          <div className="text-center py-10">
-            <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center mx-auto mb-4">
-              <span className="text-rose-400 font-bold text-lg">!</span>
-            </div>
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-2">
-              Scan Protocols Failed
-            </h4>
-            <p className="text-xs text-white/40 mb-6 max-w-xs mx-auto">
-              We encountered a network error establishing contact with VidRock server.
-            </p>
-            <button
-              onClick={() => onSelect()}
-              className="px-6 py-3 bg-white text-obsidian rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-nebula-cyan transition-colors"
-            >
-              Use Standard Route
-            </button>
-          </div>
-        )}
-
-        {/* Sources List */}
-        {!loading && !error && (
-          <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
-            {/* Standard Stream Fallback */}
+        {/* Dual Card Choice Layout (Always rendered if loaded) */}
+        {!loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[380px] sm:max-h-none overflow-y-auto pr-1 sm:pr-0 custom-scrollbar">
+            {/* VidRock Card */}
             <motion.div
-              whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.06)" }}
-              onClick={() => onSelect()}
-              className="flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 cursor-pointer transition-all group"
+              whileHover={sources.length > 0 ? { scale: 1.02, translateY: -2 } : {}}
+              onClick={() => {
+                if (sources.length > 0) {
+                  onSelect(vidrockUrl);
+                }
+              }}
+              className={`relative flex flex-col justify-between p-5 rounded-2xl border transition-all h-full min-h-[170px] ${
+                sources.length > 0
+                  ? "border-nebula-cyan/35 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.05)] group"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+              }`}
             >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white group-hover:text-nebula-cyan transition-colors">
-                  <Server size={20} />
+              {sources.length > 0 && (
+                <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-nebula-cyan text-obsidian text-[8px] font-black uppercase tracking-wider animate-pulse shadow-[0_0_10px_rgba(0,229,255,0.3)]">
+                  <Sparkles size={8} />
+                  <span>RECOMMENDED</span>
                 </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors uppercase tracking-tight">
-                    Standard Route
-                  </h4>
-                  <p className="text-[10px] text-white/40 uppercase font-semibold">
-                    Nebula Multi-Source Router
-                  </p>
+              )}
+
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                    sources.length > 0 ? "bg-nebula-cyan/15 text-nebula-cyan" : "bg-white/5 text-white/20"
+                  }`}>
+                    <Zap size={18} fill={sources.length > 0 ? "currentColor" : "none"} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-white uppercase tracking-tight flex items-center gap-1.5">
+                      VidRock
+                      <span className="text-[8px] font-black px-1 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase">
+                        DEFAULT
+                      </span>
+                    </h4>
+                    <p className="text-[9px] text-white/40 uppercase font-semibold">
+                      High-Speed Uplink
+                    </p>
+                  </div>
                 </div>
+
+                <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
+                  Delivers ultra-fast multi-CDN speeds, rich HLS quality, and seamless client-side failover between active mirrors.
+                </p>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-white/40 bg-white/5 px-2.5 py-1 rounded border border-white/10">
-                  AUTO-FAILOVER
-                </span>
+
+              {/* Dynamic Uplinks Footer */}
+              <div className="mt-auto pt-3 border-t border-white/5">
+                {sources.length > 0 ? (
+                  <div>
+                    <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
+                      Active Mirrors (Failover Enabled):
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {sources.map((src) => {
+                        let color = "border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5";
+                        if (src.name === "Atlas") color = "border-amber-500/20 text-amber-400/80 bg-amber-500/5";
+                        if (src.name === "Orion") color = "border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5";
+                        return (
+                          <span key={src.name} className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}>
+                            {src.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[9px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                    {error ? "Uplink currently offline" : "No mirror streams available"}
+                  </p>
+                )}
               </div>
             </motion.div>
 
-            {/* VidRock Active Sources */}
-            {sources.map((src) => {
-              const isNova = src.name === "Nova";
-              const isAtlas = src.name === "Atlas";
-              const isOrion = src.name === "Orion";
-
-              let details = "Decryption Completed";
-              let speedTag = "Optimal Speed";
-              let iconColor = "text-nebula-cyan";
-              let bgColor = "bg-nebula-cyan/10";
-              let format = src.type ? src.type.toUpperCase() : "HLS";
-
-              if (isNova) {
-                speedTag = "High Speed HLS";
-                details = "Nova High-Performance CDN";
-              } else if (isAtlas) {
-                speedTag = "Dynamic MP4 Direct";
-                details = "Atlas High-Stability Buffer";
-                iconColor = "text-amber-400";
-                bgColor = "bg-amber-400/10";
-              } else if (isOrion) {
-                speedTag = "Secure HLS Cloud";
-                details = "Orion Distributed Node";
-                iconColor = "text-emerald-400";
-                bgColor = "bg-emerald-400/10";
-              }
-
-              return (
-                <motion.div
-                  key={src.name}
-                  whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.06)" }}
-                  onClick={() => onSelect(src.url)}
-                  className="flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 cursor-pointer transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl ${bgColor} flex items-center justify-center ${iconColor} group-hover:scale-105 transition-transform`}>
-                      <Zap size={20} fill="currentColor" className="opacity-80" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors uppercase tracking-tight flex items-center gap-2">
-                        {src.name}
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40">
-                          {format}
-                        </span>
-                      </h4>
-                      <p className="text-[10px] text-white/40 uppercase font-semibold">
-                        {details}
-                      </p>
-                    </div>
+            {/* VidLink Card (Always Active) */}
+            <motion.div
+              whileHover={{ scale: 1.02, translateY: -2 }}
+              onClick={() => onSelect()}
+              className="relative flex flex-col justify-between p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/8 cursor-pointer group min-h-[170px]"
+            >
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-white/70 group-hover:text-nebula-cyan transition-colors">
+                    <Server size={18} />
                   </div>
-                  <div className="text-right">
-                    <p className={`text-[10px] font-black uppercase tracking-wider ${iconColor}`}>
-                      {speedTag}
-                    </p>
-                    <p className="text-[9px] text-white/40 uppercase">
-                      {src.language} (US)
+                  <div>
+                    <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors uppercase tracking-tight">
+                      VidLink
+                    </h4>
+                    <p className="text-[9px] text-white/40 uppercase font-semibold">
+                      Standard Route
                     </p>
                   </div>
-                </motion.div>
-              );
-            })}
+                </div>
 
-            {sources.length === 0 && (
-              <p className="text-center py-6 text-xs text-white/40">
-                No extra high-speed mirrors active. Defaulting to standard route.
-              </p>
-            )}
+                <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
+                  Aggregates comprehensive standard indexes across global hosts to ensure robust content availability.
+                </p>
+              </div>
+
+              {/* Status Footer */}
+              <div className="mt-auto pt-3 border-t border-white/5">
+                <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
+                  System Routing:
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
+                    Auto-Failover
+                  </span>
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
+                    Standard DNS
+                  </span>
+                </div>
+              </div>
+            </motion.div>
           </div>
         )}
       </motion.div>
