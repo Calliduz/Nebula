@@ -302,15 +302,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           ? `https://cache.vdrk.site/v2/tv/${movie.id}/${season}/${episode}/English.vtt`
           : `https://cache.vdrk.site/v2/movie/${movie.id}/English.vtt`;
 
-        let fetchedSubs = data.subtitles || [];
-        fetchedSubs.push({
-          url: vrSubUrl,
-          lang: "en",
-          languageName: "English (VidRock Cache)",
-          source: "VidRock"
-        });
+        const fetchedSubs = Array.isArray(data.subtitles) ? [...data.subtitles] : [];
+
+        try {
+          const vrSubResponse = await fetch(vrSubUrl, { method: "HEAD" });
+          if (!cancelled && vrSubResponse.ok) {
+            fetchedSubs.push({
+              url: vrSubUrl,
+              lang: "en",
+              languageName: "English (VidRock Cache)",
+              source: "VidRock"
+            });
+          }
+        } catch (e) {
+          console.warn("VidRock cache subtitle probe failed:", e);
+        }
 
         if (!cancelled) {
+          if (fetchedSubs.length === 0) {
+            showToast("No external subtitles found", "info");
+          }
           setSubtitles((prev) => processSubtitles(fetchedSubs, prev));
         }
       } catch (e) {
