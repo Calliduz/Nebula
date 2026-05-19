@@ -194,26 +194,37 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     if (source) {
       const candidateUrls = source.split("|");
-      const processedMirrors = candidateUrls.map((urlWithHash, idx) => {
-        const [rawUrl, hashName] = urlWithHash.split("#");
-        const isEmb = rawUrl.includes("embed") || rawUrl.includes("iframe");
-        const name = hashName || (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
-        const proxiedUrl = isEmb ? rawUrl : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
-        return {
-          source: name,
-          url: proxiedUrl,
-          type: isEmb ? "embed" : "hls"
-        };
-      });
+      const processedMirrors = candidateUrls
+        .map((urlWithHash, idx) => {
+          const [rawUrlPart, hashName] = urlWithHash.split("#");
+          const rawUrl = rawUrlPart.trim();
 
-      setMirrors(processedMirrors);
-      mirrorsRef.current = processedMirrors;
-      setStreamUrl(processedMirrors[0].url);
-      setIsEmbed(processedMirrors[0].type === "embed");
-      setActiveMirror(0);
-      activeMirrorRef.current = 0;
-      setLoading(false);
-      return;
+          if (!rawUrl) {
+            return null;
+          }
+
+          const isEmb = rawUrl.includes("embed") || rawUrl.includes("iframe");
+          const trimmedHashName = hashName?.trim();
+          const name = trimmedHashName || (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
+          const proxiedUrl = isEmb ? rawUrl : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
+          return {
+            source: name,
+            url: proxiedUrl,
+            type: isEmb ? "embed" : "hls"
+          };
+        })
+        .filter((mirror): mirror is { source: string; url: string; type: "embed" | "hls" } => mirror !== null);
+
+      if (processedMirrors.length > 0) {
+        setMirrors(processedMirrors);
+        mirrorsRef.current = processedMirrors;
+        setStreamUrl(processedMirrors[0].url);
+        setIsEmbed(processedMirrors[0].type === "embed");
+        setActiveMirror(0);
+        activeMirrorRef.current = 0;
+        setLoading(false);
+        return;
+      }
     }
 
     let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&releaseDate=${movie.release_date || ""}`;
