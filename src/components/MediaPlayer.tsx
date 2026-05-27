@@ -1541,9 +1541,43 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         style={{
           opacity: showUi ? 1 : 0,
           transition: "opacity 0.25s",
-          // When hidden, block NO pointer events at all — the tap layer above
-          // handles show/hide. When visible, each bar controls its own events.
           pointerEvents: showUi ? "auto" : "none",
+        }}
+        // Tap on empty space (not the bars) → toggle UI visibility
+        onClick={handleTap}
+        onPointerDown={(e) => {
+          if (e.button !== undefined && e.button !== 0) return;
+          if (longPressTimer.current) clearTimeout(longPressTimer.current);
+          longPressTimer.current = setTimeout(() => {
+            isLongPressing.current = true;
+            const v = videoRef.current;
+            if (v) v.playbackRate = 2;
+            showToast("2× Speed", "info");
+            setSpeed(2);
+          }, 400);
+        }}
+        onPointerUp={() => {
+          if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+          }
+          if (isLongPressing.current) {
+            const v = videoRef.current;
+            if (v) v.playbackRate = 1;
+            setSpeed(1);
+            showToast("1× Speed", "info");
+          }
+        }}
+        onPointerCancel={() => {
+          if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+          }
+          if (isLongPressing.current) {
+            const v = videoRef.current;
+            if (v) v.playbackRate = 1;
+            setSpeed(1);
+          }
         }}
       >
         <div

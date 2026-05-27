@@ -144,14 +144,15 @@ export default function App() {
               }
             />
 
-            {/* Other base routes map back to Home for the 'Routed Modal' handle */}
+            {/* /movie/:id and /tv/:id render MovieDetails as a first-class page
+                so that direct URL navigation (paste/refresh) works. */}
             <Route
               path="/movie/:id"
-              element={<HomeStub actions={actions} state={state} refs={refs} />}
+              element={<MovieDetailPageStub actions={actions} state={state} />}
             />
             <Route
               path="/tv/:id"
-              element={<HomeStub actions={actions} state={state} refs={refs} />}
+              element={<MovieDetailPageStub actions={actions} state={state} />}
             />
 
             {/* Standalone Player Route */}
@@ -179,10 +180,10 @@ export default function App() {
 
       {/* The Player and Details now render via Routes, the following are kept for backward-compat and manual transitions if needed */}
 
-      <AnimatePresence>
+        {/* Modal variant: shown when a card is clicked anywhere in the app */}
         {state.selectedMovie && !isWatching && (
           <MovieDetails
-            key="movie-details-modal"
+            key={`movie-details-${state.selectedMovie.id}`}
             movie={state.selectedMovie}
             onClose={() => actions.setSelectedMovie(null)}
             onPlay={(s, e, src) => actions.startPlayback(state.selectedMovie, s, e, src)}
@@ -191,7 +192,6 @@ export default function App() {
             onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
           />
         )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {state.isTransitioning && (
@@ -270,6 +270,46 @@ function HomeStub({ actions, state, refs }: any) {
         removeFromProgress={actions.removeFromProgress}
       />
     </>
+  );
+}
+
+// Renders MovieDetails as a full page when navigating directly to /movie/:id or /tv/:id
+function MovieDetailPageStub({ actions, state }: any) {
+  const { id, type } = useParams();
+  const navigate = useNavigate();
+
+  // Try to find the movie in the already-loaded catalog
+  const catalogMovie = id
+    ? state.allMovies.find(
+        (m: any) =>
+          m.id.toString() === id &&
+          (type ? m.type === type : true),
+      )
+    : null;
+
+  return (
+    <div className="min-h-screen bg-obsidian">
+      <MovieDetails
+        key={`page-details-${id}`}
+        movie={catalogMovie || null}
+        onClose={() => navigate("/")}
+        onPlay={(s: number, e: number, src?: string) => {
+          if (catalogMovie) actions.startPlayback(catalogMovie, s, e, src);
+        }}
+        onSelectMovie={(m: any) => {
+          // When a related title is clicked inside the page, navigate to its page
+          navigate(`/${m.type || "movie"}/${m.id}`);
+        }}
+        isInList={
+          catalogMovie
+            ? state.myList.includes(catalogMovie.id.toString())
+            : false
+        }
+        onToggleList={() => {
+          if (catalogMovie) actions.toggleMyList(catalogMovie.id);
+        }}
+      />
+    </div>
   );
 }
 
