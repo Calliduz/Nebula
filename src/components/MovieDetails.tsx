@@ -864,7 +864,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     deepDetails.similar.map((m: any, i: number) => (
                       <div
                         key={`rel-${movie.id}-${m.id}-${i}`}
-                        onClick={() => onSelectMovie?.(m)}
+                        onClick={() => navigate(`/${m.type}/${m.id}`)}
                         className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10 group cursor-pointer relative"
                       >
                         <img

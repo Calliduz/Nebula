@@ -112,6 +112,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   // Refs to track latest mirror state for use inside HLS error closures
   const mirrorsRef = useRef<any[]>([]);
   const activeMirrorRef = useRef<number>(0);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressing = useRef(false);
 
   // ── Auto Fullscreen & Landscape ───────────────────────────────────────────
   useEffect(() => {
@@ -1019,15 +1021,27 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   }, [isPaused, showSettings, showSubtitles, showEpisodeDrawer]);
 
   // Tap on the video/empty area:
-  //  - If controls are hidden  → show them and start the auto-hide timer
-  //  - If controls are visible → hide them immediately (unless a menu is open)
+  //  - If a menu is open → close it
+  //  - If controls are hidden → show them and start the auto-hide timer
+  //  - If controls are visible → hide them immediately
   const handleTap = useCallback(() => {
-    if (!showUi) {
+    // If a long-press just fired, suppress the tap
+    if (isLongPressing.current) {
+      isLongPressing.current = false;
+      return;
+    }
+    if (showSettings || showSubtitles || showEpisodeDrawer) {
+      // Close whichever menu is open
+      setShowSettings(false);
+      setShowSubtitles(false);
+      setShowEpisodeDrawer(false);
       resetHideTimer();
-    } else if (!showSettings && !showSubtitles && !showEpisodeDrawer) {
+    } else if (!showUi) {
+      resetHideTimer();
+    } else {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setShowUi(false);
-      setShowMobileVolume(false); // dismiss mobile volume popup too
+      setShowMobileVolume(false);
     }
   }, [showUi, showSettings, showSubtitles, showEpisodeDrawer, resetHideTimer]);
 
@@ -1476,6 +1490,41 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           className="absolute inset-0 z-10"
           style={{ cursor: showUi ? "default" : "none" }}
           onClick={handleTap}
+          onPointerDown={(e) => {
+            // Only trigger long-press on primary pointer (finger / left click)
+            if (e.button !== undefined && e.button !== 0) return;
+            if (longPressTimer.current) clearTimeout(longPressTimer.current);
+            longPressTimer.current = setTimeout(() => {
+              isLongPressing.current = true;
+              const v = videoRef.current;
+              if (v) v.playbackRate = 2;
+              showToast("2× Speed", "info");
+              setSpeed(2);
+            }, 400);
+          }}
+          onPointerUp={() => {
+            if (longPressTimer.current) {
+              clearTimeout(longPressTimer.current);
+              longPressTimer.current = null;
+            }
+            if (isLongPressing.current) {
+              const v = videoRef.current;
+              if (v) v.playbackRate = 1;
+              setSpeed(1);
+              showToast("1× Speed", "info");
+            }
+          }}
+          onPointerCancel={() => {
+            if (longPressTimer.current) {
+              clearTimeout(longPressTimer.current);
+              longPressTimer.current = null;
+            }
+            if (isLongPressing.current) {
+              const v = videoRef.current;
+              if (v) v.playbackRate = 1;
+              setSpeed(1);
+            }
+          }}
         />
       )}
 
