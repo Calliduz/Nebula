@@ -196,24 +196,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       const candidateUrls = source.split("|");
       const processedMirrors = candidateUrls
         .map((urlWithHash, idx) => {
-          const [rawUrlPart, hashName] = urlWithHash.split("#");
-          const rawUrl = rawUrlPart.trim();
+          const parts = urlWithHash.split("#");
+          const rawUrl = parts[0]?.trim();
+          const hashName = parts[1]?.trim();
+          const hashType = parts[2]?.trim();
 
           if (!rawUrl) {
             return null;
           }
 
-          const isEmb = rawUrl.includes("embed") || rawUrl.includes("iframe");
-          const trimmedHashName = hashName?.trim();
-          const name = trimmedHashName || (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
+          const isEmb = rawUrl.includes("embed") || rawUrl.includes("iframe") || hashType === "embed";
+          const isMp4 = hashType === "mp4" || rawUrl.includes(".mp4");
+          const name = hashName || (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
           const proxiedUrl = isEmb ? rawUrl : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
           return {
             source: name,
             url: proxiedUrl,
-            type: isEmb ? "embed" : "hls"
+            type: isEmb ? "embed" : (isMp4 ? "mp4" : "hls")
           };
         })
-        .filter((mirror): mirror is { source: string; url: string; type: "embed" | "hls" } => mirror !== null);
+        .filter((mirror): mirror is { source: string; url: string; type: "embed" | "hls" | "mp4" } => mirror !== null);
 
       if (processedMirrors.length > 0) {
         setMirrors(processedMirrors);
@@ -561,12 +563,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   // ── HLS setup ─────────────────────────────────────────────────────────────
   useEffect(() => {
     setCurrentHeight(null);
+    setQualities([]);
     if (!streamUrl || !videoRef.current || isEmbed) return;
 
     const video = videoRef.current;
     setIsBuffering(true);
 
-    if (Hls.isSupported()) {
+    const currentMirrorType = mirrors[activeMirror]?.type;
+
+    if (currentMirrorType === "mp4") {
+      video.src = streamUrl;
+      video.play().catch(() => setIsPaused(true));
+      return () => {
+        video.src = "";
+      };
+    } else if (Hls.isSupported()) {
       const hls = new Hls({
         // ── Buffer ──────────────────────────────────────────────────────────
         // Netflix-style: large forward buffer so paused sessions don't rebuffer.
@@ -768,7 +779,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       video.src = streamUrl;
       video.play().catch(() => setIsPaused(true));
     }
-  }, [streamUrl]);
+  }, [streamUrl, activeMirror, mirrors]);
 
   // ── Video event listeners ─────────────────────────────────────────────────
   useEffect(() => {

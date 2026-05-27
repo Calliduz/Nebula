@@ -91,7 +91,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   }, [movie.id, movie.type, season, episode]);
 
   // Construct the serialized pipeline for VidRock
-  const vidrockUrl = sources.map(src => `${src.url}#${src.name}`).join("|");
+  const vidrockUrl = sources.map(src => `${src.url}#${src.name}#${src.type}`).join("|");
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
