@@ -1047,9 +1047,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   useEffect(() => {
     resetHideTimer();
-    window.addEventListener("mousemove", resetHideTimer);
+    // Only reset the hide timer for real mouse/pen movement.
+    // Touch (mobile) generates fake mousemove events that would re-show the UI
+    // immediately after handleTap() hides it, breaking tap-to-dismiss.
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") resetHideTimer();
+    };
+    window.addEventListener("pointermove", onPointerMove);
     return () => {
-      window.removeEventListener("mousemove", resetHideTimer);
+      window.removeEventListener("pointermove", onPointerMove);
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, [resetHideTimer]);
@@ -1218,7 +1224,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     <div
       ref={containerRef}
       className="fixed inset-0 z-[200] bg-black overflow-hidden"
-      onMouseMove={resetHideTimer}
+      onPointerMove={(e) => { if (e.pointerType !== "touch") resetHideTimer(); }}
       style={{ cursor: showUi ? "default" : "none" }}
     >
       <AnimatePresence>
