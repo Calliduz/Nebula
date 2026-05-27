@@ -333,6 +333,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       const type = location.pathname.includes("/tv/") ? "tv" : "movie";
       const tmdbId = id || movie?.id;
 
+      // If the URL points to a different title than what we have loaded,
+      // discard the stale internal movie so the fetch branch below runs fresh.
+      if (
+        currentMovie &&
+        tmdbId &&
+        currentMovie.id.toString() !== tmdbId.toString()
+      ) {
+        currentMovie = null;
+        setMovie(null);
+        setDeepDetails({ trailers: [], similar: [], cast: [] });
+      }
+
       if (!currentMovie && tmdbId) {
         // Landing directly on the URL
         if (typeof tmdbId === "string" && isNaN(parseInt(tmdbId))) {
@@ -864,7 +876,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     deepDetails.similar.map((m: any, i: number) => (
                       <div
                         key={`rel-${movie.id}-${m.id}-${i}`}
-                        onClick={() => navigate(`/${m.type}/${m.id}`)}
+                        onClick={() => {
+                          navigate(`/${m.type}/${m.id}`);
+                          onSelectMovie?.(m); // sync App state so the component re-evaluates
+                        }}
                         className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10 group cursor-pointer relative"
                       >
                         <img

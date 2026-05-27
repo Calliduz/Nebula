@@ -77,6 +77,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [fetchingSubtitles, setFetchingSubtitles] = useState(false);
   const [showEpisodeDrawer, setShowEpisodeDrawer] = useState(false);
   const [tvDetails, setTvDetails] = useState<any>(null);
+  // Source selection triggered from Next/episode drawer
+  const [sourceSelect, setSourceSelect] = useState<{ season: number; episode: number } | null>(null);
   const [qualityTag, setQualityTag] = useState<string>(""); // CAM | WEBDL | WEBRIP | BLURAY | etc.
   const [resolution, setResolution] = useState<string>("");
   const [toast, setToast] = useState<{
@@ -1208,7 +1210,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const handleNextEpisode = () => {
     if (movie.type !== "tv" || season === undefined || episode === undefined)
       return;
-    navigate(`/watch/tv/${movie.id}?season=${season}&episode=${episode + 1}`);
+    setSourceSelect({ season, episode: episode + 1 });
   };
 
   const safeClose = () => {
@@ -2022,9 +2024,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       <button
                         key={epNum}
                         onClick={() => {
-                          navigate(
-                            `/watch/tv/${movie.id}?season=${season}&episode=${epNum}`,
-                          );
+                          setSourceSelect({ season: season!, episode: epNum });
                           setShowEpisodeDrawer(false);
                         }}
                         className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${episode === epNum ? "bg-nebula-cyan/20 border border-nebula-cyan/30" : "hover:bg-white/5 border border-transparent"}`}
@@ -2063,6 +2063,153 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           </>
         )}
       </AnimatePresence>
+      {/* ── In-Player Source Picker ── */}
+      <AnimatePresence>
+        {sourceSelect && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-sm p-3"
+            onClick={() => setSourceSelect(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 16 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 16 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-[#0d0d0d] border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+                <div>
+                  <p className="text-[10px] text-nebula-cyan uppercase tracking-widest font-black">Stream Source</p>
+                  <p className="text-sm font-bold text-white">{movie.title} · S{sourceSelect.season}E{sourceSelect.episode}</p>
+                </div>
+                <button
+                  onClick={() => setSourceSelect(null)}
+                  className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Cards — horizontal on landscape, stacked on portrait */}
+              <InPlayerSourcePicker
+                movie={movie}
+                season={sourceSelect.season}
+                episode={sourceSelect.episode}
+                onSelect={(src) => {
+                  setSourceSelect(null);
+                  navigate(
+                    `/watch/tv/${movie.id}?season=${sourceSelect.season}&episode=${sourceSelect.episode}${src ? `&source=${encodeURIComponent(src)}` : ""}`
+                  );
+                }}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+
+// ── Compact source picker used inside the media player ────────────────────────
+function InPlayerSourcePicker({
+  movie,
+  season,
+  episode,
+  onSelect,
+}: {
+  movie: any;
+  season: number;
+  episode: number;
+  onSelect: (src?: string) => void;
+}) {
+  const [sources, setSources] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+    const url = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&season=${season}&episode=${episode}`;
+    fetch(url)
+      .then((r) => { if (!r.ok) throw new Error("Uplink scan failed"); return r.json(); })
+      .then((data) => {
+        if (!active) return;
+        const list = Object.entries(data)
+          .filter(([, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({ name, url: v.url, type: v.type || "hls" }));
+        setSources(list);
+      })
+      .catch((e) => { if (active) setError(e.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [movie.id, season, episode]);
+
+  const vidrockUrl = sources.map((s) => `${s.url}#${s.name}#${s.type}`).join("|");
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-3">
+        <Loader2 className="animate-spin text-nebula-cyan" size={28} />
+        <p className="text-[10px] text-white/40 uppercase tracking-widest animate-pulse">Scanning uplinks…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3 p-4 overflow-y-auto max-h-[70vh]">
+      {/* VidRock */}
+      <button
+        onClick={() => sources.length > 0 && onSelect(vidrockUrl)}
+        disabled={sources.length === 0}
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          sources.length > 0
+            ? "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95"
+            : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan">
+            <Info size={14} />
+          </div>
+          <div>
+            <p className="text-xs font-black text-white uppercase tracking-tight">VidRock</p>
+            <p className="text-[8px] text-white/40 uppercase">High-Speed</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {sources.length > 0 ? sources.map((s) => (
+            <span key={s.name} className="text-[7px] font-bold px-1 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase">
+              {s.name}
+            </span>
+          )) : (
+            <span className="text-[8px] text-rose-400 uppercase">{error || "No mirrors"}</span>
+          )}
+        </div>
+      </button>
+
+      {/* VidLink */}
+      <button
+        onClick={() => onSelect()}
+        className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-left transition-all"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white/60">
+            <Search size={14} />
+          </div>
+          <div>
+            <p className="text-xs font-black text-white uppercase tracking-tight">VidLink</p>
+            <p className="text-[8px] text-white/40 uppercase">Standard</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          <span className="text-[7px] font-bold px-1 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">Auto-Failover</span>
+        </div>
+      </button>
+    </div>
+  );
+}
