@@ -541,9 +541,11 @@ export function useAppState() {
     const missingMedia: { id: string; type: "movie" | "tv" }[] = [];
 
     for (const [baseId, { key, val }] of sortedProgressEntries) {
-      let movie = allMovies.find((m) => m.id.toString() === baseId);
+      const type = key.includes("-") ? "tv" : "movie";
+      let movie = allMovies.find(
+        (m) => m.id.toString() === baseId && (m.type || "movie") === type,
+      );
       if (!movie) {
-        const type = key.includes("-") ? "tv" : "movie";
         missingMedia.push({ id: baseId, type });
       } else {
         continueWatchingItems.push({
@@ -1027,8 +1029,11 @@ export function useAppState() {
           return tsB - tsA;
         });
       for (const [baseId, { key, val }] of sortedProgressEntries) {
-        let movie = allMovies.find((m) => m.id.toString() === baseId);
-        if (!movie) movie = (await getMediaBasicInfo(baseId, "movie")) as any;
+        const type = key.includes("-") ? "tv" : "movie";
+        let movie = allMovies.find(
+          (m) => m.id.toString() === baseId && (m.type || "movie") === type,
+        );
+        if (!movie) movie = (await getMediaBasicInfo(baseId, type)) as any;
         if (movie) {
           continueWatchingItems.push({
             ...movie,
