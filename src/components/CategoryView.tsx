@@ -19,7 +19,7 @@ interface CategoryViewProps {
   data: any[];
   selectedRegion?: string;
   setSelectedRegion?: (region: string) => void;
-  removeFromHistory: (id: number) => void;
+  removeFromHistory: (id: string | number, type?: string) => void;
   removeFromProgress: (id: string) => void;
   clearHistory: () => void;
   clearMyList: () => void;
@@ -62,6 +62,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   isLoading,
 }) => {
   React.useEffect(() => {
+    if ((window as any).__isRestoringScroll) return;
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [viewingCategory]);
 
@@ -227,16 +228,36 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                 {history
                   .slice()
                   .reverse()
-                  .map((id) => {
-                    const m = (allMovies || []).find(
-                      (m) => m.id.toString() === id.toString(),
-                    );
+                  .map((item) => {
+                    let rawId = "";
+                    let type = "movie";
+                    if (item && typeof item === "object") {
+                      rawId = String(item.id);
+                      type = item.type || "movie";
+                    } else if (typeof item === "string") {
+                      if (item.includes("_")) {
+                        const parts = item.split("_");
+                        type = parts[0];
+                        rawId = parts[1];
+                      } else {
+                        rawId = item;
+                      }
+                    } else {
+                      rawId = String(item);
+                    }
+
+                    const m = (allMovies || []).find((m) => {
+                      const mId = m.id.toString();
+                      const mType = m.type || "movie";
+                      return mId === rawId && mType === type;
+                    });
                     if (!m) return null;
+
                     const p = JSON.parse(
                       localStorage.getItem("nebula-progress") || "{}",
                     );
                     const progKey = Object.keys(p).find((k) =>
-                      k.startsWith(id.toString()),
+                      k.startsWith(rawId),
                     );
                     return { ...m, progress: progKey ? p[progKey] : null };
                   })
@@ -254,7 +275,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                           (id) => id.toString() === movie.id.toString(),
                         )}
                         onToggleList={() => toggleMyList(movie.id)}
-                        onRemove={() => removeFromHistory(movie.id)}
+                        onRemove={() => removeFromHistory(movie.id, movie.type)}
                       />
                       <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <button

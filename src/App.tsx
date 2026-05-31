@@ -180,18 +180,20 @@ export default function App() {
 
       {/* The Player and Details now render via Routes, the following are kept for backward-compat and manual transitions if needed */}
 
-        {/* Modal variant: shown when a card is clicked anywhere in the app */}
-        {state.selectedMovie && !isWatching && (
-          <MovieDetails
-            key={`movie-details-${state.selectedMovie.id}`}
-            movie={state.selectedMovie}
-            onClose={() => actions.setSelectedMovie(null)}
-            onPlay={(s, e, src) => actions.startPlayback(state.selectedMovie, s, e, src)}
-            onSelectMovie={actions.setSelectedMovie}
-            isInList={state.myList.includes(state.selectedMovie.id.toString())}
-            onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
-          />
-        )}
+      {/* Modal variant: shown when a card is clicked anywhere in the app */}
+      {state.selectedMovie && !isWatching && (
+        <MovieDetails
+          key={`movie-details-${state.selectedMovie.id}`}
+          movie={state.selectedMovie}
+          onClose={() => actions.setSelectedMovie(null)}
+          onPlay={(s, e, src) =>
+            actions.startPlayback(state.selectedMovie, s, e, src)
+          }
+          onSelectMovie={actions.setSelectedMovie}
+          isInList={state.myList.includes(state.selectedMovie.id.toString())}
+          onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
+        />
+      )}
 
       <AnimatePresence>
         {state.isTransitioning && (
@@ -281,9 +283,7 @@ function MovieDetailPageStub({ actions, state }: any) {
   // Try to find the movie in the already-loaded catalog
   const catalogMovie = id
     ? state.allMovies.find(
-        (m: any) =>
-          m.id.toString() === id &&
-          (type ? m.type === type : true),
+        (m: any) => m.id.toString() === id && (type ? m.type === type : true),
       )
     : null;
 
@@ -292,14 +292,11 @@ function MovieDetailPageStub({ actions, state }: any) {
       <MovieDetails
         key={`page-details-${id}`}
         movie={catalogMovie || null}
-        onClose={() => navigate("/")}
+        onClose={() => actions.setSelectedMovie(null)}
         onPlay={(s: number, e: number, src?: string) => {
           if (catalogMovie) actions.startPlayback(catalogMovie, s, e, src);
         }}
-        onSelectMovie={(m: any) => {
-          // When a related title is clicked inside the page, navigate to its page
-          navigate(`/${m.type || "movie"}/${m.id}`);
-        }}
+        onSelectMovie={actions.setSelectedMovie}
         isInList={
           catalogMovie
             ? state.myList.includes(catalogMovie.id.toString())

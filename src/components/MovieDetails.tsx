@@ -367,6 +367,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         }
       }
 
+      if (currentMovie && !currentMovie.isDrama && currentMovie.origin !== "dramacool" && currentMovie.origin !== "kisskh") {
+        const enriched = await enrichMoviesWithMetadata([currentMovie]);
+        currentMovie = { ...currentMovie, ...enriched[0] };
+        setMovie(currentMovie);
+      }
+
       if (currentMovie) {
         if (
           currentMovie.origin === "dramacool" ||

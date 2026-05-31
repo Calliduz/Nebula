@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback, memo } from "react";
 import { handleImageError } from "../utils/helpers";
 
 interface MovieCardProps {
@@ -12,7 +12,7 @@ interface MovieCardProps {
   isGrid?: boolean;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({
+export const MovieCard = memo<MovieCardProps>(({
   movie,
   snap = false,
   onSelect,
@@ -21,6 +21,17 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   isGrid = false,
 }) => {
   const isLandscape = aspect === "landscape";
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const onImgLoad = useCallback(() => setImgLoaded(true), []);
+  const onImgError = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+      setImgError(true);
+      handleImageError(e);
+    },
+    [],
+  );
 
   return (
     <div
@@ -30,12 +41,18 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       style={{ willChange: "transform" }}
     >
       <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 hover:scale-[1.02] transform-gpu shadow-2xl">
+        {/* Shimmer placeholder while image loads */}
+        {!imgLoaded && !imgError && (
+          <div className="absolute inset-0 bg-white/5 shimmer-bg" />
+        )}
         <img
-          src={movie.image || null}
+          key={movie.image || movie.id}
+          src={movie.image || undefined}
           alt={movie.title}
-          className="w-full h-full object-cover opacity-80 group-hover/card:opacity-70 transition-opacity duration-300"
+          className={`w-full h-full object-cover group-hover/card:opacity-70 transition-opacity duration-500 ${imgLoaded ? "opacity-80" : "opacity-0"}`}
           referrerPolicy="no-referrer"
-          onError={handleImageError}
+          onLoad={onImgLoad}
+          onError={onImgError}
           loading="lazy"
         />
 
@@ -180,4 +197,20 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.aspect === nextProps.aspect &&
+    prevProps.isGrid === nextProps.isGrid &&
+    prevProps.snap === nextProps.snap &&
+    prevProps.isInList === nextProps.isInList &&
+    prevProps.movie?.id === nextProps.movie?.id &&
+    prevProps.movie?.image === nextProps.movie?.image &&
+    prevProps.movie?.title === nextProps.movie?.title &&
+    prevProps.movie?.quality === nextProps.movie?.quality &&
+    prevProps.movie?.isVerified === nextProps.movie?.isVerified &&
+    prevProps.movie?.isDead === nextProps.movie?.isDead &&
+    prevProps.movie?.clearLogo === nextProps.movie?.clearLogo &&
+    prevProps.movie?.genre === nextProps.movie?.genre &&
+    JSON.stringify(prevProps.movie?.progress) === JSON.stringify(nextProps.movie?.progress)
+  );
+});

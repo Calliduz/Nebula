@@ -1,10 +1,10 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, memo } from "react";
 import { NebulaMovie } from "../services/tmdb";
 import { handleImageError } from "../utils/helpers";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-export const TopTenShelf = ({
+export const TopTenShelf = memo(({
   data,
   onSelect,
 }: {
@@ -178,4 +178,13 @@ export const TopTenShelf = ({
       </div>
     </section>
   );
-};
+}, (prevProps, nextProps) => {
+  if (prevProps.data.length !== nextProps.data.length) return false;
+  const prevSlice = prevProps.data.slice(0, 10);
+  const nextSlice = nextProps.data.slice(0, 10);
+  if (prevSlice.length !== nextSlice.length) return false;
+  return prevSlice.every((movie, index) => {
+    const nextMovie = nextSlice[index];
+    return movie?.id === nextMovie?.id && movie?.image === nextMovie?.image && movie?.title === nextMovie?.title;
+  });
+});

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 
 import { API_BASE_URL } from "../config";
 import { useLocalStorage } from "./useLocalStorage";
@@ -239,6 +245,76 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     discoverParams: { sort_by: "popularity.desc" },
     filterFn: (m) => m.type === "tv",
   },
+  "War \u0026 Military": {
+    mediaType: "movie",
+    discoverParams: {
+      with_genres: "10752",
+      "primary_release_date.gte": "1990-01-01",
+      sort_by: "vote_count.desc",
+    },
+    filterFn: (m) => m.genre.includes("War"),
+  },
+  "Heart-Pounding Thrillers": {
+    mediaType: "movie",
+    discoverParams: {
+      with_genres: "53",
+      "primary_release_date.gte": "2000-01-01",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => m.genre.includes("Thriller"),
+  },
+  "Musical \u0026 Music": {
+    mediaType: "movie",
+    discoverParams: {
+      with_genres: "10402",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => m.genre.includes("Music"),
+  },
+  "Western Frontier": {
+    mediaType: "movie",
+    discoverParams: {
+      with_genres: "37",
+      sort_by: "vote_count.desc",
+    },
+    filterFn: (m) => m.genre.includes("Western"),
+  },
+  "TV Dramas": {
+    mediaType: "tv",
+    discoverParams: { with_genres: "18", sort_by: "popularity.desc" },
+    filterFn: (m) => m.type === "tv" && m.genre.includes("Drama"),
+  },
+  "Anime Series": {
+    mediaType: "tv",
+    discoverParams: { with_genres: "16", sort_by: "popularity.desc" },
+    filterFn: (m) => m.type === "tv" && m.genre.includes("Animation"),
+  },
+  "2010s Hits": {
+    mediaType: "movie",
+    discoverParams: {
+      "primary_release_date.gte": "2010-01-01",
+      "primary_release_date.lte": "2019-12-31",
+      "vote_count.gte": "500",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => {
+      const y = m.year || 0;
+      return y >= 2010 && y <= 2019 && m.type === "movie";
+    },
+  },
+  "90s Classics": {
+    mediaType: "movie",
+    discoverParams: {
+      "primary_release_date.gte": "1990-01-01",
+      "primary_release_date.lte": "1999-12-31",
+      "vote_count.gte": "300",
+      sort_by: "vote_count.desc",
+    },
+    filterFn: (m) => {
+      const y = m.year || 0;
+      return y >= 1990 && y <= 1999 && m.type === "movie";
+    },
+  },
 };
 
 const hardDedupe = (arr: any[]) => {
@@ -254,10 +330,136 @@ const hardDedupe = (arr: any[]) => {
   return results;
 };
 
+// ─── Scroll Restoration Helper ──────────────────────────────────────────────
+const SCROLL_KEY_PREFIX = "nebula-scroll-";
+
+const getScrollKey = (path: string, category: string | null) => {
+  return `${SCROLL_KEY_PREFIX}${path}${category ? `-${category}` : ""}`;
+};
+
+function saveScrollPosition(path: string, category: string | null = null) {
+  try {
+    const mainEl = document.querySelector("main");
+    const scrollY = Math.max(window.scrollY, mainEl?.scrollTop || 0);
+    const key = getScrollKey(path, category);
+    sessionStorage.setItem(key, scrollY.toString());
+  } catch {
+    /* quota */
+  }
+}
+
+function restoreScrollPosition(
+  path: string,
+  category: string | null = null,
+): boolean {
+  const key = getScrollKey(path, category);
+  const saved = sessionStorage.getItem(key);
+  if (saved !== null) {
+    const y = parseInt(saved, 10);
+    if (!isNaN(y) && y > 0) {
+      (window as any).__isRestoringScroll = true;
+      let attempts = 0;
+      const attemptScroll = () => {
+        const mainEl = document.querySelector("main");
+        const docHeight = Math.max(
+          document.body.scrollHeight,
+          document.body.offsetHeight,
+          document.documentElement.clientHeight,
+          document.documentElement.scrollHeight,
+          document.documentElement.offsetHeight,
+          mainEl?.scrollHeight || 0,
+        );
+        // If the document/container height is not yet large enough to scroll to y, retry.
+        const viewportHeight = window.innerHeight || mainEl?.clientHeight || 0;
+        if (docHeight < y + viewportHeight && attempts < 25) {
+          attempts++;
+          setTimeout(attemptScroll, 50);
+        } else {
+          window.scrollTo(0, y);
+          if (mainEl) {
+            mainEl.scrollTop = y;
+          }
+          // Wait a bit before clearing flag to let other effects run
+          setTimeout(() => {
+            (window as any).__isRestoringScroll = false;
+          }, 150);
+        }
+      };
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          attemptScroll();
+        });
+      });
+      return true;
+    }
+  }
+
+  // Reset scroll to top on new pages
+  const mainEl = document.querySelector("main");
+  if (mainEl) {
+    mainEl.scrollTop = 0;
+  }
+  window.scrollTo(0, 0);
+  (window as any).__isRestoringScroll = false;
+  return false;
+}
+
+// ─── History composite key helper ───────────────────────────────────────────
+function historyId(item: any): string {
+  if (typeof item === "object" && item !== null) {
+    return `${item.type || "movie"}_${item.id}`;
+  }
+  return `movie_${item}`;
+}
+
+function historyRawId(item: any): string {
+  return typeof item === "object" ? String(item.id) : String(item);
+}
+
+function historyType(item: any): string {
+  return typeof item === "object" ? item.type || "movie" : "movie";
+}
+
 export function useAppState() {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
+
+  const prevRouteRef = useRef({
+    pathname: location.pathname,
+    viewingCategory: null as string | null,
+  });
+
+  const categoryCacheRef = useRef<Record<string, Set<number>>>({});
+
+  const isPageFetched = (category: string, region: string, page: number) => {
+    const key = `${category}-${region}`;
+    if (!categoryCacheRef.current[key]) {
+      categoryCacheRef.current[key] = new Set();
+    }
+    return categoryCacheRef.current[key].has(page);
+  };
+
+  const markPageAsFetched = (
+    category: string,
+    region: string,
+    page: number,
+  ) => {
+    const key = `${category}-${region}`;
+    if (!categoryCacheRef.current[key]) {
+      categoryCacheRef.current[key] = new Set();
+    }
+    categoryCacheRef.current[key].add(page);
+  };
+
+  const markInitialPagesAsFetched = () => {
+    markPageAsFetched("Dramas", "All", 1);
+    markPageAsFetched("Dramas", "8", 1);
+    Object.keys(ROW_FETCH_CONFIG).forEach((title) => {
+      markPageAsFetched(title, "All", 1);
+    });
+  };
 
   const [activeTab, setActiveTab] = useState("home");
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
@@ -320,6 +522,7 @@ export function useAppState() {
           setFeaturedMovies(cFeatured);
           setAllMovies(cAll);
           setIsLoading(false);
+          markInitialPagesAsFetched();
           // Still proceed with fetch in background to refresh data
         }
       } catch (e) {
@@ -354,6 +557,14 @@ export function useAppState() {
         crimeRaw,
         historyRaw,
         familyRaw,
+        warRaw,
+        thrillerRaw,
+        musicRaw,
+        westernRaw,
+        tvDramasRaw,
+        animeRaw,
+        hits2010sRaw,
+        classics90sRaw,
         leoRaw,
       ] = await Promise.all([
         getTrending("all").catch(() => []),
@@ -400,6 +611,44 @@ export function useAppState() {
           sort_by: "vote_count.desc",
         }).catch(() => []),
         discoverMedia("movie", { with_genres: "10751" }).catch(() => []),
+        discoverMedia("movie", {
+          with_genres: "10752",
+          "primary_release_date.gte": "1990-01-01",
+          sort_by: "vote_count.desc",
+        }).catch(() => []),
+        discoverMedia("movie", {
+          with_genres: "53",
+          "primary_release_date.gte": "2000-01-01",
+          sort_by: "popularity.desc",
+        }).catch(() => []),
+        discoverMedia("movie", {
+          with_genres: "10402",
+          sort_by: "popularity.desc",
+        }).catch(() => []),
+        discoverMedia("movie", {
+          with_genres: "37",
+          sort_by: "vote_count.desc",
+        }).catch(() => []),
+        discoverMedia("tv", {
+          with_genres: "18",
+          sort_by: "popularity.desc",
+        }).catch(() => []),
+        discoverMedia("tv", {
+          with_genres: "16",
+          sort_by: "popularity.desc",
+        }).catch(() => []),
+        discoverMedia("movie", {
+          "primary_release_date.gte": "2010-01-01",
+          "primary_release_date.lte": "2019-12-31",
+          "vote_count.gte": "500",
+          sort_by: "popularity.desc",
+        }).catch(() => []),
+        discoverMedia("movie", {
+          "primary_release_date.gte": "1990-01-01",
+          "primary_release_date.lte": "1999-12-31",
+          "vote_count.gte": "300",
+          sort_by: "vote_count.desc",
+        }).catch(() => []),
         (async () => {
           let actorToUse =
             SPOTLIGHT_POOL[
@@ -498,16 +747,20 @@ export function useAppState() {
       const recommendationRows: any[] = [];
       const historyItems = [...history].reverse().slice(0, 3);
       for (const hist of historyItems) {
-        const histId = typeof hist === "object" ? hist.id : hist;
-        const histType = typeof hist === "object" ? hist.type : "movie";
+        const histRawId = historyRawId(hist);
+        const histItemType = historyType(hist);
 
         let movie = allMovies.find(
-          (m) => m.id.toString() === histId.toString() && m.type === histType,
+          (m) => m.id.toString() === histRawId && m.type === histItemType,
         );
-        if (!movie) movie = (await getMediaBasicInfo(histId, histType)) as any;
+        if (!movie)
+          movie = (await getMediaBasicInfo(
+            histRawId,
+            histItemType as "tv" | "movie",
+          )) as any;
         if (movie) {
           const recs = await getRecommendations(
-            histId,
+            histRawId,
             movie.type || "movie",
           ).catch(() => []);
           const filtered = recs
@@ -515,8 +768,9 @@ export function useAppState() {
             .slice(0, 20);
           if (filtered.length > 5) {
             filtered.forEach((m) => globalShown.add(m.id.toString()));
+            const histIdx = historyItems.indexOf(hist);
             const label =
-              historyItems.indexOf(hist) === 0
+              histIdx === 0
                 ? `Since you watched ${movie.title}`
                 : `More like ${movie.title}`;
             recommendationRows.push({
@@ -525,7 +779,7 @@ export function useAppState() {
               config: {
                 mediaType: movie.type || "movie",
                 type: "recommendations",
-                targetId: histId,
+                targetId: histRawId,
                 discoverParams: {},
                 filterFn: (m: any) => m.type === (movie?.type || "movie"),
               },
@@ -570,6 +824,24 @@ export function useAppState() {
       const historyFiltered = filterRow(historyMovies);
       const familyFiltered = filterRow(familyMovies);
       const spotlightFiltered = filterRow(spotlightMovies);
+
+      const warMovies = hardDedupe(warRaw);
+      const thrillerMovies = hardDedupe(thrillerRaw);
+      const musicMovies = hardDedupe(musicRaw);
+      const westernMovies = hardDedupe(westernRaw);
+      const tvDramaMovies = hardDedupe(tvDramasRaw);
+      const animeMovies = hardDedupe(animeRaw);
+      const hits2010sMovies = hardDedupe(hits2010sRaw);
+      const classics90sMovies = hardDedupe(classics90sRaw);
+
+      const warFiltered = filterRow(warMovies);
+      const thrillerFiltered = filterRow(thrillerMovies);
+      const musicFiltered = filterRow(musicMovies);
+      const westernFiltered = filterRow(westernMovies);
+      const tvDramaFiltered = filterRow(tvDramaMovies);
+      const animeFiltered = filterRow(animeMovies);
+      const hits2010sFiltered = filterRow(hits2010sMovies);
+      const classics90sFiltered = filterRow(classics90sMovies);
 
       const filteredPop = filterRow(popMovies);
       const filteredTV = filterRow(tvShows);
@@ -653,6 +925,14 @@ export function useAppState() {
         { title: "Historical Epics", items: historyFiltered },
         { title: "Family Movie Night", items: familyFiltered },
         { title: "Top Rated Movies", items: filteredTop.slice(15) },
+        { title: "War & Military", items: warFiltered },
+        { title: "Heart-Pounding Thrillers", items: thrillerFiltered },
+        { title: "Musical & Music", items: musicFiltered },
+        { title: "Western Frontier", items: westernFiltered },
+        { title: "TV Dramas", items: tvDramaFiltered },
+        { title: "Anime Series", items: animeFiltered },
+        { title: "2010s Hits", items: hits2010sFiltered },
+        { title: "90s Classics", items: classics90sFiltered },
       ]
         .filter((r) => r.items.length > 0)
         .sort(() => Math.random() - 0.5);
@@ -669,9 +949,13 @@ export function useAppState() {
         {
           title: "Watch It Again",
           items: history
-            .map((id) =>
-              allMovies.find((m) => m.id.toString() === id.toString()),
-            )
+            .map((item) => {
+              const rid = historyRawId(item);
+              const rtype = historyType(item);
+              return allMovies.find(
+                (m) => m.id.toString() === rid && m.type === rtype,
+              );
+            })
             .filter(Boolean)
             .slice(0, 10)
             .sort(() => Math.random() - 0.5),
@@ -766,8 +1050,17 @@ export function useAppState() {
         ...crimeMovies,
         ...historyMovies,
         ...familyMovies,
+        ...warMovies,
+        ...thrillerMovies,
+        ...musicMovies,
+        ...westernMovies,
+        ...tvDramaMovies,
+        ...animeMovies,
+        ...hits2010sMovies,
+        ...classics90sMovies,
       ]);
       setAllMovies(finalPool);
+      markInitialPagesAsFetched();
 
       // 6. Background enrichment for all rows (Skip Dramas as requested)
       initialRows.forEach(async (row) => {
@@ -818,23 +1111,32 @@ export function useAppState() {
     setVisibleCount((prev) => prev + 12);
   };
 
-  const getCategoryMovies = () => {
+  const getCategoryMovies = useCallback(() => {
     switch (viewingCategory) {
       case "Movies":
       case "TV Shows":
         // Now handled by ROW_FETCH_CONFIG below for pagination support
         break;
-      case "Library":
-        const libraryIds = new Set(
-          [...myList, ...history].map((id) => id.toString()),
+      case "Library": {
+        const myListIdSet = new Set(myList.map((id) => id.toString()));
+        const histCompositeSet = new Set(history.map(historyId));
+        return allMovies.filter(
+          (m) =>
+            myListIdSet.has(m.id.toString()) ||
+            histCompositeSet.has(`${m.type || "movie"}_${m.id}`),
         );
-        return allMovies.filter((m) => libraryIds.has(m.id.toString()));
-      case "My Secure Records":
+      }
+      case "My Secure Records": {
         const myListIds = new Set(myList.map((id) => id.toString()));
         return allMovies.filter((m) => myListIds.has(m.id.toString()));
-      case "Watch History":
-        const historyIds = new Set(history.map((id) => id.toString()));
-        return allMovies.filter((m) => historyIds.has(m.id.toString()));
+      }
+      case "Watch History": {
+        // Use composite key to avoid movie/TV ID collision
+        const histComposite = new Set(history.map(historyId));
+        return allMovies.filter((m) =>
+          histComposite.has(`${m.type || "movie"}_${m.id}`),
+        );
+      }
       case "Dramas":
         return allMovies.filter((m) => (m as any).isDrama);
     }
@@ -865,27 +1167,56 @@ export function useAppState() {
     }
 
     return allMovies;
-  };
+  }, [viewingCategory, myList, history, allMovies, rows]);
 
   useEffect(() => {
     fetchInitialData();
   }, []);
 
+  // ── Optimized Search with AbortController ─────────────────────────────────
+  const searchAbortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     const handler = setTimeout(async () => {
       setDebouncedSearchQuery(searchQuery);
       if (searchQuery.trim().length > 1) {
+        // Cancel any in-flight search
+        searchAbortRef.current?.abort();
+        const controller = new AbortController();
+        searchAbortRef.current = controller;
+
         setIsLoading(true);
-        const results = await searchMedia(searchQuery);
-        const enriched = await enrichMoviesWithMetadata(results.slice(0, 6)); // Enrich first 6 search results
-        const finalResults = [...enriched, ...results.slice(6)];
-        setSearchResults(finalResults);
-        updateGlobalPool(finalResults);
-        setIsLoading(false);
+        try {
+          const results = await searchMedia(searchQuery);
+          if (controller.signal.aborted) return;
+          // Show results immediately, enrich in background
+          setSearchResults(results);
+          updateGlobalPool(results);
+          setIsLoading(false);
+
+          // Background enrichment for top results (non-blocking)
+          enrichMoviesWithMetadata(results.slice(0, 6)).then((enriched) => {
+            if (controller.signal.aborted) return;
+            setSearchResults((prev) => {
+              const enrichedIds = new Set(enriched.map((e) => e.id.toString()));
+              const rest = prev.filter(
+                (m) => !enrichedIds.has(m.id.toString()),
+              );
+              return [...enriched, ...rest];
+            });
+          });
+        } catch (e) {
+          if (!controller.signal.aborted) {
+            setSearchResults([]);
+            setIsLoading(false);
+          }
+        }
       } else {
+        searchAbortRef.current?.abort();
         setSearchResults([]);
+        setIsLoading(false);
       }
-    }, 400);
+    }, 250); // Reduced from 400ms for snappier feel
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
@@ -901,11 +1232,14 @@ export function useAppState() {
     });
   };
 
-  const removeFromHistory = (id: string | number) => {
+  const removeFromHistory = (id: string | number, type?: string) => {
     setHistory((prev) =>
       prev.filter((h) => {
-        const hid = typeof h === "object" ? h.id : h;
-        return hid.toString() !== id.toString();
+        const hid = historyRawId(h);
+        const htype = historyType(h);
+        // If type is provided, match both id+type; otherwise match id only (backward compat)
+        if (type) return !(hid === id.toString() && htype === type);
+        return hid !== id.toString();
       }),
     );
     fetchInitialData();
@@ -959,11 +1293,125 @@ export function useAppState() {
     cleanup();
   }, []);
 
+  // Fetch basic metadata for any watch history or myList items missing from the cache pool
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    if (allMovies.length === 0) return;
+
+    const fetchMissing = async () => {
+      const missingHistory = history.map(h => ({
+        id: historyRawId(h),
+        type: historyType(h)
+      })).filter(item => {
+        return !allMovies.some(m => m.id.toString() === item.id && (m.type || "movie") === item.type);
+      });
+
+      const parseMyListId = (item: string) => {
+        if (item.includes("_")) {
+          const parts = item.split("_");
+          return { id: parts[1], type: parts[0] };
+        }
+        return { id: item, type: "movie" };
+      };
+
+      const missingMyList = myList.map(item => {
+        const parsed = parseMyListId(item.toString());
+        return { id: parsed.id, type: parsed.type };
+      }).filter(item => {
+        return !allMovies.some(m => m.id.toString() === item.id && (m.type || "movie") === item.type);
+      });
+
+      const allMissing: { id: string; type: string }[] = [];
+      const seen = new Set<string>();
+      
+      [...missingHistory, ...missingMyList].forEach(item => {
+        const key = `${item.type}_${item.id}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          allMissing.push(item);
+        }
+      });
+
+      if (allMissing.length === 0) return;
+
+      try {
+        const fetched = await Promise.all(
+          allMissing.map(async (item) => {
+            try {
+              return await getMediaBasicInfo(item.id, item.type as "movie" | "tv");
+            } catch {
+              return null;
+            }
+          })
+        );
+        const valid = fetched.filter(Boolean) as any[];
+        if (valid.length > 0) {
+          updateGlobalPool(valid);
+        }
+      } catch (err) {
+        console.error("Failed to fetch missing library items", err);
+      }
+    };
+
+    fetchMissing();
+  }, [history, myList, allMovies.length]);
+
+  // Synchronously flag scroll restoration on popstate (browser back/forward button clicks)
+  // before React Router's post-render cycle triggers scroll collapse events
+  useEffect(() => {
+    const handlePopState = () => {
+      (window as any).__isRestoringScroll = true;
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    const current = { pathname: location.pathname, viewingCategory };
+
+    // Update the ref to the current route/category
+    prevRouteRef.current = current;
+
+    // 2. Restore or reset scroll position for the NEW route/category
+    restoreScrollPosition(current.pathname, current.viewingCategory);
+
+    // 3. Then set up the scroll event listener
+    let scrollTimeout: any;
+    const handleScroll = () => {
+      const mainEl = document.querySelector("main");
+      const offset = Math.max(window.scrollY, mainEl?.scrollTop || 0);
+      setScrolled(offset > 50);
+
+      // Only save if we are not in the process of restoring scroll
+      if ((window as any).__isRestoringScroll) return;
+
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        try {
+          const key = getScrollKey(location.pathname, viewingCategory);
+          sessionStorage.setItem(key, offset.toString());
+        } catch {
+          /* quota */
+        }
+      }, 100);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    const mainEl = document.querySelector("main");
+    if (mainEl) {
+      mainEl.addEventListener("scroll", handleScroll, { passive: true });
+    }
+
+    // Call once initially *after* restoration/reset has kicked off
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (mainEl) {
+        mainEl.removeEventListener("scroll", handleScroll);
+      }
+      clearTimeout(scrollTimeout);
+    };
+  }, [location.pathname, viewingCategory]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1035,6 +1483,7 @@ export function useAppState() {
     if (!viewingCategory) return;
 
     if (viewingCategory === "Dramas") {
+      if (isPageFetched("Dramas", selectedRegion, dramaPage)) return;
       const fetchRegionalDramas = async () => {
         setIsLoading(true);
         try {
@@ -1050,6 +1499,7 @@ export function useAppState() {
           if (data.results) {
             updateGlobalPool(data.results);
           }
+          markPageAsFetched("Dramas", selectedRegion, dramaPage);
         } catch (e) {
           console.error("Failed to fetch regional dramas", e);
         } finally {
@@ -1062,6 +1512,7 @@ export function useAppState() {
         viewingCategory,
       )
     ) {
+      if (isPageFetched(viewingCategory, selectedRegion, dramaPage)) return;
       const fetchMoreForCategory = async () => {
         let config = ROW_FETCH_CONFIG[viewingCategory];
         if (!config) {
@@ -1103,6 +1554,9 @@ export function useAppState() {
                 ),
               );
             }
+            markPageAsFetched(viewingCategory, selectedRegion, dramaPage);
+          } catch (e) {
+            console.error("Failed to fetch more for category", e);
           } finally {
             setIsLoading(false);
           }
@@ -1167,7 +1621,15 @@ export function useAppState() {
     });
   };
 
-  const startPlayback = (movie: any, s?: number, e?: number, source?: string) => {
+  const startPlayback = (
+    movie: any,
+    s?: number,
+    e?: number,
+    source?: string,
+  ) => {
+    // Save scroll position before navigating to player
+    saveScrollPosition(location.pathname, viewingCategory);
+    (window as any).__isRestoringScroll = true;
     setIsTransitioning(true);
     let target =
       s !== undefined && e !== undefined
@@ -1175,7 +1637,9 @@ export function useAppState() {
         : `/watch/${movie.type}/${movie.id}`;
 
     if (source) {
-      target += (target.includes("?") ? "&" : "?") + `source=${encodeURIComponent(source)}`;
+      target +=
+        (target.includes("?") ? "&" : "?") +
+        `source=${encodeURIComponent(source)}`;
     }
 
     navigate(target);
@@ -1186,24 +1650,45 @@ export function useAppState() {
     if (!movie) {
       navigate("/");
     } else {
+      // Save scroll position before navigating to detail page
+      saveScrollPosition(location.pathname, viewingCategory);
+      (window as any).__isRestoringScroll = true;
       navigate(`/${movie.type}/${movie.id}`);
     }
     setSelectedMovie(movie);
   };
 
+  const changeActiveTab = (tab: string) => {
+    saveScrollPosition(location.pathname, viewingCategory);
+    (window as any).__isRestoringScroll = true;
+    setActiveTab(tab);
+  };
+
+  const changeViewingCategory = (category: string | null) => {
+    saveScrollPosition(location.pathname, viewingCategory);
+    (window as any).__isRestoringScroll = true;
+    setViewingCategory(category);
+  };
+
   const handleNavClick = (id: string) => {
     if (id === "search") setIsSearchOpen(true);
     else {
-      setActiveTab(id);
-      if (id === "movies") setViewingCategory("Movies");
-      else if (id === "tv") setViewingCategory("TV Shows");
-      else if (id === "drama") setViewingCategory("Dramas");
-      else if (id === "library") setViewingCategory("Library");
-      else setViewingCategory(null);
+      changeActiveTab(id);
+      if (id === "movies") changeViewingCategory("Movies");
+      else if (id === "tv") changeViewingCategory("TV Shows");
+      else if (id === "drama") changeViewingCategory("Dramas");
+      else if (id === "library") changeViewingCategory("Library");
+      else changeViewingCategory(null);
+      setSelectedMovie(null);
+      if (location.pathname !== "/") {
+        navigate("/");
+      }
     }
   };
 
   const handleBack = () => {
+    saveScrollPosition(location.pathname, viewingCategory);
+    (window as any).__isRestoringScroll = true;
     setIsTransitioning(true);
     navigate(-1);
     setTimeout(() => setIsTransitioning(false), 500);
@@ -1238,12 +1723,12 @@ export function useAppState() {
       selectedRegion,
     },
     actions: {
-      setActiveTab,
+      setActiveTab: changeActiveTab,
       setCurrentHeroIndex,
       setIsHoveringHero,
       setIsPlaying,
       setSelectedGenre,
-      setViewingCategory,
+      setViewingCategory: changeViewingCategory,
       setIsSearchOpen,
       setSearchQuery,
       setSelectedMovie: wrappedSetSelectedMovie,

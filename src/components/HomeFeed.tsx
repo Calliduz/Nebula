@@ -22,7 +22,7 @@ interface HomeFeedProps {
   setViewingCategory: (category: string | null) => void;
   onRandomize: () => void;
   allMovies: any[];
-  removeFromHistory: (id: number) => void;
+  removeFromHistory: (id: string | number, type?: string) => void;
   removeFromProgress: (id: string) => void;
 }
 
