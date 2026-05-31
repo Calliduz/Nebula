@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from "react";
+import React, { useState, useCallback, memo, useEffect } from "react";
 import { handleImageError } from "../utils/helpers";
 
 interface MovieCardProps {
@@ -23,6 +23,11 @@ export const MovieCard = memo<MovieCardProps>(({
   const isLandscape = aspect === "landscape";
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgLoaded(false);
+    setImgError(false);
+  }, [movie.image, movie.id]);
 
   const onImgLoad = useCallback(() => setImgLoaded(true), []);
   const onImgError = useCallback(
@@ -199,6 +204,9 @@ export const MovieCard = memo<MovieCardProps>(({
   );
 }, (prevProps, nextProps) => {
   return (
+    prevProps.onSelect === nextProps.onSelect &&
+    prevProps.onRemove === nextProps.onRemove &&
+    prevProps.onToggleList === nextProps.onToggleList &&
     prevProps.aspect === nextProps.aspect &&
     prevProps.isGrid === nextProps.isGrid &&
     prevProps.snap === nextProps.snap &&
