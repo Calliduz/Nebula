@@ -811,8 +811,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         if (Date.now() - lastSaveTime.current > 5000) {
           const key = getProgressKey();
 
-          // Mark as watched in history after 15 seconds of successful playback
-          if (cur > 15 && !hasLoggedHistory.current) {
+          // Mark as watched in history after 5 seconds of successful playback
+          if (cur > 5 && !hasLoggedHistory.current) {
             onMarkAsWatched(movie.id, movie.type || "movie");
             hasLoggedHistory.current = true;
           }
@@ -820,7 +820,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isNearEnd =
             video.duration - cur < 60 || cur / video.duration > 0.9;
 
-          if (cur > 10 && !isNearEnd) {
+          if (cur > 5 && !isNearEnd) {
             const p = JSON.parse(
               localStorage.getItem("nebula-progress") || "{}",
             );

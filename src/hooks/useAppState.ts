@@ -505,6 +505,155 @@ export function useAppState() {
     });
   };
 
+  const syncUserRows = useCallback(async () => {
+    if (allMovies.length === 0) return;
+
+    // 1. Continue Watching
+    const progressData = JSON.parse(
+      localStorage.getItem("nebula-progress") || "{}",
+    );
+    const progressByTitle: Record<string, { key: string; val: any }> = {};
+    for (const [key, val] of Object.entries(progressData)) {
+      const baseId = key.toString().split("-")[0];
+      const existing = progressByTitle[baseId];
+      const ts =
+        typeof val === "object" && val !== null
+          ? ((val as any).timestamp ?? 0)
+          : 0;
+      const existingTs = existing
+        ? typeof existing.val === "object" && existing.val !== null
+          ? ((existing.val as any).timestamp ?? 0)
+          : 0
+        : -1;
+      if (!existing || ts > existingTs) {
+        progressByTitle[baseId] = { key, val };
+      }
+    }
+
+    const continueWatchingItems: any[] = [];
+    const sortedProgressEntries = Object.entries(progressByTitle)
+      .sort((a, b) => {
+        const tsA = a[1].val?.timestamp ?? 0;
+        const tsB = b[1].val?.timestamp ?? 0;
+        return tsB - tsA;
+      });
+
+    const missingMedia: { id: string; type: "movie" | "tv" }[] = [];
+
+    for (const [baseId, { key, val }] of sortedProgressEntries) {
+      let movie = allMovies.find((m) => m.id.toString() === baseId);
+      if (!movie) {
+        const type = key.includes("-") ? "tv" : "movie";
+        missingMedia.push({ id: baseId, type });
+      } else {
+        continueWatchingItems.push({
+          ...movie,
+          progressKey: key,
+          progress: val,
+        });
+      }
+    }
+
+    // 2. My List
+    const myListItems = allMovies
+      .filter((m) => myList.includes(m.id.toString()))
+      .slice(0, 20);
+
+    // 3. Watch It Again (History)
+    const watchItAgainItems: any[] = [];
+    for (const item of history) {
+      const rid = historyRawId(item);
+      const rtype = historyType(item);
+      let movie = allMovies.find(
+        (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
+      );
+      if (!movie) {
+        missingMedia.push({ id: rid, type: rtype as "movie" | "tv" });
+      } else {
+        const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
+        watchItAgainItems.push({
+          ...movie,
+          progress: progKey ? progressData[progKey] : null
+        });
+      }
+    }
+
+    // Fetch missing movies if any
+    if (missingMedia.length > 0) {
+      const uniqueMissing = missingMedia.filter(
+        (val, index, self) =>
+          self.findIndex((t) => t.id === val.id && t.type === val.type) === index
+      );
+      try {
+        const fetched = await Promise.all(
+          uniqueMissing.map(async (item) => {
+            try {
+              return await getMediaBasicInfo(item.id, item.type);
+            } catch {
+              return null;
+            }
+          })
+        );
+        const valid = fetched.filter(Boolean) as any[];
+        if (valid.length > 0) {
+          updateGlobalPool(valid);
+        }
+      } catch (err) {
+        console.error("Failed to fetch missing items in syncUserRows", err);
+      }
+    }
+
+    setRows((prev) => {
+      if (prev.length === 0) return prev;
+      let updated = [...prev];
+
+      // Update Continue Watching Row
+      const cwIndex = updated.findIndex((r) => r.title === "Continue Watching");
+      if (continueWatchingItems.length > 0) {
+        const newRow = { title: "Continue Watching", items: continueWatchingItems };
+        if (cwIndex !== -1) {
+          updated[cwIndex] = newRow;
+        } else {
+          updated = [newRow, ...updated];
+        }
+      } else if (cwIndex !== -1) {
+        updated.splice(cwIndex, 1);
+      }
+
+      // Update My Secure Records Row
+      const mlIndex = updated.findIndex((r) => r.title === "My Secure Records");
+      if (myListItems.length > 0) {
+        const newRow = { title: "My Secure Records", items: myListItems };
+        if (mlIndex !== -1) {
+          updated[mlIndex] = newRow;
+        } else {
+          const cwIdx = updated.findIndex((r) => r.title === "Continue Watching");
+          const trendIdx = updated.findIndex((r) => r.title === "Trending Missions: Global Feed");
+          const insertIdx = trendIdx !== -1 ? trendIdx + 1 : (cwIdx !== -1 ? cwIdx + 1 : 0);
+          updated.splice(insertIdx, 0, newRow);
+        }
+      } else if (mlIndex !== -1) {
+        updated.splice(mlIndex, 1);
+      }
+
+      // Update Watch It Again Row
+      const wiaIndex = updated.findIndex((r) => r.title === "Watch It Again");
+      if (wiaIndex !== -1) {
+        updated[wiaIndex] = {
+          ...updated[wiaIndex],
+          items: watchItAgainItems.slice(0, 10)
+        };
+      } else if (watchItAgainItems.length > 0) {
+        const mlIdx = updated.findIndex((r) => r.title === "My Secure Records");
+        const trendIdx = updated.findIndex((r) => r.title === "Trending Missions: Global Feed");
+        const insertIdx = mlIdx !== -1 ? mlIdx + 1 : (trendIdx !== -1 ? trendIdx + 1 : 0);
+        updated.splice(insertIdx, 0, { title: "Watch It Again", items: watchItAgainItems.slice(0, 10) });
+      }
+
+      return updated;
+    });
+  }, [allMovies, history, myList]);
+
   const fetchInitialData = async () => {
     // 0. Hydrate from Cache for instant load
     const cachedFeed = localStorage.getItem("nebula-feed-cache");
@@ -871,7 +1020,13 @@ export function useAppState() {
         }
       }
       const continueWatchingItems: any[] = [];
-      for (const [baseId, { key, val }] of Object.entries(progressByTitle)) {
+      const sortedProgressEntries = Object.entries(progressByTitle)
+        .sort((a, b) => {
+          const tsA = a[1].val?.timestamp ?? 0;
+          const tsB = b[1].val?.timestamp ?? 0;
+          return tsB - tsA;
+        });
+      for (const [baseId, { key, val }] of sortedProgressEntries) {
         let movie = allMovies.find((m) => m.id.toString() === baseId);
         if (!movie) movie = (await getMediaBasicInfo(baseId, "movie")) as any;
         if (movie) {
@@ -953,12 +1108,11 @@ export function useAppState() {
               const rid = historyRawId(item);
               const rtype = historyType(item);
               return allMovies.find(
-                (m) => m.id.toString() === rid && m.type === rtype,
+                (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
               );
             })
             .filter(Boolean)
-            .slice(0, 10)
-            .sort(() => Math.random() - 0.5),
+            .slice(0, 10),
         },
         { title: "Popular Asian Dramas", items: topDramas, isDramaRow: true },
         ...topGenres.map((g) => {
@@ -1130,12 +1284,17 @@ export function useAppState() {
         const myListIds = new Set(myList.map((id) => id.toString()));
         return allMovies.filter((m) => myListIds.has(m.id.toString()));
       }
+      case "Watch It Again":
       case "Watch History": {
-        // Use composite key to avoid movie/TV ID collision
-        const histComposite = new Set(history.map(historyId));
-        return allMovies.filter((m) =>
-          histComposite.has(`${m.type || "movie"}_${m.id}`),
-        );
+        return history
+          .map((item) => {
+            const rid = historyRawId(item);
+            const rtype = historyType(item);
+            return allMovies.find(
+              (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
+            );
+          })
+          .filter(Boolean);
       }
       case "Dramas":
         return allMovies.filter((m) => (m as any).isDrama);
@@ -1172,6 +1331,10 @@ export function useAppState() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    syncUserRows();
+  }, [location.pathname, history, myList, allMovies.length, syncUserRows]);
 
   // ── Optimized Search with AbortController ─────────────────────────────────
   const searchAbortRef = useRef<AbortController | null>(null);
@@ -1242,30 +1405,48 @@ export function useAppState() {
         return hid !== id.toString();
       }),
     );
-    fetchInitialData();
-  };
-
-  const removeFromProgress = (id: string | number) => {
+    // Also remove from progress to keep them in sync
     const p = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
     Object.keys(p).forEach((key) => {
-      if (key.includes(id.toString())) {
+      const baseId = key.split("-")[0];
+      if (baseId === id.toString()) {
         delete p[key];
       }
     });
     localStorage.setItem("nebula-progress", JSON.stringify(p));
-    fetchInitialData();
+    syncUserRows();
+  };
+
+  const removeFromProgress = (id: string | number) => {
+    // 1. Remove from progress
+    const p = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+    Object.keys(p).forEach((key) => {
+      const baseId = key.split("-")[0];
+      if (baseId === id.toString()) {
+        delete p[key];
+      }
+    });
+    localStorage.setItem("nebula-progress", JSON.stringify(p));
+
+    // 2. Remove from history to keep them in sync
+    setHistory((prev) =>
+      prev.filter((h) => historyRawId(h) !== id.toString())
+    );
+
+    syncUserRows();
   };
 
   const clearHistory = () => {
     setHistory([]);
     localStorage.removeItem("nebula-history");
     localStorage.removeItem("nebula-progress");
-    fetchInitialData();
+    syncUserRows();
   };
 
   const clearMyList = () => {
     setMyList([]);
     localStorage.removeItem("nebula-my-list");
+    // This will naturally trigger syncUserRows via useEffect because myList reference changes
   };
 
   const clearFinishedProgress = () => {
@@ -1277,15 +1458,15 @@ export function useAppState() {
       }
     });
     localStorage.setItem("nebula-progress", JSON.stringify(p));
-    fetchInitialData();
+    syncUserRows();
   };
 
   // Auto-Cleanup Logic (Prune items older than 30 days)
   useEffect(() => {
     const cleanup = () => {
-      // Prune History (Keep last 100 items only for performance)
+      // Prune History (Keep newest 100 items only for performance)
       if (history.length > 100) {
-        const newHistory = history.slice(-100);
+        const newHistory = history.slice(0, 100);
         setHistory(newHistory);
         localStorage.setItem("nebula-history", JSON.stringify(newHistory));
       }
@@ -1508,7 +1689,7 @@ export function useAppState() {
       };
       fetchRegionalDramas();
     } else if (
-      !["Library", "My Secure Records", "Watch History"].includes(
+      !["Library", "My Secure Records", "Watch History", "Watch It Again"].includes(
         viewingCategory,
       )
     ) {
