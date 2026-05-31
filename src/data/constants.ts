@@ -36,9 +36,14 @@ export const MOCK_PROFILES = [
 ];
 
 export const topSearches = [
-  "Interstellar II",
-  "Cyberpulse Origins",
-  "The Silent Void",
-  "Solo Leveling",
-  "Circuit Breaker",
+  "Stranger Things",
+  "One Piece",
+  "Interstellar",
+  "Attack on Titan",
+  "The Dark Knight",
+  "Breaking Bad",
+  "Demon Slayer",
+  "Inception",
+  "The Bear",
+  "Jujutsu Kaisen",
 ];
