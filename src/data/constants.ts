@@ -29,12 +29,6 @@ export const MOODS = [
 
 export const SORTS = ["Recently Added", "IMDB Rating", "Release Date"];
 
-export const MOCK_PROFILES = [
-  { name: "Commander", color: "bg-nebula-cyan" },
-  { name: "Scientist", color: "bg-[#2ecc71]" },
-  { name: "Guest", color: "bg-[#888888]" },
-];
-
 export const topSearches = [
   "Stranger Things",
   "One Piece",

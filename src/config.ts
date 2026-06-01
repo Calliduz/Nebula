@@ -42,5 +42,3 @@ export const FRONTEND_URL = window.location.origin;
  */
 export const IS_PROD = import.meta.env.PROD;
 export const IS_DEV = import.meta.env.DEV;
-
-console.log(`[Nebula] Initialized with API: ${API_BASE_URL}`);

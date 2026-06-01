@@ -466,9 +466,9 @@ export const getMediaDetails = async (
         data.videos?.results.filter(
           (v: any) => v.type === "Trailer" || v.type === "Teaser",
         ) || [],
-      similar: (data.recommendations?.results || []).map((m: any) =>
-        normalizeMovie(m, type),
-      ),
+      similar: (data.recommendations?.results || [])
+        .filter((m: any) => m.id.toString() !== id.toString())
+        .map((m: any) => normalizeMovie(m, type)),
       cast: (data.credits?.cast || []).slice(0, 12).map((c: any) => ({
         id: c.id,
         name: c.name,
