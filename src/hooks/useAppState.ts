@@ -431,14 +431,25 @@ export function useAppState() {
     viewingCategory: null as string | null,
   });
 
-  const categoryCacheRef = useRef<Record<string, Set<number>>>({});
+  const clearCategoryPageCache = () => {
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith("nebula-fetched-")) {
+          sessionStorage.removeItem(key);
+          i--; // adjust index since we removed an item
+        }
+      }
+    } catch (e) {}
+  };
 
   const isPageFetched = (category: string, region: string, page: number) => {
-    const key = `${category}-${region}`;
-    if (!categoryCacheRef.current[key]) {
-      categoryCacheRef.current[key] = new Set();
+    try {
+      const key = `nebula-fetched-${category}-${region}-${page}`;
+      return sessionStorage.getItem(key) === "1";
+    } catch {
+      return false;
     }
-    return categoryCacheRef.current[key].has(page);
   };
 
   const markPageAsFetched = (
@@ -446,11 +457,10 @@ export function useAppState() {
     region: string,
     page: number,
   ) => {
-    const key = `${category}-${region}`;
-    if (!categoryCacheRef.current[key]) {
-      categoryCacheRef.current[key] = new Set();
-    }
-    categoryCacheRef.current[key].add(page);
+    try {
+      const key = `nebula-fetched-${category}-${region}-${page}`;
+      sessionStorage.setItem(key, "1");
+    } catch {}
   };
 
   const markInitialPagesAsFetched = () => {
@@ -658,6 +668,7 @@ export function useAppState() {
 
   const fetchInitialData = async () => {
     // 0. Hydrate from Cache for instant load
+    let currentPool = allMovies;
     const cachedFeed = localStorage.getItem("nebula-feed-cache");
     if (cachedFeed) {
       try {
@@ -667,19 +678,27 @@ export function useAppState() {
           all: cAll,
           timestamp,
         } = JSON.parse(cachedFeed);
+        const cacheAge = Date.now() - timestamp;
         // If cache is fresh (< 4 hours), use it to skip initial loader
-        if (Date.now() - timestamp < 1000 * 60 * 60 * 4) {
+        if (cacheAge < 1000 * 60 * 60 * 4) {
           setRows(cRows);
           setFeaturedMovies(cFeatured);
           setAllMovies(cAll);
           setIsLoading(false);
           markInitialPagesAsFetched();
-          // Still proceed with fetch in background to refresh data
+          // Return early if cache is very fresh (< 3 hours)
+          if (cacheAge < 1000 * 60 * 60 * 3) {
+            return;
+          }
         }
+        currentPool = cAll || [];
       } catch (e) {
         localStorage.removeItem("nebula-feed-cache");
       }
     }
+
+    // Clear fetched category cache since we are doing a full/stale refresh
+    clearCategoryPageCache();
 
     if (isLoading) setIsLoading(true);
     try {
@@ -813,7 +832,7 @@ export function useAppState() {
               // Take a recent item and get its cast
               const recentId = history[history.length - 1];
               const movie =
-                allMovies.find((m) => m.id === recentId) ||
+                currentPool.find((m) => m.id === recentId) ||
                 ((await getMediaBasicInfo(recentId, "movie")) as any);
               if (movie) {
                 const { cast } = await getMediaDetails(
@@ -880,6 +899,51 @@ export function useAppState() {
         (p: any) => !topDramas.some((t: any) => t.id === p.id),
       );
 
+      const warMovies = hardDedupe(warRaw);
+      const thrillerMovies = hardDedupe(thrillerRaw);
+      const musicMovies = hardDedupe(musicRaw);
+      const westernMovies = hardDedupe(westernRaw);
+      const tvDramaMovies = hardDedupe(tvDramasRaw);
+      const animeMovies = hardDedupe(animeRaw);
+      const hits2010sMovies = hardDedupe(hits2010sRaw);
+      const classics90sMovies = hardDedupe(classics90sRaw);
+
+      // Create local movie pool from all fetched rows for lookup during row generation
+      const localPool = hardDedupe([
+        ...currentPool,
+        ...trending,
+        ...popMovies,
+        ...tvShows,
+        ...topRated,
+        ...topDramas,
+        ...pinoyDramas,
+        ...sciFiMovies,
+        ...acclaimedMovies,
+        ...spotlightMovies,
+        ...actionMovies,
+        ...comedyMovies,
+        ...horrorMovies,
+        ...mysteryMovies,
+        ...documentaryMovies,
+        ...animationMovies,
+        ...awardMovies,
+        ...newMovies,
+        ...gemMovies,
+        ...fantasyMovies,
+        ...romanceMovies,
+        ...crimeMovies,
+        ...historyMovies,
+        ...familyMovies,
+        ...warMovies,
+        ...thrillerMovies,
+        ...musicMovies,
+        ...westernMovies,
+        ...tvDramaMovies,
+        ...animeMovies,
+        ...hits2010sMovies,
+        ...classics90sMovies,
+      ]);
+
       // 2. Global Deduplication logic (Exclusive rows)
       const globalShown = new Set<string>();
       const topTenItems = trending.slice(0, 10);
@@ -901,7 +965,7 @@ export function useAppState() {
         const histRawId = historyRawId(hist);
         const histItemType = historyType(hist);
 
-        let movie = allMovies.find(
+        let movie = localPool.find(
           (m) => m.id.toString() === histRawId && m.type === histItemType,
         );
         if (!movie)
@@ -976,15 +1040,6 @@ export function useAppState() {
       const familyFiltered = filterRow(familyMovies);
       const spotlightFiltered = filterRow(spotlightMovies);
 
-      const warMovies = hardDedupe(warRaw);
-      const thrillerMovies = hardDedupe(thrillerRaw);
-      const musicMovies = hardDedupe(musicRaw);
-      const westernMovies = hardDedupe(westernRaw);
-      const tvDramaMovies = hardDedupe(tvDramasRaw);
-      const animeMovies = hardDedupe(animeRaw);
-      const hits2010sMovies = hardDedupe(hits2010sRaw);
-      const classics90sMovies = hardDedupe(classics90sRaw);
-
       const warFiltered = filterRow(warMovies);
       const thrillerFiltered = filterRow(thrillerMovies);
       const musicFiltered = filterRow(musicMovies);
@@ -1030,7 +1085,7 @@ export function useAppState() {
         });
       for (const [baseId, { key, val }] of sortedProgressEntries) {
         const type = key.includes("-") ? "tv" : "movie";
-        let movie = allMovies.find(
+        let movie = localPool.find(
           (m) => m.id.toString() === baseId && (m.type || "movie") === type,
         );
         if (!movie) movie = (await getMediaBasicInfo(baseId, type)) as any;
@@ -1044,7 +1099,7 @@ export function useAppState() {
       }
 
       // 3c. My List Row
-      const myListItems = allMovies
+      const myListItems = localPool
         .filter((m) => myList.includes(m.id.toString()))
         .slice(0, 20);
 
@@ -1053,7 +1108,7 @@ export function useAppState() {
       [...history, ...myList].forEach((item) => {
         const id = typeof item === "object" ? item.id : item;
         const type = typeof item === "object" ? item.type : "movie";
-        const m = allMovies.find(
+        const m = localPool.find(
           (item) => item.id.toString() === id.toString() && item.type === type,
         );
         if (m?.genre) {
@@ -1112,7 +1167,7 @@ export function useAppState() {
             .map((item) => {
               const rid = historyRawId(item);
               const rtype = historyType(item);
-              return allMovies.find(
+              return localPool.find(
                 (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
               );
             })
@@ -1126,7 +1181,7 @@ export function useAppState() {
           )?.[0];
           return {
             title: `Because you like ${g}`,
-            items: allMovies
+            items: localPool
               .filter(
                 (m) => m.genre.includes(g) && !globalShown.has(m.id.toString()),
               )
@@ -1339,7 +1394,7 @@ export function useAppState() {
 
   useEffect(() => {
     syncUserRows();
-  }, [location.pathname, history, myList, allMovies.length, syncUserRows]);
+  }, [history, myList, allMovies.length, syncUserRows]);
 
   // ── Optimized Search with AbortController ─────────────────────────────────
   const searchAbortRef = useRef<AbortController | null>(null);
@@ -1791,7 +1846,35 @@ export function useAppState() {
 
   const recommendations = useMemo(() => {
     const flat = rows.flatMap((r) => r.items);
-    return [...flat].sort(() => Math.random() - 0.5).slice(0, 20);
+    
+    // Deduplicate items in flat to make sure recommendations has unique movies
+    const seen = new Set();
+    const uniqueFlat = [];
+    for (const m of flat) {
+      const idStr = m?.id?.toString();
+      if (idStr && !seen.has(idStr)) {
+        seen.add(idStr);
+        uniqueFlat.push(m);
+      }
+    }
+
+    // Stable sort by a hash of the movie ID so it is stable but looks shuffled
+    const hashCode = (str: string) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0; // Convert to 32bit integer
+      }
+      return hash;
+    };
+
+    return [...uniqueFlat]
+      .sort((a, b) => {
+        const hashA = hashCode(a.id?.toString() || "");
+        const hashB = hashCode(b.id?.toString() || "");
+        return hashA - hashB;
+      })
+      .slice(0, 20);
   }, [rows]);
 
   const markAsWatched = (

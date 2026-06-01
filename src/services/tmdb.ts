@@ -154,11 +154,6 @@ const fetchFromTMDB = async (
   params: Record<string, string> = {},
   ttl: number = TTL.DETAILS,
 ): Promise<any> => {
-  if (API_KEY === "PLACEHOLDER" || !API_KEY) {
-    console.warn("[TMDB] API Key missing.");
-    return { results: [] };
-  }
-
   // Safety: never fetch KissKH IDs from TMDB
   const lastPart = endpoint.split("/").pop() || "";
   if (lastPart.startsWith("k")) {
@@ -166,20 +161,18 @@ const fetchFromTMDB = async (
     return { results: [] };
   }
 
-  const isV4Token = API_KEY.length > 40;
-  const query = new URLSearchParams({ language: "en-US", ...params });
-  if (!isV4Token) query.append("api_key", API_KEY);
+  // Construct query parameters for the server-side proxy
+  const queryParams = new URLSearchParams({
+    endpoint,
+    ...params,
+  });
 
-  const cacheKey = `tmdb-${endpoint}-${query.toString()}`;
+  const cacheKey = `tmdb-proxy-${endpoint}-${queryParams.toString()}`;
   return fetchWithCache(
     cacheKey,
     async () => {
-      const headers: HeadersInit = { Accept: "application/json" };
-      if (isV4Token) headers["Authorization"] = `Bearer ${API_KEY}`;
-      const res = await fetch(`${TMDB_BASE_URL}${endpoint}?${query}`, {
-        headers,
-      });
-      if (!res.ok) throw new Error(`TMDB ${res.status}: ${endpoint}`);
+      const res = await fetch(`${getApiBase()}/api/tmdb-proxy?${queryParams.toString()}`);
+      if (!res.ok) throw new Error(`TMDB Proxy ${res.status}: ${endpoint}`);
       return res.json();
     },
     ttl,
