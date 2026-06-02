@@ -512,8 +512,48 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
   if (!movie && isLoading)
     return (
-      <div className="fixed inset-0 z-[200] bg-obsidian flex items-center justify-center text-white">
-        Establishing Satellite Link...
+      <div className="fixed inset-0 z-[200] bg-obsidian flex flex-col items-center justify-center text-white gap-6">
+        {/* Glow background */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,229,255,0.05)_0%,transparent_60%)] pointer-events-none" />
+
+        {/* Back Button */}
+        <div className="absolute top-8 left-8 sm:top-10 sm:left-10 z-[210]">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-3 text-dim hover:text-white transition-all group w-fit"
+          >
+            <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-nebula-cyan group-hover:bg-white/5 transition-all">
+              <ArrowLeft size={20} />
+            </div>
+            <span className="text-xs font-bold tracking-[0.2em] uppercase">
+              Back to Browse
+            </span>
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center gap-4 relative z-10">
+          <div className="relative">
+            <div className="absolute inset-0 bg-nebula-cyan/20 blur-xl rounded-full scale-150 animate-pulse" />
+            <Loader2 className="animate-spin text-nebula-cyan relative z-10" size={40} />
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-white font-display font-black text-xl tracking-tighter uppercase italic animate-pulse">
+              Establishing Satellite Link
+            </p>
+            <div className="h-0.5 w-32 bg-white/10 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: "100%" }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1.5,
+                  ease: "linear",
+                }}
+                className="h-full w-full bg-nebula-cyan"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     );
   if (!movie) return null;
@@ -546,7 +586,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: "100%" }}
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-[150] bg-obsidian overflow-y-auto overflow-x-hidden custom-scrollbar"
+      className="fixed inset-0 z-[200] bg-obsidian overflow-y-auto overflow-x-hidden custom-scrollbar"
     >
       <div className="absolute inset-x-0 top-0 h-[70vh] z-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-obsidian/60 to-obsidian z-10" />

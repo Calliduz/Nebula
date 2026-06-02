@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useEffect } from "react";
+import React, { useState, useCallback, memo, useEffect, useRef } from "react";
 import { handleImageError } from "../utils/helpers";
 
 interface MovieCardProps {
@@ -23,10 +23,16 @@ export const MovieCard = memo<MovieCardProps>(({
   const isLandscape = aspect === "landscape";
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     setImgLoaded(false);
     setImgError(false);
+
+    // If image is already cached/complete, mark as loaded
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setImgLoaded(true);
+    }
   }, [movie.image, movie.id]);
 
   const onImgLoad = useCallback(() => setImgLoaded(true), []);
@@ -51,6 +57,7 @@ export const MovieCard = memo<MovieCardProps>(({
           <div className="absolute inset-0 bg-white/5 shimmer-bg" />
         )}
         <img
+          ref={imgRef}
           key={movie.image || movie.id}
           src={movie.image || undefined}
           alt={movie.title}
