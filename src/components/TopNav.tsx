@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, Bell, User, ChevronDown } from "lucide-react";
-import { NAV_ITEMS, MOCK_PROFILES } from "../data/constants";
+import { NAV_ITEMS } from "../data/constants";
 
 export const TopNav = ({
   activeTab,

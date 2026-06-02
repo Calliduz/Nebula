@@ -1017,6 +1017,7 @@ export function useAppState() {
           const extras = items
             .filter((m) => !uniqueItems.some((u) => u.id === m.id))
             .slice(0, 20 - uniqueItems.length);
+          extras.forEach((m) => globalShown.add(m.id.toString()));
           uniqueItems.push(...extras);
         }
         return uniqueItems;
@@ -1179,13 +1180,15 @@ export function useAppState() {
           const gId = Object.entries(GENRE_MAP).find(
             ([_, name]) => name === g,
           )?.[0];
+          const genreItems = localPool
+            .filter(
+              (m) => m.genre.includes(g) && !globalShown.has(m.id.toString()),
+            )
+            .slice(0, 20);
+          genreItems.forEach((m) => globalShown.add(m.id.toString()));
           return {
             title: `Because you like ${g}`,
-            items: localPool
-              .filter(
-                (m) => m.genre.includes(g) && !globalShown.has(m.id.toString()),
-              )
-              .slice(0, 20),
+            items: genreItems,
             config: gId
               ? {
                   mediaType: "movie",
@@ -1198,11 +1201,17 @@ export function useAppState() {
               : undefined,
           };
         }),
-        {
-          title: "Trending in your Sector: Philippines",
-          items: pinoyDramas.slice(0, 10),
-          isDramaRow: true,
-        },
+        (() => {
+          const pinoy1 = pinoyDramas
+            .filter((m) => !globalShown.has(m.id.toString()))
+            .slice(0, 10);
+          pinoy1.forEach((m) => globalShown.add(m.id.toString()));
+          return {
+            title: "Trending in your Sector: Philippines",
+            items: pinoy1,
+            isDramaRow: true,
+          };
+        })(),
         { title: "New Intel: 2025 Releases", items: newFiltered },
         {
           title: `Actor Spotlight: ${spotlightActor}`,
@@ -1219,11 +1228,17 @@ export function useAppState() {
         { title: "Bingeworthy TV Shows", items: filteredTV },
         { title: "Popular Movies", items: filteredPop },
         ...dynamicGenreRows,
-        {
-          title: "Pinoy Movies & TV",
-          items: pinoyDramas.slice(10, 30),
-          isDramaRow: true,
-        },
+        (() => {
+          const pinoy2 = pinoyDramas
+            .filter((m) => !globalShown.has(m.id.toString()))
+            .slice(0, 20);
+          pinoy2.forEach((m) => globalShown.add(m.id.toString()));
+          return {
+            title: "Pinoy Movies & TV",
+            items: pinoy2,
+            isDramaRow: true,
+          };
+        })(),
       ].filter((r) => r.items?.length > 0);
 
       // 4. Set Initial State
@@ -1393,7 +1408,10 @@ export function useAppState() {
   }, []);
 
   useEffect(() => {
-    syncUserRows();
+    const timer = setTimeout(() => {
+      syncUserRows();
+    }, 200);
+    return () => clearTimeout(timer);
   }, [history, myList, allMovies.length, syncUserRows]);
 
   // ── Optimized Search with AbortController ─────────────────────────────────
@@ -1507,18 +1525,6 @@ export function useAppState() {
     setMyList([]);
     localStorage.removeItem("nebula-my-list");
     // This will naturally trigger syncUserRows via useEffect because myList reference changes
-  };
-
-  const clearFinishedProgress = () => {
-    const p = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
-    Object.keys(p).forEach((key) => {
-      const val = p[key];
-      if (typeof val === "object" && val.duration - val.time < 60) {
-        delete p[key];
-      }
-    });
-    localStorage.setItem("nebula-progress", JSON.stringify(p));
-    syncUserRows();
   };
 
   // Auto-Cleanup Logic (Prune items older than 30 days)

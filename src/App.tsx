@@ -7,13 +7,18 @@ import { useAppState } from "./hooks/useAppState";
 
 // Components
 import { TopNav } from "./components/TopNav";
-import { MediaPlayer } from "./components/MediaPlayer";
-import { MovieDetails } from "./components/MovieDetails";
 import { Hero } from "./components/Hero";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { CategoryView } from "./components/CategoryView";
 import { HomeFeed } from "./components/HomeFeed";
 import { NotFound } from "./components/NotFound";
+
+const MediaPlayer = React.lazy(() =>
+  import("./components/MediaPlayer").then((module) => ({ default: module.MediaPlayer }))
+);
+const MovieDetails = React.lazy(() =>
+  import("./components/MovieDetails").then((module) => ({ default: module.MovieDetails }))
+);
 
 import {
   Routes,
@@ -182,17 +187,23 @@ export default function App() {
 
       {/* Modal variant: shown when a card is clicked anywhere in the app */}
       {state.selectedMovie && !isWatching && (
-        <MovieDetails
-          key={`movie-details-${state.selectedMovie.id}`}
-          movie={state.selectedMovie}
-          onClose={() => actions.setSelectedMovie(null)}
-          onPlay={(s, e, src) =>
-            actions.startPlayback(state.selectedMovie, s, e, src)
-          }
-          onSelectMovie={actions.setSelectedMovie}
-          isInList={state.myList.includes(state.selectedMovie.id.toString())}
-          onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
-        />
+        <React.Suspense fallback={
+          <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center">
+            <Loader2 className="animate-spin text-nebula-cyan" size={32} />
+          </div>
+        }>
+          <MovieDetails
+            key={`movie-details-${state.selectedMovie.id}`}
+            movie={state.selectedMovie}
+            onClose={() => actions.setSelectedMovie(null)}
+            onPlay={(s, e, src) =>
+              actions.startPlayback(state.selectedMovie, s, e, src)
+            }
+            onSelectMovie={actions.setSelectedMovie}
+            isInList={state.myList.includes(state.selectedMovie.id.toString())}
+            onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
+          />
+        </React.Suspense>
       )}
 
       <AnimatePresence>
@@ -238,43 +249,6 @@ export default function App() {
   );
 }
 
-// Helper components to bridge state and routing
-function HomeStub({ actions, state, refs }: any) {
-  return (
-    <>
-      <Hero
-        currentHeroIndex={state.currentHeroIndex}
-        setCurrentHeroIndex={actions.setCurrentHeroIndex}
-        myList={state.myList}
-        toggleMyList={actions.toggleMyList}
-        startPlayback={actions.startPlayback}
-        setSelectedMovie={actions.setSelectedMovie}
-        featuredMovies={state.featuredMovies}
-      />
-      <HomeFeed
-        sortBy={state.sortBy}
-        setSortBy={actions.setSortBy}
-        activeMood={state.activeMood}
-        setActiveMood={actions.setActiveMood}
-        selectedGenre={state.selectedGenre}
-        setSelectedGenre={actions.setSelectedGenre}
-        setSelectedMovie={actions.setSelectedMovie}
-        isLoading={state.isLoading}
-        filteredMovies={state.filteredMovies}
-        recommendations={state.recommendations}
-        myList={state.myList}
-        toggleMyList={actions.toggleMyList}
-        setViewingCategory={actions.setViewingCategory}
-        onRandomize={actions.handleRandomize}
-        rows={state.rows}
-        allMovies={state.allMovies}
-        removeFromHistory={actions.removeFromHistory}
-        removeFromProgress={actions.removeFromProgress}
-      />
-    </>
-  );
-}
-
 // Renders MovieDetails as a full page when navigating directly to /movie/:id or /tv/:id
 function MovieDetailPageStub({ actions, state }: any) {
   const { id, type } = useParams();
@@ -289,23 +263,29 @@ function MovieDetailPageStub({ actions, state }: any) {
 
   return (
     <div className="min-h-screen bg-obsidian">
-      <MovieDetails
-        key={`page-details-${id}`}
-        movie={catalogMovie || null}
-        onClose={() => actions.setSelectedMovie(null)}
-        onPlay={(s: number, e: number, src?: string) => {
-          if (catalogMovie) actions.startPlayback(catalogMovie, s, e, src);
-        }}
-        onSelectMovie={actions.setSelectedMovie}
-        isInList={
-          catalogMovie
-            ? state.myList.includes(catalogMovie.id.toString())
-            : false
-        }
-        onToggleList={() => {
-          if (catalogMovie) actions.toggleMyList(catalogMovie.id);
-        }}
-      />
+      <React.Suspense fallback={
+        <div className="min-h-screen bg-obsidian flex items-center justify-center">
+          <Loader2 className="animate-spin text-nebula-cyan" size={32} />
+        </div>
+      }>
+        <MovieDetails
+          key={`page-details-${id}`}
+          movie={catalogMovie || null}
+          onClose={() => actions.setSelectedMovie(null)}
+          onPlay={(s: number, e: number, src?: string) => {
+            if (catalogMovie) actions.startPlayback(catalogMovie, s, e, src);
+          }}
+          onSelectMovie={actions.setSelectedMovie}
+          isInList={
+            catalogMovie
+              ? state.myList.includes(catalogMovie.id.toString())
+              : false
+          }
+          onToggleList={() => {
+            if (catalogMovie) actions.toggleMyList(catalogMovie.id);
+          }}
+        />
+      </React.Suspense>
     </div>
   );
 }
@@ -381,15 +361,21 @@ function MediaPlayerStub({ actions, state }: any) {
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black">
-      <MediaPlayer
-        key={`player-${id}-s${season ?? 0}-e${episode ?? 0}`}
-        movie={movie}
-        season={season}
-        episode={episode}
-        source={source}
-        onMarkAsWatched={actions.markAsWatched}
-        onClose={() => navigate(-1)}
-      />
+      <React.Suspense fallback={
+        <div className="h-screen bg-black flex items-center justify-center">
+          <Loader2 className="animate-spin text-nebula-cyan" size={48} />
+        </div>
+      }>
+        <MediaPlayer
+          key={`player-${id}-s${season ?? 0}-e${episode ?? 0}`}
+          movie={movie}
+          season={season}
+          episode={episode}
+          source={source}
+          onMarkAsWatched={actions.markAsWatched}
+          onClose={() => navigate(-1)}
+        />
+      </React.Suspense>
     </div>
   );
 }
