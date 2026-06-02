@@ -1180,12 +1180,9 @@ export function useAppState() {
           const gId = Object.entries(GENRE_MAP).find(
             ([_, name]) => name === g,
           )?.[0];
-          const genreItems = localPool
-            .filter(
-              (m) => m.genre.includes(g) && !globalShown.has(m.id.toString()),
-            )
-            .slice(0, 20);
-          genreItems.forEach((m) => globalShown.add(m.id.toString()));
+          const genreItems = filterRow(
+            localPool.filter((m) => m.genre.includes(g)),
+          );
           return {
             title: `Because you like ${g}`,
             items: genreItems,

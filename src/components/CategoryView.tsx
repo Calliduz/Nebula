@@ -38,7 +38,7 @@ const REGIONS = [
   { id: "3", name: "Vietnam" },
 ];
 
-import { AdBanner } from "./AdBanner";
+
 
 export const CategoryView: React.FC<CategoryViewProps> = ({
   viewingCategory,
@@ -72,34 +72,19 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   // Helper to render grid with ads every 20 items
   const renderGridWithAds = () => {
     const items = data.slice(0, visibleCount);
-    const elements = [];
-    const AD_INTERVAL = 20;
-
-    for (let i = 0; i < items.length; i++) {
-      elements.push(
-        <MovieCard
-          key={`cat-grid-${viewingCategory}-${items[i].id}-${i}`}
-          movie={items[i]}
-          aspect="portrait"
-          isGrid={true}
-          onSelect={onSelectMovie}
-          isInList={myList.some(
-            (id) => id.toString() === items[i].id.toString(),
-          )}
-          onToggleList={() => toggleMyList(items[i].id)}
-        />,
-      );
-
-      // Inject ad every AD_INTERVAL items
-      if ((i + 1) % AD_INTERVAL === 0 && i !== items.length - 1) {
-        elements.push(
-          <div key={`ad-${i}`} className="col-span-full py-8">
-            <AdBanner label={`${viewingCategory} Sponsorship`} />
-          </div>,
-        );
-      }
-    }
-    return elements;
+    return items.map((item, i) => (
+      <MovieCard
+        key={`cat-grid-${viewingCategory}-${item.id}-${i}`}
+        movie={item}
+        aspect="portrait"
+        isGrid={true}
+        onSelect={onSelectMovie}
+        isInList={myList.some(
+          (id) => id.toString() === item.id.toString(),
+        )}
+        onToggleList={() => toggleMyList(item.id)}
+      />
+    ));
   };
 
   return (
@@ -206,8 +191,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
             )}
           </section>
 
-          {/* Library Ad Placement */}
-          <AdBanner label="Library Sponsorship" />
+
 
           <section>
             <div className="flex justify-between items-center mb-8">
