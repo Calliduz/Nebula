@@ -4,7 +4,7 @@ Disallow: /watch/ # Prevent crawlers from trying to play videos (saves bandwidth
 Disallow: /api/
 
 # Host
-Host: https://nebula.clev.studio
+Host: https://nebulawatch.tech
 
 # Sitemap
-Sitemap: https://nebula.clev.studio/sitemap.xml
+Sitemap: https://nebulawatch.tech/sitemap.xml

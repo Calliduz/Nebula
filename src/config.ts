@@ -16,6 +16,9 @@ const getApiBase = (): string => {
       rawApi = "http://localhost:4000";
     }
     // 3. Known production fallback (Current Domain)
+    else if (host === "nebulawatch.tech" || host === "www.nebulawatch.tech") {
+      rawApi = "https://api.nebulawatch.tech";
+    }
     else if (host === "nebula.clev.studio") {
       rawApi = "https://nebula-server-qbp6.onrender.com";
     }
