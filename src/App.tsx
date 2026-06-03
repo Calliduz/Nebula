@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 
 // Hooks
 import { useAppState } from "./hooks/useAppState";
+import { triggerPopunder } from "./utils/helpers";
 
 // Components
 import { TopNav } from "./components/TopNav";
@@ -42,6 +43,7 @@ export default function App() {
   const [selectedEpForSource, setSelectedEpForSource] = React.useState<{ season?: number; episode?: number } | null>(null);
 
   const handleHeroPlay = (movie: any) => {
+    triggerPopunder();
     const p = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
     const key = movie.id.toString();
     const entry = Object.entries(p).find(

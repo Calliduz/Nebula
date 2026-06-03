@@ -25,9 +25,8 @@ import {
   Check,
   Smartphone,
 } from "lucide-react";
-import { AdBanner } from "./AdBanner";
 import { API_BASE_URL } from "../config";
-import { handleImageError } from "../utils/helpers";
+import { handleImageError, triggerPopunder } from "../utils/helpers";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   getMediaDetails,
@@ -346,6 +345,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   };
 
   const copyToClipboard = (text: string) => {
+    triggerPopunder();
     navigator.clipboard.writeText(text);
     setCopiedLink(text);
     setTimeout(() => setCopiedLink(null), 2000);
@@ -381,6 +381,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   }, [activeTab, movie?.id, movie?.type, downloadData]);
 
   const handlePlayClick = (s?: number, e?: number) => {
+    triggerPopunder();
     setSelectedEpForModal({ season: s, episode: e });
     setShowSourceModal(true);
   };
@@ -987,6 +988,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   <div className="flex gap-2">
                                     <a
                                       href={t.magnet}
+                                      onClick={triggerPopunder}
                                       className="flex-grow sm:flex-grow-0 px-4 py-2 bg-nebula-cyan hover:bg-white text-obsidian rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5"
                                     >
                                       <Zap size={14} fill="currentColor" />
@@ -1012,6 +1014,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     {t.torrent_url && (
                                       <a
                                         href={t.torrent_url}
+                                        onClick={triggerPopunder}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
@@ -1106,6 +1109,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                       <div className="flex gap-2 shrink-0">
                                         <a
                                           href={t.magnet}
+                                          onClick={triggerPopunder}
                                           className="flex-grow md:flex-grow-0 px-4 py-2 bg-amber-500 hover:bg-white text-obsidian rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5"
                                         >
                                           <Zap size={14} fill="currentColor" />
@@ -1205,6 +1209,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                   <div className="flex gap-2 shrink-0">
                                                     <a
                                                       href={t.magnet}
+                                                      onClick={triggerPopunder}
                                                       className="px-3 py-1.5 bg-nebula-cyan hover:bg-white text-obsidian rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1"
                                                     >
                                                       <Zap size={10} fill="currentColor" />
@@ -1249,6 +1254,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                   <div className="flex gap-2 shrink-0">
                                                     <a
                                                       href={t.magnet}
+                                                      onClick={triggerPopunder}
                                                       className="px-3 py-1.5 bg-purple-600 hover:bg-white hover:text-obsidian text-white rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1"
                                                     >
                                                       <Zap size={10} fill="currentColor" />
@@ -1472,10 +1478,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
           </div>
         </div>
 
-        {/* Generous bottom padding with Ad space */}
-        <div className="mt-12 px-8 sm:px-12">
-          <AdBanner label="Intelligence Subsidy" />
-        </div>
+        {/* Generous bottom padding */}
         <div className="h-40 w-full pointer-events-none" />
       </div>
 

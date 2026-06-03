@@ -4,7 +4,7 @@ import { TopTenShelf } from "./TopTenShelf";
 import { MovieRow } from "./MovieRow";
 import { MovieCard } from "./MovieCard";
 import { MovieSkeleton } from "./MovieSkeleton";
-import { AdBanner } from "./AdBanner";
+
 
 interface HomeFeedProps {
   sortBy: string;
@@ -90,8 +90,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             </MovieRow>
           )}
 
-          {/* Inject AdBanner every 4 rows */}
-          {(rowIndex + 1) % 4 === 0 && <AdBanner className="mt-4" />}
+
         </React.Fragment>
       ))}
 
