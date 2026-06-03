@@ -13,6 +13,7 @@ import { SearchOverlay } from "./components/SearchOverlay";
 import { CategoryView } from "./components/CategoryView";
 import { HomeFeed } from "./components/HomeFeed";
 import { NotFound } from "./components/NotFound";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 const MediaPlayer = React.lazy(() =>
   import("./components/MediaPlayer").then((module) => ({ default: module.MediaPlayer }))
@@ -102,6 +103,7 @@ export default function App() {
 
       <main
         key="layout-main"
+        id="main-scroller"
         className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 pb-24 lg:pb-0 ${state.isSearchOpen ? "blur-2xl scale-[0.98] opacity-50" : ""}`}
       >
         {/* ── System Banner ── */}
@@ -202,6 +204,9 @@ export default function App() {
           </Routes>
         </div>
       </main>
+
+      {/* Scroll-to-top button for homepage and category view */}
+      {!state.isSearchOpen && <ScrollToTop />}
 
       <SearchOverlay
         isOpen={state.isSearchOpen}

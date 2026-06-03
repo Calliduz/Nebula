@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Loader2, X, ArrowRight } from "lucide-react";
+import { Search, Loader2, X, ArrowRight, ArrowUp } from "lucide-react";
 import { topSearches } from "../data/constants";
 import { handleImageError } from "../utils/helpers";
 
@@ -25,6 +25,23 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   searchInputRef,
   isLoading,
 }) => {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [scrolledDown, setScrolledDown] = useState(false);
+
+  // Track scroll within the overlay container
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el) return;
+    const onScroll = () => setScrolledDown(el.scrollTop > 400);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [isOpen]);
+
+  // Reset scroll indicator when overlay closes
+  useEffect(() => {
+    if (!isOpen) setScrolledDown(false);
+  }, [isOpen]);
+
   // Auto-focus logic is handled in hook, but let's ensure it's robust
   useEffect(() => {
     if (isOpen) {
@@ -34,13 +51,15 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   }, [isOpen]);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          key="search-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            key="search-overlay"
+            ref={overlayRef}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           className="fixed inset-0 z-[500] bg-obsidian/95 backdrop-blur-3xl flex flex-col items-center pt-[2vh] sm:pt-[10vh] overflow-y-auto custom-scrollbar"
         >
           <div className="w-full max-w-[1200px] px-4 sm:px-8 pb-32">
@@ -228,7 +247,32 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             </div>
           </div>
         </motion.div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+
+      {/* Scroll-to-top inside search overlay */}
+      <AnimatePresence>
+        {isOpen && scrolledDown && (
+          <motion.button
+            key="search-scroll-top"
+            initial={{ opacity: 0, scale: 0.7, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.7, y: 12 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            onClick={() => overlayRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+            aria-label="Scroll to top"
+            className="fixed bottom-8 right-8 z-[510] w-11 h-11 rounded-full
+                       bg-nebula-cyan/10 border border-nebula-cyan/35 backdrop-blur-md
+                       flex items-center justify-center text-nebula-cyan
+                       hover:bg-nebula-cyan hover:text-obsidian
+                       transition-colors duration-200
+                       shadow-[0_0_18px_rgba(0,243,255,0.12)]
+                       hover:shadow-[0_0_24px_rgba(0,243,255,0.35)]"
+          >
+            <ArrowUp size={18} strokeWidth={2.5} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
