@@ -583,10 +583,13 @@ export function useAppState() {
         missingMedia.push({ id: rid, type: rtype as "movie" | "tv" });
       } else {
         const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
-        watchItAgainItems.push({
-          ...movie,
-          progress: progKey ? progressData[progKey] : null
-        });
+        const isMovie = (movie.type || "movie") === "movie";
+        if (!isMovie || !progKey) {
+          watchItAgainItems.push({
+            ...movie,
+            progress: progKey ? progressData[progKey] : null
+          });
+        }
       }
     }
 
@@ -1356,7 +1359,27 @@ export function useAppState() {
         const myListIds = new Set(myList.map((id) => id.toString()));
         return allMovies.filter((m) => myListIds.has(m.id.toString()));
       }
-      case "Watch It Again":
+      case "Watch It Again": {
+        const progressData = JSON.parse(
+          localStorage.getItem("nebula-progress") || "{}",
+        );
+        return history
+          .map((item) => {
+            const rid = historyRawId(item);
+            const rtype = historyType(item);
+            const movie = allMovies.find(
+              (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
+            );
+            if (!movie) return null;
+            
+            const isMovie = (movie.type || "movie") === "movie";
+            const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
+            if (isMovie && progKey) return null;
+            
+            return movie;
+          })
+          .filter(Boolean);
+      }
       case "Watch History": {
         return history
           .map((item) => {
