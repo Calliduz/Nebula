@@ -137,145 +137,139 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           </p>
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-12 sm:py-16 gap-4">
-            <div className="relative animate-pulse">
-              <div className="absolute inset-0 bg-nebula-cyan/20 blur-xl rounded-full scale-150" />
-              <Loader2 className="animate-spin text-nebula-cyan relative z-10" size={40} />
-            </div>
-            <div className="text-center">
-              <p className="text-white text-xs font-bold uppercase tracking-widest animate-pulse">
-                Scanning Uplinks...
-              </p>
-              <p className="text-[10px] text-white/40 uppercase mt-1">
-                Decrypting high-speed stream manifests
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Dual Card Choice Layout (Always rendered if loaded) */}
-        {!loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[380px] sm:max-h-none overflow-y-auto pr-1 sm:pr-0 custom-scrollbar">
-            {/* VidRock Card */}
-            <motion.div
-              whileHover={sources.length > 0 ? { scale: 1.02, translateY: -2 } : {}}
-              onClick={() => {
-                if (sources.length > 0) {
-                  onSelect(vidrockUrl);
-                }
-              }}
-              className={`relative flex flex-col justify-between p-5 rounded-2xl border transition-all h-full min-h-[170px] ${
-                sources.length > 0
-                  ? "border-nebula-cyan/35 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.05)] group"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-              }`}
-            >
-              {sources.length > 0 && (
-                <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-nebula-cyan text-obsidian text-[8px] font-black uppercase tracking-wider animate-pulse shadow-[0_0_10px_rgba(0,229,255,0.3)]">
-                  <Sparkles size={8} />
-                  <span>RECOMMENDED</span>
-                </div>
-              )}
-
-              <div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                    sources.length > 0 ? "bg-nebula-cyan/15 text-nebula-cyan" : "bg-white/5 text-white/20"
-                  }`}>
-                    <Zap size={18} fill={sources.length > 0 ? "currentColor" : "none"} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white uppercase tracking-tight flex items-center gap-1.5">
-                      VidRock
-                      <span className="text-[8px] font-black px-1 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase">
-                        DEFAULT
-                      </span>
-                    </h4>
-                    <p className="text-[9px] text-white/40 uppercase font-semibold">
-                      High-Speed Uplink
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
-                  Delivers ultra-fast multi-CDN speeds, rich HLS quality, and seamless client-side failover between active mirrors.
-                </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[380px] sm:max-h-none overflow-y-auto pr-1 sm:pr-0 custom-scrollbar">
+          {/* VidRock Card */}
+          <motion.div
+            whileHover={(!loading && sources.length > 0) ? { scale: 1.02, translateY: -2 } : {}}
+            onClick={() => {
+              if (!loading && sources.length > 0) {
+                onSelect(vidrockUrl);
+              }
+            }}
+            className={`relative flex flex-col justify-between p-5 rounded-2xl border transition-all h-full min-h-[170px] ${
+              loading
+                ? "border-nebula-cyan/20 bg-nebula-cyan/5 opacity-80 cursor-wait animate-pulse"
+                : sources.length > 0
+                ? "border-nebula-cyan/35 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.05)] group"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {loading ? (
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-nebula-cyan/30 bg-nebula-cyan/10 text-nebula-cyan text-[8px] font-black uppercase tracking-wider animate-pulse">
+                <Loader2 size={8} className="animate-spin" />
+                <span>SCANNING</span>
               </div>
+            ) : sources.length > 0 ? (
+              <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-nebula-cyan text-obsidian text-[8px] font-black uppercase tracking-wider animate-pulse shadow-[0_0_10px_rgba(0,229,255,0.3)]">
+                <Sparkles size={8} />
+                <span>RECOMMENDED</span>
+              </div>
+            ) : null}
 
-              {/* Dynamic Uplinks Footer */}
-              <div className="mt-auto pt-3 border-t border-white/5">
-                {sources.length > 0 ? (
-                  <div>
-                    <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
-                      Active Mirrors (Failover Enabled):
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {sources.map((src) => {
-                        let color = "border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5";
-                        if (src.name === "Atlas") color = "border-amber-500/20 text-amber-400/80 bg-amber-500/5";
-                        if (src.name === "Orion") color = "border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5";
-                        return (
-                          <span key={src.name} className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}>
-                            {src.name}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-[9px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                    <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                    {error ? "Uplink currently offline" : "No mirror streams available"}
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                  loading || sources.length > 0 ? "bg-nebula-cyan/15 text-nebula-cyan" : "bg-white/5 text-white/20"
+                }`}>
+                  <Zap size={18} fill={loading || sources.length > 0 ? "currentColor" : "none"} className={loading ? "animate-pulse" : ""} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white uppercase tracking-tight flex items-center gap-1.5">
+                    VidRock
+                    <span className="text-[8px] font-black px-1 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase">
+                      DEFAULT
+                    </span>
+                  </h4>
+                  <p className="text-[9px] text-white/40 uppercase font-semibold">
+                    High-Speed Uplink
                   </p>
-                )}
-              </div>
-            </motion.div>
-
-            {/* VidLink Card (Always Active) */}
-            <motion.div
-              whileHover={{ scale: 1.02, translateY: -2 }}
-              onClick={() => onSelect()}
-              className="relative flex flex-col justify-between p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/8 cursor-pointer group min-h-[170px]"
-            >
-              <div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-white/70 group-hover:text-nebula-cyan transition-colors">
-                    <Server size={18} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors uppercase tracking-tight">
-                      VidLink
-                    </h4>
-                    <p className="text-[9px] text-white/40 uppercase font-semibold">
-                      Standard Route
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
-                  Aggregates comprehensive standard indexes across global hosts to ensure robust content availability.
-                </p>
-              </div>
-
-              {/* Status Footer */}
-              <div className="mt-auto pt-3 border-t border-white/5">
-                <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
-                  System Routing:
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
-                    Auto-Failover
-                  </span>
-                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
-                    Standard DNS
-                  </span>
                 </div>
               </div>
-            </motion.div>
-          </div>
-        )}
+
+              <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
+                Delivers ultra-fast multi-CDN speeds, rich HLS quality, and seamless client-side failover between active mirrors.
+              </p>
+            </div>
+
+            {/* Dynamic Uplinks Footer */}
+            <div className="mt-auto pt-3 border-t border-white/5">
+              {loading ? (
+                <div className="flex items-center gap-2 text-[9px] text-nebula-cyan/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-nebula-cyan opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-nebula-cyan"></span>
+                  </span>
+                  <span>Scanning Uplinks...</span>
+                </div>
+              ) : sources.length > 0 ? (
+                <div>
+                  <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
+                    Active Mirrors (Failover Enabled):
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {sources.map((src) => {
+                      let color = "border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5";
+                      if (src.name === "Atlas") color = "border-amber-500/20 text-amber-400/80 bg-amber-500/5";
+                      if (src.name === "Orion") color = "border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5";
+                      return (
+                        <span key={src.name} className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}>
+                          {src.name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[9px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {error ? "Uplink currently offline" : "No mirror streams available"}
+                </p>
+              )}
+            </div>
+          </motion.div>
+
+          {/* VidLink Card (Always Active) */}
+          <motion.div
+            whileHover={{ scale: 1.02, translateY: -2 }}
+            onClick={() => onSelect()}
+            className="relative flex flex-col justify-between p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/8 cursor-pointer group min-h-[170px]"
+          >
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-white/70 group-hover:text-nebula-cyan transition-colors">
+                  <Server size={18} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors uppercase tracking-tight">
+                    VidLink
+                  </h4>
+                  <p className="text-[9px] text-white/40 uppercase font-semibold">
+                    Standard Route
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
+                Aggregates comprehensive standard indexes across global hosts to ensure robust content availability.
+              </p>
+            </div>
+
+            {/* Status Footer */}
+            <div className="mt-auto pt-3 border-t border-white/5">
+              <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
+                System Routing:
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
+                  Auto-Failover
+                </span>
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
+                  Standard DNS
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </motion.div>
     </div>
   );
