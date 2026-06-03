@@ -19,6 +19,9 @@ const MediaPlayer = React.lazy(() =>
 const MovieDetails = React.lazy(() =>
   import("./components/MovieDetails").then((module) => ({ default: module.MovieDetails }))
 );
+const SourceSelectionModal = React.lazy(() =>
+  import("./components/MovieDetails").then((module) => ({ default: module.SourceSelectionModal }))
+);
 
 import {
   Routes,
@@ -34,6 +37,32 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const isWatching = location.pathname.includes("/watch/");
+
+  const [selectedMovieForSource, setSelectedMovieForSource] = React.useState<any | null>(null);
+  const [selectedEpForSource, setSelectedEpForSource] = React.useState<{ season?: number; episode?: number } | null>(null);
+
+  const handleHeroPlay = (movie: any) => {
+    const p = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+    const key = movie.id.toString();
+    const entry = Object.entries(p).find(
+      ([k]) => k === key || k.startsWith(`${key}-S`)
+    );
+    let season = undefined;
+    let episode = undefined;
+    if (entry) {
+      const [k]: [string, any] = entry;
+      const tvMatch = k.match(/-S(\d+)E(\d+)/);
+      if (tvMatch) {
+        season = parseInt(tvMatch[1]);
+        episode = parseInt(tvMatch[2]);
+      }
+    } else if (movie.type === "tv") {
+      season = 1;
+      episode = 1;
+    }
+    setSelectedMovieForSource(movie);
+    setSelectedEpForSource({ season, episode });
+  };
 
   // Force portrait mode globally unless watching a video
   React.useEffect(() => {
@@ -96,7 +125,7 @@ export default function App() {
                       setCurrentHeroIndex={actions.setCurrentHeroIndex}
                       myList={state.myList}
                       toggleMyList={actions.toggleMyList}
-                      startPlayback={actions.startPlayback}
+                      startPlayback={handleHeroPlay}
                       setSelectedMovie={actions.setSelectedMovie}
                       featuredMovies={state.featuredMovies}
                     />
@@ -243,6 +272,34 @@ export default function App() {
               </p>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedMovieForSource && (
+          <React.Suspense fallback={
+            <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center">
+              <Loader2 className="animate-spin text-nebula-cyan" size={32} />
+            </div>
+          }>
+            <SourceSelectionModal
+              movie={selectedMovieForSource}
+              season={selectedEpForSource?.season}
+              episode={selectedEpForSource?.episode}
+              onClose={() => {
+                setSelectedMovieForSource(null);
+                setSelectedEpForSource(null);
+              }}
+              onSelect={(sourceUrl) => {
+                const movie = selectedMovieForSource;
+                const season = selectedEpForSource?.season;
+                const episode = selectedEpForSource?.episode;
+                setSelectedMovieForSource(null);
+                setSelectedEpForSource(null);
+                actions.startPlayback(movie, season, episode, sourceUrl);
+              }}
+            />
+          </React.Suspense>
         )}
       </AnimatePresence>
     </div>
