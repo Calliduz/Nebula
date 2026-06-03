@@ -14,6 +14,7 @@ import { CategoryView } from "./components/CategoryView";
 import { HomeFeed } from "./components/HomeFeed";
 import { NotFound } from "./components/NotFound";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { Footer } from "./components/Footer";
 
 const MediaPlayer = React.lazy(() =>
   import("./components/MediaPlayer").then((module) => ({ default: module.MediaPlayer }))
@@ -203,6 +204,9 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
+
+        {/* Footer — hidden on the watch page */}
+        {!isWatching && <Footer />}
       </main>
 
       {/* Scroll-to-top button for homepage and category view */}
