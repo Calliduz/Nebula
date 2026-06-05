@@ -48,21 +48,39 @@ export default function App() {
     triggerPopunder();
     const p = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
     const key = movie.id.toString();
-    const entry = Object.entries(p).find(
-      ([k]) => k === key || k.startsWith(`${key}-S`)
-    );
-    let season = undefined;
-    let episode = undefined;
-    if (entry) {
-      const [k]: [string, any] = entry;
-      const tvMatch = k.match(/-S(\d+)E(\d+)/);
-      if (tvMatch) {
-        season = parseInt(tvMatch[1]);
-        episode = parseInt(tvMatch[2]);
+
+    let season: number | undefined = undefined;
+    let episode: number | undefined = undefined;
+
+    if (movie.type === "tv") {
+      // Collect all episode progress entries for this show, pick latest by timestamp
+      const tvEntries = Object.entries(p)
+        .filter(([k]) => k === key || k.startsWith(`${key}-S`))
+        .map(([k, val]: [string, any]) => {
+          const tvMatch = k.match(/-S(\d+)E(\d+)/);
+          return tvMatch
+            ? { season: parseInt(tvMatch[1]), episode: parseInt(tvMatch[2]), ...val }
+            : null;
+        })
+        .filter(Boolean) as any[];
+
+      if (tvEntries.length > 0) {
+        tvEntries.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+        const latest = tvEntries[0];
+        const pct = latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
+        if (pct >= 90) {
+          // Nearly done — jump to next episode
+          season = latest.season;
+          episode = latest.episode + 1;
+        } else {
+          season = latest.season;
+          episode = latest.episode;
+        }
+      } else {
+        // Never watched — start from S1E1
+        season = 1;
+        episode = 1;
       }
-    } else if (movie.type === "tv") {
-      season = 1;
-      episode = 1;
     }
     setSelectedMovieForSource(movie);
     setSelectedEpForSource({ season, episode });

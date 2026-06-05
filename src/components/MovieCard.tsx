@@ -187,21 +187,44 @@ export const MovieCard = memo<MovieCardProps>(({
             </span>
           </div>
 
-          {/* Progress Bar for Continue Watching */}
-          {movie.progress && (
-            <div className="mt-3 h-1 w-full bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-nebula-cyan shadow-[0_0_10px_#00f3ff]"
-                style={{
-                  width: `${
-                    typeof movie.progress === "object"
-                      ? (movie.progress.time / movie.progress.duration) * 100
-                      : 50
-                  }%`, // Fallback to 50% if duration is missing
-                }}
-              />
-            </div>
-          )}
+          {/* Progress Bar for Continue Watching — Netflix-style */}
+          {(() => {
+            if (!movie.progress) return null;
+            const pct =
+              typeof movie.progress === "object" && movie.progress.duration > 0
+                ? Math.min(100, (movie.progress.time / movie.progress.duration) * 100)
+                : 0;
+            if (pct < 1) return null;
+            const isWatched = pct >= 95;
+            return (
+              <div className="mt-2.5">
+                {/* Watched badge */}
+                {isWatched && (
+                  <div className="flex items-center gap-1 mb-1">
+                    <div className="w-3.5 h-3.5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+                      <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
+                        <path d="M1 3L2.5 4.5L6 1" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/50">Watched</span>
+                  </div>
+                )}
+                {/* Track */}
+                <div className="h-[5px] w-full bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    data-testid="progress-fill"
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${pct}%`,
+                      background: "#e50914",
+                      boxShadow: "0 0 6px rgba(229,9,20,0.6)",
+                      transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Subtle Glow Sign */}

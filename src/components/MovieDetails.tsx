@@ -716,20 +716,49 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     localStorage.getItem("nebula-progress") || "{}",
                   );
                   const key = movie.id.toString();
-                  const entry = Object.entries(p).find(
-                    ([k]) => k === key || k.startsWith(`${key}-S`),
-                  );
+
+                  // ── Resume Logic: find the LATEST watched episode by timestamp
+                  // For TV: collect all episodes for this show, sort by timestamp DESC
+                  // If that episode is >= 85% done (likely credits), advance to next.
                   let resumeData: any = null;
-                  if (entry) {
-                    const [k, val]: [string, any] = entry;
-                    const tvMatch = k.match(/-S(\d+)E(\d+)/);
-                    resumeData = tvMatch
-                      ? {
-                          season: parseInt(tvMatch[1]),
-                          episode: parseInt(tvMatch[2]),
-                          ...val,
-                        }
-                      : val;
+
+                  if (movie.type === "tv") {
+                    // Gather all progress entries belonging to this show
+                    const tvEntries = Object.entries(p)
+                      .filter(([k]) => k === key || k.startsWith(`${key}-S`))
+                      .map(([k, val]: [string, any]) => {
+                        const tvMatch = k.match(/-S(\d+)E(\d+)/);
+                        return tvMatch
+                          ? { season: parseInt(tvMatch[1]), episode: parseInt(tvMatch[2]), ...val, _key: k }
+                          : null;
+                      })
+                      .filter(Boolean) as any[];
+
+                    if (tvEntries.length > 0) {
+                      // Pick the most recently watched
+                      tvEntries.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+                      const latest = tvEntries[0];
+                      const pct = latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
+
+                      if (pct >= 90) {
+                        // Episode nearly done — jump to NEXT episode
+                        resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
+                      } else {
+                        resumeData = latest;
+                      }
+                    }
+                  } else {
+                    // Movie: single progress entry
+                    const entry = Object.entries(p).find(
+                      ([k]) => k === key || k.startsWith(`${key}-S`),
+                    );
+                    if (entry) {
+                      const [k, val]: [string, any] = entry;
+                      const tvMatch = k.match(/-S(\d+)E(\d+)/);
+                      resumeData = tvMatch
+                        ? { season: parseInt(tvMatch[1]), episode: parseInt(tvMatch[2]), ...val }
+                        : val;
+                    }
                   }
 
                   const isTBA = movie.quality === "TBA";
@@ -738,7 +767,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       ? "Resume (TBA)"
                       : "Try Playback"
                     : resumeData
-                      ? "Resume Watching"
+                      ? resumeData._isNext
+                        ? `Play S${resumeData.season}E${resumeData.episode}`
+                        : "Resume Watching"
                       : "Watch Now";
 
                   return (
@@ -830,51 +861,106 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {episodes.map((ep: any) => (
-                      <div
-                        key={ep.episode_number}
-                        className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30"
-                        onClick={() => handlePlayClick(activeSeason, ep.episode_number)}
-                      >
-                        <div className="aspect-video bg-black/50 relative overflow-hidden">
-                          {ep.still_path ? (
-                            <img
-                              src={ep.still_path}
-                              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity group-hover:scale-105 duration-500"
-                              alt={ep.name}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white/20">
-                              <Play size={32} />
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all" />
-                          <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 rounded font-bold text-[10px] text-white backdrop-blur">
-                            E{ep.episode_number}
-                          </div>
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-12 h-12 bg-nebula-cyan/90 text-obsidian rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-110 transition-all">
-                              <Play
-                                size={20}
-                                fill="currentColor"
-                                className="ml-1"
+                    {episodes.map((ep: any) => {
+                      // Read per-episode progress from localStorage
+                      const epProgressData = JSON.parse(
+                        localStorage.getItem("nebula-progress") || "{}"
+                      );
+                      const epKey = `${movie.id}-S${activeSeason}E${ep.episode_number}`;
+                      const epProg = epProgressData[epKey];
+                      const epPct = epProg && epProg.duration > 0
+                        ? Math.min(100, (epProg.time / epProg.duration) * 100)
+                        : 0;
+                      const epWatched = epPct >= 90;
+
+                      return (
+                        <div
+                          key={ep.episode_number}
+                          className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30"
+                          onClick={() => handlePlayClick(activeSeason, ep.episode_number)}
+                        >
+                          <div className="aspect-video bg-black/50 relative overflow-hidden">
+                            {ep.still_path ? (
+                              <img
+                                src={ep.still_path}
+                                className={`w-full h-full object-cover transition-opacity duration-500 ${
+                                  epWatched
+                                    ? "opacity-40 group-hover:opacity-70"
+                                    : "opacity-70 group-hover:opacity-100"
+                                } group-hover:scale-105 duration-500`}
+                                alt={ep.name}
                               />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white/20">
+                                <Play size={32} />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all" />
+
+                            {/* Episode number badge */}
+                            <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 rounded font-bold text-[10px] text-white backdrop-blur">
+                              E{ep.episode_number}
                             </div>
+
+                            {/* Watched checkmark overlay */}
+                            {epWatched && (
+                              <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-sm border border-white/10">
+                                <svg width="10" height="9" viewBox="0 0 10 9" fill="none">
+                                  <path d="M1.5 4.5L4 7L8.5 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <span className="text-[8px] font-black uppercase tracking-widest text-white/70">Watched</span>
+                              </div>
+                            )}
+
+                            {/* Play button hover */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="w-12 h-12 bg-nebula-cyan/90 text-obsidian rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-110 transition-all">
+                                <Play
+                                  size={20}
+                                  fill="currentColor"
+                                  className="ml-1"
+                                />
+                              </div>
+                            </div>
+
+                            {/* ── Netflix-style progress bar at bottom of thumbnail ── */}
+                            {epPct >= 1 && !epWatched && (
+                              <div className="absolute bottom-0 left-0 right-0">
+                                <div className="h-[5px] w-full bg-black/40">
+                                  <div
+                                    className="h-full"
+                                    style={{
+                                      width: `${epPct}%`,
+                                      background: "#e50914",
+                                      boxShadow: "0 0 4px rgba(229,9,20,0.7)",
+                                      transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {/* Watched: full dim bar */}
+                            {epWatched && (
+                              <div className="absolute bottom-0 left-0 right-0">
+                                <div className="h-[5px] w-full bg-white/20" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="p-4 flex flex-col flex-1">
+                            <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors line-clamp-1 mb-1">
+                              {ep.episode_number}.{" "}
+                              {!ep.name || ep.name.includes("Episode")
+                                ? `Episode ${ep.episode_number}`
+                                : ep.name}
+                            </h4>
+                            <p className="text-xs text-dim line-clamp-2 mt-auto">
+                              {ep.overview || "No description available."}
+                            </p>
                           </div>
                         </div>
-                        <div className="p-4 flex flex-col flex-1">
-                          <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors line-clamp-1 mb-1">
-                            {ep.episode_number}.{" "}
-                            {!ep.name || ep.name.includes("Episode")
-                              ? `Episode ${ep.episode_number}`
-                              : ep.name}
-                          </h4>
-                          <p className="text-xs text-dim line-clamp-2 mt-auto">
-                            {ep.overview || "No description available."}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </motion.div>
               )}
