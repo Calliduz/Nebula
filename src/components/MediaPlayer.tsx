@@ -785,6 +785,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   }, [streamUrl, activeMirror, mirrors]);
 
+  // ─── Reset playback UI state on episode/season change ────────────────────
+  // Prevents stale progress bar, seek thumb, and time display carrying over
+  // from the previous episode when the user clicks Next Episode.
+  useEffect(() => {
+    setProgress(0);
+    setCurrentTime("0:00");
+    setDuration("0:00");
+    setBuffered(0);
+    setIsDragging(false);
+    setDragProgress(0);
+    setHoverTime(null);
+  }, [season, episode]);
+
+
   // ── Video event listeners ─────────────────────────────────────────────────
   useEffect(() => {
     const video = videoRef.current;
@@ -1007,7 +1021,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       video.removeEventListener("suspend", onSuspend);
       video.removeEventListener("error", onVideoError);
     };
-  }, [streamUrl, movie.id]);
+  }, [streamUrl, movie.id, getProgressKey]);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.volume = isMuted ? 0 : volume / 100;
