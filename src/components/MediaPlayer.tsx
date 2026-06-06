@@ -17,6 +17,7 @@ import {
   List,
   Search,
   Info,
+  RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -64,6 +65,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [showUi, setShowUi] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [speed, setSpeed] = useState(1);
+  const [streamReloadKey, setStreamReloadKey] = useState(0);
   const [currentTime, setCurrentTime] = useState("0:00");
   const [duration, setDuration] = useState("0:00");
   const [buffered, setBuffered] = useState(0);
@@ -295,7 +297,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         keepalive: true,
       }).catch(() => {});
     };
-  }, [movie.id, season, episode, source]);
+  }, [movie.id, season, episode, source, streamReloadKey]);
 
   // ── Auto-fetch external subtitles in the background ─────────────────────
   useEffect(() => {
@@ -2015,6 +2017,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       </div>
                     </div>
                   )}
+                  {/* Reload Stream — recovers from stuck seek/fast-forward */}
+                  <div className="mt-1 border-t border-white/10 pt-2 px-2">
+                    <button
+                      id="reload-stream-btn"
+                      onClick={() => {
+                        // Save current position so it can be restored after reload
+                        const v = videoRef.current;
+                        if (v && v.currentTime > 5 && v.duration > 0) {
+                          const progressKey = movie.type === "tv" && season !== undefined && episode !== undefined
+                            ? `${movie.id}-S${season}E${episode}`
+                            : String(movie.id);
+                          const all = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+                          all[progressKey] = { time: v.currentTime, duration: v.duration, timestamp: Date.now() };
+                          localStorage.setItem("nebula-progress", JSON.stringify(all));
+                        }
+                        setShowSettings(false);
+                        showToast("Reloading stream…", "info");
+                        setStreamReloadKey((k) => k + 1);
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-2 text-[11px] text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10 rounded-md transition-colors"
+                    >
+                      <RefreshCw size={13} />
+                      <span>Reload Stream</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
