@@ -20,31 +20,43 @@ const CURRENT_YEAR = new Date().getFullYear();
 // ─── Cache with eviction ──────────────────────────────────────────────────────
 const MAX_CACHE_BYTES = 4 * 1024 * 1024; // 4 MB
 
+// Incremental byte counter — avoids an O(n) full scan on every write.
+// -1 means "not yet computed"; getCacheSize() will populate it on first call.
+let _cacheSizeBytes = -1;
+
 const getCacheSize = (): number => {
+  if (_cacheSizeBytes >= 0) return _cacheSizeBytes;
+  // One-time bootstrap scan
   let total = 0;
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith(CACHE_VERSION)) {
-      total += (localStorage.getItem(key) || "").length * 2; // UTF-16
+      total += (localStorage.getItem(key) || "").length * 2; // UTF-16 bytes
     }
   }
+  _cacheSizeBytes = total;
   return total;
 };
 
 const evictOldest = () => {
-  const entries: { key: string; ts: number }[] = [];
+  const entries: { key: string; ts: number; size: number }[] = [];
   for (const key of Object.keys(localStorage)) {
     if (!key.startsWith(CACHE_VERSION)) continue;
+    const raw = localStorage.getItem(key) || "";
     try {
-      const { timestamp } = JSON.parse(localStorage.getItem(key) || "{}");
-      entries.push({ key, ts: timestamp || 0 });
+      const { timestamp } = JSON.parse(raw);
+      entries.push({ key, ts: timestamp || 0, size: raw.length * 2 });
     } catch {
-      entries.push({ key, ts: 0 });
+      entries.push({ key, ts: 0, size: raw.length * 2 });
     }
   }
   // Sort oldest first, remove bottom 25%
   entries.sort((a, b) => a.ts - b.ts);
   const toRemove = entries.slice(0, Math.ceil(entries.length * 0.25));
-  toRemove.forEach((e) => localStorage.removeItem(e.key));
+  toRemove.forEach((e) => {
+    localStorage.removeItem(e.key);
+    // Adjust the running counter
+    if (_cacheSizeBytes >= 0) _cacheSizeBytes = Math.max(0, _cacheSizeBytes - e.size);
+  });
 };
 
 const fetchWithCache = async (
@@ -54,6 +66,7 @@ const fetchWithCache = async (
 ): Promise<any> => {
   const versionedKey = `${CACHE_VERSION}-${key}`;
   const cached = localStorage.getItem(versionedKey);
+  const oldSize = cached ? cached.length * 2 : 0;
 
   if (cached) {
     try {
@@ -61,24 +74,30 @@ const fetchWithCache = async (
       if (Date.now() - timestamp < ttl) return data;
     } catch {
       localStorage.removeItem(versionedKey);
+      // Adjust counter for the removed entry
+      if (_cacheSizeBytes >= 0) _cacheSizeBytes = Math.max(0, _cacheSizeBytes - oldSize);
     }
   }
 
   const data = await fetcher();
 
   try {
-    if (getCacheSize() > MAX_CACHE_BYTES) evictOldest();
-    localStorage.setItem(
-      versionedKey,
-      JSON.stringify({ data, timestamp: Date.now() }),
-    );
+    const serialized = JSON.stringify({ data, timestamp: Date.now() });
+    const newSize = serialized.length * 2;
+
+    if (getCacheSize() - oldSize + newSize > MAX_CACHE_BYTES) evictOldest();
+
+    localStorage.setItem(versionedKey, serialized);
+    // Update running counter: subtract old entry, add new
+    if (_cacheSizeBytes >= 0) _cacheSizeBytes = Math.max(0, _cacheSizeBytes - oldSize) + newSize;
   } catch {
     evictOldest();
+    // Counter may be stale after eviction-triggered retry; reset to force rescan
+    _cacheSizeBytes = -1;
     try {
-      localStorage.setItem(
-        versionedKey,
-        JSON.stringify({ data, timestamp: Date.now() }),
-      );
+      const serialized = JSON.stringify({ data, timestamp: Date.now() });
+      localStorage.setItem(versionedKey, serialized);
+      _cacheSizeBytes = -1; // let next call rescan cleanly
     } catch {
       /* quota hard-fail: skip caching silently */
     }
