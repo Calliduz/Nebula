@@ -762,15 +762,28 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   }
 
                   const isTBA = movie.quality === "TBA";
-                  const label = isTBA
-                    ? resumeData
-                      ? "Resume (TBA)"
-                      : "Try Playback"
-                    : resumeData
-                      ? resumeData._isNext
-                        ? `Play S${resumeData.season}E${resumeData.episode}`
-                        : "Resume Watching"
-                      : "Watch Now";
+
+                  // Label logic:
+                  // • No progress at all → "Watch Now" / "Try Playback"
+                  // • Movie with progress → "Resume Watching"
+                  // • TV: next episode (done) → "Play S1E2"
+                  // • TV: mid-episode at S1E1 → "Resume Watching" (don't clutter with S1E1)
+                  // • TV: mid-episode at S2E3 etc → "Resume S2E3"
+                  let label: string;
+                  if (isTBA) {
+                    label = resumeData ? "Resume (TBA)" : "Try Playback";
+                  } else if (!resumeData) {
+                    label = "Watch Now";
+                  } else if (resumeData._isNext) {
+                    label = `Play S${resumeData.season}E${resumeData.episode}`;
+                  } else if (
+                    movie.type === "tv" &&
+                    (resumeData.season > 1 || resumeData.episode > 1)
+                  ) {
+                    label = `Resume S${resumeData.season}E${resumeData.episode}`;
+                  } else {
+                    label = "Resume Watching";
+                  }
 
                   return (
                     <div className="flex flex-col gap-2 flex-1 sm:flex-none">
@@ -939,10 +952,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 </div>
                               </div>
                             )}
-                            {/* Watched: full dim bar */}
+                            {/* Watched: full 100% red bar (consistent with in-progress style) */}
                             {epWatched && (
                               <div className="absolute bottom-0 left-0 right-0">
-                                <div className="h-[5px] w-full bg-white/20" />
+                                <div className="h-[5px] w-full bg-black/40">
+                                  <div
+                                    className="h-full w-full"
+                                    style={{
+                                      background: "#e50914",
+                                      opacity: 0.5,
+                                    }}
+                                  />
+                                </div>
                               </div>
                             )}
                           </div>
