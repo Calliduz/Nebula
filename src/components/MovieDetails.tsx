@@ -177,11 +177,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <div>
                   <h4 className="font-bold text-sm text-white uppercase tracking-tight flex items-center gap-1.5">
                     VidRock
-                    <span className="text-[8px] font-black px-1 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase">
+                    <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase">
                       DEFAULT
                     </span>
                   </h4>
-                  <p className="text-[9px] text-white/40 uppercase font-semibold">
+                  <p className="text-[10px] text-white/60 uppercase font-semibold">
                     High-Speed Uplink
                   </p>
                 </div>
@@ -204,7 +204,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : sources.length > 0 ? (
                 <div>
-                  <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
+                  <p className="text-[10px] text-white/60 uppercase font-bold tracking-wider mb-2">
                     Active Mirrors (Failover Enabled):
                   </p>
                   <div className="flex flex-wrap gap-1">
@@ -213,7 +213,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       if (src.name === "Atlas") color = "border-amber-500/20 text-amber-400/80 bg-amber-500/5";
                       if (src.name === "Orion") color = "border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5";
                       return (
-                        <span key={src.name} className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}>
+                        <span key={src.name} className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}>
                           {src.name}
                         </span>
                       );
@@ -221,7 +221,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <p className="text-[9px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {error ? "Uplink currently offline" : "No mirror streams available"}
                 </p>
@@ -244,7 +244,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors uppercase tracking-tight">
                     VidLink
                   </h4>
-                  <p className="text-[9px] text-white/40 uppercase font-semibold">
+                  <p className="text-[10px] text-white/60 uppercase font-semibold">
                     Standard Route
                   </p>
                 </div>
@@ -257,14 +257,14 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
             {/* Status Footer */}
             <div className="mt-auto pt-3 border-t border-white/5">
-              <p className="text-[8px] text-white/40 uppercase font-bold tracking-wider mb-2">
+              <p className="text-[10px] text-white/60 uppercase font-bold tracking-wider mb-2">
                 System Routing:
               </p>
               <div className="flex flex-wrap gap-1">
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
+                <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 uppercase tracking-wider">
                   Auto-Failover
                 </span>
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/60 bg-white/5 uppercase tracking-wider">
+                <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 uppercase tracking-wider">
                   Standard DNS
                 </span>
               </div>
@@ -1232,11 +1232,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   <FileDown size={16} />
                                   Direct High-Speed Downloads
                                 </h3>
-                                <span className="text-[10px] text-white/40 uppercase tracking-widest mt-0.5 font-semibold">
+                                <span className="text-[11px] text-white/60 uppercase tracking-wider mt-0.5 font-bold">
                                   via VidVault • No torrent client needed
                                 </span>
                               </div>
-                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-300">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-300">
                                 Direct
                               </span>
                             </div>
@@ -1251,24 +1251,24 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     <span className="font-bold text-sm text-white">
                                       {d.quality}
                                     </span>
-                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/40 uppercase">
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
                                       {d.size}
                                     </span>
                                     {d.format === "mkv" ? (
                                       <>
-                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
+                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
                                           MKV
                                         </span>
-                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase">
+                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase">
                                           ✓ Embedded Subs
                                         </span>
                                       </>
                                     ) : (
                                       <>
-                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-300 uppercase">
+                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-300 uppercase">
                                           MP4
                                         </span>
-                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/35 uppercase">
+                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60 uppercase">
                                           No Embedded Subs
                                         </span>
                                       </>
@@ -1292,7 +1292,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                             {allSubs.length > 0 && (
                               <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/5">
-                                <h4 className="text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                                   <Globe size={12} />
                                   Download External Subtitles
                                 </h4>
@@ -1350,11 +1350,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   <div>
                                     <h4 className="font-bold text-sm text-white flex flex-wrap items-center gap-2">
                                       {t.quality}
-                                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/60 uppercase">
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/80 uppercase">
                                         {t.size}
                                       </span>
                                       {t.source && (
-                                        <span className={`text-[9.5px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                                        <span className={`text-[10.5px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
                                           t.source.toLowerCase() === 'yts' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' :
                                           t.source.toLowerCase() === 'eztv' ? 'bg-sky-500/10 border border-sky-500/20 text-sky-400' :
                                           t.source.toLowerCase() === 'thepiratebay' ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' :
@@ -1364,7 +1364,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                         </span>
                                       )}
                                     </h4>
-                                    <p className="text-[10px] text-white/40 mt-1">
+                                    <p className="text-[11px] text-white/65 mt-1">
                                       Seeds: <span className="text-emerald-400 font-bold">{t.seeds}</span> • Peers: <span className="text-blue-400 font-bold">{t.peers}</span>
                                     </p>
                                   </div>
@@ -1483,8 +1483,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     <h4 className="font-bold text-sm text-white break-words">
                                       {t.title}
                                     </h4>
-                                    <p className="text-[10px] text-white/40 mt-1 flex flex-wrap items-center gap-2">
-                                      <span>Size: <strong className="text-white/60">{t.size}</strong></span>
+                                    <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
+                                      <span>Size: <strong className="text-white/90">{t.size}</strong></span>
                                       <span>•</span>
                                       <span>Seeds: <strong className="text-emerald-400">{t.seeds}</strong></span>
                                       <span>•</span>
@@ -1579,7 +1579,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                       >
                                         <div>
                                           <span className="text-xs font-bold text-nebula-cyan uppercase tracking-wider mr-2">Episode {epNum}</span>
-                                          <span className="text-xs text-white/55">
+                                          <span className="text-xs text-white/75 font-semibold">
                                             ({torrentsForEp.length + (backupTorrents[epNum]?.length || 0)} torrent streams
                                             {backupDirectDownloads[epNum]?.length ? `, ${backupDirectDownloads[epNum].length} direct downloads` : ""} available)
                                           </span>
@@ -1622,10 +1622,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                 <div className="rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/8 to-transparent overflow-hidden">
                                                   <div className="px-4 py-2 bg-violet-500/10 border-b border-white/5 flex items-center justify-between">
                                                     <div className="flex flex-col">
-                                                      <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">
+                                                      <span className="text-xs font-black text-violet-400 uppercase tracking-widest">
                                                         Direct Downloads
                                                       </span>
-                                                      <span className="text-[8px] text-white/25 uppercase tracking-wider font-bold">
+                                                      <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold">
                                                         via VidVault • No torrent client needed
                                                       </span>
                                                     </div>
@@ -1641,24 +1641,24 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                           <span className="font-bold text-sm text-white">
                                                             {d.quality}
                                                           </span>
-                                                          <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/40 uppercase">
+                                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
                                                             {d.size}
                                                           </span>
                                                           {d.format === "mkv" ? (
                                                             <>
-                                                              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
+                                                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
                                                                 MKV
                                                               </span>
-                                                              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase">
+                                                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase">
                                                                 ✓ Embedded Subs
                                                               </span>
                                                             </>
                                                           ) : (
                                                             <>
-                                                              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-300 uppercase">
+                                                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-300 uppercase">
                                                                 MP4
                                                               </span>
-                                                              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/35 uppercase">
+                                                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60 uppercase">
                                                                 No Embedded Subs
                                                               </span>
                                                             </>
@@ -1682,8 +1682,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                                                   {allSubs.length > 0 && (
                                                     <div className="px-4 py-3 border-t border-white/5 bg-black/15">
-                                                      <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                                        <Globe size={8} />
+                                                      <p className="text-[11px] text-white/60 font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                                        <Globe size={10} />
                                                         Available Subtitles ({allSubs.length})
                                                       </p>
                                                       <div className="flex flex-wrap gap-1.5">
@@ -1694,10 +1694,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                             download
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[9px] font-bold uppercase tracking-wide hover:bg-violet-500/20 hover:text-white transition-all"
+                                                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[10px] font-extrabold uppercase tracking-wide hover:bg-violet-500/20 hover:text-white transition-all"
                                                             title={`Download ${sub.lanName || "subtitle"}`}
                                                           >
-                                                            <Globe size={7} />
+                                                            <Globe size={9} />
                                                             {sub.lanName || "Unknown"}
                                                           </a>
                                                         ))}
@@ -1711,7 +1711,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                                           {/* ── Torrent Links Section ── */}
                                           <div className="pt-2">
-                                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-2">
+                                            <span className="text-[11px] font-black text-white/65 uppercase tracking-wider block mb-2">
                                               Torrent Stream Links
                                             </span>
                                             
@@ -1724,8 +1724,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                       <h5 className="font-bold text-xs text-white break-words">
                                                         {t.title}
                                                       </h5>
-                                                      <p className="text-[10px] text-white/40 mt-1 flex flex-wrap items-center gap-2">
-                                                        <span>Size: <strong className="text-white/60">{t.size}</strong></span>
+                                                      <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
+                                                        <span>Size: <strong className="text-white/90">{t.size}</strong></span>
                                                         <span>•</span>
                                                         <span>Seeds: <strong className="text-emerald-400">{t.seeds}</strong></span>
                                                         <span>•</span>
@@ -1765,8 +1765,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                       <h5 className="font-bold text-xs text-white/80 break-words">
                                                         {t.title}
                                                       </h5>
-                                                      <p className="text-[10px] text-white/40 mt-1 flex flex-wrap items-center gap-2">
-                                                        <span>Size: <strong className="text-white/60">{t.size}</strong></span>
+                                                      <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
+                                                        <span>Size: <strong className="text-white/90">{t.size}</strong></span>
                                                         <span>•</span>
                                                         <span>Seeds: <strong className="text-emerald-400">{t.seeds}</strong></span>
                                                         <span>•</span>
@@ -1807,9 +1807,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                                             {/* Backup loading status */}
                                             {backupTorrentsLoading[epNum] && (
-                                              <div className="flex justify-center items-center py-4 gap-2 text-white/40">
-                                                <Loader2 className="animate-spin text-nebula-cyan" size={14} />
-                                                <span className="text-[10px] uppercase font-bold tracking-wider">Scanning Backup Trackers...</span>
+                                              <div className="flex justify-center items-center py-4 gap-2 text-white/60">
+                                                <Loader2 className="animate-spin text-nebula-cyan" size={16} />
+                                                <span className="text-xs uppercase font-bold tracking-wider">Scanning Backup Trackers...</span>
                                               </div>
                                             )}
 
@@ -1818,7 +1818,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                               <div className="py-3 flex justify-center">
                                                 <button
                                                   onClick={() => loadBackupTorrents(epNum)}
-                                                  className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white/80 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+                                                  className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white/85 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
                                                 >
                                                   <ExternalLink size={12} />
                                                   Search Backup Trackers (Torrentio, PirateBay, Galaxy)
