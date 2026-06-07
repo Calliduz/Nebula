@@ -421,6 +421,35 @@ function historyType(item: any): string {
   return typeof item === "object" ? item.type || "movie" : "movie";
 }
 
+export function getLastEpisodeDetails(details: any) {
+  if (!details) return null;
+  if (details.last_episode_to_air) {
+    return {
+      season_number: details.last_episode_to_air.season_number,
+      episode_number: details.last_episode_to_air.episode_number,
+    };
+  }
+  const regularSeasons = details.seasons?.filter((s: any) => s.season_number > 0) || [];
+  if (regularSeasons.length === 0) return null;
+  regularSeasons.sort((a: any, b: any) => b.season_number - a.season_number);
+  const lastSeason = regularSeasons[0];
+  return {
+    season_number: lastSeason.season_number,
+    episode_number: lastSeason.episode_count,
+  };
+}
+
+export function getShowProductionDetails(details: any, id: string) {
+  if (id && (id.startsWith("k") || isNaN(parseInt(id)))) {
+    return { inProduction: false, status: "Ended" };
+  }
+  if (!details) return { inProduction: true, status: "Airing" };
+  return {
+    inProduction: details.in_production ?? false,
+    status: details.status ?? "Ended",
+  };
+}
+
 export function useAppState() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -492,6 +521,7 @@ export function useAppState() {
   const [history, setHistory] = useLocalStorage<any[]>("nebula-history", []);
   const [visibleCount, setVisibleCount] = useState(12);
   const [dramaPage, setDramaPage] = useState(1);
+  const [tvDetailsCache, setTvDetailsCache] = useState<Record<string, any>>({});
 
   // Data States
   const [featuredMovies, setFeaturedMovies] = useState<NebulaMovie[]>([]);
@@ -524,7 +554,6 @@ export function useAppState() {
     );
     const progressByTitle: Record<string, { key: string; val: any }> = {};
     for (const [key, val] of Object.entries(progressData)) {
-      if (typeof val === "object" && val !== null && (val as any).watched) continue;
       const baseId = key.toString().split("-")[0];
       const existing = progressByTitle[baseId];
       const ts =
@@ -559,6 +588,22 @@ export function useAppState() {
       if (!movie) {
         missingMedia.push({ id: baseId, type });
       } else {
+        const isMovie = type === "movie";
+        if (isMovie) {
+          const isWatched = typeof val === "object" && val !== null && val.watched;
+          if (isWatched) continue;
+        } else {
+          const details = tvDetailsCache[baseId];
+          if (details) {
+            const lastEp = getLastEpisodeDetails(details);
+            if (lastEp) {
+              const lastEpKey = `${baseId}-S${lastEp.season_number}E${lastEp.episode_number}`;
+              const lastEpProg = progressData[lastEpKey];
+              const isLastWatched = lastEpProg && (lastEpProg.watched || (lastEpProg.duration > 0 && (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
+              if (isLastWatched) continue;
+            }
+          }
+        }
         continueWatchingItems.push({
           ...movie,
           progressKey: key,
@@ -1065,7 +1110,6 @@ export function useAppState() {
       // Group all progress keys by base ID (strip -S1E1 suffixes)
       const progressByTitle: Record<string, { key: string; val: any }> = {};
       for (const [key, val] of Object.entries(progressData)) {
-        if (typeof val === "object" && val !== null && (val as any).watched) continue;
         const baseId = key.toString().split("-")[0];
         // Keep the entry with the highest timestamp (most recently watched episode)
         const existing = progressByTitle[baseId];
@@ -1096,6 +1140,22 @@ export function useAppState() {
         );
         if (!movie) movie = (await getMediaBasicInfo(baseId, type)) as any;
         if (movie) {
+          const isMovie = type === "movie";
+          if (isMovie) {
+            const isWatched = typeof val === "object" && val !== null && val.watched;
+            if (isWatched) continue;
+          } else {
+            const details = tvDetailsCache[baseId];
+            if (details) {
+              const lastEp = getLastEpisodeDetails(details);
+              if (lastEp) {
+                const lastEpKey = `${baseId}-S${lastEp.season_number}E${lastEp.episode_number}`;
+                const lastEpProg = progressData[lastEpKey];
+                const isLastWatched = lastEpProg && (lastEpProg.watched || (lastEpProg.duration > 0 && (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
+                if (isLastWatched) continue;
+              }
+            }
+          }
           continueWatchingItems.push({
             ...movie,
             progressKey: key,
@@ -1375,11 +1435,31 @@ export function useAppState() {
             if (!movie) return null;
             
             const isMovie = (movie.type || "movie") === "movie";
-            const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
-            if (isMovie && progKey) {
-              const val = progressData[progKey];
-              const isWatched = typeof val === "object" && val !== null && val.watched;
-              if (!isWatched) return null;
+            if (isMovie) {
+              const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
+              if (progKey) {
+                const val = progressData[progKey];
+                const isWatched = typeof val === "object" && val !== null && val.watched;
+                if (!isWatched) return null;
+              }
+            } else {
+              // TV Show:
+              // (1) Must have finished the last available episode
+              // (2) The show must be fully released (in_production is false, or status is Ended/Canceled)
+              const details = tvDetailsCache[rid];
+              if (!details) return null; // details not loaded yet, skip
+              
+              const prod = getShowProductionDetails(details, rid);
+              const isFullyReleased = prod.status === "Ended" || prod.status === "Canceled" || prod.inProduction === false;
+              if (!isFullyReleased) return null;
+              
+              const lastEp = getLastEpisodeDetails(details);
+              if (!lastEp) return null;
+              
+              const lastEpKey = `${rid}-S${lastEp.season_number}E${lastEp.episode_number}`;
+              const lastEpProg = progressData[lastEpKey];
+              const isLastWatched = lastEpProg && (lastEpProg.watched || (lastEpProg.duration > 0 && (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
+              if (!isLastWatched) return null;
             }
             
             return movie;
@@ -1627,6 +1707,36 @@ export function useAppState() {
 
     fetchMissing();
   }, [history, myList, allMovies.length]);
+
+  useEffect(() => {
+    if (allMovies.length === 0) return;
+
+    const fetchHistoryTvDetails = async () => {
+      const tvShows = history
+        .map((h) => {
+          const rid = historyRawId(h);
+          const rtype = historyType(h);
+          return rtype === "tv" ? rid : null;
+        })
+        .filter(Boolean) as string[];
+
+      for (const id of tvShows) {
+        if (tvDetailsCache[id]) continue;
+        try {
+          const apiBase = API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
+          const res = await fetch(`${apiBase}/api/tv-details/${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            setTvDetailsCache((prev) => ({ ...prev, [id]: data }));
+          }
+        } catch (e) {
+          console.error("Failed to fetch TV details for history item", id, e);
+        }
+      }
+    };
+
+    fetchHistoryTvDetails();
+  }, [history, allMovies.length]);
 
   // Synchronously flag scroll restoration on popstate (browser back/forward button clicks)
   // before React Router's post-render cycle triggers scroll collapse events
