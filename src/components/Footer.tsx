@@ -1,8 +1,9 @@
 import React from "react";
-import { Coffee, ExternalLink, ShieldAlert, Tv2 } from "lucide-react";
+import { Bug, Coffee, ExternalLink, ShieldAlert, Tv2 } from "lucide-react";
 
 const KOFI_URL = "https://ko-fi.com/calliduz";
 const DMCA_EMAIL = "mailto:nebula.database@gmail.com";
+const SUPPORT_EMAIL = "mailto:nebula.database@gmail.com?subject=Nebula - Bug/Issue Report";
 const CURRENT_YEAR = new Date().getFullYear();
 
 export const Footer: React.FC = () => (
@@ -35,13 +36,22 @@ export const Footer: React.FC = () => (
             to publicly available third-party sources.
           </p>
 
-          <a
-            href={DMCA_EMAIL}
-            className="inline-flex items-center gap-1.5 text-white/35 hover:text-white/60 transition-colors text-xs w-fit mt-1"
-          >
-            <ShieldAlert size={12} />
-            DMCA / Content Removal
-          </a>
+          <div className="flex flex-col gap-2 mt-2">
+            <a
+              href={DMCA_EMAIL}
+              className="inline-flex items-center gap-1.5 text-white/35 hover:text-white/60 transition-colors text-xs w-fit"
+            >
+              <ShieldAlert size={12} />
+              DMCA / Content Removal
+            </a>
+            <a
+              href={SUPPORT_EMAIL}
+              className="inline-flex items-center gap-1.5 text-white/35 hover:text-white/60 transition-colors text-xs w-fit"
+            >
+              <Bug size={12} />
+              Report Bugs / Issues
+            </a>
+          </div>
         </div>
 
         {/* RIGHT — Ko-fi CTA */}
