@@ -524,6 +524,7 @@ export function useAppState() {
     );
     const progressByTitle: Record<string, { key: string; val: any }> = {};
     for (const [key, val] of Object.entries(progressData)) {
+      if (typeof val === "object" && val !== null && (val as any).watched) continue;
       const baseId = key.toString().split("-")[0];
       const existing = progressByTitle[baseId];
       const ts =
@@ -1064,6 +1065,7 @@ export function useAppState() {
       // Group all progress keys by base ID (strip -S1E1 suffixes)
       const progressByTitle: Record<string, { key: string; val: any }> = {};
       for (const [key, val] of Object.entries(progressData)) {
+        if (typeof val === "object" && val !== null && (val as any).watched) continue;
         const baseId = key.toString().split("-")[0];
         // Keep the entry with the highest timestamp (most recently watched episode)
         const existing = progressByTitle[baseId];
@@ -1374,7 +1376,11 @@ export function useAppState() {
             
             const isMovie = (movie.type || "movie") === "movie";
             const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
-            if (isMovie && progKey) return null;
+            if (isMovie && progKey) {
+              const val = progressData[progKey];
+              const isWatched = typeof val === "object" && val !== null && val.watched;
+              if (!isWatched) return null;
+            }
             
             return movie;
           })

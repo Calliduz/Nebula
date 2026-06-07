@@ -734,19 +734,19 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       })
                       .filter(Boolean) as any[];
 
-                    if (tvEntries.length > 0) {
-                      // Pick the most recently watched
-                      tvEntries.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
-                      const latest = tvEntries[0];
-                      const pct = latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
+                      if (tvEntries.length > 0) {
+                        // Pick the most recently watched
+                        tvEntries.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+                        const latest = tvEntries[0];
+                        const pct = latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
 
-                      if (pct >= 90) {
-                        // Episode nearly done — jump to NEXT episode
-                        resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
-                      } else {
-                        resumeData = latest;
+                        if (pct >= 90 || latest.watched) {
+                          // Episode nearly done — jump to NEXT episode
+                          resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
+                        } else {
+                          resumeData = latest;
+                        }
                       }
-                    }
                   } else {
                     // Movie: single progress entry
                     const entry = Object.entries(p).find(
@@ -884,7 +884,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       const epPct = epProg && epProg.duration > 0
                         ? Math.min(100, (epProg.time / epProg.duration) * 100)
                         : 0;
-                      const epWatched = epPct >= 90;
+                      const epWatched = (epProg && epProg.watched) || epPct >= 90;
 
                       return (
                         <div
@@ -960,7 +960,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     className="h-full w-full"
                                     style={{
                                       background: "#e50914",
-                                      opacity: 0.5,
+                                      boxShadow: "0 0 4px rgba(229,9,20,0.7)",
                                     }}
                                   />
                                 </div>

@@ -813,7 +813,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       const key = getProgressKey();
       if (savedProgress[key]) {
         const val = savedProgress[key];
-        video.currentTime = typeof val === "object" ? val.time : val;
+        const isWatched = typeof val === "object" ? val.watched : false;
+        if (!isWatched) {
+          video.currentTime = typeof val === "object" ? val.time : val;
+        }
       }
     };
 
@@ -850,9 +853,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           } else if (isNearEnd && video.duration > 30) {
             // Only mark as fully finished if we are near the end AND the video is actually long enough
             const p = JSON.parse(
-              localStorage.getItem("nebula-progress") || "{}",
+              localStorage.getItem("nebula-progress") || "{}"
             );
-            delete p[key];
+            p[key] = {
+              time: cur,
+              duration: video.duration,
+              timestamp: Date.now(),
+              watched: true,
+            };
             localStorage.setItem("nebula-progress", JSON.stringify(p));
             lastSaveTime.current = Date.now();
           }

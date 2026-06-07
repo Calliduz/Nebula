@@ -68,7 +68,7 @@ export default function App() {
         tvEntries.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
         const latest = tvEntries[0];
         const pct = latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
-        if (pct >= 90) {
+        if (latest.watched || pct >= 90) {
           // Nearly done — jump to next episode
           season = latest.season;
           episode = latest.episode + 1;
