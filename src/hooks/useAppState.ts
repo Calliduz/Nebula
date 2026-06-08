@@ -450,6 +450,40 @@ export function getShowProductionDetails(details: any, id: string) {
   };
 }
 
+export function isWatchItAgainItem(movie: any, progressData: any, tvDetailsCache: any) {
+  const rid = movie.id.toString();
+  const isMovie = (movie.type || "movie") === "movie";
+  if (isMovie) {
+    // For movie: if there is progress data, it must be fully watched (watched = true or >= 90% progress)
+    // If there is NO progress data (e.g. legacy history or manually added), show it.
+    const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
+    if (progKey) {
+      const val = progressData[progKey];
+      const isWatched = typeof val === "object" && val !== null && (val.watched || (val.duration > 0 && (val.time / val.duration) * 100 >= 90));
+      return isWatched;
+    }
+    return true; 
+  } else {
+    // For TV Show:
+    // (1) Must have finished the last available episode (watched = true or >= 90%)
+    // (2) The show must be fully released (in_production is false, or status is Ended/Canceled)
+    const details = tvDetailsCache[rid];
+    if (!details) return false; // details not loaded yet, exclude until we know
+    
+    const prod = getShowProductionDetails(details, rid);
+    const isFullyReleased = prod.status === "Ended" || prod.status === "Canceled" || prod.inProduction === false;
+    if (!isFullyReleased) return false;
+    
+    const lastEp = getLastEpisodeDetails(details);
+    if (!lastEp) return false;
+    
+    const lastEpKey = `${rid}-S${lastEp.season_number}E${lastEp.episode_number}`;
+    const lastEpProg = progressData[lastEpKey];
+    const isLastWatched = lastEpProg && (lastEpProg.watched || (lastEpProg.duration > 0 && (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
+    return !!isLastWatched;
+  }
+}
+
 export function useAppState() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -628,9 +662,8 @@ export function useAppState() {
       if (!movie) {
         missingMedia.push({ id: rid, type: rtype as "movie" | "tv" });
       } else {
-        const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
-        const isMovie = (movie.type || "movie") === "movie";
-        if (!isMovie || !progKey) {
+        if (isWatchItAgainItem(movie, progressData, tvDetailsCache)) {
+          const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
           watchItAgainItems.push({
             ...movie,
             progress: progKey ? progressData[progKey] : null
@@ -713,7 +746,7 @@ export function useAppState() {
 
       return updated;
     });
-  }, [allMovies, history, myList]);
+  }, [allMovies, history, myList, tvDetailsCache]);
 
   const fetchInitialData = async () => {
     // 0. Hydrate from Cache for instant load
@@ -1235,9 +1268,11 @@ export function useAppState() {
             .map((item) => {
               const rid = historyRawId(item);
               const rtype = historyType(item);
-              return localPool.find(
+              const movie = localPool.find(
                 (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
               );
+              if (!movie) return null;
+              return isWatchItAgainItem(movie, progressData, tvDetailsCache) ? movie : null;
             })
             .filter(Boolean)
             .slice(0, 10),
@@ -1435,36 +1470,7 @@ export function useAppState() {
               (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
             );
             if (!movie) return null;
-            
-            const isMovie = (movie.type || "movie") === "movie";
-            if (isMovie) {
-              const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
-              if (progKey) {
-                const val = progressData[progKey];
-                const isWatched = typeof val === "object" && val !== null && val.watched;
-                if (!isWatched) return null;
-              }
-            } else {
-              // TV Show:
-              // (1) Must have finished the last available episode
-              // (2) The show must be fully released (in_production is false, or status is Ended/Canceled)
-              const details = tvDetailsCache[rid];
-              if (!details) return null; // details not loaded yet, skip
-              
-              const prod = getShowProductionDetails(details, rid);
-              const isFullyReleased = prod.status === "Ended" || prod.status === "Canceled" || prod.inProduction === false;
-              if (!isFullyReleased) return null;
-              
-              const lastEp = getLastEpisodeDetails(details);
-              if (!lastEp) return null;
-              
-              const lastEpKey = `${rid}-S${lastEp.season_number}E${lastEp.episode_number}`;
-              const lastEpProg = progressData[lastEpKey];
-              const isLastWatched = lastEpProg && (lastEpProg.watched || (lastEpProg.duration > 0 && (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
-              if (!isLastWatched) return null;
-            }
-            
-            return movie;
+            return isWatchItAgainItem(movie, progressData, tvDetailsCache) ? movie : null;
           })
           .filter(Boolean);
       }
