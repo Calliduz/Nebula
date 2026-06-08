@@ -1581,7 +1581,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       <video
           ref={videoRef}
           className="w-full h-full object-contain"
-          crossOrigin="anonymous"
           playsInline
         >
           {vttBlobUrl && (
