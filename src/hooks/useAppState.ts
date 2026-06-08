@@ -406,18 +406,18 @@ function restoreScrollPosition(
 }
 
 // ─── History composite key helper ───────────────────────────────────────────
-function historyId(item: any): string {
+export function historyId(item: any): string {
   if (typeof item === "object" && item !== null) {
     return `${item.type || "movie"}_${item.id}`;
   }
   return `movie_${item}`;
 }
 
-function historyRawId(item: any): string {
+export function historyRawId(item: any): string {
   return typeof item === "object" ? String(item.id) : String(item);
 }
 
-function historyType(item: any): string {
+export function historyType(item: any): string {
   return typeof item === "object" ? item.type || "movie" : "movie";
 }
 
@@ -879,10 +879,12 @@ export function useAppState() {
           if (history.length > 0) {
             try {
               // Take a recent item and get its cast
-              const recentId = history[history.length - 1];
+              const recentItem = history[history.length - 1];
+              const recentId = historyRawId(recentItem);
+              const recentType = historyType(recentItem);
               const movie =
-                currentPool.find((m) => m.id === recentId) ||
-                ((await getMediaBasicInfo(recentId, "movie")) as any);
+                currentPool.find((m) => m.id.toString() === recentId) ||
+                ((await getMediaBasicInfo(recentId, recentType as "movie" | "tv")) as any);
               if (movie) {
                 const { cast } = await getMediaDetails(
                   movie.id,

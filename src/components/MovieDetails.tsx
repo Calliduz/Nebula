@@ -936,7 +936,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() =>
-                          handlePlayClick(resumeData?.season, resumeData?.episode)
+                          handlePlayClick(
+                            resumeData?.season !== undefined ? resumeData.season : (movie.type === "tv" ? 1 : undefined),
+                            resumeData?.episode !== undefined ? resumeData.episode : (movie.type === "tv" ? 1 : undefined)
+                          )
                         }
                         className={`bg-white text-obsidian glow-white hover:bg-nebula-cyan px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none`}
                       >

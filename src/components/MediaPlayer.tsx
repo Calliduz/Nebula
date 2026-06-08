@@ -46,12 +46,14 @@ function formatTime(s: number) {
 
 export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   movie,
-  season,
-  episode,
+  season: propSeason,
+  episode: propEpisode,
   source,
   onMarkAsWatched,
   onClose,
 }) => {
+  const season = propSeason !== undefined ? propSeason : (movie.type === "tv" ? 1 : undefined);
+  const episode = propEpisode !== undefined ? propEpisode : (movie.type === "tv" ? 1 : undefined);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
   const [isEmbed, setIsEmbed] = useState(false);
@@ -118,6 +120,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const activeMirrorRef = useRef<number>(0);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const isLongPressing = useRef(false);
+
+  const hasReportedSuccess = useRef(false);
+  const frag0LoadRetries = useRef(0);
+
+  useEffect(() => {
+    hasReportedSuccess.current = false;
+  }, [movie.id, season, episode]);
+
+  useEffect(() => {
+    frag0LoadRetries.current = 0;
+  }, [streamUrl]);
 
   // ── Auto Fullscreen & Landscape ───────────────────────────────────────────
   useEffect(() => {
@@ -579,7 +592,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     if (currentMirrorType === "mp4") {
       video.src = streamUrl;
-      video.play().catch(() => setIsPaused(true));
+      video.play().catch((err) => {
+        console.warn("[PLAYER] play() failed or was interrupted:", err);
+        setIsPaused(true);
+        showToast("Playback failed to start.", "error");
+      });
       return () => {
         video.src = "";
       };
@@ -641,14 +658,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             url.includes("/api/proxy/stream")
           )
             return;
-          // Direct CDN segment — route through proxy
-          if (
-            url.includes(".ts") ||
-            url.includes("/seg") ||
-            url.includes("/frag") ||
-            url.includes(".aac") ||
-            url.includes(".mp4")
-          ) {
+          
+          const shouldProxy =
+            /\.ts(\?|$)/i.test(url) ||
+            /\.m4s(\?|$)/i.test(url) ||
+            /\.m4a(\?|$)/i.test(url) ||
+            /\.mp3(\?|$)/i.test(url) ||
+            /\.mp4(\?|$)/i.test(url) ||
+            /\.aac(\?|$)/i.test(url) ||
+            /(\/seg-|\/segments?\/|\/fragments?\/|index-)/i.test(url);
+
+          if (shouldProxy) {
             xhr.open(
               "GET",
               `${API}/api/proxy/segment?url=${encodeURIComponent(url)}`,
@@ -668,7 +688,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             .reverse(),
         );
         video.volume = isMuted ? 0 : volume / 100;
-        video.play().catch(() => setIsPaused(true));
+        video.play().catch((err) => {
+          console.warn("[PLAYER] play() failed or was interrupted:", err);
+          setIsPaused(true);
+          showToast("Playback failed to start.", "error");
+        });
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
@@ -687,6 +711,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       let mediaRecoveryAttempt = 0;
 
       hls.on(Hls.Events.ERROR, (_, d) => {
+        // Frag 0 loading failure retry & fallback
+        if (d.details === "fragLoadError" && (video.duration === 0 || isNaN(video.duration))) {
+          console.warn(`[HLS] Fragment 0 load error. Retry count: ${frag0LoadRetries.current}`);
+          if (frag0LoadRetries.current < 3) {
+            frag0LoadRetries.current++;
+            hls.startLoad();
+          } else {
+            console.error("[HLS] Fragment 0 load failed 3 times. Escalating to fatal mirror switch.");
+            const nextIdx = activeMirrorRef.current + 1;
+            if (nextIdx < mirrorsRef.current.length) {
+              setActiveMirror(nextIdx);
+              activeMirrorRef.current = nextIdx;
+              setStreamUrl(mirrorsRef.current[nextIdx].url);
+            } else {
+              setError("Initial playback failed. All mirrors exhausted.");
+            }
+          }
+          return;
+        }
+
         // Handle non-fatal fragment errors: nudge past stuck fragments
         if (!d.fatal && d.details === "fragLoadError") {
           console.warn(
@@ -765,6 +809,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       // Reset retry counters on successful fragment load
       hls.on(Hls.Events.FRAG_LOADED, () => {
+        frag0LoadRetries.current = 0;
         if (networkRetries > 0) {
           console.log(
             `[HLS] Fragment loaded successfully. Resetting retry counter (was ${networkRetries}).`,
@@ -783,7 +828,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       };
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamUrl;
-      video.play().catch(() => setIsPaused(true));
+      video.play().catch((err) => {
+        console.warn("[PLAYER] play() failed or was interrupted:", err);
+        setIsPaused(true);
+        showToast("Playback failed to start.", "error");
+      });
     }
   }, [streamUrl, activeMirror, mirrors]);
 
@@ -878,7 +927,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const onPlay = () => setIsPaused(false);
     const onPause = () => setIsPaused(true);
     const onWaiting = () => setIsBuffering(true);
-    const onPlaying = () => setIsBuffering(false);
+    const onPlaying = () => {
+      setIsBuffering(false);
+      if (!hasReportedSuccess.current) {
+        hasReportedSuccess.current = true;
+        fetch(`${API}/api/stream/playback-success`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tmdbId: movie.id.toString(),
+            type: movie.type,
+            season: season,
+            episode: episode,
+          }),
+        }).catch((err) => {
+          console.warn("[PLAYER] Failed to report playback success:", err);
+        });
+      }
+    };
     const onCanPlay = () => setIsBuffering(false);
     const onCanPlayThrough = () => setIsBuffering(false);
 
@@ -1092,7 +1158,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       switch (e.code) {
         case "Space":
           e.preventDefault();
-          v?.paused ? v?.play() : v?.pause();
+          if (v) {
+            if (v.paused) {
+              v.play().catch((err) => {
+                console.warn("[PLAYER] play() failed or was interrupted:", err);
+                setIsPaused(true);
+                showToast("Playback failed to start.", "error");
+              });
+            } else {
+              v.pause();
+            }
+          }
           break;
         case "KeyM":
           setIsMuted((p) => !p);
@@ -1134,7 +1210,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    v.paused ? v.play() : v.pause();
+    if (v.paused) {
+      v.play().catch((err) => {
+        console.warn("[PLAYER] play() failed or was interrupted:", err);
+        setIsPaused(true);
+        showToast("Playback failed to start.", "error");
+      });
+    } else {
+      v.pause();
+    }
   };
 
   const handleSliderMove = useCallback(
