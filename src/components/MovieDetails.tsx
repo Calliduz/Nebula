@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -21,6 +21,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   Check,
   Smartphone,
@@ -334,6 +336,34 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const [backupTorrentsLoading, setBackupTorrentsLoading] = useState<Record<number, boolean>>({});
   const [backupDirectDownloads, setBackupDirectDownloads] = useState<Record<number, any[]>>({});
   const [backupDirectLoading, setBackupDirectLoading] = useState<Record<number, boolean>>({});
+
+  const relatedRowRef = useRef<HTMLDivElement>(null);
+  const [showRelatedLeftArrow, setShowRelatedLeftArrow] = useState(false);
+  const [showRelatedRightArrow, setShowRelatedRightArrow] = useState(true);
+  const [isRelatedHovered, setIsRelatedHovered] = useState(false);
+
+  const updateRelatedArrows = () => {
+    if (relatedRowRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = relatedRowRef.current;
+      setShowRelatedLeftArrow(scrollLeft > 10);
+      setShowRelatedRightArrow(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    updateRelatedArrows();
+    window.addEventListener("resize", updateRelatedArrows);
+    return () => window.removeEventListener("resize", updateRelatedArrows);
+  }, [deepDetails.similar]);
+
+  const scrollRelated = (direction: "left" | "right") => {
+    if (relatedRowRef.current) {
+      const { clientWidth } = relatedRowRef.current;
+      const scrollAmount =
+        direction === "left" ? -clientWidth * 0.8 : clientWidth * 0.8;
+      relatedRowRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
 
   const loadBackupTorrents = (epNum: number) => {
     // 1. Fetch Torrent Backups
@@ -701,8 +731,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const accentColor = movie.accent || "#00E5FF";
   const TABS =
     movie.type === "tv"
-      ? ["Episodes", "Downloads", "Overview", "Trailers & Extras", "Related Titles"]
-      : ["Overview", "Downloads", "Trailers & Extras", "Related Titles"];
+      ? ["Episodes", "Downloads", "Overview", "Trailers & Extras"]
+      : ["Overview", "Downloads", "Trailers & Extras"];
 
   const logoTitle = movie.clearLogo ? (
     <div className="mb-8 lg:mb-12">
@@ -974,6 +1004,89 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   {isInList ? <X size={20} /> : <Plus size={20} />}{" "}
                   <span>{isInList ? "Remove" : "Add to List"}</span>
                 </motion.button>
+              </div>
+
+              {/* Related Titles inline row */}
+              <div 
+                className="mb-10 w-full"
+                onMouseEnter={() => setIsRelatedHovered(true)}
+                onMouseLeave={() => setIsRelatedHovered(false)}
+              >
+                <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4">
+                  Related Titles
+                </h3>
+                
+                <div className="relative">
+                  <AnimatePresence>
+                    {isRelatedHovered && showRelatedLeftArrow && (
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => scrollRelated("left")}
+                        className="absolute left-[-16px] top-[-16px] bottom-[-16px] z-50 w-24 bg-gradient-to-r from-obsidian via-obsidian/80 to-transparent flex items-center justify-start pl-6 text-white/50 hover:text-nebula-cyan transition-all hidden md:flex"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-110 transition-all shadow-2xl cursor-pointer">
+                          <ChevronLeft size={32} />
+                        </div>
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+
+                  <div
+                    ref={relatedRowRef}
+                    onScroll={updateRelatedArrows}
+                    className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar touch-pan-x snap-x snap-mandatory scroll-smooth"
+                  >
+                    {deepDetails.similar.length > 0 ? (
+                      deepDetails.similar.map((m: any, i: number) => (
+                        <div
+                          key={`rel-inline-${movie.id}-${m.id}-${i}`}
+                          onClick={() => {
+                            navigate(`/${m.type}/${m.id}`);
+                            onSelectMovie?.(m); // sync App state so the component re-evaluates
+                          }}
+                          className="w-32 sm:w-40 aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10 group cursor-pointer relative shrink-0 snap-start"
+                        >
+                          <img
+                            src={m.image}
+                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-500"
+                            referrerPolicy="no-referrer"
+                            onError={handleImageError}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                            <p className="text-[9px] font-bold text-nebula-cyan mb-0.5 uppercase tracking-widest truncate">
+                              {m.genre}
+                            </p>
+                            <p className="text-[10px] font-bold text-white leading-tight line-clamp-2">
+                              {m.title}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-dim text-xs py-2">
+                        No related mission vectors identified.
+                      </p>
+                    )}
+                  </div>
+
+                  <AnimatePresence>
+                    {isRelatedHovered && showRelatedRightArrow && (
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => scrollRelated("right")}
+                        className="absolute right-[-16px] top-[-16px] bottom-[-16px] z-50 w-24 bg-gradient-to-l from-obsidian via-obsidian/80 to-transparent flex items-center justify-end pr-6 text-white/50 hover:text-nebula-cyan transition-all hidden md:flex"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-110 transition-all shadow-2xl cursor-pointer">
+                          <ChevronRight size={32} />
+                        </div>
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
 
@@ -1967,45 +2080,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                 </motion.div>
               )}
 
-              {activeTab === "Related Titles" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
-                >
-                  {deepDetails.similar.length > 0 ? (
-                    deepDetails.similar.map((m: any, i: number) => (
-                      <div
-                        key={`rel-${movie.id}-${m.id}-${i}`}
-                        onClick={() => {
-                          navigate(`/${m.type}/${m.id}`);
-                          onSelectMovie?.(m); // sync App state so the component re-evaluates
-                        }}
-                        className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10 group cursor-pointer relative"
-                      >
-                        <img
-                          src={m.image}
-                          className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-500"
-                          referrerPolicy="no-referrer"
-                          onError={handleImageError}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                          <p className="text-[10px] font-bold text-nebula-cyan mb-1 uppercase tracking-widest truncate">
-                            {m.genre}
-                          </p>
-                          <p className="text-xs font-bold text-white leading-tight line-clamp-2">
-                            {m.title}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-dim text-xs col-span-full py-10 text-center border border-dashed border-white/10 rounded-2xl">
-                      No related mission vectors identified.
-                    </p>
-                  )}
-                </motion.div>
-              )}
+
             </div>
           </div>
         </div>

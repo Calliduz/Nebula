@@ -90,6 +90,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     type: "error" | "info";
   } | null>(null);
 
+  const [doubleTapFeedback, setDoubleTapFeedback] = useState<{
+    visible: boolean;
+    type: "rewind" | "forward";
+    x: number;
+    y: number;
+    key: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (doubleTapFeedback && doubleTapFeedback.visible) {
+      const timer = setTimeout(() => {
+        setDoubleTapFeedback((p) => p ? { ...p, visible: false } : null);
+      }, 650);
+      return () => clearTimeout(timer);
+    }
+  }, [doubleTapFeedback?.key]);
+
   const showToast = useCallback(
     (message: string, type: "error" | "info" = "info") => {
       setToast({ message, type });
@@ -123,6 +140,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const hasReportedSuccess = useRef(false);
   const frag0LoadRetries = useRef(0);
+
+  const lastTouchRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     hasReportedSuccess.current = false;
@@ -1137,6 +1163,68 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   }, [showUi, showSettings, showSubtitles, showEpisodeDrawer, resetHideTimer]);
 
+  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault(); // Unconditionally suppress synthesized click events
+    
+    if (e.changedTouches.length !== 1) return;
+    
+    const touch = e.changedTouches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const width = rect.width;
+    
+    const now = Date.now();
+    const lastTouch = lastTouchRef.current;
+    
+    if (touchTimeoutRef.current) {
+      clearTimeout(touchTimeoutRef.current);
+      touchTimeoutRef.current = null;
+    }
+    
+    if (lastTouch && (now - lastTouch.time < 300) && Math.abs(x - lastTouch.x) < 100) {
+      lastTouchRef.current = null;
+      
+      const v = videoRef.current;
+      if (v) {
+        const isLeft = x < width / 2;
+        if (isLeft) {
+          v.currentTime = Math.max(0, v.currentTime - 10);
+          setDoubleTapFeedback({
+            visible: true,
+            type: "rewind",
+            x,
+            y,
+            key: Date.now(),
+          });
+        } else {
+          const maxTime = isNaN(v.duration) || v.duration === 0 ? v.currentTime : v.duration;
+          v.currentTime = Math.min(maxTime, v.currentTime + 10);
+          setDoubleTapFeedback({
+            visible: true,
+            type: "forward",
+            x,
+            y,
+            key: Date.now(),
+          });
+        }
+      }
+    } else {
+      lastTouchRef.current = { time: now, x, y };
+      
+      touchTimeoutRef.current = setTimeout(() => {
+        handleTap();
+        lastTouchRef.current = null;
+      }, 300);
+    }
+  }, [handleTap]);
+
+  const handleDesktopClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    handleTap();
+  }, [handleTap]);
+
   useEffect(() => {
     resetHideTimer();
     // Only reset the hide timer for real mouse/pen movement.
@@ -1541,24 +1629,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       )}
 
       {isBuffering && !loading && !error && (
-        <div className="absolute inset-0 flex items-center justify-center z-[150] pointer-events-none bg-black/20 backdrop-blur-sm transition-all duration-300">
-          <div className="flex flex-col items-center gap-4">
+        <div className="absolute inset-0 flex items-center justify-center z-[18] pointer-events-none bg-black/20 backdrop-blur-sm transition-all duration-300">
+          <div className="flex flex-col items-center gap-4 pointer-events-none">
             {movie.clearLogo ? (
               <img
                 src={movie.clearLogo}
                 alt="Loading..."
-                className="h-16 md:h-24 w-auto object-contain drop-shadow-2xl animate-pulse opacity-80"
+                className="h-16 md:h-24 w-auto object-contain drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="relative">
+              <div className="relative pointer-events-none">
                 <Loader2
                   size={48}
-                  className="animate-spin text-nebula-cyan opacity-80"
+                  className="animate-spin text-nebula-cyan opacity-80 pointer-events-none"
                 />
               </div>
             )}
-            <p className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-bold animate-pulse">
+            <p className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-bold animate-pulse pointer-events-none">
               Buffering Signal...
             </p>
           </div>
@@ -1604,7 +1692,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         <div
           className="absolute inset-0 z-10"
           style={{ cursor: showUi ? "default" : "none" }}
-          onClick={handleTap}
+          onClick={handleDesktopClick}
+          onTouchEnd={handleTouchEnd}
           onPointerDown={(e) => {
             // Only trigger long-press on primary pointer (finger / left click)
             if (e.button !== undefined && e.button !== 0) return;
@@ -1643,6 +1732,100 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         />
       )}
 
+      {doubleTapFeedback && doubleTapFeedback.visible && (
+        <div
+          key={doubleTapFeedback.key}
+          className={`absolute inset-y-0 w-1/2 pointer-events-none z-[19] flex items-center justify-center overflow-hidden ${
+            doubleTapFeedback.type === "rewind" ? "left-0" : "right-0"
+          }`}
+        >
+          {/* Background Ripple/Crescent */}
+          <motion.div
+            initial={{ 
+              opacity: 0, 
+              scaleX: 0.5,
+              borderRadius: doubleTapFeedback.type === "rewind" ? "0 100% 100% 0" : "100% 0 0 100%"
+            }}
+            animate={{ 
+              opacity: [0, 0.4, 0.4, 0],
+              scaleX: [0.8, 1, 1.05, 1],
+            }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+            className={`absolute inset-0 bg-white/10 ${
+              doubleTapFeedback.type === "rewind"
+                ? "origin-left bg-gradient-to-r from-black/40 to-transparent"
+                : "origin-right bg-gradient-to-l from-black/40 to-transparent"
+            }`}
+          />
+
+          {/* Icon and Text Container */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ 
+              opacity: [0, 1, 1, 0],
+              scale: [0.9, 1.1, 1, 0.9] 
+            }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+            className="relative flex flex-col items-center gap-2 z-10"
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-black/40 border border-white/10 backdrop-blur-md">
+              {doubleTapFeedback.type === "rewind" ? (
+                <div className="flex items-center justify-center gap-0.5">
+                  <motion.span 
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 0.5, delay: 0.2 }}
+                    className="text-white text-lg font-black"
+                  >
+                    &lsaquo;
+                  </motion.span>
+                  <motion.span 
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 0.5, delay: 0.1 }}
+                    className="text-white text-lg font-black"
+                  >
+                    &lsaquo;
+                  </motion.span>
+                  <motion.span 
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 0.5 }}
+                    className="text-white text-lg font-black"
+                  >
+                    &lsaquo;
+                  </motion.span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-0.5">
+                  <motion.span 
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 0.5 }}
+                    className="text-white text-lg font-black"
+                  >
+                    &rsaquo;
+                  </motion.span>
+                  <motion.span 
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 0.5, delay: 0.1 }}
+                    className="text-white text-lg font-black"
+                  >
+                    &rsaquo;
+                  </motion.span>
+                  <motion.span 
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 0.5, delay: 0.2 }}
+                    className="text-white text-lg font-black"
+                  >
+                    &rsaquo;
+                  </motion.span>
+                </div>
+              )}
+            </div>
+            <span className="text-white text-xs font-black tracking-widest uppercase bg-black/40 px-2 py-0.5 rounded border border-white/5 font-mono">
+              {doubleTapFeedback.type === "rewind" ? "-10s" : "+10s"}
+            </span>
+          </motion.div>
+        </div>
+      )}
+
       <div
         className="absolute inset-0 flex flex-col justify-between z-20"
         style={{
@@ -1651,7 +1834,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           pointerEvents: showUi ? "auto" : "none",
         }}
         // Tap on empty space (not the bars) → toggle UI visibility
-        onClick={handleTap}
+        onClick={handleDesktopClick}
+        onTouchEnd={handleTouchEnd}
         onPointerDown={(e) => {
           if (e.button !== undefined && e.button !== 0) return;
           if (longPressTimer.current) clearTimeout(longPressTimer.current);
@@ -1691,6 +1875,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           className={`flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 ${!isEmbed ? "bg-gradient-to-b from-black/80 to-transparent" : ""}`}
           // Stop taps on the top bar from bubbling to the tap layer
           onClick={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           <button
             onClick={safeClose}
@@ -1747,6 +1932,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           className={`px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 ${!isEmbed ? "bg-gradient-to-t from-black/90 to-transparent" : ""}`}
           // Stop taps on the bottom bar from bubbling to the tap layer
           onClick={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           {!isEmbed && (
             <div
