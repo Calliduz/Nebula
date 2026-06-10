@@ -64,6 +64,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [volume, setVolume] = useState(80);
   const [isMuted, setIsMuted] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [showServerTip, setShowServerTip] = useState(false);
   const [showUi, setShowUi] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -140,6 +141,45 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const hasReportedSuccess = useRef(false);
   const frag0LoadRetries = useRef(0);
+  const bufferingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const serverTipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showBufferingWithDelay = useCallback((delay = 600) => {
+    if (bufferingTimeoutRef.current) return;
+    bufferingTimeoutRef.current = setTimeout(() => {
+      setIsBuffering(true);
+      bufferingTimeoutRef.current = null;
+
+      if (serverTipTimeoutRef.current) clearTimeout(serverTipTimeoutRef.current);
+      serverTipTimeoutRef.current = setTimeout(() => {
+        setShowServerTip(true);
+      }, 10000);
+    }, delay);
+  }, []);
+
+  const clearBuffering = useCallback(() => {
+    if (bufferingTimeoutRef.current) {
+      clearTimeout(bufferingTimeoutRef.current);
+      bufferingTimeoutRef.current = null;
+    }
+    if (serverTipTimeoutRef.current) {
+      clearTimeout(serverTipTimeoutRef.current);
+      serverTipTimeoutRef.current = null;
+    }
+    setIsBuffering(false);
+    setShowServerTip(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (bufferingTimeoutRef.current) {
+        clearTimeout(bufferingTimeoutRef.current);
+      }
+      if (serverTipTimeoutRef.current) {
+        clearTimeout(serverTipTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const lastTouchRef = useRef<{ time: number; x: number; y: number } | null>(null);
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -952,9 +992,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const onDuration = () => setDuration(formatTime(video.duration));
     const onPlay = () => setIsPaused(false);
     const onPause = () => setIsPaused(true);
-    const onWaiting = () => setIsBuffering(true);
+    const onWaiting = () => showBufferingWithDelay(600);
     const onPlaying = () => {
-      setIsBuffering(false);
+      clearBuffering();
       if (!hasReportedSuccess.current) {
         hasReportedSuccess.current = true;
         fetch(`${API}/api/stream/playback-success`, {
@@ -971,13 +1011,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         });
       }
     };
-    const onCanPlay = () => setIsBuffering(false);
-    const onCanPlayThrough = () => setIsBuffering(false);
+    const onCanPlay = () => clearBuffering();
+    const onCanPlayThrough = () => clearBuffering();
 
     // ── Stall recovery: detect frozen playback and nudge forward ──
     const onStalled = () => {
       console.warn("[PLAYER] Stalled event — data delivery halted.");
-      setIsBuffering(true);
+      showBufferingWithDelay(600);
       // If HLS is active, prod it to resume loading
       if (hlsRef.current) hlsRef.current.startLoad();
     };
@@ -1649,6 +1689,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             <p className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-bold animate-pulse pointer-events-none">
               Buffering Signal...
             </p>
+            <AnimatePresence>
+              {showServerTip && (
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-nebula-cyan/80 text-[10px] uppercase tracking-[0.15em] font-medium pointer-events-none mt-2 px-4 text-center max-w-md select-none"
+                >
+                  Slow connection? Tap the Gear icon (⚙️) to switch servers.
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}
