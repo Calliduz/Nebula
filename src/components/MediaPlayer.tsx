@@ -1443,10 +1443,39 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   };
 
+  const getNextEpisodeDetails = () => {
+    if (movie.type !== "tv" || season === undefined || episode === undefined || !tvDetails || !tvDetails.seasons) {
+      return null;
+    }
+    const sortedSeasons = tvDetails.seasons
+      .filter((s: any) => s.season_number > 0)
+      .sort((a: any, b: any) => a.season_number - b.season_number);
+    
+    const currentSeasonInfo = sortedSeasons.find((s: any) => s.season_number === season);
+    if (!currentSeasonInfo) return null;
+
+    const maxEpisodes = currentSeasonInfo.episode_count;
+    if (episode < maxEpisodes) {
+      return { season, episode: episode + 1 };
+    }
+
+    // Check if there is a next season
+    const currentSeasonIdx = sortedSeasons.findIndex((s: any) => s.season_number === season);
+    if (currentSeasonIdx !== -1 && currentSeasonIdx < sortedSeasons.length - 1) {
+      const nextSeason = sortedSeasons[currentSeasonIdx + 1];
+      return { season: nextSeason.season_number, episode: 1 };
+    }
+
+    return null;
+  };
+
+  const hasNext = !tvDetails || getNextEpisodeDetails() !== null;
+
   const handleNextEpisode = () => {
-    if (movie.type !== "tv" || season === undefined || episode === undefined)
-      return;
-    setSourceSelect({ season, episode: episode + 1 });
+    const nextEp = getNextEpisodeDetails();
+    if (nextEp) {
+      setSourceSelect(nextEp);
+    }
   };
 
   const safeClose = () => {
@@ -2087,8 +2116,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               {movie.type === "tv" && (
                 <button
                   onClick={handleNextEpisode}
-                  className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all border border-white/5"
-                  title="Next Episode"
+                  disabled={!hasNext}
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                    hasNext
+                      ? "bg-white/10 hover:bg-white/20 text-white border-white/5 active:scale-95"
+                      : "bg-white/5 text-white/30 border-transparent opacity-40 cursor-not-allowed"
+                  }`}
+                  title={hasNext ? "Next Episode" : "No More Episodes"}
                 >
                   <span className="hidden sm:inline italic">NEXT</span>
                   <ChevronRight size={16} />

@@ -917,7 +917,35 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                         if (pct >= 90 || latest.watched) {
                           // Episode nearly done — jump to NEXT episode
-                          resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
+                          if (tvDetails && tvDetails.seasons) {
+                            const sortedSeasons = tvDetails.seasons
+                              .filter((s: any) => s.season_number > 0)
+                              .sort((a: any, b: any) => a.season_number - b.season_number);
+                            
+                            const currentSeasonInfo = sortedSeasons.find((s: any) => s.season_number === latest.season);
+                            if (currentSeasonInfo) {
+                              const maxEpisodes = currentSeasonInfo.episode_count;
+                              if (latest.episode < maxEpisodes) {
+                                resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
+                              } else {
+                                // Transition to next season
+                                const currentSeasonIdx = sortedSeasons.findIndex((s: any) => s.season_number === latest.season);
+                                if (currentSeasonIdx !== -1 && currentSeasonIdx < sortedSeasons.length - 1) {
+                                  const nextSeason = sortedSeasons[currentSeasonIdx + 1];
+                                  resumeData = { season: nextSeason.season_number, episode: 1, _isNext: true };
+                                } else {
+                                  // No more seasons or episodes!
+                                  resumeData = { season: latest.season, episode: latest.episode, _completed: true };
+                                }
+                              }
+                            } else {
+                              // Fallback if current season info not found
+                              resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
+                            }
+                          } else {
+                            // tvDetails not loaded yet, fallback to next episode
+                            resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
+                          }
                         } else {
                           resumeData = latest;
                         }
@@ -947,6 +975,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   let label: string;
                   if (isTBA) {
                     label = resumeData ? "Resume (TBA)" : "Try Playback";
+                  } else if (resumeData && resumeData._completed) {
+                    label = "Series Completed";
                   } else if (!resumeData) {
                     label = "Watch Now";
                   } else if (resumeData._isNext) {
@@ -960,23 +990,30 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     label = "Resume Watching";
                   }
 
+                  const isDisabled = resumeData && resumeData._completed;
+
                   return (
                     <div className="flex flex-col gap-2 flex-1 sm:flex-none">
                       <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={!isDisabled ? { scale: 1.05 } : {}}
+                        whileTap={!isDisabled ? { scale: 0.95 } : {}}
+                        disabled={isDisabled}
                         onClick={() =>
-                          handlePlayClick(
+                          !isDisabled && handlePlayClick(
                             resumeData?.season !== undefined ? resumeData.season : (movie.type === "tv" ? 1 : undefined),
                             resumeData?.episode !== undefined ? resumeData.episode : (movie.type === "tv" ? 1 : undefined)
                           )
                         }
-                        className={`bg-white text-obsidian glow-white hover:bg-nebula-cyan px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none`}
+                        className={`px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none ${
+                          isDisabled
+                            ? "bg-white/5 text-white/30 border border-transparent cursor-not-allowed"
+                            : "bg-white text-obsidian glow-white hover:bg-nebula-cyan"
+                        }`}
                       >
                         {isTBA ? (
                           <Clock size={20} className="text-obsidian/40" />
                         ) : (
-                          <Play size={20} fill="currentColor" />
+                          <Play size={20} fill="currentColor" className={isDisabled ? "opacity-30" : ""} />
                         )}
                         <span>{label}</span>
                       </motion.button>
