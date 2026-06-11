@@ -1682,12 +1682,54 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               90%  { width: 90%; opacity: 0.7; }
               100% { width: 90%; opacity: 0.7; }
             }
+            @media (max-height: 480px) {
+              .error-overlay {
+                padding: 1rem !important;
+              }
+              .error-box {
+                max-width: 440px !important;
+              }
+              .error-icon-box {
+                width: 2.75rem !important;
+                height: 2.75rem !important;
+                margin-bottom: 0.5rem !important;
+              }
+              .error-icon-box svg {
+                width: 1.25rem !important;
+                height: 1.25rem !important;
+              }
+              .error-title {
+                font-size: 1.1rem !important;
+                margin-bottom: 0.25rem !important;
+              }
+              .error-msg-tag {
+                margin-bottom: 0.5rem !important;
+                font-size: 8px !important;
+                padding: 0.25rem 0.5rem !important;
+              }
+              .error-desc {
+                margin-bottom: 0.75rem !important;
+                font-size: 11px !important;
+                line-height: 1rem !important;
+                max-width: 24rem !important;
+              }
+              .error-buttons-grid {
+                margin-top: 0.25rem !important;
+                gap: 0.5rem !important;
+                max-width: 400px !important;
+              }
+              .error-buttons-grid button {
+                padding: 0.5rem 0.75rem !important;
+                font-size: 8px !important;
+                min-height: 32px !important;
+              }
+            }
           `}</style>
         </div>
       )}
 
       {error && !loading && (
-        <div className="absolute inset-0 z-[500] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500 pointer-events-none">
+        <div className="absolute inset-0 z-[500] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500 pointer-events-none error-overlay">
           {movie.backdrop && (
             <img
               src={movie.backdrop}
@@ -1695,23 +1737,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               alt=""
             />
           )}
-          <div className="relative z-10 flex flex-col items-center pointer-events-auto">
-            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-6 border border-red-500/50">
+          <div className="relative z-10 flex flex-col items-center pointer-events-auto error-box">
+            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-6 border border-red-500/50 error-icon-box">
               <Info className="text-red-500" size={32} />
             </div>
-            <h3 className="text-2xl font-display font-black text-white mb-2 uppercase tracking-tighter">
+            <h3 className="text-2xl font-display font-black text-white mb-2 uppercase tracking-tighter error-title">
               No signal detected
             </h3>
             {error && (
-              <p className="text-red-400/90 max-w-sm mb-3 font-mono text-[10px] uppercase tracking-wider bg-red-950/30 border border-red-500/20 px-3 py-1.5 rounded-md">
+              <p className="text-red-400/90 max-w-sm mb-3 font-mono text-[10px] uppercase tracking-wider bg-red-950/30 border border-red-500/20 px-3 py-1.5 rounded-md error-msg-tag">
                 {error}
               </p>
             )}
-            <p className="text-white/40 max-w-sm mb-6 font-light text-sm">
+            <p className="text-white/40 max-w-sm mb-6 font-light text-sm error-desc">
               All mirrors for this source have failed. Try switching stream
               sources/providers (e.g. from VidRock to Videasy) below.
             </p>
-            <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-md sm:max-w-2xl justify-center mt-2 pointer-events-auto error-buttons-grid">
               <button
                 onClick={() =>
                   setSourceSelect({
@@ -1719,35 +1761,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     episode: episode ?? 1,
                   })
                 }
-                className="px-8 py-3 bg-violet-600 hover:bg-violet-500 text-white font-black rounded-full transition-all uppercase text-[10px] tracking-widest shadow-[0_0_15px_rgba(168,85,247,0.3)] border border-violet-500/20 pointer-events-auto"
+                className="col-span-1 px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white font-black rounded-full transition-all uppercase text-[10px] tracking-widest shadow-[0_0_15px_rgba(168,85,247,0.3)] border border-violet-500/20 text-center flex items-center justify-center min-h-[44px] sm:min-h-0"
               >
                 Switch Source
               </button>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-8 py-3 bg-white text-black font-black rounded-full hover:bg-white/80 transition-all uppercase text-[10px] tracking-widest pointer-events-auto"
-              >
-                Retry Connection
-              </button>
-            </div>
-            <button
-              onClick={async () => {
-                try {
-                  await fetch(`${API}/api/stream/flush`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ tmdbId: movie.id }),
-                  });
-                  window.location.reload();
-                } catch {
-                  window.location.reload();
-                }
-              }}
-              className="px-6 py-2 bg-white/10 text-white/60 font-bold rounded-full hover:bg-white/20 transition-all uppercase text-[8px] tracking-widest pointer-events-auto border border-white/10"
-            >
-              Deep Reset (Clear Cache)
-            </button>
-            <div className="flex items-center gap-3 flex-wrap justify-center">
               <button
                 onClick={() => {
                   setError("");
@@ -1792,39 +1809,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     .catch((e) => setError(e.message))
                     .finally(() => setLoading(false));
                 }}
-                className="px-8 py-3 bg-nebula-cyan text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-white transition-colors"
+                className="col-span-1 px-4 py-3 bg-nebula-cyan text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-white transition-colors text-center flex items-center justify-center min-h-[44px] sm:min-h-0"
               >
                 Retry Stream
               </button>
-              {mirrors.length > 1 && activeMirror < mirrors.length - 1 && (
-                <button
-                  onClick={() => {
-                    setError("");
-                    const nextIdx = activeMirror + 1;
-                    setActiveMirror(nextIdx);
-                    activeMirrorRef.current = nextIdx;
-                    setStreamUrl(mirrors[nextIdx].url);
-                    setIsEmbed(mirrors[nextIdx].type === "embed");
-                  }}
-                  className="px-8 py-3 bg-white/10 text-white rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-white/20 transition-colors border border-white/10"
-                >
-                  Try Next Mirror
-                </button>
-              )}
-              <button
-                onClick={() =>
-                  setSourceSelect({
-                    season: season ?? 1,
-                    episode: episode ?? 1,
-                  })
-                }
-                className="px-8 py-3 bg-violet-600/20 hover:bg-violet-600/40 text-violet-400 rounded-full text-[10px] uppercase font-black tracking-[0.2em] transition-colors border border-violet-500/30"
-              >
-                Switch Source
-              </button>
               <button
                 onClick={safeClose}
-                className="px-8 py-3 bg-white text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-nebula-cyan transition-colors"
+                className="col-span-2 sm:col-span-1 px-4 py-3 bg-white text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-nebula-cyan transition-colors text-center flex items-center justify-center min-h-[44px] sm:min-h-0"
               >
                 Abort Mission
               </button>
