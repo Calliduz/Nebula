@@ -38,8 +38,6 @@ const REGIONS = [
   { id: "3", name: "Vietnam" },
 ];
 
-
-
 export const CategoryView: React.FC<CategoryViewProps> = ({
   viewingCategory,
   setViewingCategory,
@@ -79,9 +77,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         aspect="portrait"
         isGrid={true}
         onSelect={onSelectMovie}
-        isInList={myList.some(
-          (id) => id.toString() === item.id.toString(),
-        )}
+        isInList={myList.some((id) => id.toString() === item.id.toString())}
         onToggleList={() => toggleMyList(item.id)}
       />
     ));
@@ -190,8 +186,6 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               </div>
             )}
           </section>
-
-
 
           <section>
             <div className="flex justify-between items-center mb-8">

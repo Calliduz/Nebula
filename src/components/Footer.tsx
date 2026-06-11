@@ -3,7 +3,8 @@ import { Bug, Coffee, ExternalLink, ShieldAlert, Tv2 } from "lucide-react";
 
 const KOFI_URL = "https://ko-fi.com/calliduz";
 const DMCA_EMAIL = "mailto:nebula.database@gmail.com";
-const SUPPORT_EMAIL = "mailto:nebula.database@gmail.com?subject=Nebula - Bug/Issue Report";
+const SUPPORT_EMAIL =
+  "mailto:nebula.database@gmail.com?subject=Nebula - Bug/Issue Report";
 const CURRENT_YEAR = new Date().getFullYear();
 
 export const Footer: React.FC = () => (
@@ -16,10 +17,8 @@ export const Footer: React.FC = () => (
     <div className="absolute top-px inset-x-0 h-8 bg-gradient-to-b from-nebula-cyan/[0.03] to-transparent pointer-events-none" />
 
     <div className="max-w-5xl mx-auto px-6 pt-12 flex flex-col gap-12">
-
       {/* ── Main content row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 lg:gap-20 items-start">
-
         {/* LEFT — brand */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
@@ -70,9 +69,15 @@ export const Footer: React.FC = () => (
                        hover:shadow-[0_0_24px_rgba(255,94,91,0.15)]
                        transition-all duration-250 text-[#FF5E5B] text-sm font-semibold whitespace-nowrap"
           >
-            <Coffee size={16} className="group-hover:scale-110 transition-transform duration-200" />
+            <Coffee
+              size={16}
+              className="group-hover:scale-110 transition-transform duration-200"
+            />
             Support on Ko‑fi
-            <ExternalLink size={11} className="opacity-40 group-hover:opacity-70 transition-opacity" />
+            <ExternalLink
+              size={11}
+              className="opacity-40 group-hover:opacity-70 transition-opacity"
+            />
           </a>
 
           <p className="text-white/30 text-xs lg:text-right leading-relaxed max-w-[210px]">
@@ -96,7 +101,6 @@ export const Footer: React.FC = () => (
           streams are sourced from independent third-party providers.
         </p>
       </div>
-
     </div>
   </footer>
 );

@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
     test: {
       // jsdom gives us localStorage, DOM APIs needed by both test files
       environment: "jsdom",
-      include: ["src/test/**/*.test.ts"],
+      include: ["src/test/**/*.test.ts", "src/test/**/*.test.tsx"],
       globals: false,
     },
   };

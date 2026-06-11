@@ -12,243 +12,265 @@ interface MovieCardProps {
   isGrid?: boolean;
 }
 
-export const MovieCard = memo<MovieCardProps>(({
-  movie,
-  snap = false,
-  onSelect,
-  aspect = "portrait",
-  onRemove,
-  isGrid = false,
-}) => {
-  const isLandscape = aspect === "landscape";
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
+export const MovieCard = memo<MovieCardProps>(
+  ({
+    movie,
+    snap = false,
+    onSelect,
+    aspect = "portrait",
+    onRemove,
+    isGrid = false,
+  }) => {
+    const isLandscape = aspect === "landscape";
+    const [imgLoaded, setImgLoaded] = useState(false);
+    const [imgError, setImgError] = useState(false);
+    const imgRef = useRef<HTMLImageElement>(null);
 
-  useEffect(() => {
-    setImgLoaded(false);
-    setImgError(false);
+    useEffect(() => {
+      setImgLoaded(false);
+      setImgError(false);
 
-    // If image is already cached/complete, mark as loaded
-    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
-      setImgLoaded(true);
-    }
-  }, [movie.image, movie.id]);
+      // If image is already cached/complete, mark as loaded
+      if (
+        imgRef.current &&
+        imgRef.current.complete &&
+        imgRef.current.naturalWidth > 0
+      ) {
+        setImgLoaded(true);
+      }
+    }, [movie.image, movie.id]);
 
-  const onImgLoad = useCallback(() => setImgLoaded(true), []);
-  const onImgError = useCallback(
-    (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-      setImgError(true);
-      handleImageError(e);
-    },
-    [],
-  );
+    const onImgLoad = useCallback(() => setImgLoaded(true), []);
+    const onImgError = useCallback(
+      (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        setImgError(true);
+        handleImageError(e);
+      },
+      [],
+    );
 
-  return (
-    <div
-      className={`group/card relative ${isGrid ? "w-full" : isLandscape ? "w-[220px] md:w-[280px]" : "w-[160px] md:w-[280px]"} shrink-0 ${isLandscape ? "aspect-video" : "aspect-[2/3]"} transition-all duration-300 ${snap ? "snap-start" : ""}`}
-      onContextMenu={(e) => e.preventDefault()}
-      onClick={() => onSelect?.(movie)}
-      style={{ willChange: "transform" }}
-    >
-      <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 hover:scale-[1.02] transform-gpu shadow-2xl">
-        {/* Shimmer placeholder while image loads */}
-        {!imgLoaded && !imgError && (
-          <div className="absolute inset-0 bg-white/5 shimmer-bg" />
-        )}
-        <img
-          ref={imgRef}
-          key={movie.image || movie.id}
-          src={movie.image || undefined}
-          alt={movie.title}
-          className={`w-full h-full object-cover group-hover/card:opacity-70 transition-opacity duration-500 ${imgLoaded ? "opacity-80" : "opacity-0"}`}
-          referrerPolicy="no-referrer"
-          onLoad={onImgLoad}
-          onError={onImgError}
-          loading="lazy"
-        />
+    return (
+      <div
+        className={`group/card relative ${isGrid ? "w-full" : isLandscape ? "w-[220px] md:w-[280px]" : "w-[160px] md:w-[280px]"} shrink-0 ${isLandscape ? "aspect-video" : "aspect-[2/3]"} transition-all duration-300 ${snap ? "snap-start" : ""}`}
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={() => onSelect?.(movie)}
+        style={{ willChange: "transform" }}
+      >
+        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 hover:scale-[1.02] transform-gpu shadow-2xl">
+          {/* Shimmer placeholder while image loads */}
+          {!imgLoaded && !imgError && (
+            <div className="absolute inset-0 bg-white/5 shimmer-bg" />
+          )}
+          <img
+            ref={imgRef}
+            key={movie.image || movie.id}
+            src={movie.image || undefined}
+            alt={movie.title}
+            className={`w-full h-full object-cover group-hover/card:opacity-70 transition-opacity duration-500 ${imgLoaded ? "opacity-80" : "opacity-0"}`}
+            referrerPolicy="no-referrer"
+            onLoad={onImgLoad}
+            onError={onImgError}
+            loading="lazy"
+          />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-90" />
 
-        {/* Info Overlay (Persistent) */}
-        <div className="absolute top-3 left-3 right-3 z-30 flex justify-between items-start">
-          <div className="flex flex-col gap-1.5">
-            {isLandscape && (
-              <div className="px-2 py-0.5 rounded-md bg-nebula-cyan/20 border border-nebula-cyan/30 backdrop-blur-md w-fit">
-                <p className="text-[8px] font-black text-nebula-cyan uppercase tracking-widest italic">
-                  Series
-                </p>
-              </div>
-            )}
+          {/* Info Overlay (Persistent) */}
+          <div className="absolute top-3 left-3 right-3 z-30 flex justify-between items-start">
+            <div className="flex flex-col gap-1.5">
+              {isLandscape && (
+                <div className="px-2 py-0.5 rounded-md bg-nebula-cyan/20 border border-nebula-cyan/30 backdrop-blur-md w-fit">
+                  <p className="text-[8px] font-black text-nebula-cyan uppercase tracking-widest italic">
+                    Series
+                  </p>
+                </div>
+              )}
 
-            {/* Status Badges */}
-            <div className="flex flex-wrap gap-1.5 md:gap-2">
-              {/* Quality Badge */}
-              {movie.quality && (
-                <div
-                  className={`px-1.5 md:px-2 py-0.5 rounded-md backdrop-blur-xl border md:border-2 w-fit shadow-2xl ${
-                    movie.quality === "CAM"
-                      ? "bg-amber-500/30 border-amber-500/50"
-                      : movie.quality === "TBA"
-                        ? "bg-red-500/30 border-red-500/50"
-                        : "bg-nebula-cyan/30 border-nebula-cyan/50"
-                  }`}
-                >
-                  <p
-                    className={`text-[8px] md:text-[10px] font-black uppercase tracking-wider ${
+              {/* Status Badges */}
+              <div className="flex flex-wrap gap-1.5 md:gap-2">
+                {/* Quality Badge */}
+                {movie.quality && (
+                  <div
+                    className={`px-1.5 md:px-2 py-0.5 rounded-md backdrop-blur-xl border md:border-2 w-fit shadow-2xl ${
                       movie.quality === "CAM"
-                        ? "text-amber-400"
+                        ? "bg-amber-500/30 border-amber-500/50"
                         : movie.quality === "TBA"
-                          ? "text-red-400"
-                          : "text-nebula-cyan"
+                          ? "bg-red-500/30 border-red-500/50"
+                          : "bg-nebula-cyan/30 border-nebula-cyan/50"
                     }`}
                   >
-                    {movie.quality}
-                  </p>
-                </div>
-              )}
-
-              {/* Verified Status Badge */}
-              {movie.isVerified ? (
-                <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-emerald-500/30 border md:border-2 border-emerald-500/50 backdrop-blur-xl w-fit shadow-2xl">
-                  <p className="text-[8px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="hidden md:inline">Verified</span>
-                    <span className="md:hidden">Live</span>
-                  </p>
-                </div>
-              ) : movie.isDead ? (
-                <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-rose-600/40 border md:border-2 border-rose-500/60 backdrop-blur-xl w-fit shadow-2xl">
-                  <p className="text-[8px] md:text-[10px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1">
-                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-rose-500" />
-                    <span className="hidden md:inline">No Signal</span>
-                    <span className="md:hidden">Dead</span>
-                  </p>
-                </div>
-              ) : (
-                movie.quality !== "TBA" && (
-                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-white/10 border md:border-2 border-white/20 backdrop-blur-xl w-fit shadow-2xl">
-                    <p className="text-[8px] md:text-[10px] font-black text-white/80 uppercase tracking-wider">
-                      {movie.quality === "CAM" ? (
-                        <>
-                          <span className="hidden md:inline">In Theaters</span>
-                          <span className="md:hidden">Theater</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="hidden md:inline">
-                            Searching Mirrors
-                          </span>
-                          <span className="md:hidden">Pending</span>
-                        </>
-                      )}
+                    <p
+                      className={`text-[8px] md:text-[10px] font-black uppercase tracking-wider ${
+                        movie.quality === "CAM"
+                          ? "text-amber-400"
+                          : movie.quality === "TBA"
+                            ? "text-red-400"
+                            : "text-nebula-cyan"
+                      }`}
+                    >
+                      {movie.quality}
                     </p>
                   </div>
-                )
-              )}
+                )}
+
+                {/* Verified Status Badge */}
+                {movie.isVerified ? (
+                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-emerald-500/30 border md:border-2 border-emerald-500/50 backdrop-blur-xl w-fit shadow-2xl">
+                    <p className="text-[8px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                      <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="hidden md:inline">Verified</span>
+                      <span className="md:hidden">Live</span>
+                    </p>
+                  </div>
+                ) : movie.isDead ? (
+                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-rose-600/40 border md:border-2 border-rose-500/60 backdrop-blur-xl w-fit shadow-2xl">
+                    <p className="text-[8px] md:text-[10px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                      <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-rose-500" />
+                      <span className="hidden md:inline">No Signal</span>
+                      <span className="md:hidden">Dead</span>
+                    </p>
+                  </div>
+                ) : (
+                  movie.quality !== "TBA" && (
+                    <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-white/10 border md:border-2 border-white/20 backdrop-blur-xl w-fit shadow-2xl">
+                      <p className="text-[8px] md:text-[10px] font-black text-white/80 uppercase tracking-wider">
+                        {movie.quality === "CAM" ? (
+                          <>
+                            <span className="hidden md:inline">
+                              In Theaters
+                            </span>
+                            <span className="md:hidden">Theater</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="hidden md:inline">
+                              Searching Mirrors
+                            </span>
+                            <span className="md:hidden">Pending</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )
+                )}
+              </div>
             </div>
-          </div>
 
-          {onRemove && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-              className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-red-500/50 hover:border-red-500/50 transition-all ml-auto"
-            >
-              <span className="text-xs font-black">×</span>
-            </button>
-          )}
-        </div>
-
-        <div className="absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 group-hover/card:bottom-6">
-          <div className="mb-2 hidden md:block">
-            {movie.clearLogo ? (
-              <img
-                src={movie.clearLogo}
-                alt={movie.title}
-                className="h-10 w-auto object-contain object-left drop-shadow-2xl transition-transform duration-300 group-hover/card:scale-110 origin-left"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <p className="text-[18px] font-bold leading-tight drop-shadow-lg truncate group-hover/card:text-nebula-cyan transition-colors">
-                {movie.title}
-              </p>
+            {onRemove && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-red-500/50 hover:border-red-500/50 transition-all ml-auto"
+              >
+                <span className="text-xs font-black">×</span>
+              </button>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            <p className="text-[10px] text-white/30 font-extrabold uppercase tracking-[0.2em]">
-              {movie.genre.split(", ")[0]}
-            </p>
-            <div className="w-1 h-1 rounded-full bg-white/10 opacity-0 group-hover/card:opacity-100 transition-opacity" />
-            <span className="text-[9px] font-bold text-nebula-cyan/0 group-hover/card:text-nebula-cyan/80 uppercase tracking-widest transition-all duration-300 translate-x-[-4px] group-hover/card:translate-x-0">
-              Open Dossier
-            </span>
+
+          <div className="absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 group-hover/card:bottom-6">
+            <div className="mb-2 hidden md:block">
+              {movie.clearLogo ? (
+                <img
+                  src={movie.clearLogo}
+                  alt={movie.title}
+                  className="h-10 w-auto object-contain object-left drop-shadow-2xl transition-transform duration-300 group-hover/card:scale-110 origin-left"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <p className="text-[18px] font-bold leading-tight drop-shadow-lg truncate group-hover/card:text-nebula-cyan transition-colors">
+                  {movie.title}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <p className="text-[10px] text-white/30 font-extrabold uppercase tracking-[0.2em]">
+                {movie.genre.split(", ")[0]}
+              </p>
+              <div className="w-1 h-1 rounded-full bg-white/10 opacity-0 group-hover/card:opacity-100 transition-opacity" />
+              <span className="text-[9px] font-bold text-nebula-cyan/0 group-hover/card:text-nebula-cyan/80 uppercase tracking-widest transition-all duration-300 translate-x-[-4px] group-hover/card:translate-x-0">
+                Open Dossier
+              </span>
+            </div>
+
+            {/* Progress Bar for Continue Watching — Netflix-style */}
+            {(() => {
+              if (!movie.progress) return null;
+              const pct =
+                typeof movie.progress === "object" &&
+                movie.progress.duration > 0
+                  ? Math.min(
+                      100,
+                      (movie.progress.time / movie.progress.duration) * 100,
+                    )
+                  : 0;
+              if (pct < 1) return null;
+              const isWatched = pct >= 95;
+              return (
+                <div className="mt-2.5">
+                  {/* Watched badge */}
+                  {isWatched && (
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className="w-3.5 h-3.5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+                        <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
+                          <path
+                            d="M1 3L2.5 4.5L6 1"
+                            stroke="white"
+                            strokeWidth="1.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-white/50">
+                        Watched
+                      </span>
+                    </div>
+                  )}
+                  {/* Track */}
+                  <div className="h-[5px] w-full bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      data-testid="progress-fill"
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${pct}%`,
+                        background: "#e50914",
+                        boxShadow: "0 0 6px rgba(229,9,20,0.6)",
+                        transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
-          {/* Progress Bar for Continue Watching — Netflix-style */}
-          {(() => {
-            if (!movie.progress) return null;
-            const pct =
-              typeof movie.progress === "object" && movie.progress.duration > 0
-                ? Math.min(100, (movie.progress.time / movie.progress.duration) * 100)
-                : 0;
-            if (pct < 1) return null;
-            const isWatched = pct >= 95;
-            return (
-              <div className="mt-2.5">
-                {/* Watched badge */}
-                {isWatched && (
-                  <div className="flex items-center gap-1 mb-1">
-                    <div className="w-3.5 h-3.5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                      <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
-                        <path d="M1 3L2.5 4.5L6 1" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-white/50">Watched</span>
-                  </div>
-                )}
-                {/* Track */}
-                <div className="h-[5px] w-full bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    data-testid="progress-fill"
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${pct}%`,
-                      background: "#e50914",
-                      boxShadow: "0 0 6px rgba(229,9,20,0.6)",
-                      transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })()}
+          {/* Subtle Glow Sign */}
+          <div className="absolute inset-0 opacity-0 group-hover/card:opacity-10 transition-opacity duration-500 bg-nebula-cyan pointer-events-none" />
         </div>
-
-        {/* Subtle Glow Sign */}
-        <div className="absolute inset-0 opacity-0 group-hover/card:opacity-10 transition-opacity duration-500 bg-nebula-cyan pointer-events-none" />
       </div>
-    </div>
-  );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.onSelect === nextProps.onSelect &&
-    prevProps.onRemove === nextProps.onRemove &&
-    prevProps.onToggleList === nextProps.onToggleList &&
-    prevProps.aspect === nextProps.aspect &&
-    prevProps.isGrid === nextProps.isGrid &&
-    prevProps.snap === nextProps.snap &&
-    prevProps.isInList === nextProps.isInList &&
-    prevProps.movie?.id === nextProps.movie?.id &&
-    prevProps.movie?.image === nextProps.movie?.image &&
-    prevProps.movie?.title === nextProps.movie?.title &&
-    prevProps.movie?.quality === nextProps.movie?.quality &&
-    prevProps.movie?.isVerified === nextProps.movie?.isVerified &&
-    prevProps.movie?.isDead === nextProps.movie?.isDead &&
-    prevProps.movie?.clearLogo === nextProps.movie?.clearLogo &&
-    prevProps.movie?.genre === nextProps.movie?.genre &&
-    JSON.stringify(prevProps.movie?.progress) === JSON.stringify(nextProps.movie?.progress)
-  );
-});
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.onSelect === nextProps.onSelect &&
+      prevProps.onRemove === nextProps.onRemove &&
+      prevProps.onToggleList === nextProps.onToggleList &&
+      prevProps.aspect === nextProps.aspect &&
+      prevProps.isGrid === nextProps.isGrid &&
+      prevProps.snap === nextProps.snap &&
+      prevProps.isInList === nextProps.isInList &&
+      prevProps.movie?.id === nextProps.movie?.id &&
+      prevProps.movie?.image === nextProps.movie?.image &&
+      prevProps.movie?.title === nextProps.movie?.title &&
+      prevProps.movie?.quality === nextProps.movie?.quality &&
+      prevProps.movie?.isVerified === nextProps.movie?.isVerified &&
+      prevProps.movie?.isDead === nextProps.movie?.isDead &&
+      prevProps.movie?.clearLogo === nextProps.movie?.clearLogo &&
+      prevProps.movie?.genre === nextProps.movie?.genre &&
+      JSON.stringify(prevProps.movie?.progress) ===
+        JSON.stringify(nextProps.movie?.progress)
+    );
+  },
+);

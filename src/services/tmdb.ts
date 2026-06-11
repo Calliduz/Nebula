@@ -55,7 +55,8 @@ const evictOldest = () => {
   toRemove.forEach((e) => {
     localStorage.removeItem(e.key);
     // Adjust the running counter
-    if (_cacheSizeBytes >= 0) _cacheSizeBytes = Math.max(0, _cacheSizeBytes - e.size);
+    if (_cacheSizeBytes >= 0)
+      _cacheSizeBytes = Math.max(0, _cacheSizeBytes - e.size);
   });
 };
 
@@ -75,7 +76,8 @@ const fetchWithCache = async (
     } catch {
       localStorage.removeItem(versionedKey);
       // Adjust counter for the removed entry
-      if (_cacheSizeBytes >= 0) _cacheSizeBytes = Math.max(0, _cacheSizeBytes - oldSize);
+      if (_cacheSizeBytes >= 0)
+        _cacheSizeBytes = Math.max(0, _cacheSizeBytes - oldSize);
     }
   }
 
@@ -89,7 +91,8 @@ const fetchWithCache = async (
 
     localStorage.setItem(versionedKey, serialized);
     // Update running counter: subtract old entry, add new
-    if (_cacheSizeBytes >= 0) _cacheSizeBytes = Math.max(0, _cacheSizeBytes - oldSize) + newSize;
+    if (_cacheSizeBytes >= 0)
+      _cacheSizeBytes = Math.max(0, _cacheSizeBytes - oldSize) + newSize;
   } catch {
     evictOldest();
     // Counter may be stale after eviction-triggered retry; reset to force rescan
@@ -190,7 +193,9 @@ const fetchFromTMDB = async (
   return fetchWithCache(
     cacheKey,
     async () => {
-      const res = await fetch(`${getApiBase()}/api/tmdb-proxy?${queryParams.toString()}`);
+      const res = await fetch(
+        `${getApiBase()}/api/tmdb-proxy?${queryParams.toString()}`,
+      );
       if (!res.ok) throw new Error(`TMDB Proxy ${res.status}: ${endpoint}`);
       return res.json();
     },
@@ -248,7 +253,10 @@ const normalizeMovie = (
  * Batches a check against the server's StreamCache to verify if we definitely have a copy.
  * Uses an in-memory cache (60s) to deduplicate identical requests.
  */
-const availabilityCache = new Map<string, { ts: number; data: Map<string, { isVerified: boolean; isDead: boolean }> }>();
+const availabilityCache = new Map<
+  string,
+  { ts: number; data: Map<string, { isVerified: boolean; isDead: boolean }> }
+>();
 const AVAIL_CACHE_TTL = 60_000; // 60 seconds
 
 export const fetchAvailability = async (
@@ -263,7 +271,11 @@ export const fetchAvailability = async (
     return movies.map((m) => {
       const info = cached.data.get(m.id.toString());
       if (info) {
-        return { ...m, isVerified: info.isVerified, quality: info.isVerified && m.quality === "TBA" ? "HD" : m.quality };
+        return {
+          ...m,
+          isVerified: info.isVerified,
+          quality: info.isVerified && m.quality === "TBA" ? "HD" : m.quality,
+        };
       }
       return m;
     });
@@ -276,8 +288,16 @@ export const fetchAvailability = async (
     const { results } = await response.json();
 
     // Store in cache
-    const cacheData = new Map<string, { isVerified: boolean; isDead: boolean }>();
-    results.forEach((r: any) => cacheData.set(r.id.toString(), { isVerified: r.isVerified, isDead: r.isDead }));
+    const cacheData = new Map<
+      string,
+      { isVerified: boolean; isDead: boolean }
+    >();
+    results.forEach((r: any) =>
+      cacheData.set(r.id.toString(), {
+        isVerified: r.isVerified,
+        isDead: r.isDead,
+      }),
+    );
     availabilityCache.set(ids, { ts: Date.now(), data: cacheData });
 
     const verifiedMap = new Map<string, boolean>(

@@ -429,7 +429,8 @@ export function getLastEpisodeDetails(details: any) {
       episode_number: details.last_episode_to_air.episode_number,
     };
   }
-  const regularSeasons = details.seasons?.filter((s: any) => s.season_number > 0) || [];
+  const regularSeasons =
+    details.seasons?.filter((s: any) => s.season_number > 0) || [];
   if (regularSeasons.length === 0) return null;
   regularSeasons.sort((a: any, b: any) => b.season_number - a.season_number);
   const lastSeason = regularSeasons[0];
@@ -450,7 +451,11 @@ export function getShowProductionDetails(details: any, id: string) {
   };
 }
 
-export function isWatchItAgainItem(movie: any, progressData: any, tvDetailsCache: any) {
+export function isWatchItAgainItem(
+  movie: any,
+  progressData: any,
+  tvDetailsCache: any,
+) {
   const rid = movie.id.toString();
   const isMovie = (movie.type || "movie") === "movie";
   if (isMovie) {
@@ -459,27 +464,38 @@ export function isWatchItAgainItem(movie: any, progressData: any, tvDetailsCache
     const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
     if (progKey) {
       const val = progressData[progKey];
-      const isWatched = typeof val === "object" && val !== null && (val.watched || (val.duration > 0 && (val.time / val.duration) * 100 >= 90));
+      const isWatched =
+        typeof val === "object" &&
+        val !== null &&
+        (val.watched ||
+          (val.duration > 0 && (val.time / val.duration) * 100 >= 90));
       return isWatched;
     }
-    return true; 
+    return true;
   } else {
     // For TV Show:
     // (1) Must have finished the last available episode (watched = true or >= 90%)
     // (2) The show must be fully released (in_production is false, or status is Ended/Canceled)
     const details = tvDetailsCache[rid];
     if (!details) return false; // details not loaded yet, exclude until we know
-    
+
     const prod = getShowProductionDetails(details, rid);
-    const isFullyReleased = prod.status === "Ended" || prod.status === "Canceled" || prod.inProduction === false;
+    const isFullyReleased =
+      prod.status === "Ended" ||
+      prod.status === "Canceled" ||
+      prod.inProduction === false;
     if (!isFullyReleased) return false;
-    
+
     const lastEp = getLastEpisodeDetails(details);
     if (!lastEp) return false;
-    
+
     const lastEpKey = `${rid}-S${lastEp.season_number}E${lastEp.episode_number}`;
     const lastEpProg = progressData[lastEpKey];
-    const isLastWatched = lastEpProg && (lastEpProg.watched || (lastEpProg.duration > 0 && (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
+    const isLastWatched =
+      lastEpProg &&
+      (lastEpProg.watched ||
+        (lastEpProg.duration > 0 &&
+          (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
     return !!isLastWatched;
   }
 }
@@ -612,12 +628,13 @@ export function useAppState() {
     }
 
     const continueWatchingItems: any[] = [];
-    const sortedProgressEntries = Object.entries(progressByTitle)
-      .sort((a, b) => {
+    const sortedProgressEntries = Object.entries(progressByTitle).sort(
+      (a, b) => {
         const tsA = a[1].val?.timestamp ?? 0;
         const tsB = b[1].val?.timestamp ?? 0;
         return tsB - tsA;
-      });
+      },
+    );
 
     const missingMedia: { id: string; type: "movie" | "tv" }[] = [];
 
@@ -631,7 +648,8 @@ export function useAppState() {
       } else {
         const isMovie = type === "movie";
         if (isMovie) {
-          const isWatched = typeof val === "object" && val !== null && val.watched;
+          const isWatched =
+            typeof val === "object" && val !== null && val.watched;
           if (isWatched) continue;
         } else {
           const details = tvDetailsCache[baseId];
@@ -640,7 +658,11 @@ export function useAppState() {
             if (lastEp) {
               const lastEpKey = `${baseId}-S${lastEp.season_number}E${lastEp.episode_number}`;
               const lastEpProg = progressData[lastEpKey];
-              const isLastWatched = lastEpProg && (lastEpProg.watched || (lastEpProg.duration > 0 && (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
+              const isLastWatched =
+                lastEpProg &&
+                (lastEpProg.watched ||
+                  (lastEpProg.duration > 0 &&
+                    (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
               if (isLastWatched) continue;
             }
           }
@@ -670,10 +692,12 @@ export function useAppState() {
         missingMedia.push({ id: rid, type: rtype as "movie" | "tv" });
       } else {
         if (isWatchItAgainItem(movie, progressData, tvDetailsCache)) {
-          const progKey = Object.keys(progressData).find((k) => k.startsWith(rid));
+          const progKey = Object.keys(progressData).find((k) =>
+            k.startsWith(rid),
+          );
           watchItAgainItems.push({
             ...movie,
-            progress: progKey ? progressData[progKey] : null
+            progress: progKey ? progressData[progKey] : null,
           });
         }
       }
@@ -683,11 +707,13 @@ export function useAppState() {
     if (missingMedia.length > 0) {
       const uniqueMissing = missingMedia.filter(
         (val, index, self) =>
-          self.findIndex((t) => t.id === val.id && t.type === val.type) === index &&
-          !fetchedMissingIdsRef.current.has(`${val.type}_${val.id}`)
+          self.findIndex((t) => t.id === val.id && t.type === val.type) ===
+            index && !fetchedMissingIdsRef.current.has(`${val.type}_${val.id}`),
       );
       // Mark these as attempted so we don't re-fetch on next cycle
-      uniqueMissing.forEach((m) => fetchedMissingIdsRef.current.add(`${m.type}_${m.id}`));
+      uniqueMissing.forEach((m) =>
+        fetchedMissingIdsRef.current.add(`${m.type}_${m.id}`),
+      );
       if (uniqueMissing.length > 0) {
         try {
           const fetched = await Promise.all(
@@ -697,7 +723,7 @@ export function useAppState() {
               } catch {
                 return null;
               }
-            })
+            }),
           );
           const valid = fetched.filter(Boolean) as any[];
           if (valid.length > 0) {
@@ -717,7 +743,10 @@ export function useAppState() {
       // Update Continue Watching Row
       const cwIndex = updated.findIndex((r) => r.title === "Continue Watching");
       if (continueWatchingItems.length > 0) {
-        const newRow = { title: "Continue Watching", items: continueWatchingItems };
+        const newRow = {
+          title: "Continue Watching",
+          items: continueWatchingItems,
+        };
         if (cwIndex !== -1) {
           updated[cwIndex] = newRow;
         } else {
@@ -734,9 +763,14 @@ export function useAppState() {
         if (mlIndex !== -1) {
           updated[mlIndex] = newRow;
         } else {
-          const cwIdx = updated.findIndex((r) => r.title === "Continue Watching");
-          const trendIdx = updated.findIndex((r) => r.title === "Trending Missions: Global Feed");
-          const insertIdx = trendIdx !== -1 ? trendIdx + 1 : (cwIdx !== -1 ? cwIdx + 1 : 0);
+          const cwIdx = updated.findIndex(
+            (r) => r.title === "Continue Watching",
+          );
+          const trendIdx = updated.findIndex(
+            (r) => r.title === "Trending Missions: Global Feed",
+          );
+          const insertIdx =
+            trendIdx !== -1 ? trendIdx + 1 : cwIdx !== -1 ? cwIdx + 1 : 0;
           updated.splice(insertIdx, 0, newRow);
         }
       } else if (mlIndex !== -1) {
@@ -748,13 +782,19 @@ export function useAppState() {
       if (wiaIndex !== -1) {
         updated[wiaIndex] = {
           ...updated[wiaIndex],
-          items: watchItAgainItems.slice(0, 10)
+          items: watchItAgainItems.slice(0, 10),
         };
       } else if (watchItAgainItems.length > 0) {
         const mlIdx = updated.findIndex((r) => r.title === "My Secure Records");
-        const trendIdx = updated.findIndex((r) => r.title === "Trending Missions: Global Feed");
-        const insertIdx = mlIdx !== -1 ? mlIdx + 1 : (trendIdx !== -1 ? trendIdx + 1 : 0);
-        updated.splice(insertIdx, 0, { title: "Watch It Again", items: watchItAgainItems.slice(0, 10) });
+        const trendIdx = updated.findIndex(
+          (r) => r.title === "Trending Missions: Global Feed",
+        );
+        const insertIdx =
+          mlIdx !== -1 ? mlIdx + 1 : trendIdx !== -1 ? trendIdx + 1 : 0;
+        updated.splice(insertIdx, 0, {
+          title: "Watch It Again",
+          items: watchItAgainItems.slice(0, 10),
+        });
       }
 
       return updated;
@@ -930,7 +970,10 @@ export function useAppState() {
               const recentType = historyType(recentItem);
               const movie =
                 currentPool.find((m) => m.id.toString() === recentId) ||
-                ((await getMediaBasicInfo(recentId, recentType as "movie" | "tv")) as any);
+                ((await getMediaBasicInfo(
+                  recentId,
+                  recentType as "movie" | "tv",
+                )) as any);
               if (movie) {
                 const { cast } = await getMediaDetails(
                   movie.id,
@@ -1175,12 +1218,13 @@ export function useAppState() {
         }
       }
       const continueWatchingItems: any[] = [];
-      const sortedProgressEntries = Object.entries(progressByTitle)
-        .sort((a, b) => {
+      const sortedProgressEntries = Object.entries(progressByTitle).sort(
+        (a, b) => {
           const tsA = a[1].val?.timestamp ?? 0;
           const tsB = b[1].val?.timestamp ?? 0;
           return tsB - tsA;
-        });
+        },
+      );
       for (const [baseId, { key, val }] of sortedProgressEntries) {
         const type = key.includes("-") ? "tv" : "movie";
         let movie = localPool.find(
@@ -1190,7 +1234,8 @@ export function useAppState() {
         if (movie) {
           const isMovie = type === "movie";
           if (isMovie) {
-            const isWatched = typeof val === "object" && val !== null && val.watched;
+            const isWatched =
+              typeof val === "object" && val !== null && val.watched;
             if (isWatched) continue;
           } else {
             const details = tvDetailsCache[baseId];
@@ -1199,7 +1244,11 @@ export function useAppState() {
               if (lastEp) {
                 const lastEpKey = `${baseId}-S${lastEp.season_number}E${lastEp.episode_number}`;
                 const lastEpProg = progressData[lastEpKey];
-                const isLastWatched = lastEpProg && (lastEpProg.watched || (lastEpProg.duration > 0 && (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
+                const isLastWatched =
+                  lastEpProg &&
+                  (lastEpProg.watched ||
+                    (lastEpProg.duration > 0 &&
+                      (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
                 if (isLastWatched) continue;
               }
             }
@@ -1285,7 +1334,9 @@ export function useAppState() {
                 (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
               );
               if (!movie) return null;
-              return isWatchItAgainItem(movie, progressData, tvDetailsCache) ? movie : null;
+              return isWatchItAgainItem(movie, progressData, tvDetailsCache)
+                ? movie
+                : null;
             })
             .filter(Boolean)
             .slice(0, 10),
@@ -1483,7 +1534,9 @@ export function useAppState() {
               (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
             );
             if (!movie) return null;
-            return isWatchItAgainItem(movie, progressData, tvDetailsCache) ? movie : null;
+            return isWatchItAgainItem(movie, progressData, tvDetailsCache)
+              ? movie
+              : null;
           })
           .filter(Boolean);
       }
@@ -1638,9 +1691,7 @@ export function useAppState() {
     localStorage.setItem("nebula-progress", JSON.stringify(p));
 
     // 2. Remove from history to keep them in sync
-    setHistory((prev) =>
-      prev.filter((h) => historyRawId(h) !== id.toString())
-    );
+    setHistory((prev) => prev.filter((h) => historyRawId(h) !== id.toString()));
 
     syncUserRows();
   };
@@ -1676,12 +1727,17 @@ export function useAppState() {
     if (allMovies.length === 0) return;
 
     const fetchMissing = async () => {
-      const missingHistory = history.map(h => ({
-        id: historyRawId(h),
-        type: historyType(h)
-      })).filter(item => {
-        return !allMovies.some(m => m.id.toString() === item.id && (m.type || "movie") === item.type);
-      });
+      const missingHistory = history
+        .map((h) => ({
+          id: historyRawId(h),
+          type: historyType(h),
+        }))
+        .filter((item) => {
+          return !allMovies.some(
+            (m) =>
+              m.id.toString() === item.id && (m.type || "movie") === item.type,
+          );
+        });
 
       const parseMyListId = (item: string) => {
         if (item.includes("_")) {
@@ -1691,17 +1747,22 @@ export function useAppState() {
         return { id: item, type: "movie" };
       };
 
-      const missingMyList = myList.map(item => {
-        const parsed = parseMyListId(item.toString());
-        return { id: parsed.id, type: parsed.type };
-      }).filter(item => {
-        return !allMovies.some(m => m.id.toString() === item.id && (m.type || "movie") === item.type);
-      });
+      const missingMyList = myList
+        .map((item) => {
+          const parsed = parseMyListId(item.toString());
+          return { id: parsed.id, type: parsed.type };
+        })
+        .filter((item) => {
+          return !allMovies.some(
+            (m) =>
+              m.id.toString() === item.id && (m.type || "movie") === item.type,
+          );
+        });
 
       const allMissing: { id: string; type: string }[] = [];
       const seen = new Set<string>();
-      
-      [...missingHistory, ...missingMyList].forEach(item => {
+
+      [...missingHistory, ...missingMyList].forEach((item) => {
         const key = `${item.type}_${item.id}`;
         if (!seen.has(key)) {
           seen.add(key);
@@ -1715,11 +1776,14 @@ export function useAppState() {
         const fetched = await Promise.all(
           allMissing.map(async (item) => {
             try {
-              return await getMediaBasicInfo(item.id, item.type as "movie" | "tv");
+              return await getMediaBasicInfo(
+                item.id,
+                item.type as "movie" | "tv",
+              );
             } catch {
               return null;
             }
-          })
+          }),
         );
         const valid = fetched.filter(Boolean) as any[];
         if (valid.length > 0) {
@@ -1748,7 +1812,10 @@ export function useAppState() {
       for (const id of tvShows) {
         if (tvDetailsCache[id]) continue;
         try {
-          const apiBase = API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
+          const apiBase = API_BASE_URL.replace(/\/api\/?$/, "").replace(
+            /\/$/,
+            "",
+          );
           const res = await fetch(`${apiBase}/api/tv-details/${id}`);
           if (res.ok) {
             const data = await res.json();
@@ -1916,9 +1983,12 @@ export function useAppState() {
       };
       fetchRegionalDramas();
     } else if (
-      !["Library", "My Secure Records", "Watch History", "Watch It Again"].includes(
-        viewingCategory,
-      )
+      ![
+        "Library",
+        "My Secure Records",
+        "Watch History",
+        "Watch It Again",
+      ].includes(viewingCategory)
     ) {
       if (isPageFetched(viewingCategory, selectedRegion, dramaPage)) return;
       const fetchMoreForCategory = async () => {
@@ -2013,7 +2083,7 @@ export function useAppState() {
 
   const recommendations = useMemo(() => {
     const flat = rows.flatMap((r) => r.items);
-    
+
     // Deduplicate items in flat to make sure recommendations has unique movies
     const seen = new Set();
     const uniqueFlat = [];

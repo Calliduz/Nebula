@@ -83,7 +83,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       })
       .then((data) => {
         if (!active) return;
-        
+
         // Filter out sources that have null url
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
@@ -116,7 +116,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       })
       .then((data) => {
         if (!active) return;
-        
+
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
@@ -130,7 +130,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         setVideasySources(activeSources);
       })
       .catch((err) => {
-        if (active) setVideasyError(err.message || "Failed to contact Videasy.");
+        if (active)
+          setVideasyError(err.message || "Failed to contact Videasy.");
       })
       .finally(() => {
         if (active) setVideasyLoading(false);
@@ -142,8 +143,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   }, [movie.id, movie.type, season, episode, movie.title, movie.year]);
 
   // Construct the serialized pipelines
-  const vidrockUrl = sources.map(src => `${src.url}#${src.name}#${src.type}`).join("|");
-  const videasyUrl = videasySources.map(src => `${src.url}#${src.name}#${src.type}#${src.audio || ""}`).join("|");
+  const vidrockUrl = sources
+    .map((src) => `${src.url}#${src.name}#${src.type}`)
+    .join("|");
+  const videasyUrl = videasySources
+    .map((src) => `${src.url}#${src.name}#${src.type}#${src.audio || ""}`)
+    .join("|");
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
@@ -177,14 +182,19 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             Choose Stream Source
           </h3>
           <p className="text-xs text-white/50 max-w-md mx-auto">
-            {movie.title} {season !== undefined && `• Season ${season} Episode ${episode}`}
+            {movie.title}{" "}
+            {season !== undefined && `• Season ${season} Episode ${episode}`}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[380px] md:max-h-none overflow-y-auto pr-1 sm:pr-0 custom-scrollbar">
           {/* VidRock Card */}
           <motion.div
-            whileHover={(!loading && sources.length > 0) ? { scale: 1.02, translateY: -2 } : {}}
+            whileHover={
+              !loading && sources.length > 0
+                ? { scale: 1.02, translateY: -2 }
+                : {}
+            }
             onClick={() => {
               if (!loading && sources.length > 0) {
                 onSelect(vidrockUrl);
@@ -194,8 +204,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               loading
                 ? "border-nebula-cyan/20 bg-nebula-cyan/5 opacity-80 cursor-wait animate-pulse"
                 : sources.length > 0
-                ? "border-nebula-cyan/35 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.05)] group"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+                  ? "border-nebula-cyan/35 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.05)] group"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {loading ? (
@@ -212,10 +222,20 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                  loading || sources.length > 0 ? "bg-nebula-cyan/15 text-nebula-cyan" : "bg-white/5 text-white/20"
-                }`}>
-                  <Zap size={18} fill={loading || sources.length > 0 ? "currentColor" : "none"} className={loading ? "animate-pulse" : ""} />
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                    loading || sources.length > 0
+                      ? "bg-nebula-cyan/15 text-nebula-cyan"
+                      : "bg-white/5 text-white/20"
+                  }`}
+                >
+                  <Zap
+                    size={18}
+                    fill={
+                      loading || sources.length > 0 ? "currentColor" : "none"
+                    }
+                    className={loading ? "animate-pulse" : ""}
+                  />
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-white uppercase tracking-tight flex items-center gap-1.5">
@@ -231,7 +251,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               </div>
 
               <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
-                Delivers ultra-fast multi-CDN speeds, rich HLS quality, and seamless client-side failover between active mirrors.
+                Delivers ultra-fast multi-CDN speeds, rich HLS quality, and
+                seamless client-side failover between active mirrors.
               </p>
             </div>
 
@@ -252,11 +273,19 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {sources.map((src) => {
-                      let color = "border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5";
-                      if (src.name === "Atlas") color = "border-amber-500/20 text-amber-400/80 bg-amber-500/5";
-                      if (src.name === "Orion") color = "border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5";
+                      let color =
+                        "border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5";
+                      if (src.name === "Atlas")
+                        color =
+                          "border-amber-500/20 text-amber-400/80 bg-amber-500/5";
+                      if (src.name === "Orion")
+                        color =
+                          "border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5";
                       return (
-                        <span key={src.name} className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}>
+                        <span
+                          key={src.name}
+                          className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}
+                        >
                           {src.name}
                         </span>
                       );
@@ -266,7 +295,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : (
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {error ? "Uplink currently offline" : "No mirror streams available"}
+                  {error
+                    ? "Uplink currently offline"
+                    : "No mirror streams available"}
                 </p>
               )}
             </div>
@@ -274,7 +305,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
           {/* Videasy Card */}
           <motion.div
-            whileHover={(!videasyLoading && videasySources.length > 0) ? { scale: 1.02, translateY: -2 } : {}}
+            whileHover={
+              !videasyLoading && videasySources.length > 0
+                ? { scale: 1.02, translateY: -2 }
+                : {}
+            }
             onClick={() => {
               if (!videasyLoading && videasySources.length > 0) {
                 onSelect(videasyUrl);
@@ -284,8 +319,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               videasyLoading
                 ? "border-violet-500/20 bg-violet-500/5 opacity-80 cursor-wait animate-pulse"
                 : videasySources.length > 0
-                ? "border-violet-500/35 bg-violet-500/5 hover:bg-violet-500/10 cursor-pointer shadow-[0_0_20px_rgba(168,85,247,0.05)] group"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+                  ? "border-violet-500/35 bg-violet-500/5 hover:bg-violet-500/10 cursor-pointer shadow-[0_0_20px_rgba(168,85,247,0.05)] group"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {videasyLoading ? (
@@ -302,10 +337,17 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                  videasyLoading || videasySources.length > 0 ? "bg-violet-500/15 text-violet-400" : "bg-white/5 text-white/20"
-                }`}>
-                  <Tv size={18} className={videasyLoading ? "animate-pulse" : ""} />
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                    videasyLoading || videasySources.length > 0
+                      ? "bg-violet-500/15 text-violet-400"
+                      : "bg-white/5 text-white/20"
+                  }`}
+                >
+                  <Tv
+                    size={18}
+                    className={videasyLoading ? "animate-pulse" : ""}
+                  />
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-white group-hover:text-violet-400 transition-colors uppercase tracking-tight flex items-center gap-1.5">
@@ -321,7 +363,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               </div>
 
               <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
-                Bypasses player protection layers using WebAssembly decryption to unlock multiple global multi-language audio mirrors.
+                Bypasses player protection layers using WebAssembly decryption
+                to unlock multiple global multi-language audio mirrors.
               </p>
             </div>
 
@@ -342,9 +385,14 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {videasySources.map((src) => {
-                      const mirrorName = src.name.replace("Videasy (", "").replace(")", "");
+                      const mirrorName = src.name
+                        .replace("Videasy (", "")
+                        .replace(")", "");
                       return (
-                        <span key={src.name} className="inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wider">
+                        <span
+                          key={src.name}
+                          className="inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wider"
+                        >
                           {src.flag && (
                             <img
                               src={`https://flagcdn.com/16x12/${src.flag}.png`}
@@ -361,7 +409,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : (
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {videasyError ? "Decryption engine offline" : "No mirror streams available"}
+                  {videasyError
+                    ? "Decryption engine offline"
+                    : "No mirror streams available"}
                 </p>
               )}
             </div>
@@ -389,7 +439,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               </div>
 
               <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
-                Aggregates comprehensive standard indexes across global hosts to ensure robust content availability.
+                Aggregates comprehensive standard indexes across global hosts to
+                ensure robust content availability.
               </p>
             </div>
 
@@ -453,7 +504,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const [episodes, setEpisodes] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedEpForModal, setSelectedEpForModal] = useState<{ season?: number; episode?: number } | null>(null);
+  const [selectedEpForModal, setSelectedEpForModal] = useState<{
+    season?: number;
+    episode?: number;
+  } | null>(null);
   const [showSourceModal, setShowSourceModal] = useState(false);
 
   const [torrentData, setTorrentData] = useState<any>(null);
@@ -468,10 +522,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const [expandedEpisode, setExpandedEpisode] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
-  const [backupTorrents, setBackupTorrents] = useState<Record<number, any[]>>({});
-  const [backupTorrentsLoading, setBackupTorrentsLoading] = useState<Record<number, boolean>>({});
-  const [backupDirectDownloads, setBackupDirectDownloads] = useState<Record<number, any[]>>({});
-  const [backupDirectLoading, setBackupDirectLoading] = useState<Record<number, boolean>>({});
+  const [backupTorrents, setBackupTorrents] = useState<Record<number, any[]>>(
+    {},
+  );
+  const [backupTorrentsLoading, setBackupTorrentsLoading] = useState<
+    Record<number, boolean>
+  >({});
+  const [backupDirectDownloads, setBackupDirectDownloads] = useState<
+    Record<number, any[]>
+  >({});
+  const [backupDirectLoading, setBackupDirectLoading] = useState<
+    Record<number, boolean>
+  >({});
 
   const relatedRowRef = useRef<HTMLDivElement>(null);
   const [showRelatedLeftArrow, setShowRelatedLeftArrow] = useState(false);
@@ -497,43 +559,56 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       const { clientWidth } = relatedRowRef.current;
       const scrollAmount =
         direction === "left" ? -clientWidth * 0.8 : clientWidth * 0.8;
-      relatedRowRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+      relatedRowRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: "smooth",
+      });
     }
   };
 
   const loadBackupTorrents = (epNum: number) => {
     // 1. Fetch Torrent Backups
-    setBackupTorrentsLoading(prev => ({ ...prev, [epNum]: true }));
-    fetch(`${API_BASE_URL}/api/download/episode?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`)
-      .then(res => {
+    setBackupTorrentsLoading((prev) => ({ ...prev, [epNum]: true }));
+    fetch(
+      `${API_BASE_URL}/api/download/episode?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`,
+    )
+      .then((res) => {
         if (!res.ok) throw new Error("Failed to load torrent backups");
         return res.json();
       })
-      .then(data => {
-        setBackupTorrents(prev => ({ ...prev, [epNum]: data.torrents || [] }));
+      .then((data) => {
+        setBackupTorrents((prev) => ({
+          ...prev,
+          [epNum]: data.torrents || [],
+        }));
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Torrent backup error:", err);
       })
       .finally(() => {
-        setBackupTorrentsLoading(prev => ({ ...prev, [epNum]: false }));
+        setBackupTorrentsLoading((prev) => ({ ...prev, [epNum]: false }));
       });
 
     // 2. Fetch Direct Downloads
-    setBackupDirectLoading(prev => ({ ...prev, [epNum]: true }));
-    fetch(`${API_BASE_URL}/api/download/episode/direct?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`)
-      .then(res => {
+    setBackupDirectLoading((prev) => ({ ...prev, [epNum]: true }));
+    fetch(
+      `${API_BASE_URL}/api/download/episode/direct?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`,
+    )
+      .then((res) => {
         if (!res.ok) throw new Error("Failed to load direct backups");
         return res.json();
       })
-      .then(data => {
-        setBackupDirectDownloads(prev => ({ ...prev, [epNum]: data.directDownloads || [] }));
+      .then((data) => {
+        setBackupDirectDownloads((prev) => ({
+          ...prev,
+          [epNum]: data.directDownloads || [],
+        }));
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Direct backup error:", err);
       })
       .finally(() => {
-        setBackupDirectLoading(prev => ({ ...prev, [epNum]: false }));
+        setBackupDirectLoading((prev) => ({ ...prev, [epNum]: false }));
       });
   };
 
@@ -563,7 +638,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       if (!torrentData && !torrentLoading) {
         setTorrentLoading(true);
         setTorrentError("");
-        fetch(`${API_BASE_URL}/api/download?tmdbId=${movie.id}&type=${movie.type}`)
+        fetch(
+          `${API_BASE_URL}/api/download?tmdbId=${movie.id}&type=${movie.type}`,
+        )
           .then((res) => {
             if (!res.ok) throw new Error("Failed to load torrent indexes");
             return res.json();
@@ -582,7 +659,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       if (!directData && !directLoading) {
         setDirectLoading(true);
         setDirectError("");
-        fetch(`${API_BASE_URL}/api/download/direct?tmdbId=${movie.id}&type=${movie.type}`)
+        fetch(
+          `${API_BASE_URL}/api/download/direct?tmdbId=${movie.id}&type=${movie.type}`,
+        )
           .then((res) => {
             if (!res.ok) throw new Error("Failed to load direct downloads");
             return res.json();
@@ -591,21 +670,31 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
             setDirectData(data);
           })
           .catch((err) => {
-            setDirectError(err.message || "Failed to retrieve direct downloads.");
+            setDirectError(
+              err.message || "Failed to retrieve direct downloads.",
+            );
           })
           .finally(() => {
             setDirectLoading(false);
           });
       }
     }
-  }, [activeTab, movie?.id, movie?.type, torrentData, torrentLoading, directData, directLoading]);
+  }, [
+    activeTab,
+    movie?.id,
+    movie?.type,
+    torrentData,
+    torrentLoading,
+    directData,
+    directLoading,
+  ]);
 
   // Background progressive batch prefetcher for TV episodes
   useEffect(() => {
     if (activeTab !== "Downloads" || movie?.type !== "tv" || !tvDetails) return;
 
     const seasonObj = tvDetails.seasons?.find(
-      (s: any) => s.season_number === activeDownloadSeason
+      (s: any) => s.season_number === activeDownloadSeason,
     );
     if (!seasonObj) return;
 
@@ -640,40 +729,60 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         if (batch.length > 0) {
           batch.forEach((epNum) => {
             // Fetch TV episode backup torrents
-            setBackupTorrentsLoading(prev => ({ ...prev, [epNum]: true }));
-            fetch(`${API_BASE_URL}/api/download/episode?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`)
-              .then(res => {
+            setBackupTorrentsLoading((prev) => ({ ...prev, [epNum]: true }));
+            fetch(
+              `${API_BASE_URL}/api/download/episode?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`,
+            )
+              .then((res) => {
                 if (!res.ok) throw new Error("Failed to load torrent backups");
                 return res.json();
               })
-              .then(data => {
+              .then((data) => {
                 if (active) {
-                  setBackupTorrents(prev => ({ ...prev, [epNum]: data.torrents || [] }));
+                  setBackupTorrents((prev) => ({
+                    ...prev,
+                    [epNum]: data.torrents || [],
+                  }));
                 }
               })
-              .catch(err => console.error(`Prefetch torrent error ep ${epNum}:`, err))
+              .catch((err) =>
+                console.error(`Prefetch torrent error ep ${epNum}:`, err),
+              )
               .finally(() => {
                 if (active) {
-                  setBackupTorrentsLoading(prev => ({ ...prev, [epNum]: false }));
+                  setBackupTorrentsLoading((prev) => ({
+                    ...prev,
+                    [epNum]: false,
+                  }));
                 }
               });
 
             // Fetch TV episode direct downloads
-            setBackupDirectLoading(prev => ({ ...prev, [epNum]: true }));
-            fetch(`${API_BASE_URL}/api/download/episode/direct?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`)
-              .then(res => {
+            setBackupDirectLoading((prev) => ({ ...prev, [epNum]: true }));
+            fetch(
+              `${API_BASE_URL}/api/download/episode/direct?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`,
+            )
+              .then((res) => {
                 if (!res.ok) throw new Error("Failed to load direct downloads");
                 return res.json();
               })
-              .then(data => {
+              .then((data) => {
                 if (active) {
-                  setBackupDirectDownloads(prev => ({ ...prev, [epNum]: data.directDownloads || [] }));
+                  setBackupDirectDownloads((prev) => ({
+                    ...prev,
+                    [epNum]: data.directDownloads || [],
+                  }));
                 }
               })
-              .catch(err => console.error(`Prefetch direct error ep ${epNum}:`, err))
+              .catch((err) =>
+                console.error(`Prefetch direct error ep ${epNum}:`, err),
+              )
               .finally(() => {
                 if (active) {
-                  setBackupDirectLoading(prev => ({ ...prev, [epNum]: false }));
+                  setBackupDirectLoading((prev) => ({
+                    ...prev,
+                    [epNum]: false,
+                  }));
                 }
               });
           });
@@ -744,7 +853,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         }
       }
 
-      if (currentMovie && !currentMovie.isDrama && currentMovie.origin !== "dramacool" && currentMovie.origin !== "kisskh") {
+      if (
+        currentMovie &&
+        !currentMovie.isDrama &&
+        currentMovie.origin !== "dramacool" &&
+        currentMovie.origin !== "kisskh"
+      ) {
         const enriched = await enrichMoviesWithMetadata([currentMovie]);
         currentMovie = { ...currentMovie, ...enriched[0] };
         setMovie(currentMovie);
@@ -840,7 +954,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         <div className="flex flex-col items-center gap-4 relative z-10">
           <div className="relative">
             <div className="absolute inset-0 bg-nebula-cyan/20 blur-xl rounded-full scale-150 animate-pulse" />
-            <Loader2 className="animate-spin text-nebula-cyan relative z-10" size={40} />
+            <Loader2
+              className="animate-spin text-nebula-cyan relative z-10"
+              size={40}
+            />
           </div>
           <div className="flex flex-col items-center gap-2">
             <p className="text-white font-display font-black text-xl tracking-tighter uppercase italic animate-pulse">
@@ -1040,52 +1157,93 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       .map(([k, val]: [string, any]) => {
                         const tvMatch = k.match(/-S(\d+)E(\d+)/);
                         return tvMatch
-                          ? { season: parseInt(tvMatch[1]), episode: parseInt(tvMatch[2]), ...val, _key: k }
+                          ? {
+                              season: parseInt(tvMatch[1]),
+                              episode: parseInt(tvMatch[2]),
+                              ...val,
+                              _key: k,
+                            }
                           : null;
                       })
                       .filter(Boolean) as any[];
 
-                      if (tvEntries.length > 0) {
-                        // Pick the most recently watched
-                        tvEntries.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
-                        const latest = tvEntries[0];
-                        const pct = latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
+                    if (tvEntries.length > 0) {
+                      // Pick the most recently watched
+                      tvEntries.sort(
+                        (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0),
+                      );
+                      const latest = tvEntries[0];
+                      const pct =
+                        latest.duration > 0
+                          ? (latest.time / latest.duration) * 100
+                          : 0;
 
-                        if (pct >= 90 || latest.watched) {
-                          // Episode nearly done — jump to NEXT episode
-                          if (tvDetails && tvDetails.seasons) {
-                            const sortedSeasons = tvDetails.seasons
-                              .filter((s: any) => s.season_number > 0)
-                              .sort((a: any, b: any) => a.season_number - b.season_number);
-                            
-                            const currentSeasonInfo = sortedSeasons.find((s: any) => s.season_number === latest.season);
-                            if (currentSeasonInfo) {
-                              const maxEpisodes = currentSeasonInfo.episode_count;
-                              if (latest.episode < maxEpisodes) {
-                                resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
-                              } else {
-                                // Transition to next season
-                                const currentSeasonIdx = sortedSeasons.findIndex((s: any) => s.season_number === latest.season);
-                                if (currentSeasonIdx !== -1 && currentSeasonIdx < sortedSeasons.length - 1) {
-                                  const nextSeason = sortedSeasons[currentSeasonIdx + 1];
-                                  resumeData = { season: nextSeason.season_number, episode: 1, _isNext: true };
-                                } else {
-                                  // No more seasons or episodes!
-                                  resumeData = { season: latest.season, episode: latest.episode, _completed: true };
-                                }
-                              }
+                      if (pct >= 90 || latest.watched) {
+                        // Episode nearly done — jump to NEXT episode
+                        if (tvDetails && tvDetails.seasons) {
+                          const sortedSeasons = tvDetails.seasons
+                            .filter((s: any) => s.season_number > 0)
+                            .sort(
+                              (a: any, b: any) =>
+                                a.season_number - b.season_number,
+                            );
+
+                          const currentSeasonInfo = sortedSeasons.find(
+                            (s: any) => s.season_number === latest.season,
+                          );
+                          if (currentSeasonInfo) {
+                            const maxEpisodes = currentSeasonInfo.episode_count;
+                            if (latest.episode < maxEpisodes) {
+                              resumeData = {
+                                season: latest.season,
+                                episode: latest.episode + 1,
+                                _isNext: true,
+                              };
                             } else {
-                              // Fallback if current season info not found
-                              resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
+                              // Transition to next season
+                              const currentSeasonIdx = sortedSeasons.findIndex(
+                                (s: any) => s.season_number === latest.season,
+                              );
+                              if (
+                                currentSeasonIdx !== -1 &&
+                                currentSeasonIdx < sortedSeasons.length - 1
+                              ) {
+                                const nextSeason =
+                                  sortedSeasons[currentSeasonIdx + 1];
+                                resumeData = {
+                                  season: nextSeason.season_number,
+                                  episode: 1,
+                                  _isNext: true,
+                                };
+                              } else {
+                                // No more seasons or episodes!
+                                resumeData = {
+                                  season: latest.season,
+                                  episode: latest.episode,
+                                  _completed: true,
+                                };
+                              }
                             }
                           } else {
-                            // tvDetails not loaded yet, fallback to next episode
-                            resumeData = { season: latest.season, episode: latest.episode + 1, _isNext: true };
+                            // Fallback if current season info not found
+                            resumeData = {
+                              season: latest.season,
+                              episode: latest.episode + 1,
+                              _isNext: true,
+                            };
                           }
                         } else {
-                          resumeData = latest;
+                          // tvDetails not loaded yet, fallback to next episode
+                          resumeData = {
+                            season: latest.season,
+                            episode: latest.episode + 1,
+                            _isNext: true,
+                          };
                         }
+                      } else {
+                        resumeData = latest;
                       }
+                    }
                   } else {
                     // Movie: single progress entry
                     const entry = Object.entries(p).find(
@@ -1095,7 +1253,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       const [k, val]: [string, any] = entry;
                       const tvMatch = k.match(/-S(\d+)E(\d+)/);
                       resumeData = tvMatch
-                        ? { season: parseInt(tvMatch[1]), episode: parseInt(tvMatch[2]), ...val }
+                        ? {
+                            season: parseInt(tvMatch[1]),
+                            episode: parseInt(tvMatch[2]),
+                            ...val,
+                          }
                         : val;
                     }
                   }
@@ -1135,9 +1297,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         whileTap={!isDisabled ? { scale: 0.95 } : {}}
                         disabled={isDisabled}
                         onClick={() =>
-                          !isDisabled && handlePlayClick(
-                            resumeData?.season !== undefined ? resumeData.season : (movie.type === "tv" ? 1 : undefined),
-                            resumeData?.episode !== undefined ? resumeData.episode : (movie.type === "tv" ? 1 : undefined)
+                          !isDisabled &&
+                          handlePlayClick(
+                            resumeData?.season !== undefined
+                              ? resumeData.season
+                              : movie.type === "tv"
+                                ? 1
+                                : undefined,
+                            resumeData?.episode !== undefined
+                              ? resumeData.episode
+                              : movie.type === "tv"
+                                ? 1
+                                : undefined,
                           )
                         }
                         className={`px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none ${
@@ -1149,7 +1320,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         {isTBA ? (
                           <Clock size={20} className="text-obsidian/40" />
                         ) : (
-                          <Play size={20} fill="currentColor" className={isDisabled ? "opacity-30" : ""} />
+                          <Play
+                            size={20}
+                            fill="currentColor"
+                            className={isDisabled ? "opacity-30" : ""}
+                          />
                         )}
                         <span>{label}</span>
                       </motion.button>
@@ -1180,7 +1355,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
               </div>
 
               {/* Related Titles inline row */}
-              <div 
+              <div
                 className="mb-10 w-full"
                 onMouseEnter={() => setIsRelatedHovered(true)}
                 onMouseLeave={() => setIsRelatedHovered(false)}
@@ -1188,7 +1363,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                 <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4">
                   Related Titles
                 </h3>
-                
+
                 <div className="relative">
                   <AnimatePresence>
                     {isRelatedHovered && showRelatedLeftArrow && (
@@ -1311,20 +1486,24 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     {episodes.map((ep: any) => {
                       // Read per-episode progress from localStorage
                       const epProgressData = JSON.parse(
-                        localStorage.getItem("nebula-progress") || "{}"
+                        localStorage.getItem("nebula-progress") || "{}",
                       );
                       const epKey = `${movie.id}-S${activeSeason}E${ep.episode_number}`;
                       const epProg = epProgressData[epKey];
-                      const epPct = epProg && epProg.duration > 0
-                        ? Math.min(100, (epProg.time / epProg.duration) * 100)
-                        : 0;
-                      const epWatched = (epProg && epProg.watched) || epPct >= 90;
+                      const epPct =
+                        epProg && epProg.duration > 0
+                          ? Math.min(100, (epProg.time / epProg.duration) * 100)
+                          : 0;
+                      const epWatched =
+                        (epProg && epProg.watched) || epPct >= 90;
 
                       return (
                         <div
                           key={ep.episode_number}
                           className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30"
-                          onClick={() => handlePlayClick(activeSeason, ep.episode_number)}
+                          onClick={() =>
+                            handlePlayClick(activeSeason, ep.episode_number)
+                          }
                         >
                           <div className="aspect-video bg-black/50 relative overflow-hidden">
                             {ep.still_path ? (
@@ -1352,10 +1531,23 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                             {/* Watched checkmark overlay */}
                             {epWatched && (
                               <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-sm border border-white/10">
-                                <svg width="10" height="9" viewBox="0 0 10 9" fill="none">
-                                  <path d="M1.5 4.5L4 7L8.5 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <svg
+                                  width="10"
+                                  height="9"
+                                  viewBox="0 0 10 9"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M1.5 4.5L4 7L8.5 1.5"
+                                    stroke="white"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
                                 </svg>
-                                <span className="text-[8px] font-black uppercase tracking-widest text-white/70">Watched</span>
+                                <span className="text-[8px] font-black uppercase tracking-widest text-white/70">
+                                  Watched
+                                </span>
                               </div>
                             )}
 
@@ -1380,7 +1572,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                       width: `${epPct}%`,
                                       background: "#e50914",
                                       boxShadow: "0 0 4px rgba(229,9,20,0.7)",
-                                      transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
+                                      transition:
+                                        "width 0.4s cubic-bezier(0.4,0,0.2,1)",
                                     }}
                                   />
                                 </div>
@@ -1437,7 +1630,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                           Security Notice: Use a VPN
                         </h4>
                         <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed">
-                          Your ISP can monitor torrent downloads. We highly recommend using a secure VPN (like Mullvad, ProtonVPN, or NordVPN) to encrypt your traffic before clicking magnet links.
+                          Your ISP can monitor torrent downloads. We highly
+                          recommend using a secure VPN (like Mullvad, ProtonVPN,
+                          or NordVPN) to encrypt your traffic before clicking
+                          magnet links.
                         </p>
                       </div>
                     </div>
@@ -1451,7 +1647,26 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                           Desktop Clients
                         </h4>
                         <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed">
-                          Magnet links require a client to download. We recommend downloading <a href="https://www.qbittorrent.org/" target="_blank" rel="noopener noreferrer" className="text-nebula-cyan underline font-bold hover:text-white transition-colors">qBittorrent</a> (Open Source &amp; Ad-Free) or <a href="https://transmissionbt.com/" target="_blank" rel="noopener noreferrer" className="text-nebula-cyan underline font-bold hover:text-white transition-colors">Transmission</a>.
+                          Magnet links require a client to download. We
+                          recommend downloading{" "}
+                          <a
+                            href="https://www.qbittorrent.org/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-nebula-cyan underline font-bold hover:text-white transition-colors"
+                          >
+                            qBittorrent
+                          </a>{" "}
+                          (Open Source &amp; Ad-Free) or{" "}
+                          <a
+                            href="https://transmissionbt.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-nebula-cyan underline font-bold hover:text-white transition-colors"
+                          >
+                            Transmission
+                          </a>
+                          .
                         </p>
                       </div>
                     </div>
@@ -1465,7 +1680,29 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                           Mobile &amp; iOS Torrenting
                         </h4>
                         <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed">
-                          Android users can use apps like <strong className="text-white">Flud</strong> or <strong className="text-white">LibreTorrent</strong>. iOS users can copy magnet links into free cloud services like <a href="https://www.seedr.cc/" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline font-bold hover:text-white transition-colors">Seedr.cc</a> or <a href="https://real-debrid.com/" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline font-bold hover:text-white transition-colors">Real-Debrid</a> to download via high-speed direct links.
+                          Android users can use apps like{" "}
+                          <strong className="text-white">Flud</strong> or{" "}
+                          <strong className="text-white">LibreTorrent</strong>.
+                          iOS users can copy magnet links into free cloud
+                          services like{" "}
+                          <a
+                            href="https://www.seedr.cc/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-400 underline font-bold hover:text-white transition-colors"
+                          >
+                            Seedr.cc
+                          </a>{" "}
+                          or{" "}
+                          <a
+                            href="https://real-debrid.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-400 underline font-bold hover:text-white transition-colors"
+                          >
+                            Real-Debrid
+                          </a>{" "}
+                          to download via high-speed direct links.
                         </p>
                       </div>
                     </div>
@@ -1477,7 +1714,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       {/* Direct downloads block */}
                       {directLoading && (
                         <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-transparent p-6 flex flex-col items-center justify-center py-12 gap-3">
-                          <Loader2 className="animate-spin text-violet-400" size={24} />
+                          <Loader2
+                            className="animate-spin text-violet-400"
+                            size={24}
+                          />
                           <p className="text-xs text-violet-400/70 uppercase tracking-widest font-black animate-pulse">
                             Scanning high-speed direct downloads...
                           </p>
@@ -1489,122 +1729,141 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                           <p className="text-rose-400 text-xs font-bold uppercase tracking-wider mb-1">
                             Direct downloads scanning failed
                           </p>
-                          <p className="text-[10px] text-white/40">{directError}</p>
+                          <p className="text-[10px] text-white/40">
+                            {directError}
+                          </p>
                         </div>
                       )}
 
-                      {!directLoading && directData?.directDownloads && directData.directDownloads.length > 0 && (() => {
-                        const sortedDirects = [...directData.directDownloads].sort((a: any, b: any) => {
-                          if (a.format === "mkv" && b.format !== "mkv") return -1;
-                          if (a.format !== "mkv" && b.format === "mkv") return 1;
-                          return 0;
-                        });
+                      {!directLoading &&
+                        directData?.directDownloads &&
+                        directData.directDownloads.length > 0 &&
+                        (() => {
+                          const sortedDirects = [
+                            ...directData.directDownloads,
+                          ].sort((a: any, b: any) => {
+                            if (a.format === "mkv" && b.format !== "mkv")
+                              return -1;
+                            if (a.format !== "mkv" && b.format === "mkv")
+                              return 1;
+                            return 0;
+                          });
 
-                        const allSubs: any[] = [];
-                        const seenSubUrls = new Set<string>();
-                        sortedDirects.forEach((d: any) => {
-                          if (d.subtitles) {
-                            d.subtitles.forEach((sub: any) => {
-                              if (sub.url && !seenSubUrls.has(sub.url)) {
-                                seenSubUrls.add(sub.url);
-                                allSubs.push(sub);
-                              }
-                            });
-                          }
-                        });
+                          const allSubs: any[] = [];
+                          const seenSubUrls = new Set<string>();
+                          sortedDirects.forEach((d: any) => {
+                            if (d.subtitles) {
+                              d.subtitles.forEach((sub: any) => {
+                                if (sub.url && !seenSubUrls.has(sub.url)) {
+                                  seenSubUrls.add(sub.url);
+                                  allSubs.push(sub);
+                                }
+                              });
+                            }
+                          });
 
-                        return (
-                          <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-transparent overflow-hidden p-6 animate-fade-in">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex flex-col">
-                                <h3 className="text-sm font-bold text-violet-400 uppercase tracking-wider flex items-center gap-2">
-                                  <FileDown size={16} />
-                                  Direct High-Speed Downloads
-                                </h3>
-                                <span className="text-[11px] text-white/60 uppercase tracking-wider mt-0.5 font-bold">
-                                  via VidVault • No torrent client needed
+                          return (
+                            <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-transparent overflow-hidden p-6 animate-fade-in">
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex flex-col">
+                                  <h3 className="text-sm font-bold text-violet-400 uppercase tracking-wider flex items-center gap-2">
+                                    <FileDown size={16} />
+                                    Direct High-Speed Downloads
+                                  </h3>
+                                  <span className="text-[11px] text-white/60 uppercase tracking-wider mt-0.5 font-bold">
+                                    via VidVault • No torrent client needed
+                                  </span>
+                                </div>
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-300">
+                                  Direct
                                 </span>
                               </div>
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-300">
-                                Direct
-                              </span>
-                            </div>
-                            
-                            <div className="divide-y divide-white/5 bg-black/10 rounded-xl overflow-hidden border border-white/5">
-                              {sortedDirects.map((d: any, idx: number) => (
-                                <div
-                                  key={`direct-movie-${idx}`}
-                                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 ${d.format === "mkv" ? "bg-emerald-500/3" : ""}`}
-                                >
-                                  <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="font-bold text-sm text-white">
-                                      {d.quality}
-                                    </span>
-                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
-                                      {d.size}
-                                    </span>
-                                    {d.format === "mkv" ? (
-                                      <>
-                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
-                                          MKV
-                                        </span>
-                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase">
-                                          ✓ Embedded Subs
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-300 uppercase">
-                                          MP4
-                                        </span>
-                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60 uppercase">
-                                          No Embedded Subs
-                                        </span>
-                                      </>
-                                    )}
-                                  </div>
-                                  <a
-                                    href={d.direct_url.startsWith("http") ? d.direct_url : `${API_BASE_URL}${d.direct_url}`}
-                                    onClick={triggerPopunder}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`shrink-0 px-3 py-1.5 text-white rounded-lg font-bold text-[10px] transition-all flex items-center gap-1.5 ${
-                                      d.format === "mkv" ? "bg-emerald-700 hover:bg-emerald-600" : "bg-sky-600/80 hover:bg-sky-500"
-                                    }`}
-                                  >
-                                    <FileDown size={10} />
-                                    Download {d.format.toUpperCase()}
-                                  </a>
-                                </div>
-                              ))}
-                            </div>
 
-                            {allSubs.length > 0 && (
-                              <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/5">
-                                <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                  <Globe size={12} />
-                                  Download External Subtitles
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {allSubs.map((sub: any, sIdx: number) => (
+                              <div className="divide-y divide-white/5 bg-black/10 rounded-xl overflow-hidden border border-white/5">
+                                {sortedDirects.map((d: any, idx: number) => (
+                                  <div
+                                    key={`direct-movie-${idx}`}
+                                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 ${d.format === "mkv" ? "bg-emerald-500/3" : ""}`}
+                                  >
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="font-bold text-sm text-white">
+                                        {d.quality}
+                                      </span>
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
+                                        {d.size}
+                                      </span>
+                                      {d.format === "mkv" ? (
+                                        <>
+                                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
+                                            MKV
+                                          </span>
+                                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase">
+                                            ✓ Embedded Subs
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-300 uppercase">
+                                            MP4
+                                          </span>
+                                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60 uppercase">
+                                            No Embedded Subs
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
                                     <a
-                                      key={sIdx}
-                                      href={sub.url.startsWith("http") ? sub.url : `${API_BASE_URL}${sub.url}`}
-                                      download
+                                      href={
+                                        d.direct_url.startsWith("http")
+                                          ? d.direct_url
+                                          : `${API_BASE_URL}${d.direct_url}`
+                                      }
+                                      onClick={triggerPopunder}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 hover:bg-violet-500/20 hover:text-white text-xs font-bold uppercase tracking-wide transition-all"
+                                      className={`shrink-0 px-3 py-1.5 text-white rounded-lg font-bold text-[10px] transition-all flex items-center gap-1.5 ${
+                                        d.format === "mkv"
+                                          ? "bg-emerald-700 hover:bg-emerald-600"
+                                          : "bg-sky-600/80 hover:bg-sky-500"
+                                      }`}
                                     >
-                                      <Globe size={10} />
-                                      {sub.lanName || "Unknown"}
+                                      <FileDown size={10} />
+                                      Download {d.format.toUpperCase()}
                                     </a>
-                                  ))}
-                                </div>
+                                  </div>
+                                ))}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })()}
+
+                              {allSubs.length > 0 && (
+                                <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/5">
+                                  <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <Globe size={12} />
+                                    Download External Subtitles
+                                  </h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {allSubs.map((sub: any, sIdx: number) => (
+                                      <a
+                                        key={sIdx}
+                                        href={
+                                          sub.url.startsWith("http")
+                                            ? sub.url
+                                            : `${API_BASE_URL}${sub.url}`
+                                        }
+                                        download
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 hover:bg-violet-500/20 hover:text-white text-xs font-bold uppercase tracking-wide transition-all"
+                                      >
+                                        <Globe size={10} />
+                                        {sub.lanName || "Unknown"}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                       {/* Torrents block */}
                       <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
@@ -1615,7 +1874,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                         {torrentLoading && (
                           <div className="flex flex-col items-center justify-center py-12 gap-3">
-                            <Loader2 className="animate-spin text-nebula-cyan" size={24} />
+                            <Loader2
+                              className="animate-spin text-nebula-cyan"
+                              size={24}
+                            />
                             <p className="text-xs text-white/50 uppercase tracking-widest font-black animate-pulse">
                               Resolving torrent swarm indexes...
                             </p>
@@ -1627,530 +1889,823 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                             <p className="text-rose-400 text-xs font-bold uppercase tracking-wider mb-1">
                               Swarm connection failed
                             </p>
-                            <p className="text-[10px] text-white/50">{torrentError}</p>
+                            <p className="text-[10px] text-white/50">
+                              {torrentError}
+                            </p>
                           </div>
                         )}
 
-                        {!torrentLoading && torrentData?.torrents && (
-                          torrentData.torrents.length > 0 ? (
+                        {!torrentLoading &&
+                          torrentData?.torrents &&
+                          (torrentData.torrents.length > 0 ? (
                             <div className="divide-y divide-white/5">
-                              {torrentData.torrents.map((t: any, index: number) => (
-                                <div key={index} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
-                                  <div>
-                                    <h4 className="font-bold text-sm text-white flex flex-wrap items-center gap-2">
-                                      {t.quality}
-                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/80 uppercase">
-                                        {t.size}
-                                      </span>
-                                      {t.source && (
-                                        <span className={`text-[10.5px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                                          t.source.toLowerCase() === 'yts' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' :
-                                          t.source.toLowerCase() === 'eztv' ? 'bg-sky-500/10 border border-sky-500/20 text-sky-400' :
-                                          t.source.toLowerCase() === 'thepiratebay' ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' :
-                                          'bg-purple-500/10 border border-purple-500/20 text-purple-400'
-                                        }`}>
-                                          {t.source}
+                              {torrentData.torrents.map(
+                                (t: any, index: number) => (
+                                  <div
+                                    key={index}
+                                    className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0"
+                                  >
+                                    <div>
+                                      <h4 className="font-bold text-sm text-white flex flex-wrap items-center gap-2">
+                                        {t.quality}
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/80 uppercase">
+                                          {t.size}
                                         </span>
-                                      )}
-                                    </h4>
-                                    <p className="text-[11px] text-white/65 mt-1">
-                                      Seeds: <span className="text-emerald-400 font-bold">{t.seeds}</span> • Peers: <span className="text-blue-400 font-bold">{t.peers}</span>
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <a
-                                      href={t.magnet}
-                                      onClick={triggerPopunder}
-                                      className="flex-grow sm:flex-grow-0 px-4 py-2 bg-nebula-cyan hover:bg-white text-obsidian rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5"
-                                    >
-                                      <Zap size={14} fill="currentColor" />
-                                      Magnet Link
-                                    </a>
-                                    <button
-                                      onClick={() => copyToClipboard(t.magnet)}
-                                      className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
-                                      title="Copy Magnet Link"
-                                    >
-                                      {copiedLink === t.magnet ? (
-                                        <>
-                                          <Check size={14} className="text-emerald-400" />
-                                          <span className="text-[10px] text-emerald-400 font-bold uppercase">Copied</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy size={14} />
-                                          <span className="text-[10px] text-white/60 font-bold uppercase">Copy Magnet</span>
-                                        </>
-                                      )}
-                                    </button>
-                                    {t.torrent_url && (
+                                        {t.source && (
+                                          <span
+                                            className={`text-[10.5px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                                              t.source.toLowerCase() === "yts"
+                                                ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                                                : t.source.toLowerCase() ===
+                                                    "eztv"
+                                                  ? "bg-sky-500/10 border border-sky-500/20 text-sky-400"
+                                                  : t.source.toLowerCase() ===
+                                                      "thepiratebay"
+                                                    ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                                                    : "bg-purple-500/10 border border-purple-500/20 text-purple-400"
+                                            }`}
+                                          >
+                                            {t.source}
+                                          </span>
+                                        )}
+                                      </h4>
+                                      <p className="text-[11px] text-white/65 mt-1">
+                                        Seeds:{" "}
+                                        <span className="text-emerald-400 font-bold">
+                                          {t.seeds}
+                                        </span>{" "}
+                                        • Peers:{" "}
+                                        <span className="text-blue-400 font-bold">
+                                          {t.peers}
+                                        </span>
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-2">
                                       <a
-                                        href={t.torrent_url}
+                                        href={t.magnet}
                                         onClick={triggerPopunder}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
-                                        title="Download .torrent file"
+                                        className="flex-grow sm:flex-grow-0 px-4 py-2 bg-nebula-cyan hover:bg-white text-obsidian rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5"
                                       >
-                                        <ExternalLink size={14} />
-                                        <span className="text-[10px] text-white/60 font-bold uppercase">.torrent</span>
+                                        <Zap size={14} fill="currentColor" />
+                                        Magnet Link
                                       </a>
-                                    )}
+                                      <button
+                                        onClick={() =>
+                                          copyToClipboard(t.magnet)
+                                        }
+                                        className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
+                                        title="Copy Magnet Link"
+                                      >
+                                        {copiedLink === t.magnet ? (
+                                          <>
+                                            <Check
+                                              size={14}
+                                              className="text-emerald-400"
+                                            />
+                                            <span className="text-[10px] text-emerald-400 font-bold uppercase">
+                                              Copied
+                                            </span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy size={14} />
+                                            <span className="text-[10px] text-white/60 font-bold uppercase">
+                                              Copy Magnet
+                                            </span>
+                                          </>
+                                        )}
+                                      </button>
+                                      {t.torrent_url && (
+                                        <a
+                                          href={t.torrent_url}
+                                          onClick={triggerPopunder}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
+                                          title="Download .torrent file"
+                                        >
+                                          <ExternalLink size={14} />
+                                          <span className="text-[10px] text-white/60 font-bold uppercase">
+                                            .torrent
+                                          </span>
+                                        </a>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ),
+                              )}
                             </div>
                           ) : (
                             <p className="text-dim text-xs py-4 text-center">
                               No YTS index found for this movie.
                             </p>
-                          )
-                        )}
+                          ))}
                       </div>
                     </div>
                   )}
 
                   {/* TV Downloads Layout */}
-                  {movie.type === "tv" && (() => {
-                    const seasonPacks = (torrentData?.torrents || []).filter(
-                      (t: any) =>
-                        t.episode === 0 ||
-                        /complete/i.test(t.title) ||
-                        /season\s+\d+/i.test(t.title) ||
-                        /s\d{2}\s+complete/i.test(t.title)
-                    );
-                    
-                    const currentSeasonTorrents = (torrentData?.torrents || []).filter(
-                      (t: any) => t.season === activeDownloadSeason && t.episode > 0
-                    );
+                  {movie.type === "tv" &&
+                    (() => {
+                      const seasonPacks = (torrentData?.torrents || []).filter(
+                        (t: any) =>
+                          t.episode === 0 ||
+                          /complete/i.test(t.title) ||
+                          /season\s+\d+/i.test(t.title) ||
+                          /s\d{2}\s+complete/i.test(t.title),
+                      );
 
-                    const episodeGroups: Record<number, any[]> = {};
-                    currentSeasonTorrents.forEach((t: any) => {
-                      if (!episodeGroups[t.episode]) {
-                        episodeGroups[t.episode] = [];
+                      const currentSeasonTorrents = (
+                        torrentData?.torrents || []
+                      ).filter(
+                        (t: any) =>
+                          t.season === activeDownloadSeason && t.episode > 0,
+                      );
+
+                      const episodeGroups: Record<number, any[]> = {};
+                      currentSeasonTorrents.forEach((t: any) => {
+                        if (!episodeGroups[t.episode]) {
+                          episodeGroups[t.episode] = [];
+                        }
+                        episodeGroups[t.episode].push(t);
+                      });
+
+                      // Dynamically determine how many episodes to show in the accordion
+                      const seasonObj = tvDetails?.seasons?.find(
+                        (s: any) => s.season_number === activeDownloadSeason,
+                      );
+                      let episodeCount = seasonObj
+                        ? seasonObj.episode_count
+                        : 0;
+                      if (episodeCount === 0) {
+                        const maxEpInTorrents = currentSeasonTorrents.reduce(
+                          (max: number, t: any) =>
+                            Math.max(max, t.episode || 0),
+                          0,
+                        );
+                        episodeCount = Math.max(
+                          maxEpInTorrents,
+                          activeDownloadSeason === 1 ? episodes.length : 0,
+                        );
                       }
-                      episodeGroups[t.episode].push(t);
-                    });
 
-                    // Dynamically determine how many episodes to show in the accordion
-                    const seasonObj = tvDetails?.seasons?.find(
-                      (s: any) => s.season_number === activeDownloadSeason
-                    );
-                    let episodeCount = seasonObj ? seasonObj.episode_count : 0;
-                    if (episodeCount === 0) {
-                      const maxEpInTorrents = currentSeasonTorrents.reduce(
-                        (max: number, t: any) => Math.max(max, t.episode || 0),
-                        0
+                      const episodeNumbers = Array.from(
+                        { length: episodeCount },
+                        (_, i) => i + 1,
                       );
-                      episodeCount = Math.max(
-                        maxEpInTorrents,
-                        activeDownloadSeason === 1 ? episodes.length : 0
-                      );
-                    }
 
-                    const episodeNumbers = Array.from({ length: episodeCount }, (_, i) => i + 1);
-
-                    return (
-                      <div className="space-y-6">
-                        {/* Season Packs / Complete Series Section */}
-                        {torrentLoading && (
-                          <div className="flex flex-col items-center justify-center py-6 gap-3 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
-                            <Loader2 className="animate-spin text-amber-400" size={20} />
-                            <span className="text-[10px] text-amber-400/70 font-bold uppercase tracking-wider">Scanning Season Packs...</span>
-                          </div>
-                        )}
-                        {!torrentLoading && seasonPacks.length > 0 && (
-                          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6 animate-fade-in">
-                            <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                              <Download size={16} />
-                              Complete Series / Season Packs
-                            </h3>
-                            <div className="divide-y divide-white/5">
-                              {seasonPacks.map((t: any, index: number) => (
-                                <div key={index} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 first:pt-0 last:pb-0">
-                                  <div className="max-w-xl">
-                                    <h4 className="font-bold text-sm text-white break-words">
-                                      {t.title}
-                                    </h4>
-                                    <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
-                                      <span>Size: <strong className="text-white/90">{t.size}</strong></span>
-                                      <span>•</span>
-                                      <span>Seeds: <strong className="text-emerald-400">{t.seeds}</strong></span>
-                                      <span>•</span>
-                                      <span>Peers: <strong className="text-blue-400">{t.peers}</strong></span>
-                                      <span>•</span>
-                                      <span>Source: <strong className={`uppercase font-bold ${
-                                        t.source?.toLowerCase() === 'eztv' ? 'text-sky-400' :
-                                        t.source?.toLowerCase() === 'thepiratebay' ? 'text-amber-400' :
-                                        'text-purple-400'
-                                      }`}>{t.source || "EZTV"}</strong></span>
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-2 shrink-0">
-                                    <a
-                                      href={t.magnet}
-                                      onClick={triggerPopunder}
-                                      className="flex-grow md:flex-grow-0 px-4 py-2 bg-amber-500 hover:bg-white text-obsidian rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5"
-                                    >
-                                      <Zap size={14} fill="currentColor" />
-                                      Magnet Link
-                                    </a>
-                                    <button
-                                      onClick={() => copyToClipboard(t.magnet)}
-                                      className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
-                                      title="Copy Magnet"
-                                    >
-                                      {copiedLink === t.magnet ? (
-                                        <>
-                                          <Check size={14} className="text-emerald-400" />
-                                          <span className="text-[10px] text-emerald-400 font-bold uppercase">Copied</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy size={14} />
-                                          <span className="text-[10px] text-white/60 font-bold uppercase">Copy Magnet</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
+                      return (
+                        <div className="space-y-6">
+                          {/* Season Packs / Complete Series Section */}
+                          {torrentLoading && (
+                            <div className="flex flex-col items-center justify-center py-6 gap-3 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
+                              <Loader2
+                                className="animate-spin text-amber-400"
+                                size={20}
+                              />
+                              <span className="text-[10px] text-amber-400/70 font-bold uppercase tracking-wider">
+                                Scanning Season Packs...
+                              </span>
                             </div>
-                          </div>
-                        )}
-
-                        {/* Episode List Section */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                          {/* Season Selector */}
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-                            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                              <Download size={16} />
-                              Individual Episode Swarms
-                            </h3>
-                            {tvDetails?.seasons?.length > 0 && (
-                              <div className="flex flex-wrap gap-2">
-                                {tvDetails.seasons
-                                  .filter((s: any) => s.season_number > 0)
-                                  .map((s: any) => (
-                                    <button
-                                      key={s.season_number}
-                                      onClick={() => {
-                                        setActiveDownloadSeason(s.season_number);
-                                        setExpandedEpisode(null);
-                                      }}
-                                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeDownloadSeason === s.season_number ? "bg-white text-black font-black" : "bg-white/5 border border-white/10 text-white hover:bg-white/10"}`}
-                                    >
-                                      Season {s.season_number}
-                                    </button>
-                                  ))}
+                          )}
+                          {!torrentLoading && seasonPacks.length > 0 && (
+                            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6 animate-fade-in">
+                              <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <Download size={16} />
+                                Complete Series / Season Packs
+                              </h3>
+                              <div className="divide-y divide-white/5">
+                                {seasonPacks.map((t: any, index: number) => (
+                                  <div
+                                    key={index}
+                                    className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 first:pt-0 last:pb-0"
+                                  >
+                                    <div className="max-w-xl">
+                                      <h4 className="font-bold text-sm text-white break-words">
+                                        {t.title}
+                                      </h4>
+                                      <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
+                                        <span>
+                                          Size:{" "}
+                                          <strong className="text-white/90">
+                                            {t.size}
+                                          </strong>
+                                        </span>
+                                        <span>•</span>
+                                        <span>
+                                          Seeds:{" "}
+                                          <strong className="text-emerald-400">
+                                            {t.seeds}
+                                          </strong>
+                                        </span>
+                                        <span>•</span>
+                                        <span>
+                                          Peers:{" "}
+                                          <strong className="text-blue-400">
+                                            {t.peers}
+                                          </strong>
+                                        </span>
+                                        <span>•</span>
+                                        <span>
+                                          Source:{" "}
+                                          <strong
+                                            className={`uppercase font-bold ${
+                                              t.source?.toLowerCase() === "eztv"
+                                                ? "text-sky-400"
+                                                : t.source?.toLowerCase() ===
+                                                    "thepiratebay"
+                                                  ? "text-amber-400"
+                                                  : "text-purple-400"
+                                            }`}
+                                          >
+                                            {t.source || "EZTV"}
+                                          </strong>
+                                        </span>
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-2 shrink-0">
+                                      <a
+                                        href={t.magnet}
+                                        onClick={triggerPopunder}
+                                        className="flex-grow md:flex-grow-0 px-4 py-2 bg-amber-500 hover:bg-white text-obsidian rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5"
+                                      >
+                                        <Zap size={14} fill="currentColor" />
+                                        Magnet Link
+                                      </a>
+                                      <button
+                                        onClick={() =>
+                                          copyToClipboard(t.magnet)
+                                        }
+                                        className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
+                                        title="Copy Magnet"
+                                      >
+                                        {copiedLink === t.magnet ? (
+                                          <>
+                                            <Check
+                                              size={14}
+                                              className="text-emerald-400"
+                                            />
+                                            <span className="text-[10px] text-emerald-400 font-bold uppercase">
+                                              Copied
+                                            </span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy size={14} />
+                                            <span className="text-[10px] text-white/60 font-bold uppercase">
+                                              Copy Magnet
+                                            </span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
 
-                          {/* Episode Accordion */}
-                          {episodeNumbers.length > 0 ? (
-                            <div className="space-y-3">
-                              {episodeNumbers.map((epNum) => {
-                                  const torrentsForEp = episodeGroups[epNum] || [];
+                          {/* Episode List Section */}
+                          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                            {/* Season Selector */}
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+                              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                <Download size={16} />
+                                Individual Episode Swarms
+                              </h3>
+                              {tvDetails?.seasons?.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {tvDetails.seasons
+                                    .filter((s: any) => s.season_number > 0)
+                                    .map((s: any) => (
+                                      <button
+                                        key={s.season_number}
+                                        onClick={() => {
+                                          setActiveDownloadSeason(
+                                            s.season_number,
+                                          );
+                                          setExpandedEpisode(null);
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeDownloadSeason === s.season_number ? "bg-white text-black font-black" : "bg-white/5 border border-white/10 text-white hover:bg-white/10"}`}
+                                      >
+                                        Season {s.season_number}
+                                      </button>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Episode Accordion */}
+                            {episodeNumbers.length > 0 ? (
+                              <div className="space-y-3">
+                                {episodeNumbers.map((epNum) => {
+                                  const torrentsForEp =
+                                    episodeGroups[epNum] || [];
                                   const isExpanded = expandedEpisode === epNum;
-                                  
+
                                   return (
-                                    <div key={epNum} className="border border-white/5 bg-white/2 rounded-xl overflow-hidden">
+                                    <div
+                                      key={epNum}
+                                      className="border border-white/5 bg-white/2 rounded-xl overflow-hidden"
+                                    >
                                       <button
                                         onClick={() => {
-                                          const nextExpanded = isExpanded ? null : epNum;
+                                          const nextExpanded = isExpanded
+                                            ? null
+                                            : epNum;
                                           setExpandedEpisode(nextExpanded);
-                                          if (nextExpanded && backupTorrents[epNum] === undefined && !backupTorrentsLoading[epNum]) {
+                                          if (
+                                            nextExpanded &&
+                                            backupTorrents[epNum] ===
+                                              undefined &&
+                                            !backupTorrentsLoading[epNum]
+                                          ) {
                                             loadBackupTorrents(epNum);
                                           }
                                         }}
                                         className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-white/5 transition-all"
                                       >
                                         <div>
-                                          <span className="text-xs font-bold text-nebula-cyan uppercase tracking-wider mr-2">Episode {epNum}</span>
+                                          <span className="text-xs font-bold text-nebula-cyan uppercase tracking-wider mr-2">
+                                            Episode {epNum}
+                                          </span>
                                           <span className="text-xs text-white/75 font-semibold">
-                                            ({torrentsForEp.length + (backupTorrents[epNum]?.length || 0)} torrent streams
-                                            {backupDirectDownloads[epNum]?.length ? `, ${backupDirectDownloads[epNum].length} direct downloads` : ""} available)
+                                            (
+                                            {torrentsForEp.length +
+                                              (backupTorrents[epNum]?.length ||
+                                                0)}{" "}
+                                            torrent streams
+                                            {backupDirectDownloads[epNum]
+                                              ?.length
+                                              ? `, ${backupDirectDownloads[epNum].length} direct downloads`
+                                              : ""}{" "}
+                                            available)
                                           </span>
                                         </div>
-                                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                        {isExpanded ? (
+                                          <ChevronUp size={16} />
+                                        ) : (
+                                          <ChevronDown size={16} />
+                                        )}
                                       </button>
-                                      
+
                                       {isExpanded && (
                                         <div className="px-5 pb-4 bg-black/20 space-y-4">
                                           {/* ── Direct Downloads Section ── */}
                                           {backupDirectLoading[epNum] && (
                                             <div className="pt-4 flex justify-center items-center gap-2 text-violet-400/60">
-                                              <Loader2 className="animate-spin" size={14} />
-                                              <span className="text-[10px] uppercase font-bold tracking-wider">Scanning direct downloads...</span>
+                                              <Loader2
+                                                className="animate-spin"
+                                                size={14}
+                                              />
+                                              <span className="text-[10px] uppercase font-bold tracking-wider">
+                                                Scanning direct downloads...
+                                              </span>
                                             </div>
                                           )}
 
-                                          {!backupDirectLoading[epNum] && backupDirectDownloads[epNum] && backupDirectDownloads[epNum].length > 0 && (() => {
-                                            const sortedDirects = [...backupDirectDownloads[epNum]].sort((a, b) => {
-                                              if (a.format === "mkv" && b.format !== "mkv") return -1;
-                                              if (a.format !== "mkv" && b.format === "mkv") return 1;
-                                              return 0;
-                                            });
+                                          {!backupDirectLoading[epNum] &&
+                                            backupDirectDownloads[epNum] &&
+                                            backupDirectDownloads[epNum]
+                                              .length > 0 &&
+                                            (() => {
+                                              const sortedDirects = [
+                                                ...backupDirectDownloads[epNum],
+                                              ].sort((a, b) => {
+                                                if (
+                                                  a.format === "mkv" &&
+                                                  b.format !== "mkv"
+                                                )
+                                                  return -1;
+                                                if (
+                                                  a.format !== "mkv" &&
+                                                  b.format === "mkv"
+                                                )
+                                                  return 1;
+                                                return 0;
+                                              });
 
-                                            const allSubs: any[] = [];
-                                            const seenSubUrls = new Set<string>();
-                                            sortedDirects.forEach((d: any) => {
-                                              if (d.subtitles) {
-                                                d.subtitles.forEach((sub: any) => {
-                                                  if (sub.url && !seenSubUrls.has(sub.url)) {
-                                                    seenSubUrls.add(sub.url);
-                                                    allSubs.push(sub);
+                                              const allSubs: any[] = [];
+                                              const seenSubUrls =
+                                                new Set<string>();
+                                              sortedDirects.forEach(
+                                                (d: any) => {
+                                                  if (d.subtitles) {
+                                                    d.subtitles.forEach(
+                                                      (sub: any) => {
+                                                        if (
+                                                          sub.url &&
+                                                          !seenSubUrls.has(
+                                                            sub.url,
+                                                          )
+                                                        ) {
+                                                          seenSubUrls.add(
+                                                            sub.url,
+                                                          );
+                                                          allSubs.push(sub);
+                                                        }
+                                                      },
+                                                    );
                                                   }
-                                                });
-                                              }
-                                            });
+                                                },
+                                              );
 
-                                            return (
-                                              <div className="pt-4 animate-fade-in">
-                                                <div className="rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/8 to-transparent overflow-hidden">
-                                                  <div className="px-4 py-2 bg-violet-500/10 border-b border-white/5 flex items-center justify-between">
-                                                    <div className="flex flex-col">
-                                                      <span className="text-xs font-black text-violet-400 uppercase tracking-widest">
-                                                        Direct Downloads
-                                                      </span>
-                                                      <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold">
-                                                        via VidVault • No torrent client needed
-                                                      </span>
+                                              return (
+                                                <div className="pt-4 animate-fade-in">
+                                                  <div className="rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/8 to-transparent overflow-hidden">
+                                                    <div className="px-4 py-2 bg-violet-500/10 border-b border-white/5 flex items-center justify-between">
+                                                      <div className="flex flex-col">
+                                                        <span className="text-xs font-black text-violet-400 uppercase tracking-widest">
+                                                          Direct Downloads
+                                                        </span>
+                                                        <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold">
+                                                          via VidVault • No
+                                                          torrent client needed
+                                                        </span>
+                                                      </div>
                                                     </div>
-                                                  </div>
-                                                  
-                                                  <div className="divide-y divide-white/5 bg-black/10">
-                                                    {sortedDirects.map((d: any, idx: number) => (
-                                                      <div
-                                                        key={`direct-ep-${idx}`}
-                                                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 ${d.format === "mkv" ? "bg-emerald-500/3" : ""}`}
-                                                      >
-                                                        <div className="flex flex-wrap items-center gap-1.5">
-                                                          <span className="font-bold text-sm text-white">
-                                                            {d.quality}
-                                                          </span>
-                                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
-                                                            {d.size}
-                                                          </span>
-                                                          {d.format === "mkv" ? (
-                                                            <>
-                                                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
-                                                                MKV
+
+                                                    <div className="divide-y divide-white/5 bg-black/10">
+                                                      {sortedDirects.map(
+                                                        (
+                                                          d: any,
+                                                          idx: number,
+                                                        ) => (
+                                                          <div
+                                                            key={`direct-ep-${idx}`}
+                                                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 ${d.format === "mkv" ? "bg-emerald-500/3" : ""}`}
+                                                          >
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                              <span className="font-bold text-sm text-white">
+                                                                {d.quality}
                                                               </span>
-                                                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase">
-                                                                ✓ Embedded Subs
+                                                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
+                                                                {d.size}
                                                               </span>
-                                                            </>
-                                                          ) : (
-                                                            <>
-                                                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-300 uppercase">
-                                                                MP4
-                                                              </span>
-                                                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60 uppercase">
-                                                                No Embedded Subs
-                                                              </span>
-                                                            </>
+                                                              {d.format ===
+                                                              "mkv" ? (
+                                                                <>
+                                                                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
+                                                                    MKV
+                                                                  </span>
+                                                                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase">
+                                                                    ✓ Embedded
+                                                                    Subs
+                                                                  </span>
+                                                                </>
+                                                              ) : (
+                                                                <>
+                                                                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-sky-300 uppercase">
+                                                                    MP4
+                                                                  </span>
+                                                                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60 uppercase">
+                                                                    No Embedded
+                                                                    Subs
+                                                                  </span>
+                                                                </>
+                                                              )}
+                                                            </div>
+                                                            <a
+                                                              href={
+                                                                d.direct_url.startsWith(
+                                                                  "http",
+                                                                )
+                                                                  ? d.direct_url
+                                                                  : `${API_BASE_URL}${d.direct_url}`
+                                                              }
+                                                              onClick={
+                                                                triggerPopunder
+                                                              }
+                                                              target="_blank"
+                                                              rel="noopener noreferrer"
+                                                              className={`shrink-0 px-3 py-1.5 text-white rounded-lg font-bold text-[10px] transition-all flex items-center gap-1.5 ${
+                                                                d.format ===
+                                                                "mkv"
+                                                                  ? "bg-emerald-700 hover:bg-emerald-600"
+                                                                  : "bg-sky-600/80 hover:bg-sky-500"
+                                                              }`}
+                                                            >
+                                                              <FileDown
+                                                                size={10}
+                                                              />
+                                                              Download{" "}
+                                                              {d.format.toUpperCase()}
+                                                            </a>
+                                                          </div>
+                                                        ),
+                                                      )}
+                                                    </div>
+
+                                                    {allSubs.length > 0 && (
+                                                      <div className="px-4 py-3 border-t border-white/5 bg-black/15">
+                                                        <p className="text-[11px] text-white/60 font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                                          <Globe size={10} />
+                                                          Available Subtitles (
+                                                          {allSubs.length})
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                          {allSubs.map(
+                                                            (
+                                                              sub: any,
+                                                              sIdx: number,
+                                                            ) => (
+                                                              <a
+                                                                key={sIdx}
+                                                                href={
+                                                                  sub.url.startsWith(
+                                                                    "http",
+                                                                  )
+                                                                    ? sub.url
+                                                                    : `${API_BASE_URL}${sub.url}`
+                                                                }
+                                                                download
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[10px] font-extrabold uppercase tracking-wide hover:bg-violet-500/20 hover:text-white transition-all"
+                                                                title={`Download ${sub.lanName || "subtitle"}`}
+                                                              >
+                                                                <Globe
+                                                                  size={9}
+                                                                />
+                                                                {sub.lanName ||
+                                                                  "Unknown"}
+                                                              </a>
+                                                            ),
                                                           )}
                                                         </div>
-                                                        <a
-                                                          href={d.direct_url.startsWith("http") ? d.direct_url : `${API_BASE_URL}${d.direct_url}`}
-                                                          onClick={triggerPopunder}
-                                                          target="_blank"
-                                                          rel="noopener noreferrer"
-                                                          className={`shrink-0 px-3 py-1.5 text-white rounded-lg font-bold text-[10px] transition-all flex items-center gap-1.5 ${
-                                                            d.format === "mkv" ? "bg-emerald-700 hover:bg-emerald-600" : "bg-sky-600/80 hover:bg-sky-500"
-                                                          }`}
-                                                        >
-                                                          <FileDown size={10} />
-                                                          Download {d.format.toUpperCase()}
-                                                        </a>
                                                       </div>
-                                                    ))}
+                                                    )}
                                                   </div>
-
-                                                  {allSubs.length > 0 && (
-                                                    <div className="px-4 py-3 border-t border-white/5 bg-black/15">
-                                                      <p className="text-[11px] text-white/60 font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                                        <Globe size={10} />
-                                                        Available Subtitles ({allSubs.length})
-                                                      </p>
-                                                      <div className="flex flex-wrap gap-1.5">
-                                                        {allSubs.map((sub: any, sIdx: number) => (
-                                                          <a
-                                                            key={sIdx}
-                                                            href={sub.url.startsWith("http") ? sub.url : `${API_BASE_URL}${sub.url}`}
-                                                            download
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[10px] font-extrabold uppercase tracking-wide hover:bg-violet-500/20 hover:text-white transition-all"
-                                                            title={`Download ${sub.lanName || "subtitle"}`}
-                                                          >
-                                                            <Globe size={9} />
-                                                            {sub.lanName || "Unknown"}
-                                                          </a>
-                                                        ))}
-                                                      </div>
-                                                    </div>
-                                                  )}
                                                 </div>
-                                              </div>
-                                            );
-                                          })()}
+                                              );
+                                            })()}
 
                                           {/* ── Torrent Links Section ── */}
                                           <div className="pt-2">
                                             <span className="text-[11px] font-black text-white/65 uppercase tracking-wider block mb-2">
                                               Torrent Stream Links
                                             </span>
-                                            
-                                            {(torrentsForEp.length > 0 || (backupTorrents[epNum] || []).length > 0) ? (
+
+                                            {torrentsForEp.length > 0 ||
+                                            (backupTorrents[epNum] || [])
+                                              .length > 0 ? (
                                               <div className="divide-y divide-white/5 bg-black/10 rounded-xl overflow-hidden border border-white/5 px-4">
                                                 {/* Primary EZTV streams */}
-                                                {torrentsForEp.map((t: any, index: number) => (
-                                                  <div key={`eztv-${index}`} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-4 last:pb-3">
-                                                    <div className="max-w-lg">
-                                                      <h5 className="font-bold text-xs text-white break-words">
-                                                        {t.title}
-                                                      </h5>
-                                                      <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
-                                                        <span>Size: <strong className="text-white/90">{t.size}</strong></span>
-                                                        <span>•</span>
-                                                        <span>Seeds: <strong className="text-emerald-400">{t.seeds}</strong></span>
-                                                        <span>•</span>
-                                                        <span>Peers: <strong className="text-blue-400">{t.peers}</strong></span>
-                                                        <span>•</span>
-                                                        <span>Source: <strong className="text-sky-400 uppercase font-bold">{t.source || "EZTV"}</strong></span>
-                                                      </p>
+                                                {torrentsForEp.map(
+                                                  (t: any, index: number) => (
+                                                    <div
+                                                      key={`eztv-${index}`}
+                                                      className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-4 last:pb-3"
+                                                    >
+                                                      <div className="max-w-lg">
+                                                        <h5 className="font-bold text-xs text-white break-words">
+                                                          {t.title}
+                                                        </h5>
+                                                        <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
+                                                          <span>
+                                                            Size:{" "}
+                                                            <strong className="text-white/90">
+                                                              {t.size}
+                                                            </strong>
+                                                          </span>
+                                                          <span>•</span>
+                                                          <span>
+                                                            Seeds:{" "}
+                                                            <strong className="text-emerald-400">
+                                                              {t.seeds}
+                                                            </strong>
+                                                          </span>
+                                                          <span>•</span>
+                                                          <span>
+                                                            Peers:{" "}
+                                                            <strong className="text-blue-400">
+                                                              {t.peers}
+                                                            </strong>
+                                                          </span>
+                                                          <span>•</span>
+                                                          <span>
+                                                            Source:{" "}
+                                                            <strong className="text-sky-400 uppercase font-bold">
+                                                              {t.source ||
+                                                                "EZTV"}
+                                                            </strong>
+                                                          </span>
+                                                        </p>
+                                                      </div>
+                                                      <div className="flex gap-2 shrink-0">
+                                                        <a
+                                                          href={t.magnet}
+                                                          onClick={
+                                                            triggerPopunder
+                                                          }
+                                                          className="px-3 py-1.5 bg-nebula-cyan hover:bg-white text-obsidian rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1"
+                                                        >
+                                                          <Zap
+                                                            size={10}
+                                                            fill="currentColor"
+                                                          />
+                                                          Magnet
+                                                        </a>
+                                                        <button
+                                                          onClick={() =>
+                                                            copyToClipboard(
+                                                              t.magnet,
+                                                            )
+                                                          }
+                                                          className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-[10px] transition-all flex items-center justify-center"
+                                                          title="Copy Magnet Link"
+                                                        >
+                                                          {copiedLink ===
+                                                          t.magnet ? (
+                                                            <span className="text-emerald-400 font-bold uppercase">
+                                                              Copied
+                                                            </span>
+                                                          ) : (
+                                                            <Copy size={12} />
+                                                          )}
+                                                        </button>
+                                                      </div>
                                                     </div>
-                                                    <div className="flex gap-2 shrink-0">
-                                                      <a
-                                                        href={t.magnet}
-                                                        onClick={triggerPopunder}
-                                                        className="px-3 py-1.5 bg-nebula-cyan hover:bg-white text-obsidian rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1"
-                                                      >
-                                                        <Zap size={10} fill="currentColor" />
-                                                        Magnet
-                                                      </a>
-                                                      <button
-                                                        onClick={() => copyToClipboard(t.magnet)}
-                                                        className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-[10px] transition-all flex items-center justify-center"
-                                                        title="Copy Magnet Link"
-                                                      >
-                                                        {copiedLink === t.magnet ? (
-                                                          <span className="text-emerald-400 font-bold uppercase">Copied</span>
-                                                        ) : (
-                                                          <Copy size={12} />
-                                                        )}
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                ))}
+                                                  ),
+                                                )}
 
                                                 {/* Backup streams loaded */}
-                                                {backupTorrents[epNum] !== undefined && backupTorrents[epNum].map((t: any, index: number) => (
-                                                  <div key={`backup-${index}`} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-3 last:pb-3 border-t border-white/5">
-                                                    <div className="max-w-lg">
-                                                      <h5 className="font-bold text-xs text-white/80 break-words">
-                                                        {t.title}
-                                                      </h5>
-                                                      <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
-                                                        <span>Size: <strong className="text-white/90">{t.size}</strong></span>
-                                                        <span>•</span>
-                                                        <span>Seeds: <strong className="text-emerald-400">{t.seeds}</strong></span>
-                                                        <span>•</span>
-                                                        <span>Peers: <strong className="text-blue-400">{t.peers}</strong></span>
-                                                        <span>•</span>
-                                                        <span>Source: <strong className={`uppercase font-bold ${
-                                                          t.source?.toLowerCase() === 'thepiratebay' ? 'text-amber-400' :
-                                                          t.source?.toLowerCase() === 'eztv' ? 'text-sky-400' :
-                                                          'text-purple-400'
-                                                        }`}>{t.source || "Backup"}</strong></span>
-                                                      </p>
-                                                    </div>
-                                                    <div className="flex gap-2 shrink-0">
-                                                      <a
-                                                        href={t.magnet}
-                                                        onClick={triggerPopunder}
-                                                        className="px-3 py-1.5 bg-purple-600 hover:bg-white hover:text-obsidian text-white rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1"
+                                                {backupTorrents[epNum] !==
+                                                  undefined &&
+                                                  backupTorrents[epNum].map(
+                                                    (t: any, index: number) => (
+                                                      <div
+                                                        key={`backup-${index}`}
+                                                        className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-3 last:pb-3 border-t border-white/5"
                                                       >
-                                                        <Zap size={10} fill="currentColor" />
-                                                        Magnet
-                                                      </a>
-                                                      <button
-                                                        onClick={() => copyToClipboard(t.magnet)}
-                                                        className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-[10px] transition-all flex items-center justify-center"
-                                                        title="Copy Magnet Link"
-                                                      >
-                                                        {copiedLink === t.magnet ? (
-                                                          <span className="text-emerald-400 font-bold uppercase">Copied</span>
-                                                        ) : (
-                                                          <Copy size={12} />
-                                                        )}
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                ))}
+                                                        <div className="max-w-lg">
+                                                          <h5 className="font-bold text-xs text-white/80 break-words">
+                                                            {t.title}
+                                                          </h5>
+                                                          <p className="text-[11px] text-white/65 mt-1 flex flex-wrap items-center gap-2">
+                                                            <span>
+                                                              Size:{" "}
+                                                              <strong className="text-white/90">
+                                                                {t.size}
+                                                              </strong>
+                                                            </span>
+                                                            <span>•</span>
+                                                            <span>
+                                                              Seeds:{" "}
+                                                              <strong className="text-emerald-400">
+                                                                {t.seeds}
+                                                              </strong>
+                                                            </span>
+                                                            <span>•</span>
+                                                            <span>
+                                                              Peers:{" "}
+                                                              <strong className="text-blue-400">
+                                                                {t.peers}
+                                                              </strong>
+                                                            </span>
+                                                            <span>•</span>
+                                                            <span>
+                                                              Source:{" "}
+                                                              <strong
+                                                                className={`uppercase font-bold ${
+                                                                  t.source?.toLowerCase() ===
+                                                                  "thepiratebay"
+                                                                    ? "text-amber-400"
+                                                                    : t.source?.toLowerCase() ===
+                                                                        "eztv"
+                                                                      ? "text-sky-400"
+                                                                      : "text-purple-400"
+                                                                }`}
+                                                              >
+                                                                {t.source ||
+                                                                  "Backup"}
+                                                              </strong>
+                                                            </span>
+                                                          </p>
+                                                        </div>
+                                                        <div className="flex gap-2 shrink-0">
+                                                          <a
+                                                            href={t.magnet}
+                                                            onClick={
+                                                              triggerPopunder
+                                                            }
+                                                            className="px-3 py-1.5 bg-purple-600 hover:bg-white hover:text-obsidian text-white rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1"
+                                                          >
+                                                            <Zap
+                                                              size={10}
+                                                              fill="currentColor"
+                                                            />
+                                                            Magnet
+                                                          </a>
+                                                          <button
+                                                            onClick={() =>
+                                                              copyToClipboard(
+                                                                t.magnet,
+                                                              )
+                                                            }
+                                                            className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-[10px] transition-all flex items-center justify-center"
+                                                            title="Copy Magnet Link"
+                                                          >
+                                                            {copiedLink ===
+                                                            t.magnet ? (
+                                                              <span className="text-emerald-400 font-bold uppercase">
+                                                                Copied
+                                                              </span>
+                                                            ) : (
+                                                              <Copy size={12} />
+                                                            )}
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    ),
+                                                  )}
                                               </div>
                                             ) : null}
 
                                             {/* Backup loading status */}
                                             {backupTorrentsLoading[epNum] && (
                                               <div className="flex justify-center items-center py-4 gap-2 text-white/60">
-                                                <Loader2 className="animate-spin text-nebula-cyan" size={16} />
-                                                <span className="text-xs uppercase font-bold tracking-wider">Scanning Backup Trackers...</span>
+                                                <Loader2
+                                                  className="animate-spin text-nebula-cyan"
+                                                  size={16}
+                                                />
+                                                <span className="text-xs uppercase font-bold tracking-wider">
+                                                  Scanning Backup Trackers...
+                                                </span>
                                               </div>
                                             )}
 
                                             {/* Search Backup button */}
-                                            {!backupTorrentsLoading[epNum] && backupTorrents[epNum] === undefined && (
-                                              <div className="py-3 flex justify-center">
-                                                <button
-                                                  onClick={() => loadBackupTorrents(epNum)}
-                                                  className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white/85 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
-                                                >
-                                                  <ExternalLink size={12} />
-                                                  Search Backup Trackers (Torrentio, PirateBay, Galaxy)
-                                                </button>
-                                              </div>
-                                            )}
+                                            {!backupTorrentsLoading[epNum] &&
+                                              backupTorrents[epNum] ===
+                                                undefined && (
+                                                <div className="py-3 flex justify-center">
+                                                  <button
+                                                    onClick={() =>
+                                                      loadBackupTorrents(epNum)
+                                                    }
+                                                    className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white/85 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+                                                  >
+                                                    <ExternalLink size={12} />
+                                                    Search Backup Trackers
+                                                    (Torrentio, PirateBay,
+                                                    Galaxy)
+                                                  </button>
+                                                </div>
+                                              )}
 
                                             {/* Search complete, no results */}
-                                            {!backupTorrentsLoading[epNum] && backupTorrents[epNum] !== undefined && backupTorrents[epNum].length === 0 && torrentsForEp.length === 0 && (
-                                              <p className="text-[10px] text-white/30 text-center py-3 uppercase tracking-wider font-bold">
-                                                No torrent streams found for this episode.
-                                              </p>
-                                            )}
+                                            {!backupTorrentsLoading[epNum] &&
+                                              backupTorrents[epNum] !==
+                                                undefined &&
+                                              backupTorrents[epNum].length ===
+                                                0 &&
+                                              torrentsForEp.length === 0 && (
+                                                <p className="text-[10px] text-white/30 text-center py-3 uppercase tracking-wider font-bold">
+                                                  No torrent streams found for
+                                                  this episode.
+                                                </p>
+                                              )}
 
                                             {/* EZTV empty fallback warning */}
-                                            {torrentsForEp.length === 0 && backupTorrents[epNum] === undefined && (
-                                              <p className="text-dim text-[10px] text-center py-3 uppercase tracking-wider font-bold">
-                                                No direct EZTV torrent streams found. Use the backup search button.
-                                              </p>
-                                            )}
+                                            {torrentsForEp.length === 0 &&
+                                              backupTorrents[epNum] ===
+                                                undefined && (
+                                                <p className="text-dim text-[10px] text-center py-3 uppercase tracking-wider font-bold">
+                                                  No direct EZTV torrent streams
+                                                  found. Use the backup search
+                                                  button.
+                                                </p>
+                                              )}
                                           </div>
                                         </div>
                                       )}
                                     </div>
                                   );
                                 })}
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <p className="text-dim text-xs mb-2">
-                                No episode swarms indexed for Season {activeDownloadSeason}.
-                              </p>
-                              {(movie.isDrama || movie.title?.toLowerCase().includes("drama") || movie.id?.toString().startsWith("k")) && (
-                                <p className="text-[10px] text-nebula-cyan uppercase font-bold tracking-wider animate-pulse">
-                                  Tip: Korean dramas are primarily streamed via Dramacool. Use the "Watch Now" player.
+                              </div>
+                            ) : (
+                              <div className="text-center py-8">
+                                <p className="text-dim text-xs mb-2">
+                                  No episode swarms indexed for Season{" "}
+                                  {activeDownloadSeason}.
                                 </p>
-                              )}
-                            </div>
-                          )}
+                                {(movie.isDrama ||
+                                  movie.title
+                                    ?.toLowerCase()
+                                    .includes("drama") ||
+                                  movie.id?.toString().startsWith("k")) && (
+                                  <p className="text-[10px] text-nebula-cyan uppercase font-bold tracking-wider animate-pulse">
+                                    Tip: Korean dramas are primarily streamed
+                                    via Dramacool. Use the "Watch Now" player.
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })()}
+                      );
+                    })()}
                 </motion.div>
               )}
 
@@ -2252,8 +2807,6 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   )}
                 </motion.div>
               )}
-
-
             </div>
           </div>
         </div>

@@ -53,8 +53,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   onMarkAsWatched,
   onClose,
 }) => {
-  const season = propSeason !== undefined ? propSeason : (movie.type === "tv" ? 1 : undefined);
-  const episode = propEpisode !== undefined ? propEpisode : (movie.type === "tv" ? 1 : undefined);
+  const season =
+    propSeason !== undefined ? propSeason : movie.type === "tv" ? 1 : undefined;
+  const episode =
+    propEpisode !== undefined
+      ? propEpisode
+      : movie.type === "tv"
+        ? 1
+        : undefined;
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
   const [isEmbed, setIsEmbed] = useState(false);
@@ -84,7 +90,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [showEpisodeDrawer, setShowEpisodeDrawer] = useState(false);
   const [tvDetails, setTvDetails] = useState<any>(null);
   // Source selection triggered from Next/episode drawer
-  const [sourceSelect, setSourceSelect] = useState<{ season: number; episode: number } | null>(null);
+  const [sourceSelect, setSourceSelect] = useState<{
+    season: number;
+    episode: number;
+  } | null>(null);
   const [qualityTag, setQualityTag] = useState<string>(""); // CAM | WEBDL | WEBRIP | BLURAY | etc.
   const [resolution, setResolution] = useState<string>("");
   const [toast, setToast] = useState<{
@@ -103,7 +112,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   useEffect(() => {
     if (doubleTapFeedback && doubleTapFeedback.visible) {
       const timer = setTimeout(() => {
-        setDoubleTapFeedback((p) => p ? { ...p, visible: false } : null);
+        setDoubleTapFeedback((p) => (p ? { ...p, visible: false } : null));
       }, 650);
       return () => clearTimeout(timer);
     }
@@ -151,7 +160,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setIsBuffering(true);
       bufferingTimeoutRef.current = null;
 
-      if (serverTipTimeoutRef.current) clearTimeout(serverTipTimeoutRef.current);
+      if (serverTipTimeoutRef.current)
+        clearTimeout(serverTipTimeoutRef.current);
       serverTipTimeoutRef.current = setTimeout(() => {
         setShowServerTip(true);
       }, 10000);
@@ -182,7 +192,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
   }, []);
 
-  const lastTouchRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const lastTouchRef = useRef<{ time: number; x: number; y: number } | null>(
+    null,
+  );
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -292,18 +304,34 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             return null;
           }
 
-          const isEmb = rawUrl.includes("embed") || rawUrl.includes("iframe") || hashType === "embed";
+          const isEmb =
+            rawUrl.includes("embed") ||
+            rawUrl.includes("iframe") ||
+            hashType === "embed";
           const isMp4 = hashType === "mp4" || rawUrl.includes(".mp4");
-          const name = hashName || (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
-          const proxiedUrl = isEmb ? rawUrl : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
+          const name =
+            hashName ||
+            (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
+          const proxiedUrl = isEmb
+            ? rawUrl
+            : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
           return {
             source: name,
             url: proxiedUrl,
-            type: isEmb ? "embed" : (isMp4 ? "mp4" : "hls"),
-            audio: hashAudio || ""
+            type: isEmb ? "embed" : isMp4 ? "mp4" : "hls",
+            audio: hashAudio || "",
           };
         })
-        .filter((mirror): mirror is { source: string; url: string; type: "embed" | "hls" | "mp4"; audio?: string } => mirror !== null);
+        .filter(
+          (
+            mirror,
+          ): mirror is {
+            source: string;
+            url: string;
+            type: "embed" | "hls" | "mp4";
+            audio?: string;
+          } => mirror !== null,
+        );
 
       if (processedMirrors.length > 0) {
         setMirrors(processedMirrors);
@@ -399,11 +427,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const data = await r.json();
         if (cancelled) return;
 
-        const vrSubUrl = movie.type === "tv"
-          ? `https://cache.vdrk.site/v2/tv/${movie.id}/${season}/${episode}/English.vtt`
-          : `https://cache.vdrk.site/v2/movie/${movie.id}/English.vtt`;
+        const vrSubUrl =
+          movie.type === "tv"
+            ? `https://cache.vdrk.site/v2/tv/${movie.id}/${season}/${episode}/English.vtt`
+            : `https://cache.vdrk.site/v2/movie/${movie.id}/English.vtt`;
 
-        const fetchedSubs = Array.isArray(data.subtitles) ? [...data.subtitles] : [];
+        const fetchedSubs = Array.isArray(data.subtitles)
+          ? [...data.subtitles]
+          : [];
 
         try {
           const vrSubResponse = await fetch(vrSubUrl, { method: "HEAD" });
@@ -412,7 +443,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               url: vrSubUrl,
               lang: "en",
               languageName: "English (VidRock Cache)",
-              source: "VidRock"
+              source: "VidRock",
             });
           }
         } catch (e) {
@@ -727,7 +758,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             url.includes("/api/proxy/stream")
           )
             return;
-          
+
           const shouldProxy =
             /\.ts(\?|$)/i.test(url) ||
             /\.m4s(\?|$)/i.test(url) ||
@@ -781,13 +812,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       hls.on(Hls.Events.ERROR, (_, d) => {
         // Frag 0 loading failure retry & fallback
-        if (d.details === "fragLoadError" && (video.duration === 0 || isNaN(video.duration))) {
-          console.warn(`[HLS] Fragment 0 load error. Retry count: ${frag0LoadRetries.current}`);
+        if (
+          d.details === "fragLoadError" &&
+          (video.duration === 0 || isNaN(video.duration))
+        ) {
+          console.warn(
+            `[HLS] Fragment 0 load error. Retry count: ${frag0LoadRetries.current}`,
+          );
           if (frag0LoadRetries.current < 3) {
             frag0LoadRetries.current++;
             hls.startLoad();
           } else {
-            console.error("[HLS] Fragment 0 load failed 3 times. Escalating to fatal mirror switch.");
+            console.error(
+              "[HLS] Fragment 0 load failed 3 times. Escalating to fatal mirror switch.",
+            );
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
               setActiveMirror(nextIdx);
@@ -815,6 +853,28 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         console.error(`[HLS] Fatal error: type=${d.type} details=${d.details}`);
 
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          const statusCode =
+            (d.response as any)?.code || (d.response as any)?.status;
+          if (statusCode === 404 || statusCode === 403) {
+            console.warn(
+              `[HLS] Fatal network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
+            );
+            const nextIdx = activeMirrorRef.current + 1;
+            if (nextIdx < mirrorsRef.current.length) {
+              console.log(
+                `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
+              );
+              setActiveMirror(nextIdx);
+              activeMirrorRef.current = nextIdx;
+              setStreamUrl(mirrorsRef.current[nextIdx].url);
+            } else {
+              setError(
+                `Stream not found (${statusCode}). All mirrors exhausted.`,
+              );
+            }
+            return;
+          }
+
           networkRetries++;
           if (networkRetries <= MAX_NETWORK_RETRIES) {
             const delay = Math.min(
@@ -918,7 +978,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setHoverTime(null);
   }, [season, episode]);
 
-
   // ── Video event listeners ─────────────────────────────────────────────────
   useEffect(() => {
     const video = videoRef.current;
@@ -971,7 +1030,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           } else if (isNearEnd && video.duration > 30) {
             // Only mark as fully finished if we are near the end AND the video is actually long enough
             const p = JSON.parse(
-              localStorage.getItem("nebula-progress") || "{}"
+              localStorage.getItem("nebula-progress") || "{}",
             );
             p[key] = {
               time: cur,
@@ -1048,12 +1107,29 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       console.error(
         `[PLAYER] Video element error: code=${err?.code} msg=${err?.message}`,
       );
-      // MEDIA_ERR_NETWORK (2) or MEDIA_ERR_DECODE (3): try HLS recovery
-      if (err && (err.code === 2 || err.code === 3) && hlsRef.current) {
-        console.warn(
-          "[PLAYER] Attempting HLS media error recovery from video element error...",
-        );
-        hlsRef.current.recoverMediaError();
+      if (err) {
+        if (hlsRef.current) {
+          // MEDIA_ERR_NETWORK (2) or MEDIA_ERR_DECODE (3): try HLS recovery
+          if (err.code === 2 || err.code === 3) {
+            console.warn(
+              "[PLAYER] Attempting HLS media error recovery from video element error...",
+            );
+            hlsRef.current.recoverMediaError();
+          }
+        } else {
+          // Native MP4 error recovery: try next mirror
+          console.warn(
+            "[PLAYER] Native video error. Attempting mirror fallback...",
+          );
+          const nextIdx = activeMirrorRef.current + 1;
+          if (nextIdx < mirrorsRef.current.length) {
+            setActiveMirror(nextIdx);
+            activeMirrorRef.current = nextIdx;
+            setStreamUrl(mirrorsRef.current[nextIdx].url);
+          } else {
+            setError(`Playback failed: ${err.message || "Media source error"}`);
+          }
+        }
       }
     };
 
@@ -1206,67 +1282,80 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   }, [showUi, showSettings, showSubtitles, showEpisodeDrawer, resetHideTimer]);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    e.preventDefault(); // Unconditionally suppress synthesized click events
-    
-    if (e.changedTouches.length !== 1) return;
-    
-    const touch = e.changedTouches[0];
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-    const width = rect.width;
-    
-    const now = Date.now();
-    const lastTouch = lastTouchRef.current;
-    
-    if (touchTimeoutRef.current) {
-      clearTimeout(touchTimeoutRef.current);
-      touchTimeoutRef.current = null;
-    }
-    
-    if (lastTouch && (now - lastTouch.time < 300) && Math.abs(x - lastTouch.x) < 100) {
-      lastTouchRef.current = null;
-      
-      const v = videoRef.current;
-      if (v) {
-        const isLeft = x < width / 2;
-        if (isLeft) {
-          v.currentTime = Math.max(0, v.currentTime - 10);
-          setDoubleTapFeedback({
-            visible: true,
-            type: "rewind",
-            x,
-            y,
-            key: Date.now(),
-          });
-        } else {
-          const maxTime = isNaN(v.duration) || v.duration === 0 ? v.currentTime : v.duration;
-          v.currentTime = Math.min(maxTime, v.currentTime + 10);
-          setDoubleTapFeedback({
-            visible: true,
-            type: "forward",
-            x,
-            y,
-            key: Date.now(),
-          });
-        }
-      }
-    } else {
-      lastTouchRef.current = { time: now, x, y };
-      
-      touchTimeoutRef.current = setTimeout(() => {
-        handleTap();
-        lastTouchRef.current = null;
-      }, 300);
-    }
-  }, [handleTap]);
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      e.preventDefault(); // Unconditionally suppress synthesized click events
 
-  const handleDesktopClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    handleTap();
-  }, [handleTap]);
+      if (e.changedTouches.length !== 1) return;
+
+      const touch = e.changedTouches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      const width = rect.width;
+
+      const now = Date.now();
+      const lastTouch = lastTouchRef.current;
+
+      if (touchTimeoutRef.current) {
+        clearTimeout(touchTimeoutRef.current);
+        touchTimeoutRef.current = null;
+      }
+
+      if (
+        lastTouch &&
+        now - lastTouch.time < 300 &&
+        Math.abs(x - lastTouch.x) < 100
+      ) {
+        lastTouchRef.current = null;
+
+        const v = videoRef.current;
+        if (v) {
+          const isLeft = x < width / 2;
+          if (isLeft) {
+            v.currentTime = Math.max(0, v.currentTime - 10);
+            setDoubleTapFeedback({
+              visible: true,
+              type: "rewind",
+              x,
+              y,
+              key: Date.now(),
+            });
+          } else {
+            const maxTime =
+              isNaN(v.duration) || v.duration === 0
+                ? v.currentTime
+                : v.duration;
+            v.currentTime = Math.min(maxTime, v.currentTime + 10);
+            setDoubleTapFeedback({
+              visible: true,
+              type: "forward",
+              x,
+              y,
+              key: Date.now(),
+            });
+          }
+        }
+      } else {
+        lastTouchRef.current = { time: now, x, y };
+
+        touchTimeoutRef.current = setTimeout(() => {
+          handleTap();
+          lastTouchRef.current = null;
+        }, 300);
+      }
+    },
+    [handleTap],
+  );
+
+  const handleDesktopClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      handleTap();
+    },
+    [handleTap],
+  );
 
   useEffect(() => {
     resetHideTimer();
@@ -1447,14 +1536,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   };
 
   const getNextEpisodeDetails = () => {
-    if (movie.type !== "tv" || season === undefined || episode === undefined || !tvDetails || !tvDetails.seasons) {
+    if (
+      movie.type !== "tv" ||
+      season === undefined ||
+      episode === undefined ||
+      !tvDetails ||
+      !tvDetails.seasons
+    ) {
       return null;
     }
     const sortedSeasons = tvDetails.seasons
       .filter((s: any) => s.season_number > 0)
       .sort((a: any, b: any) => a.season_number - b.season_number);
-    
-    const currentSeasonInfo = sortedSeasons.find((s: any) => s.season_number === season);
+
+    const currentSeasonInfo = sortedSeasons.find(
+      (s: any) => s.season_number === season,
+    );
     if (!currentSeasonInfo) return null;
 
     const maxEpisodes = currentSeasonInfo.episode_count;
@@ -1463,8 +1560,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
 
     // Check if there is a next season
-    const currentSeasonIdx = sortedSeasons.findIndex((s: any) => s.season_number === season);
-    if (currentSeasonIdx !== -1 && currentSeasonIdx < sortedSeasons.length - 1) {
+    const currentSeasonIdx = sortedSeasons.findIndex(
+      (s: any) => s.season_number === season,
+    );
+    if (
+      currentSeasonIdx !== -1 &&
+      currentSeasonIdx < sortedSeasons.length - 1
+    ) {
       const nextSeason = sortedSeasons[currentSeasonIdx + 1];
       return { season: nextSeason.season_number, episode: 1 };
     }
@@ -1494,7 +1596,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     <div
       ref={containerRef}
       className="fixed inset-0 z-[200] bg-black overflow-hidden"
-      onPointerMove={(e) => { if (e.pointerType !== "touch") resetHideTimer(); }}
+      onPointerMove={(e) => {
+        if (e.pointerType !== "touch") resetHideTimer();
+      }}
       style={{ cursor: showUi ? "default" : "none" }}
     >
       <AnimatePresence>
@@ -1598,16 +1702,34 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             <h3 className="text-2xl font-display font-black text-white mb-2 uppercase tracking-tighter">
               No signal detected
             </h3>
+            {error && (
+              <p className="text-red-400/90 max-w-sm mb-3 font-mono text-[10px] uppercase tracking-wider bg-red-950/30 border border-red-500/20 px-3 py-1.5 rounded-md">
+                {error}
+              </p>
+            )}
             <p className="text-white/40 max-w-sm mb-6 font-light text-sm">
-              The requested data stream is unreachable. This can happen on
-              mobile after being in the background.
+              All mirrors for this source have failed. Try switching stream
+              sources/providers (e.g. from VidRock to Videasy) below.
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-8 py-3 bg-white text-black font-black rounded-full hover:bg-white/80 transition-all uppercase text-[10px] tracking-widest mb-4 pointer-events-auto"
-            >
-              Retry Connection
-            </button>
+            <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
+              <button
+                onClick={() =>
+                  setSourceSelect({
+                    season: season ?? 1,
+                    episode: episode ?? 1,
+                  })
+                }
+                className="px-8 py-3 bg-violet-600 hover:bg-violet-500 text-white font-black rounded-full transition-all uppercase text-[10px] tracking-widest shadow-[0_0_15px_rgba(168,85,247,0.3)] border border-violet-500/20 pointer-events-auto"
+              >
+                Switch Source
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-8 py-3 bg-white text-black font-black rounded-full hover:bg-white/80 transition-all uppercase text-[10px] tracking-widest pointer-events-auto"
+              >
+                Retry Connection
+              </button>
+            </div>
             <button
               onClick={async () => {
                 try {
@@ -1690,6 +1812,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 </button>
               )}
               <button
+                onClick={() =>
+                  setSourceSelect({
+                    season: season ?? 1,
+                    episode: episode ?? 1,
+                  })
+                }
+                className="px-8 py-3 bg-violet-600/20 hover:bg-violet-600/40 text-violet-400 rounded-full text-[10px] uppercase font-black tracking-[0.2em] transition-colors border border-violet-500/30"
+              >
+                Switch Source
+              </button>
+              <button
                 onClick={safeClose}
                 className="px-8 py-3 bg-white text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-nebula-cyan transition-colors"
               >
@@ -1751,7 +1884,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }}
         />
       ) : (
-      <video
+        <video
           ref={videoRef}
           className="w-full h-full object-contain"
           playsInline
@@ -1826,12 +1959,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         >
           {/* Background Ripple/Crescent */}
           <motion.div
-            initial={{ 
-              opacity: 0, 
+            initial={{
+              opacity: 0,
               scaleX: 0.5,
-              borderRadius: doubleTapFeedback.type === "rewind" ? "0 100% 100% 0" : "100% 0 0 100%"
+              borderRadius:
+                doubleTapFeedback.type === "rewind"
+                  ? "0 100% 100% 0"
+                  : "100% 0 0 100%",
             }}
-            animate={{ 
+            animate={{
               opacity: [0, 0.4, 0.4, 0],
               scaleX: [0.8, 1, 1.05, 1],
             }}
@@ -1846,9 +1982,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           {/* Icon and Text Container */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ 
+            animate={{
               opacity: [0, 1, 1, 0],
-              scale: [0.9, 1.1, 1, 0.9] 
+              scale: [0.9, 1.1, 1, 0.9],
             }}
             transition={{ duration: 0.65, ease: "easeOut" }}
             className="relative flex flex-col items-center gap-2 z-10"
@@ -1856,21 +1992,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-black/40 border border-white/10 backdrop-blur-md">
               {doubleTapFeedback.type === "rewind" ? (
                 <div className="flex items-center justify-center gap-0.5">
-                  <motion.span 
+                  <motion.span
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ repeat: Infinity, duration: 0.5, delay: 0.2 }}
                     className="text-white text-lg font-black"
                   >
                     &lsaquo;
                   </motion.span>
-                  <motion.span 
+                  <motion.span
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ repeat: Infinity, duration: 0.5, delay: 0.1 }}
                     className="text-white text-lg font-black"
                   >
                     &lsaquo;
                   </motion.span>
-                  <motion.span 
+                  <motion.span
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ repeat: Infinity, duration: 0.5 }}
                     className="text-white text-lg font-black"
@@ -1880,21 +2016,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-0.5">
-                  <motion.span 
+                  <motion.span
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ repeat: Infinity, duration: 0.5 }}
                     className="text-white text-lg font-black"
                   >
                     &rsaquo;
                   </motion.span>
-                  <motion.span 
+                  <motion.span
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ repeat: Infinity, duration: 0.5, delay: 0.1 }}
                     className="text-white text-lg font-black"
                   >
                     &rsaquo;
                   </motion.span>
-                  <motion.span 
+                  <motion.span
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ repeat: Infinity, duration: 0.5, delay: 0.2 }}
                     className="text-white text-lg font-black"
@@ -2347,7 +2483,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                             className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${activeMirror === i ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
                           >
                             <div className="flex flex-col min-w-0">
-                              <span className="truncate text-[11px] font-semibold">{m.source}</span>
+                              <span className="truncate text-[11px] font-semibold">
+                                {m.source}
+                              </span>
                               {m.audio && (
                                 <span className="text-[9.5px] text-white/40 font-normal leading-tight">
                                   {m.audio}
@@ -2399,12 +2537,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         // Save current position so it can be restored after reload
                         const v = videoRef.current;
                         if (v && v.currentTime > 5 && v.duration > 0) {
-                          const progressKey = movie.type === "tv" && season !== undefined && episode !== undefined
-                            ? `${movie.id}-S${season}E${episode}`
-                            : String(movie.id);
-                          const all = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
-                          all[progressKey] = { time: v.currentTime, duration: v.duration, timestamp: Date.now() };
-                          localStorage.setItem("nebula-progress", JSON.stringify(all));
+                          const progressKey =
+                            movie.type === "tv" &&
+                            season !== undefined &&
+                            episode !== undefined
+                              ? `${movie.id}-S${season}E${episode}`
+                              : String(movie.id);
+                          const all = JSON.parse(
+                            localStorage.getItem("nebula-progress") || "{}",
+                          );
+                          all[progressKey] = {
+                            time: v.currentTime,
+                            duration: v.duration,
+                            timestamp: Date.now(),
+                          };
+                          localStorage.setItem(
+                            "nebula-progress",
+                            JSON.stringify(all),
+                          );
                         }
                         setShowSettings(false);
                         showToast("Reloading stream…", "info");
@@ -2532,8 +2682,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
                 <div>
-                  <p className="text-[10px] text-nebula-cyan uppercase tracking-widest font-black">Stream Source</p>
-                  <p className="text-sm font-bold text-white">{movie.title} · S{sourceSelect.season}E{sourceSelect.episode}</p>
+                  <p className="text-[10px] text-nebula-cyan uppercase tracking-widest font-black">
+                    Stream Source
+                  </p>
+                  <p className="text-sm font-bold text-white">
+                    {movie.title}
+                    {movie.type === "tv" &&
+                      ` · S${sourceSelect.season}E${sourceSelect.episode}`}
+                  </p>
                 </div>
                 <button
                   onClick={() => setSourceSelect(null)}
@@ -2551,7 +2707,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 onSelect={(src) => {
                   setSourceSelect(null);
                   navigate(
-                    `/watch/tv/${movie.id}?season=${sourceSelect.season}&episode=${sourceSelect.episode}${src ? `&source=${encodeURIComponent(src)}` : ""}`
+                    `/watch/tv/${movie.id}?season=${sourceSelect.season}&episode=${sourceSelect.episode}${src ? `&source=${encodeURIComponent(src)}` : ""}`,
                   );
                 }}
               />
@@ -2564,15 +2720,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 };
 
 // ── Compact source picker used inside the media player ────────────────────────
-function InPlayerSourcePicker({
+export function InPlayerSourcePicker({
   movie,
   season,
   episode,
   onSelect,
 }: {
   movie: any;
-  season: number;
-  episode: number;
+  season?: number;
+  episode?: number;
   onSelect: (src?: string) => void;
 }) {
   const [sources, setSources] = useState<any[]>([]);
@@ -2591,44 +2747,81 @@ function InPlayerSourcePicker({
     setVideasyError("");
 
     // 1. VidRock Fetch
-    const vidrockUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&season=${season}&episode=${episode}`;
+    let vidrockUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+    if (season !== undefined) vidrockUrl += `&season=${season}`;
+    if (episode !== undefined) vidrockUrl += `&episode=${episode}`;
+
     fetch(vidrockUrl)
-      .then((r) => { if (!r.ok) throw new Error("Uplink scan failed"); return r.json(); })
+      .then((r) => {
+        if (!r.ok) throw new Error("Uplink scan failed");
+        return r.json();
+      })
       .then((data) => {
         if (!active) return;
         const list = Object.entries(data)
           .filter(([, v]: any) => v && v.url)
-          .map(([name, v]: any) => ({ name, url: v.url, type: v.type || "hls" }));
+          .map(([name, v]: any) => ({
+            name,
+            url: v.url,
+            type: v.type || "hls",
+          }));
         setSources(list);
       })
-      .catch((e) => { if (active) setError(e.message); })
-      .finally(() => { if (active) setLoading(false); });
+      .catch((e) => {
+        if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
     // 2. Videasy Fetch
-    const videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&season=${season}&episode=${episode}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}`;
+    let videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}`;
+    if (season !== undefined) videasyUrl += `&season=${season}`;
+    if (episode !== undefined) videasyUrl += `&episode=${episode}`;
+
     fetch(videasyUrl)
-      .then((r) => { if (!r.ok) throw new Error("Videasy scan failed"); return r.json(); })
+      .then((r) => {
+        if (!r.ok) throw new Error("Videasy scan failed");
+        return r.json();
+      })
       .then((data) => {
         if (!active) return;
         const list = Object.entries(data)
           .filter(([, v]: any) => v && v.url)
-          .map(([name, v]: any) => ({ name, url: v.url, type: v.type || "hls", audio: v.audio || "" }));
+          .map(([name, v]: any) => ({
+            name,
+            url: v.url,
+            type: v.type || "hls",
+            audio: v.audio || "",
+          }));
         setVideasySources(list);
       })
-      .catch((e) => { if (active) setVideasyError(e.message); })
-      .finally(() => { if (active) setVideasyLoading(false); });
+      .catch((e) => {
+        if (active) setVideasyError(e.message);
+      })
+      .finally(() => {
+        if (active) setVideasyLoading(false);
+      });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [movie.id, season, episode, movie.title, movie.year]);
 
-  const vidrockUrl = sources.map((s) => `${s.url}#${s.name}#${s.type}`).join("|");
-  const videasyUrl = videasySources.map((s) => `${s.url}#${s.name}#${s.type}#${s.audio || ""}`).join("|");
+  const vidrockUrl = sources
+    .map((s) => `${s.url}#${s.name}#${s.type}`)
+    .join("|");
+  const videasyUrl = videasySources
+    .map((s) => `${s.url}#${s.name}#${s.type}#${s.audio || ""}`)
+    .join("|");
 
   if (loading || videasyLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-3">
         <Loader2 className="animate-spin text-nebula-cyan" size={28} />
-        <p className="text-[10px] text-white/40 uppercase tracking-widest animate-pulse">Scanning uplinks…</p>
+        <p className="text-[10px] text-white/40 uppercase tracking-widest animate-pulse">
+          Scanning uplinks…
+        </p>
       </div>
     );
   }
@@ -2650,17 +2843,26 @@ function InPlayerSourcePicker({
             <Info size={14} />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-tight">VidRock</p>
+            <p className="text-xs font-black text-white uppercase tracking-tight">
+              VidRock
+            </p>
             <p className="text-[8px] text-white/40 uppercase">High-Speed</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
-          {sources.length > 0 ? sources.map((s) => (
-            <span key={s.name} className="text-[7px] font-bold px-1 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase">
-              {s.name}
+          {sources.length > 0 ? (
+            sources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7px] font-bold px-1 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase"
+              >
+                {s.name}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">
+              {error || "No mirrors"}
             </span>
-          )) : (
-            <span className="text-[8px] text-rose-400 uppercase">{error || "No mirrors"}</span>
           )}
         </div>
       </button>
@@ -2680,19 +2882,26 @@ function InPlayerSourcePicker({
             <Tv size={14} />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-tight">Videasy</p>
+            <p className="text-xs font-black text-white uppercase tracking-tight">
+              Videasy
+            </p>
             <p className="text-[8px] text-white/40 uppercase">Decrypted</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {videasySources.length > 0 ? (
             videasySources.slice(0, 3).map((s) => (
-              <span key={s.name} className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase">
+              <span
+                key={s.name}
+                className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase"
+              >
                 {s.name.replace("Videasy (", "").replace(")", "")}
               </span>
             ))
           ) : (
-            <span className="text-[8px] text-rose-400 uppercase">{videasyError || "No mirrors"}</span>
+            <span className="text-[8px] text-rose-400 uppercase">
+              {videasyError || "No mirrors"}
+            </span>
           )}
           {videasySources.length > 3 && (
             <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase">
@@ -2712,12 +2921,16 @@ function InPlayerSourcePicker({
             <Search size={14} />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-tight">VidLink</p>
+            <p className="text-xs font-black text-white uppercase tracking-tight">
+              VidLink
+            </p>
             <p className="text-[8px] text-white/40 uppercase">Standard</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
-          <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">Auto-Failover</span>
+          <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">
+            Auto-Failover
+          </span>
         </div>
       </button>
     </div>

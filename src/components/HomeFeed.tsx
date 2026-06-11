@@ -5,7 +5,6 @@ import { MovieRow } from "./MovieRow";
 import { MovieCard } from "./MovieCard";
 import { MovieSkeleton } from "./MovieSkeleton";
 
-
 interface HomeFeedProps {
   sortBy: string;
   setSortBy: (val: string) => void;
@@ -89,8 +88,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   ))}
             </MovieRow>
           )}
-
-
         </React.Fragment>
       ))}
 

@@ -17,13 +17,19 @@ import { ScrollToTop } from "./components/ScrollToTop";
 import { Footer } from "./components/Footer";
 
 const MediaPlayer = React.lazy(() =>
-  import("./components/MediaPlayer").then((module) => ({ default: module.MediaPlayer }))
+  import("./components/MediaPlayer").then((module) => ({
+    default: module.MediaPlayer,
+  })),
 );
 const MovieDetails = React.lazy(() =>
-  import("./components/MovieDetails").then((module) => ({ default: module.MovieDetails }))
+  import("./components/MovieDetails").then((module) => ({
+    default: module.MovieDetails,
+  })),
 );
 const SourceSelectionModal = React.lazy(() =>
-  import("./components/MovieDetails").then((module) => ({ default: module.SourceSelectionModal }))
+  import("./components/MovieDetails").then((module) => ({
+    default: module.SourceSelectionModal,
+  })),
 );
 
 import {
@@ -41,8 +47,13 @@ export default function App() {
   const navigate = useNavigate();
   const isWatching = location.pathname.includes("/watch/");
 
-  const [selectedMovieForSource, setSelectedMovieForSource] = React.useState<any | null>(null);
-  const [selectedEpForSource, setSelectedEpForSource] = React.useState<{ season?: number; episode?: number } | null>(null);
+  const [selectedMovieForSource, setSelectedMovieForSource] = React.useState<
+    any | null
+  >(null);
+  const [selectedEpForSource, setSelectedEpForSource] = React.useState<{
+    season?: number;
+    episode?: number;
+  } | null>(null);
 
   const handleHeroPlay = (movie: any) => {
     triggerPopunder();
@@ -59,7 +70,11 @@ export default function App() {
         .map(([k, val]: [string, any]) => {
           const tvMatch = k.match(/-S(\d+)E(\d+)/);
           return tvMatch
-            ? { season: parseInt(tvMatch[1]), episode: parseInt(tvMatch[2]), ...val }
+            ? {
+                season: parseInt(tvMatch[1]),
+                episode: parseInt(tvMatch[2]),
+                ...val,
+              }
             : null;
         })
         .filter(Boolean) as any[];
@@ -67,7 +82,8 @@ export default function App() {
       if (tvEntries.length > 0) {
         tvEntries.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
         const latest = tvEntries[0];
-        const pct = latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
+        const pct =
+          latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
         if (latest.watched || pct >= 90) {
           // Nearly done — jump to next episode
           season = latest.season;
@@ -130,8 +146,8 @@ export default function App() {
           <div className="relative z-[60] mt-[64px] md:mt-[76px] bg-nebula-cyan/5 border-b border-nebula-cyan/10 px-4 py-2.5 flex items-center justify-center gap-3 backdrop-blur-sm">
             <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shadow-[0_0_10px_#00f3ff]" />
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/50">
-              <span className="text-nebula-cyan/80">Transmission:</span> Secure
-              streams require 5-10s for manifest decryption & rewriting.
+              <span className="text-nebula-cyan/80">Announcement:</span> Videasy
+              source is now added. ; Some vidrock mirrors may encounter 404's
             </p>
           </div>
         )}
@@ -245,11 +261,13 @@ export default function App() {
 
       {/* Modal variant: shown when a card is clicked anywhere in the app */}
       {state.selectedMovie && !isWatching && (
-        <React.Suspense fallback={
-          <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center">
-            <Loader2 className="animate-spin text-nebula-cyan" size={32} />
-          </div>
-        }>
+        <React.Suspense
+          fallback={
+            <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center">
+              <Loader2 className="animate-spin text-nebula-cyan" size={32} />
+            </div>
+          }
+        >
           <MovieDetails
             key={`movie-details-${state.selectedMovie.id}`}
             movie={state.selectedMovie}
@@ -306,11 +324,13 @@ export default function App() {
 
       <AnimatePresence>
         {selectedMovieForSource && (
-          <React.Suspense fallback={
-            <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center">
-              <Loader2 className="animate-spin text-nebula-cyan" size={32} />
-            </div>
-          }>
+          <React.Suspense
+            fallback={
+              <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center">
+                <Loader2 className="animate-spin text-nebula-cyan" size={32} />
+              </div>
+            }
+          >
             <SourceSelectionModal
               movie={selectedMovieForSource}
               season={selectedEpForSource?.season}
@@ -349,11 +369,13 @@ function MovieDetailPageStub({ actions, state }: any) {
 
   return (
     <div className="min-h-screen bg-obsidian">
-      <React.Suspense fallback={
-        <div className="min-h-screen bg-obsidian flex items-center justify-center">
-          <Loader2 className="animate-spin text-nebula-cyan" size={32} />
-        </div>
-      }>
+      <React.Suspense
+        fallback={
+          <div className="min-h-screen bg-obsidian flex items-center justify-center">
+            <Loader2 className="animate-spin text-nebula-cyan" size={32} />
+          </div>
+        }
+      >
         <MovieDetails
           key={`page-details-${id}`}
           movie={catalogMovie || null}
@@ -447,11 +469,13 @@ function MediaPlayerStub({ actions, state }: any) {
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black">
-      <React.Suspense fallback={
-        <div className="h-screen bg-black flex items-center justify-center">
-          <Loader2 className="animate-spin text-nebula-cyan" size={48} />
-        </div>
-      }>
+      <React.Suspense
+        fallback={
+          <div className="h-screen bg-black flex items-center justify-center">
+            <Loader2 className="animate-spin text-nebula-cyan" size={48} />
+          </div>
+        }
+      >
         <MediaPlayer
           key={`player-${id}-s${season ?? 0}-e${episode ?? 0}`}
           movie={movie}
