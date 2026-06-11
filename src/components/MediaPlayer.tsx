@@ -128,6 +128,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [mirrors, setMirrors] = useState<any[]>([]);
   const [activeMirror, setActiveMirror] = useState<number>(0);
   const [vttBlobUrl, setVttBlobUrl] = useState<string | null>(null);
+  const vttBlobUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    vttBlobUrlRef.current = vttBlobUrl;
+  }, [vttBlobUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (vttBlobUrlRef.current) {
+        URL.revokeObjectURL(vttBlobUrlRef.current);
+      }
+    };
+  }, []);
   const [isDragging, setIsDragging] = useState(false);
   const [dragProgress, setDragProgress] = useState(0);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
