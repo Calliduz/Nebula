@@ -28,6 +28,7 @@ import {
   Smartphone,
   FileDown,
   Globe,
+  Tv,
 } from "lucide-react";
 import { API_BASE_URL } from "../config";
 import { handleImageError, triggerPopunder } from "../utils/helpers";
@@ -59,16 +60,23 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [videasySources, setVideasySources] = useState<any[]>([]);
+  const [videasyLoading, setVideasyLoading] = useState(true);
+  const [videasyError, setVideasyError] = useState("");
+
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
+    setVideasyLoading(true);
+    setVideasyError("");
 
-    let url = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
-    if (season !== undefined) url += `&season=${season}`;
-    if (episode !== undefined) url += `&episode=${episode}`;
+    // 1. VidRock Fetch
+    let vidrockUrl = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+    if (season !== undefined) vidrockUrl += `&season=${season}`;
+    if (episode !== undefined) vidrockUrl += `&episode=${episode}`;
 
-    fetch(url)
+    fetch(vidrockUrl)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to scan VidRock uplink");
         return res.json();
@@ -96,13 +104,46 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (active) setLoading(false);
       });
 
+    // 2. Videasy Fetch
+    let videasyUrl = `${API_BASE_URL}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}`;
+    if (season !== undefined) videasyUrl += `&season=${season}`;
+    if (episode !== undefined) videasyUrl += `&episode=${episode}`;
+
+    fetch(videasyUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan Videasy uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name,
+            url: value.url,
+            type: value.type || "hls",
+            audio: value.audio || "Original audio",
+            flag: value.flag || "us",
+          }));
+
+        setVideasySources(activeSources);
+      })
+      .catch((err) => {
+        if (active) setVideasyError(err.message || "Failed to contact Videasy.");
+      })
+      .finally(() => {
+        if (active) setVideasyLoading(false);
+      });
+
     return () => {
       active = false;
     };
-  }, [movie.id, movie.type, season, episode]);
+  }, [movie.id, movie.type, season, episode, movie.title, movie.year]);
 
-  // Construct the serialized pipeline for VidRock
+  // Construct the serialized pipelines
   const vidrockUrl = sources.map(src => `${src.url}#${src.name}#${src.type}`).join("|");
+  const videasyUrl = videasySources.map(src => `${src.url}#${src.name}#${src.type}#${src.audio || ""}`).join("|");
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
@@ -113,7 +154,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative z-10 w-full max-w-2xl bg-obsidian/85 border border-white/10 rounded-3xl p-5 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden"
+        className="relative z-10 w-full max-w-4xl bg-obsidian/85 border border-white/10 rounded-3xl p-5 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden"
       >
         {/* Glow border element */}
         <div className="absolute inset-0 border border-white/5 rounded-3xl pointer-events-none" />
@@ -140,7 +181,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[380px] sm:max-h-none overflow-y-auto pr-1 sm:pr-0 custom-scrollbar">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[380px] md:max-h-none overflow-y-auto pr-1 sm:pr-0 custom-scrollbar">
           {/* VidRock Card */}
           <motion.div
             whileHover={(!loading && sources.length > 0) ? { scale: 1.02, translateY: -2 } : {}}
@@ -207,7 +248,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : sources.length > 0 ? (
                 <div>
                   <p className="text-[10px] text-white/60 uppercase font-bold tracking-wider mb-2">
-                    Active Mirrors (Failover Enabled):
+                    Active Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {sources.map((src) => {
@@ -226,6 +267,101 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {error ? "Uplink currently offline" : "No mirror streams available"}
+                </p>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Videasy Card */}
+          <motion.div
+            whileHover={(!videasyLoading && videasySources.length > 0) ? { scale: 1.02, translateY: -2 } : {}}
+            onClick={() => {
+              if (!videasyLoading && videasySources.length > 0) {
+                onSelect(videasyUrl);
+              }
+            }}
+            className={`relative flex flex-col justify-between p-5 rounded-2xl border transition-all h-full min-h-[170px] ${
+              videasyLoading
+                ? "border-violet-500/20 bg-violet-500/5 opacity-80 cursor-wait animate-pulse"
+                : videasySources.length > 0
+                ? "border-violet-500/35 bg-violet-500/5 hover:bg-violet-500/10 cursor-pointer shadow-[0_0_20px_rgba(168,85,247,0.05)] group"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {videasyLoading ? (
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-400 text-[8px] font-black uppercase tracking-wider animate-pulse">
+                <Loader2 size={8} className="animate-spin" />
+                <span>SCANNING</span>
+              </div>
+            ) : videasySources.length > 0 ? (
+              <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500 text-white text-[8px] font-black uppercase tracking-wider animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.3)]">
+                <Sparkles size={8} />
+                <span>DECRYPTED</span>
+              </div>
+            ) : null}
+
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                  videasyLoading || videasySources.length > 0 ? "bg-violet-500/15 text-violet-400" : "bg-white/5 text-white/20"
+                }`}>
+                  <Tv size={18} className={videasyLoading ? "animate-pulse" : ""} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white group-hover:text-violet-400 transition-colors uppercase tracking-tight flex items-center gap-1.5">
+                    Videasy
+                    <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-violet-400 uppercase">
+                      NEW
+                    </span>
+                  </h4>
+                  <p className="text-[10px] text-white/60 uppercase font-semibold">
+                    Encrypted CDN Nodes
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
+                Bypasses player protection layers using WebAssembly decryption to unlock multiple global multi-language audio mirrors.
+              </p>
+            </div>
+
+            {/* Dynamic Uplinks Footer */}
+            <div className="mt-auto pt-3 border-t border-white/5">
+              {videasyLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-violet-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500"></span>
+                  </span>
+                  <span>Decrypting Nodes...</span>
+                </div>
+              ) : videasySources.length > 0 ? (
+                <div>
+                  <p className="text-[10px] text-white/60 uppercase font-bold tracking-wider mb-2">
+                    Active Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {videasySources.map((src) => {
+                      const mirrorName = src.name.replace("Videasy (", "").replace(")", "");
+                      return (
+                        <span key={src.name} className="inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wider">
+                          {src.flag && (
+                            <img
+                              src={`https://flagcdn.com/16x12/${src.flag}.png`}
+                              alt={src.flag}
+                              className="w-3 h-2.5 object-cover rounded-sm"
+                            />
+                          )}
+                          <span>{mirrorName}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {videasyError ? "Decryption engine offline" : "No mirror streams available"}
                 </p>
               )}
             </div>

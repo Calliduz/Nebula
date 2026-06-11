@@ -568,6 +568,10 @@ export function useAppState() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Guard against re-entrant syncUserRows calls and track already-fetched missing IDs
+  const syncInProgressRef = useRef(false);
+  const fetchedMissingIdsRef = useRef<Set<string>>(new Set());
+
   // Helper to merge new movies into the global pool uniquely
   const updateGlobalPool = (newMovies: NebulaMovie[]) => {
     setAllMovies((prev) => {
@@ -575,12 +579,15 @@ export function useAppState() {
       const uniqueNew = newMovies.filter(
         (m) => !existingIds.has(m.id.toString()),
       );
+      if (uniqueNew.length === 0) return prev; // Referential stability — no change
       return [...prev, ...uniqueNew];
     });
   };
 
   const syncUserRows = useCallback(async () => {
     if (allMovies.length === 0) return;
+    if (syncInProgressRef.current) return;
+    syncInProgressRef.current = true;
 
     // 1. Continue Watching
     const progressData = JSON.parse(
@@ -672,30 +679,36 @@ export function useAppState() {
       }
     }
 
-    // Fetch missing movies if any
+    // Fetch missing movies if any — but skip IDs we already tried
     if (missingMedia.length > 0) {
       const uniqueMissing = missingMedia.filter(
         (val, index, self) =>
-          self.findIndex((t) => t.id === val.id && t.type === val.type) === index
+          self.findIndex((t) => t.id === val.id && t.type === val.type) === index &&
+          !fetchedMissingIdsRef.current.has(`${val.type}_${val.id}`)
       );
-      try {
-        const fetched = await Promise.all(
-          uniqueMissing.map(async (item) => {
-            try {
-              return await getMediaBasicInfo(item.id, item.type);
-            } catch {
-              return null;
-            }
-          })
-        );
-        const valid = fetched.filter(Boolean) as any[];
-        if (valid.length > 0) {
-          updateGlobalPool(valid);
+      // Mark these as attempted so we don't re-fetch on next cycle
+      uniqueMissing.forEach((m) => fetchedMissingIdsRef.current.add(`${m.type}_${m.id}`));
+      if (uniqueMissing.length > 0) {
+        try {
+          const fetched = await Promise.all(
+            uniqueMissing.map(async (item) => {
+              try {
+                return await getMediaBasicInfo(item.id, item.type);
+              } catch {
+                return null;
+              }
+            })
+          );
+          const valid = fetched.filter(Boolean) as any[];
+          if (valid.length > 0) {
+            updateGlobalPool(valid);
+          }
+        } catch (err) {
+          console.error("Failed to fetch missing items in syncUserRows", err);
         }
-      } catch (err) {
-        console.error("Failed to fetch missing items in syncUserRows", err);
       }
     }
+    syncInProgressRef.current = false;
 
     setRows((prev) => {
       if (prev.length === 0) return prev;
@@ -1521,12 +1534,16 @@ export function useAppState() {
     fetchInitialData();
   }, []);
 
+  // Sync user-specific rows when history/myList change.
+  // NOTE: allMovies.length is intentionally EXCLUDED from deps to prevent
+  // the loop: syncUserRows → updateGlobalPool → allMovies change → re-trigger.
   useEffect(() => {
     const timer = setTimeout(() => {
       syncUserRows();
-    }, 200);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [history, myList, allMovies.length, syncUserRows]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, myList]);
 
   // ── Optimized Search with AbortController ─────────────────────────────────
   const searchAbortRef = useRef<AbortController | null>(null);

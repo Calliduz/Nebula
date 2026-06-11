@@ -246,18 +246,39 @@ const normalizeMovie = (
 
 /**
  * Batches a check against the server's StreamCache to verify if we definitely have a copy.
+ * Uses an in-memory cache (60s) to deduplicate identical requests.
  */
+const availabilityCache = new Map<string, { ts: number; data: Map<string, { isVerified: boolean; isDead: boolean }> }>();
+const AVAIL_CACHE_TTL = 60_000; // 60 seconds
+
 export const fetchAvailability = async (
   movies: NebulaMovie[],
 ): Promise<NebulaMovie[]> => {
   const ids = movies.map((m) => m.id).join(",");
   if (!ids) return movies;
 
+  // Check in-memory cache first
+  const cached = availabilityCache.get(ids);
+  if (cached && Date.now() - cached.ts < AVAIL_CACHE_TTL) {
+    return movies.map((m) => {
+      const info = cached.data.get(m.id.toString());
+      if (info) {
+        return { ...m, isVerified: info.isVerified, quality: info.isVerified && m.quality === "TBA" ? "HD" : m.quality };
+      }
+      return m;
+    });
+  }
+
   try {
     const response = await fetch(
       `${getApiBase()}/api/stream/availability?ids=${ids}`,
     );
     const { results } = await response.json();
+
+    // Store in cache
+    const cacheData = new Map<string, { isVerified: boolean; isDead: boolean }>();
+    results.forEach((r: any) => cacheData.set(r.id.toString(), { isVerified: r.isVerified, isDead: r.isDead }));
+    availabilityCache.set(ids, { ts: Date.now(), data: cacheData });
 
     const verifiedMap = new Map<string, boolean>(
       results.map((r: any) => [r.id.toString(), r.isVerified]),

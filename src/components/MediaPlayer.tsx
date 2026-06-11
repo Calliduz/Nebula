@@ -18,6 +18,7 @@ import {
   Search,
   Info,
   RefreshCw,
+  Tv,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -285,6 +286,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const rawUrl = parts[0]?.trim();
           const hashName = parts[1]?.trim();
           const hashType = parts[2]?.trim();
+          const hashAudio = parts[3]?.trim();
 
           if (!rawUrl) {
             return null;
@@ -297,10 +299,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           return {
             source: name,
             url: proxiedUrl,
-            type: isEmb ? "embed" : (isMp4 ? "mp4" : "hls")
+            type: isEmb ? "embed" : (isMp4 ? "mp4" : "hls"),
+            audio: hashAudio || ""
           };
         })
-        .filter((mirror): mirror is { source: string; url: string; type: "embed" | "hls" | "mp4" } => mirror !== null);
+        .filter((mirror): mirror is { source: string; url: string; type: "embed" | "hls" | "mp4"; audio?: string } => mirror !== null);
 
       if (processedMirrors.length > 0) {
         setMirrors(processedMirrors);
@@ -2341,10 +2344,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                               activeMirrorRef.current = i;
                               setStreamUrl(m.url);
                             }}
-                            className={`w-full text-left px-2 py-2 text-[11px] rounded-md transition-colors flex items-center justify-between ${activeMirror === i ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+                            className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${activeMirror === i ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
                           >
-                            <span className="truncate">{m.source}</span>
-                            <span className="text-[9px] opacity-40 shrink-0">
+                            <div className="flex flex-col min-w-0">
+                              <span className="truncate text-[11px] font-semibold">{m.source}</span>
+                              {m.audio && (
+                                <span className="text-[9.5px] text-white/40 font-normal leading-tight">
+                                  {m.audio}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[9px] opacity-40 shrink-0 self-center">
                               {m.quality}
                             </span>
                           </button>
@@ -2569,12 +2579,20 @@ function InPlayerSourcePicker({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [videasySources, setVideasySources] = useState<any[]>([]);
+  const [videasyLoading, setVideasyLoading] = useState(true);
+  const [videasyError, setVideasyError] = useState("");
+
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
-    const url = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&season=${season}&episode=${episode}`;
-    fetch(url)
+    setVideasyLoading(true);
+    setVideasyError("");
+
+    // 1. VidRock Fetch
+    const vidrockUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&season=${season}&episode=${episode}`;
+    fetch(vidrockUrl)
       .then((r) => { if (!r.ok) throw new Error("Uplink scan failed"); return r.json(); })
       .then((data) => {
         if (!active) return;
@@ -2585,12 +2603,28 @@ function InPlayerSourcePicker({
       })
       .catch((e) => { if (active) setError(e.message); })
       .finally(() => { if (active) setLoading(false); });
+
+    // 2. Videasy Fetch
+    const videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&season=${season}&episode=${episode}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}`;
+    fetch(videasyUrl)
+      .then((r) => { if (!r.ok) throw new Error("Videasy scan failed"); return r.json(); })
+      .then((data) => {
+        if (!active) return;
+        const list = Object.entries(data)
+          .filter(([, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({ name, url: v.url, type: v.type || "hls", audio: v.audio || "" }));
+        setVideasySources(list);
+      })
+      .catch((e) => { if (active) setVideasyError(e.message); })
+      .finally(() => { if (active) setVideasyLoading(false); });
+
     return () => { active = false; };
-  }, [movie.id, season, episode]);
+  }, [movie.id, season, episode, movie.title, movie.year]);
 
   const vidrockUrl = sources.map((s) => `${s.url}#${s.name}#${s.type}`).join("|");
+  const videasyUrl = videasySources.map((s) => `${s.url}#${s.name}#${s.type}#${s.audio || ""}`).join("|");
 
-  if (loading) {
+  if (loading || videasyLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-3">
         <Loader2 className="animate-spin text-nebula-cyan" size={28} />
@@ -2600,7 +2634,7 @@ function InPlayerSourcePicker({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 p-4 overflow-y-auto max-h-[70vh]">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 overflow-y-auto max-h-[70vh]">
       {/* VidRock */}
       <button
         onClick={() => sources.length > 0 && onSelect(vidrockUrl)}
@@ -2631,6 +2665,43 @@ function InPlayerSourcePicker({
         </div>
       </button>
 
+      {/* Videasy */}
+      <button
+        onClick={() => videasySources.length > 0 && onSelect(videasyUrl)}
+        disabled={videasySources.length === 0}
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          videasySources.length > 0
+            ? "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95"
+            : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400">
+            <Tv size={14} />
+          </div>
+          <div>
+            <p className="text-xs font-black text-white uppercase tracking-tight">Videasy</p>
+            <p className="text-[8px] text-white/40 uppercase">Decrypted</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {videasySources.length > 0 ? (
+            videasySources.slice(0, 3).map((s) => (
+              <span key={s.name} className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase">
+                {s.name.replace("Videasy (", "").replace(")", "")}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">{videasyError || "No mirrors"}</span>
+          )}
+          {videasySources.length > 3 && (
+            <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase">
+              +{videasySources.length - 3}
+            </span>
+          )}
+        </div>
+      </button>
+
       {/* VidLink */}
       <button
         onClick={() => onSelect()}
@@ -2646,7 +2717,7 @@ function InPlayerSourcePicker({
           </div>
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
-          <span className="text-[7px] font-bold px-1 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">Auto-Failover</span>
+          <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">Auto-Failover</span>
         </div>
       </button>
     </div>
