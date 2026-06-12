@@ -2340,6 +2340,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4 relative">
+              <button
+                onClick={() => setSourceSelect({ season: season ?? 1, episode: episode ?? 1 })}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all text-xs font-bold border border-white/10 ${sourceSelect ? "bg-white text-black" : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10"}`}
+              >
+                <Tv size={14} />
+                <span className="hidden sm:inline">SOURCES</span>
+              </button>
               {movie.type === "tv" && (
                 <button
                   onClick={() => setShowEpisodeDrawer(true)}
@@ -2533,6 +2540,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       </div>
                     </div>
                   )}
+                  {/* Switch Source */}
+                  <div className="mt-1 border-t border-white/10 pt-2 px-2">
+                    <button
+                      onClick={() => {
+                        setShowSettings(false);
+                        setSourceSelect({ season: season ?? 1, episode: episode ?? 1 });
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-2 text-[11px] text-nebula-cyan/80 hover:text-nebula-cyan hover:bg-nebula-cyan/10 rounded-md transition-colors"
+                    >
+                      <Tv size={13} />
+                      <span>Switch Source</span>
+                    </button>
+                  </div>
                   {/* Reload Stream — recovers from stuck seek/fast-forward */}
                   <div className="mt-1 border-t border-white/10 pt-2 px-2">
                     <button
@@ -2819,42 +2839,43 @@ export function InPlayerSourcePicker({
     .map((s) => `${s.url}#${s.name}#${s.type}#${s.audio || ""}`)
     .join("|");
 
-  if (loading || videasyLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10 gap-3">
-        <Loader2 className="animate-spin text-nebula-cyan" size={28} />
-        <p className="text-[10px] text-white/40 uppercase tracking-widest animate-pulse">
-          Scanning uplinks…
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 overflow-y-auto max-h-[70vh]">
       {/* VidRock */}
       <button
         onClick={() => sources.length > 0 && onSelect(vidrockUrl)}
-        disabled={sources.length === 0}
+        disabled={loading || sources.length === 0}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          sources.length > 0
-            ? "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95"
-            : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          loading
+            ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+            : sources.length > 0
+              ? "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95"
+              : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
         }`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan">
-            <Info size={14} />
+            {loading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Info size={14} />
+            )}
           </div>
           <div>
             <p className="text-xs font-black text-white uppercase tracking-tight">
               VidRock
             </p>
-            <p className="text-[8px] text-white/40 uppercase">High-Speed</p>
+            <p className="text-[8px] text-white/40 uppercase">
+              {loading ? "Scanning..." : "High-Speed"}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
-          {sources.length > 0 ? (
+          {loading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Running uplink check...
+            </span>
+          ) : sources.length > 0 ? (
             sources.map((s) => (
               <span
                 key={s.name}
@@ -2874,42 +2895,56 @@ export function InPlayerSourcePicker({
       {/* Videasy */}
       <button
         onClick={() => videasySources.length > 0 && onSelect(videasyUrl)}
-        disabled={videasySources.length === 0}
+        disabled={videasyLoading || videasySources.length === 0}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          videasySources.length > 0
-            ? "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95"
-            : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          videasyLoading
+            ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+            : videasySources.length > 0
+              ? "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95"
+              : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
         }`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400">
-            <Tv size={14} />
+            {videasyLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Tv size={14} />
+            )}
           </div>
           <div>
             <p className="text-xs font-black text-white uppercase tracking-tight">
               Videasy
             </p>
-            <p className="text-[8px] text-white/40 uppercase">Decrypted</p>
+            <p className="text-[8px] text-white/40 uppercase">
+              {videasyLoading ? "Decrypting..." : "Decrypted"}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
-          {videasySources.length > 0 ? (
-            videasySources.slice(0, 3).map((s) => (
-              <span
-                key={s.name}
-                className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase"
-              >
-                {s.name.replace("Videasy (", "").replace(")", "")}
-              </span>
-            ))
+          {videasyLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Running decrypt scan...
+            </span>
+          ) : videasySources.length > 0 ? (
+            <>
+              {videasySources.slice(0, 3).map((s) => (
+                <span
+                  key={s.name}
+                  className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase"
+                >
+                  {s.name.replace("Videasy (", "").replace(")", "")}
+                </span>
+              ))}
+              {videasySources.length > 3 && (
+                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase">
+                  +{videasySources.length - 3}
+                </span>
+              )}
+            </>
           ) : (
             <span className="text-[8px] text-rose-400 uppercase">
               {videasyError || "No mirrors"}
-            </span>
-          )}
-          {videasySources.length > 3 && (
-            <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase">
-              +{videasySources.length - 3}
             </span>
           )}
         </div>
