@@ -57,6 +57,63 @@ const parseMirrorName = (name: string) => {
   return { base: name, quality: "Original" };
 };
 
+export const parseMirrorDetails = (sourceName: string) => {
+  // e.g. "Videasy (Neon)" -> category: "Videasy", name: "Neon"
+  // e.g. "VidRock (Mirror 1)" -> category: "VidRock", name: "Mirror 1"
+  // e.g. "VidLink" -> category: "VidLink", name: "VidLink"
+  const match = sourceName.match(/^(.*?)\s*\((.*?)\)$/);
+  if (match) {
+    return {
+      category: match[1].trim(),
+      name: match[2].trim(),
+    };
+  }
+
+  if (sourceName.startsWith("VidRock")) {
+    return { category: "VidRock", name: sourceName.replace("VidRock", "").trim() || "Mirror" };
+  }
+  if (sourceName.startsWith("Videasy")) {
+    return { category: "Videasy", name: sourceName.replace("Videasy", "").trim() || "Mirror" };
+  }
+
+  return { category: "VidLink", name: sourceName };
+};
+
+export const serverSortOrder = [
+  "neon",
+  "yoru",
+  "cypher",
+  "sage",
+  "breach",
+  "vyse",
+  "killjoy",
+  "fade",
+  "omen",
+  "raze"
+];
+
+export const getMirrorPriority = (sourceName: string) => {
+  const { category, name } = parseMirrorDetails(sourceName);
+  const cleanName = name.toLowerCase();
+  const cleanCategory = category.toLowerCase();
+
+  for (let i = 0; i < serverSortOrder.length; i++) {
+    const term = serverSortOrder[i];
+    if (cleanName.includes(term) || cleanCategory.includes(term)) {
+      return i;
+    }
+  }
+  return 999;
+};
+
+export const sortMirrorsList = (list: any[]) => {
+  return [...list].sort((a, b) => {
+    const prioA = getMirrorPriority(a.source);
+    const prioB = getMirrorPriority(b.source);
+    return prioA - prioB;
+  });
+};
+
 const groupMirrors = (mirrorsList: any[]) => {
   const groups: Record<string, any> = {};
 
@@ -85,35 +142,15 @@ const groupMirrors = (mirrorsList: any[]) => {
     }
   });
 
-  return Object.values(groups).map((group: any) => {
+  const groupedList = Object.values(groups).map((group: any) => {
     if (group.type === "mp4_grouped") {
       group.qualities.sort((a: any, b: any) => b.height - a.height);
       group.url = group.qualities[0].url;
     }
     return group;
   });
-};
 
-const parseMirrorDetails = (sourceName: string) => {
-  // e.g. "Videasy (Neon)" -> category: "Videasy", name: "Neon"
-  // e.g. "VidRock (Mirror 1)" -> category: "VidRock", name: "Mirror 1"
-  // e.g. "VidLink" -> category: "VidLink", name: "VidLink"
-  const match = sourceName.match(/^(.*?)\s*\((.*?)\)$/);
-  if (match) {
-    return {
-      category: match[1].trim(),
-      name: match[2].trim(),
-    };
-  }
-
-  if (sourceName.startsWith("VidRock")) {
-    return { category: "VidRock", name: sourceName.replace("VidRock", "").trim() || "Mirror" };
-  }
-  if (sourceName.startsWith("Videasy")) {
-    return { category: "Videasy", name: sourceName.replace("Videasy", "").trim() || "Mirror" };
-  }
-
-  return { category: "VidLink", name: sourceName };
+  return sortMirrorsList(groupedList);
 };
 
 export const MediaPlayer: React.FC<MediaPlayerProps> = ({
@@ -244,6 +281,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const hasLoggedHistory = useRef(false);
   const subTextCache = useRef<Record<string, string>>({}); // Cache for raw VTT text
   const navigate = useNavigate();
+
+  const hasPrefetchedNextEpisode = useRef(false);
+  const nextEpisodeDetailsRef = useRef<any>(null);
+  useEffect(() => {
+    nextEpisodeDetailsRef.current = getNextEpisodeDetails();
+  });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -1167,6 +1210,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setIsDragging(false);
     setDragProgress(0);
     setHoverTime(null);
+    hasPrefetchedNextEpisode.current = false;
   }, [season, episode]);
 
   // ── Video event listeners ─────────────────────────────────────────────────
@@ -1193,6 +1237,45 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       if (video.duration > 0) {
         const cur = video.currentTime;
         setProgress((cur / video.duration) * 100);
+
+        // Prefetch next episode in background if progress > 50%
+        if (
+          movie.type === "tv" &&
+          !hasPrefetchedNextEpisode.current &&
+          cur / video.duration > 0.5
+        ) {
+          const nextEp = nextEpisodeDetailsRef.current;
+          if (nextEp) {
+            hasPrefetchedNextEpisode.current = true;
+            console.log(
+              `[PLAYER] Prefetching/scanning all sources for next episode: S${nextEp.season}E${nextEp.episode}`,
+            );
+
+            // 1. VidLink prefetch
+            let vidlinkPrefetchUrl = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&releaseDate=${movie.release_date || ""}`;
+            if (movie.origin) vidlinkPrefetchUrl += `&origin=${movie.origin}`;
+            vidlinkPrefetchUrl += `&season=${nextEp.season}&episode=${nextEp.episode}`;
+
+            fetch(vidlinkPrefetchUrl)
+              .then((r) => r.json())
+              .then((data) => console.log(`[PLAYER] Prefetch VidLink success for S${nextEp.season}E${nextEp.episode}:`, data))
+              .catch((err) => console.warn(`[PLAYER] Prefetch VidLink failed for S${nextEp.season}E${nextEp.episode}:`, err));
+
+            // 2. VidRock prefetch
+            let vidrockPrefetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(vidrockPrefetchUrl)
+              .then((r) => r.json())
+              .then((data) => console.log(`[PLAYER] Prefetch VidRock success for S${nextEp.season}E${nextEp.episode}:`, data))
+              .catch((err) => console.warn(`[PLAYER] Prefetch VidRock failed for S${nextEp.season}E${nextEp.episode}:`, err));
+
+            // 3. Videasy prefetch
+            let videasyPrefetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(videasyPrefetchUrl)
+              .then((r) => r.json())
+              .then((data) => console.log(`[PLAYER] Prefetch Videasy success for S${nextEp.season}E${nextEp.episode}:`, data))
+              .catch((err) => console.warn(`[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}:`, err));
+          }
+        }
 
         // Throttle progress saving to every 5 seconds
         if (Date.now() - lastSaveTime.current > 5000) {
@@ -2688,13 +2771,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       groupedByCategory[category].push({ mirror: { ...m, cleanName: name }, originalIndex: i });
                     });
 
-                    return Object.entries(groupedByCategory).map(([category, items], catIdx) => (
-                      <div key={category} className="mb-2">
-                        <p className={`text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 ${catIdx > 0 ? "border-t border-white/10" : "border-t border-white/10"}`}>
-                          {category}
-                        </p>
-                        <div className="flex flex-col px-2 gap-0.5">
-                          {items.map(({ mirror: m, originalIndex: idx }) => {
+                    return Object.entries(groupedByCategory).map(([category, items], catIdx) => {
+                      items.sort((a, b) => {
+                        return getMirrorPriority(a.mirror.source) - getMirrorPriority(b.mirror.source);
+                      });
+
+                      return (
+                        <div key={category} className="mb-2">
+                          <p className={`text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 ${catIdx > 0 ? "border-t border-white/10" : "border-t border-white/10"}`}>
+                            {category}
+                          </p>
+                          <div className="flex flex-col px-2 gap-0.5">
+                            {items.map(({ mirror: m, originalIndex: idx }) => {
                             const flagCode = m.flag ? m.flag.toLowerCase() : "us";
                             const countryCode = flagCode === "en" ? "us" : flagCode;
                             const isSelected = activeMirror === idx;
@@ -2736,8 +2824,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           })}
                         </div>
                       </div>
-                    ));
-                  })()}
+                    );
+                  });
+                })()}
                   {qualities.length > 0 && (
                     <div className="mb-2">
                       <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">
