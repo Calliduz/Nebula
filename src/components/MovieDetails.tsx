@@ -144,10 +144,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
   // Construct the serialized pipelines
   const vidrockUrl = sources
-    .map((src) => `${src.url}#${src.name}#${src.type}`)
+    .map((src) => src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`)
     .join("|");
   const videasyUrl = videasySources
-    .map((src) => `${src.url}#${src.name}#${src.type}#${src.audio || ""}`)
+    .map((src) => src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}#${src.audio || ""}`)
     .join("|");
 
   return (

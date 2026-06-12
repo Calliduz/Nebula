@@ -45,6 +45,55 @@ function formatTime(s: number) {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
+const parseMirrorName = (name: string) => {
+  const match = name.match(/^(.*?)\s*-\s*(\d+p|Auto|Original)\s*\)?$/i);
+  if (match) {
+    let base = match[1].trim();
+    if (name.includes("(") && !base.endsWith(")")) {
+      base = base + ")";
+    }
+    return { base, quality: match[2].trim() };
+  }
+  return { base: name, quality: "Original" };
+};
+
+const groupMirrors = (mirrorsList: any[]) => {
+  const groups: Record<string, any> = {};
+
+  mirrorsList.forEach((m) => {
+    if (m.type !== "mp4") {
+      const groupKey = `${m.source}_${m.audio || ""}`;
+      groups[groupKey] = { ...m };
+      return;
+    }
+
+    const { base, quality } = parseMirrorName(m.source);
+    const groupKey = `${base}_${m.audio || ""}`;
+    const height = parseInt(quality.replace(/\D/g, ""), 10) || 480;
+
+    if (!groups[groupKey]) {
+      groups[groupKey] = {
+        source: base,
+        url: m.url,
+        type: "mp4_grouped",
+        audio: m.audio,
+        flag: m.flag,
+        qualities: [{ height, url: m.url, originalSource: m.source }],
+      };
+    } else {
+      groups[groupKey].qualities.push({ height, url: m.url, originalSource: m.source });
+    }
+  });
+
+  return Object.values(groups).map((group: any) => {
+    if (group.type === "mp4_grouped") {
+      group.qualities.sort((a: any, b: any) => b.height - a.height);
+      group.url = group.qualities[0].url;
+    }
+    return group;
+  });
+};
+
 export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   movie,
   season: propSeason,
@@ -127,6 +176,29 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   );
   const [mirrors, setMirrors] = useState<any[]>([]);
   const [activeMirror, setActiveMirror] = useState<number>(0);
+  const selectMirror = useCallback((index: number, mirrorsList: any[]) => {
+    const m = mirrorsList[index];
+    if (!m) return;
+    setActiveMirror(index);
+    activeMirrorRef.current = index;
+    setStreamUrl(m.url);
+    setIsEmbed(m.type === "embed");
+
+    if (m.type === "mp4_grouped" && m.qualities) {
+      setQualities(
+        m.qualities.map((q: any, qIdx: number) => ({
+          height: q.height,
+          levelId: qIdx,
+          url: q.url,
+        }))
+      );
+      setActiveQuality(-1);
+      setCurrentHeight(m.qualities[0].height);
+    } else {
+      setQualities([]);
+      setActiveQuality(-1);
+    }
+  }, []);
   const [vttBlobUrl, setVttBlobUrl] = useState<string | null>(null);
   const vttBlobUrlRef = useRef<string | null>(null);
   useEffect(() => {
@@ -352,12 +424,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         );
 
       if (processedMirrors.length > 0) {
-        setMirrors(processedMirrors);
-        mirrorsRef.current = processedMirrors;
-        setStreamUrl(processedMirrors[0].url);
-        setIsEmbed(processedMirrors[0].type === "embed");
-        setActiveMirror(0);
-        activeMirrorRef.current = 0;
+        const grouped = groupMirrors(processedMirrors);
+        setMirrors(grouped);
+        mirrorsRef.current = grouped;
+        selectMirror(0, grouped);
         setLoading(false);
         return;
       }
@@ -380,12 +450,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
             return { ...m, url: proxiedUrl };
           });
-          setMirrors(processedMirrors);
-          mirrorsRef.current = processedMirrors;
-          setStreamUrl(processedMirrors[0].url);
-          setIsEmbed(processedMirrors[0].type === "embed");
-          setActiveMirror(0);
-          activeMirrorRef.current = 0;
+          const grouped = groupMirrors(processedMirrors);
+          setMirrors(grouped);
+          mirrorsRef.current = grouped;
+          selectMirror(0, grouped);
 
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
@@ -703,8 +771,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   // ── HLS setup ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    setCurrentHeight(null);
-    setQualities([]);
     if (!streamUrl || !videoRef.current || isEmbed) return;
 
     const video = videoRef.current;
@@ -712,7 +778,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     const currentMirrorType = mirrors[activeMirror]?.type;
 
-    if (currentMirrorType === "mp4") {
+    if (currentMirrorType === "mp4" || currentMirrorType === "mp4_grouped") {
       video.src = streamUrl;
       video.play().catch((err) => {
         console.warn("[PLAYER] play() failed or was interrupted:", err);
@@ -722,7 +788,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       return () => {
         video.src = "";
       };
-    } else if (Hls.isSupported()) {
+    }
+
+    setCurrentHeight(null);
+    setQualities([]);
+
+    if (Hls.isSupported()) {
       const hls = new Hls({
         // ── Buffer ──────────────────────────────────────────────────────────
         // Netflix-style: large forward buffer so paused sessions don't rebuffer.
@@ -851,9 +922,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
-              setActiveMirror(nextIdx);
-              activeMirrorRef.current = nextIdx;
-              setStreamUrl(mirrorsRef.current[nextIdx].url);
+              selectMirror(nextIdx, mirrorsRef.current);
             } else {
               setError("Initial playback failed. All mirrors exhausted.");
             }
@@ -887,9 +956,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               console.log(
                 `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
               );
-              setActiveMirror(nextIdx);
-              activeMirrorRef.current = nextIdx;
-              setStreamUrl(mirrorsRef.current[nextIdx].url);
+              selectMirror(nextIdx, mirrorsRef.current);
             } else {
               setError(
                 `Stream not found (${statusCode}). All mirrors exhausted.`,
@@ -920,9 +987,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               console.log(
                 `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
               );
-              setActiveMirror(nextIdx);
-              activeMirrorRef.current = nextIdx;
-              setStreamUrl(mirrorsRef.current[nextIdx].url);
+              selectMirror(nextIdx, mirrorsRef.current);
             } else {
               setError("Stream connection lost. All mirrors exhausted.");
             }
@@ -947,9 +1012,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               console.log(
                 `[HLS] Media recovery failed. Switching to mirror ${nextIdx}...`,
               );
-              setActiveMirror(nextIdx);
-              activeMirrorRef.current = nextIdx;
-              setStreamUrl(mirrorsRef.current[nextIdx].url);
+              selectMirror(nextIdx, mirrorsRef.current);
             } else {
               setError(`Stream decode failed: ${d.details}`);
             }
@@ -1146,9 +1209,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           );
           const nextIdx = activeMirrorRef.current + 1;
           if (nextIdx < mirrorsRef.current.length) {
-            setActiveMirror(nextIdx);
-            activeMirrorRef.current = nextIdx;
-            setStreamUrl(mirrorsRef.current[nextIdx].url);
+            selectMirror(nextIdx, mirrorsRef.current);
           } else {
             setError(`Playback failed: ${err.message || "Media source error"}`);
           }
@@ -1198,9 +1259,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           );
           const nextIdx = activeMirrorRef.current + 1;
           if (nextIdx < mirrorsRef.current.length) {
-            setActiveMirror(nextIdx);
-            activeMirrorRef.current = nextIdx;
-            setStreamUrl(mirrorsRef.current[nextIdx].url);
+            selectMirror(nextIdx, mirrorsRef.current);
           }
           stallCount = 0;
           recoveryCount = 0;
@@ -1265,7 +1324,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       video.removeEventListener("suspend", onSuspend);
       video.removeEventListener("error", onVideoError);
     };
-  }, [streamUrl, movie.id, getProgressKey]);
+  }, [streamUrl, movie.id, getProgressKey, selectMirror]);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.volume = isMuted ? 0 : volume / 100;
@@ -1545,6 +1604,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setActiveQuality(levelId);
     if (hlsRef.current) {
       hlsRef.current.currentLevel = levelId;
+    } else {
+      const video = videoRef.current;
+      const m = mirrors[activeMirror];
+      if (video && m?.type === "mp4_grouped") {
+        const key = getProgressKey();
+        const saved = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+        saved[key] = { time: video.currentTime, duration: video.duration, timestamp: Date.now() };
+        localStorage.setItem("nebula-progress", JSON.stringify(saved));
+        const targetId = levelId === -1 ? 0 : levelId;
+        setActiveQuality(levelId);
+        setCurrentHeight(m.qualities[targetId].height);
+        setStreamUrl(m.qualities[targetId].url);
+      }
     }
   };
 
@@ -1809,12 +1881,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
                           return { ...m, url: proxiedUrl };
                         });
-                        setMirrors(processedMirrors);
-                        mirrorsRef.current = processedMirrors;
-                        setStreamUrl(processedMirrors[0].url);
-                        setIsEmbed(processedMirrors[0].type === "embed");
-                        setActiveMirror(0);
-                        activeMirrorRef.current = 0;
+                        const grouped = groupMirrors(processedMirrors);
+                        setMirrors(grouped);
+                        mirrorsRef.current = grouped;
+                        selectMirror(0, grouped);
                         if (data.qualityTag) setQualityTag(data.qualityTag);
                         if (data.resolution) setResolution(data.resolution);
                       } else if (data.streamUrl) {
@@ -2513,9 +2583,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           <button
                             key={i}
                             onClick={() => {
-                              setActiveMirror(i);
-                              activeMirrorRef.current = i;
-                              setStreamUrl(m.url);
+                              selectMirror(i, mirrors);
                             }}
                             className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${activeMirror === i ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
                           >
@@ -2859,10 +2927,10 @@ export function InPlayerSourcePicker({
   }, [movie.id, season, episode, movie.title, movie.year]);
 
   const vidrockUrl = sources
-    .map((s) => `${s.url}#${s.name}#${s.type}`)
+    .map((s) => s.url.includes("#") ? s.url : `${s.url}#${s.name}#${s.type}`)
     .join("|");
   const videasyUrl = videasySources
-    .map((s) => `${s.url}#${s.name}#${s.type}#${s.audio || ""}`)
+    .map((s) => s.url.includes("#") ? s.url : `${s.url}#${s.name}#${s.type}#${s.audio || ""}`)
     .join("|");
 
   return (
