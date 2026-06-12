@@ -323,10 +323,16 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isMp4 = hashType === "mp4" || rawUrl.includes(".mp4");
           const name =
             hashName ||
-            (isEmb ? `Embed Mirror ${idx + 1}` : `HLS Mirror ${idx + 1}`);
+            (isEmb
+              ? `Embed Mirror ${idx + 1}`
+              : isMp4
+                ? `MP4 Mirror ${idx + 1}`
+                : `HLS Mirror ${idx + 1}`);
           const proxiedUrl = isEmb
             ? rawUrl
-            : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
+            : isMp4
+              ? `${API}/api/proxy/segment?url=${encodeURIComponent(rawUrl)}`
+              : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
           return {
             source: name,
             url: proxiedUrl,
@@ -369,7 +375,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         if (data.mirrors && data.mirrors.length > 0) {
           const processedMirrors = data.mirrors.map((m: any) => {
             if (m.type === "embed") return m;
-            const proxiedUrl = `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`;
+            const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
+            const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+            const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
             return { ...m, url: proxiedUrl };
           });
           setMirrors(processedMirrors);
@@ -386,10 +394,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }
         } else if (data.streamUrl) {
           const isEmb = data.type === "embed";
+          const isMp4 = data.type === "mp4" || data.streamUrl.includes(".mp4");
+          const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
           setStreamUrl(
             isEmb
               ? data.streamUrl
-              : `${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`,
+              : `${API}${proxyEndpoint}?url=${encodeURIComponent(data.streamUrl)}`,
           );
           setIsEmbed(isEmb);
           if (data.qualityTag) setQualityTag(data.qualityTag);
@@ -1794,7 +1804,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       if (data.mirrors && data.mirrors.length > 0) {
                         const processedMirrors = data.mirrors.map((m: any) => {
                           if (m.type === "embed") return m;
-                          const proxiedUrl = `${API}/api/proxy/stream?url=${encodeURIComponent(m.url)}`;
+                          const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
+                          const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+                          const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
                           return { ...m, url: proxiedUrl };
                         });
                         setMirrors(processedMirrors);
@@ -1807,10 +1819,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         if (data.resolution) setResolution(data.resolution);
                       } else if (data.streamUrl) {
                         const isEmb = data.type === "embed";
+                        const isMp4 = data.type === "mp4" || data.streamUrl.includes(".mp4");
+                        const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
                         setStreamUrl(
                           isEmb
                             ? data.streamUrl
-                            : `${API}/api/proxy/stream?url=${encodeURIComponent(data.streamUrl)}`,
+                            : `${API}${proxyEndpoint}?url=${encodeURIComponent(data.streamUrl)}`,
                         );
                         setIsEmbed(isEmb);
                         if (data.qualityTag) setQualityTag(data.qualityTag);
