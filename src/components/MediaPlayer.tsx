@@ -778,7 +778,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             /\.mp3(\?|$)/i.test(url) ||
             /\.mp4(\?|$)/i.test(url) ||
             /\.aac(\?|$)/i.test(url) ||
-            /(\/seg-|\/segments?\/|\/fragments?\/|index-)/i.test(url);
+            /(\/seg-|\/segments?\/|\/fragments?\/|index-)/i.test(url) ||
+            (!url.startsWith(API) && !url.startsWith("/") && !url.includes("localhost") && !url.includes("127.0.0.1"));
 
           if (shouldProxy) {
             xhr.open(
