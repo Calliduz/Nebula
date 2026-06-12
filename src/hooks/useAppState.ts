@@ -876,12 +876,8 @@ export function useAppState() {
         getPopularMovies().catch(() => []),
         getTopRatedMovies().catch(() => []),
         getPopularTV().catch(() => []),
-        fetch(`${apiBase}/api/drama/list?page=1&order=2`)
-          .then((r) => r.json())
-          .catch(() => ({ results: [] })),
-        fetch(`${apiBase}/api/drama/list?page=1&country=8`)
-          .then((r) => r.json())
-          .catch(() => ({ results: [] })),
+        Promise.resolve({ results: [] }),
+        Promise.resolve({ results: [] }),
         discoverMedia("movie", {
           with_genres: "878",
           sort_by: "vote_count.desc",
@@ -1902,11 +1898,28 @@ export function useAppState() {
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) searchInputRef.current.focus();
   }, [isSearchOpen]);
+  const wrappedSetSelectedMovie = (movie: any) => {
+    if (!movie) {
+      navigate("/");
+    } else {
+      // Save scroll position before navigating to detail page
+      saveScrollPosition(location.pathname, viewingCategory);
+      (window as any).__isRestoringScroll = true;
+      navigate(`/${movie.type}/${movie.id}`);
+    }
+    setSelectedMovie(movie);
+  };
+
   const handleRandomize = () => {
-    const pool = filteredMovies.length > 0 ? filteredMovies : allMovies;
-    if (pool.length > 0) {
-      const random = pool[Math.floor(Math.random() * pool.length)];
-      setSelectedMovie(random);
+    const pool = viewingCategory ? filteredMovies : allMovies;
+    const activeId = selectedMovie?.id?.toString() || params.id;
+    const candidates = activeId
+      ? pool.filter((m) => m.id.toString() !== activeId)
+      : pool;
+    const finalPool = candidates.length > 0 ? candidates : pool;
+    if (finalPool.length > 0) {
+      const random = finalPool[Math.floor(Math.random() * finalPool.length)];
+      wrappedSetSelectedMovie(random);
     }
   };
 
@@ -2150,18 +2163,6 @@ export function useAppState() {
 
     navigate(target);
     setTimeout(() => setIsTransitioning(false), 800);
-  };
-
-  const wrappedSetSelectedMovie = (movie: any) => {
-    if (!movie) {
-      navigate("/");
-    } else {
-      // Save scroll position before navigating to detail page
-      saveScrollPosition(location.pathname, viewingCategory);
-      (window as any).__isRestoringScroll = true;
-      navigate(`/${movie.type}/${movie.id}`);
-    }
-    setSelectedMovie(movie);
   };
 
   const changeActiveTab = (tab: string) => {

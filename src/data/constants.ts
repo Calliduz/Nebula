@@ -5,7 +5,6 @@ export const NAV_ITEMS = [
   { id: "search", icon: Search, label: "Search" },
   { id: "movies", icon: Clapperboard, label: "Movies" },
   { id: "tv", icon: Tv, label: "TV Shows" },
-  { id: "drama", icon: Theater, label: "Dramas" },
   { id: "library", icon: Library, label: "Library" },
 ];
 
