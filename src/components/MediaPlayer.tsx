@@ -94,6 +94,28 @@ const groupMirrors = (mirrorsList: any[]) => {
   });
 };
 
+const parseMirrorDetails = (sourceName: string) => {
+  // e.g. "Videasy (Neon)" -> category: "Videasy", name: "Neon"
+  // e.g. "VidRock (Mirror 1)" -> category: "VidRock", name: "Mirror 1"
+  // e.g. "VidLink" -> category: "VidLink", name: "VidLink"
+  const match = sourceName.match(/^(.*?)\s*\((.*?)\)$/);
+  if (match) {
+    return {
+      category: match[1].trim(),
+      name: match[2].trim(),
+    };
+  }
+
+  if (sourceName.startsWith("VidRock")) {
+    return { category: "VidRock", name: sourceName.replace("VidRock", "").trim() || "Mirror" };
+  }
+  if (sourceName.startsWith("Videasy")) {
+    return { category: "Videasy", name: sourceName.replace("Videasy", "").trim() || "Mirror" };
+  }
+
+  return { category: "VidLink", name: sourceName };
+};
+
 export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   movie,
   season: propSeason,
@@ -429,7 +451,90 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         mirrorsRef.current = grouped;
         selectMirror(0, grouped);
         setLoading(false);
-        return;
+
+        // Fetch updated mirrors in the background progressively at 10s, 20s, and 45s to capture slow parallel scrapes
+        const runSync = () => {
+          const isVideasy = processedMirrors.some((m) => m.source.includes("Videasy"));
+          const isVidrock = processedMirrors.some((m) => m.source.includes("VidRock"));
+
+          let fetchUrl = "";
+          if (isVideasy) {
+            fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
+            if (season !== undefined) fetchUrl += `&season=${season}`;
+            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+          } else if (isVidrock) {
+            fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+            if (season !== undefined) fetchUrl += `&season=${season}`;
+            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+          }
+
+          if (fetchUrl && !cancelled) {
+            fetch(fetchUrl)
+              .then((r) => r.json())
+              .then((data) => {
+                if (cancelled) return;
+
+                // Format the updated sources
+                let updatedMirrors: any[] = [];
+                if (isVideasy) {
+                  updatedMirrors = Object.entries(data)
+                    .filter(([_, v]: any) => v && v.url)
+                    .map(([name, v]: any) => ({
+                      source: name,
+                      url: v.url,
+                      type: v.type || "hls",
+                      audio: v.audio || "",
+                      flag: v.flag || "us",
+                    }));
+                } else if (isVidrock) {
+                  updatedMirrors = Object.entries(data)
+                    .filter(([_, v]: any) => v && v.url)
+                    .map(([name, v]: any) => ({
+                      source: name,
+                      url: v.url,
+                      type: v.type || "hls",
+                      audio: v.audio || "",
+                      flag: v.flag || "us",
+                    }));
+                }
+
+                if (updatedMirrors.length > 0) {
+                  const processed = updatedMirrors.map((m: any) => {
+                    if (m.type === "embed") return m;
+                    const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
+                    const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+                    const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
+                    return { ...m, url: proxiedUrl };
+                  });
+
+                  const newGrouped = groupMirrors(processed);
+
+                  // Merge preserving active index mapping
+                  const currentActive = mirrorsRef.current[activeMirrorRef.current];
+                  if (currentActive) {
+                    const newIdx = newGrouped.findIndex((m: any) => m.source === currentActive.source);
+                    setMirrors(newGrouped);
+                    mirrorsRef.current = newGrouped;
+                    if (newIdx !== -1) {
+                      setActiveMirror(newIdx);
+                      activeMirrorRef.current = newIdx;
+                    }
+                  } else {
+                    setMirrors(newGrouped);
+                    mirrorsRef.current = newGrouped;
+                  }
+                }
+              })
+              .catch((err) => console.warn("[PLAYER] Background mirrors update failed:", err));
+          }
+        };
+
+        const syncIntervals = [10000, 20000, 45000];
+        const timers = syncIntervals.map((delay) => setTimeout(runSync, delay));
+
+        return () => {
+          timers.forEach(clearTimeout);
+        };
       }
     }
 
@@ -776,7 +881,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const video = videoRef.current;
     setIsBuffering(true);
 
-    const currentMirrorType = mirrors[activeMirror]?.type;
+    const currentMirrorType = mirrorsRef.current[activeMirrorRef.current]?.type;
 
     if (currentMirrorType === "mp4" || currentMirrorType === "mp4_grouped") {
       video.src = streamUrl;
@@ -1049,7 +1154,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         showToast("Playback failed to start.", "error");
       });
     }
-  }, [streamUrl, activeMirror, mirrors]);
+  }, [streamUrl, isEmbed]);
 
   // ─── Reset playback UI state on episode/season change ────────────────────
   // Prevents stale progress bar, seek thumb, and time display carrying over
@@ -2573,38 +2678,66 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       ))}
                     </div>
                   </div>
-                  {mirrors.length > 1 && (
-                    <div className="mb-2">
-                      <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">
-                        Servers
-                      </p>
-                      <div className="flex flex-col px-2 gap-0.5">
-                        {mirrors.map((m, i) => (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              selectMirror(i, mirrors);
-                            }}
-                            className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${activeMirror === i ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
-                          >
-                            <div className="flex flex-col min-w-0">
-                              <span className="truncate text-[11px] font-semibold">
-                                {m.source}
-                              </span>
-                              {m.audio && (
-                                <span className="text-[9.5px] text-white/40 font-normal leading-tight">
-                                  {m.audio}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[9px] opacity-40 shrink-0 self-center">
-                              {m.quality}
-                            </span>
-                          </button>
-                        ))}
+                  {mirrors.length > 1 && (() => {
+                    const groupedByCategory: Record<string, { mirror: any; originalIndex: number }[]> = {};
+                    mirrors.forEach((m, i) => {
+                      const { category, name } = parseMirrorDetails(m.source);
+                      if (!groupedByCategory[category]) {
+                        groupedByCategory[category] = [];
+                      }
+                      groupedByCategory[category].push({ mirror: { ...m, cleanName: name }, originalIndex: i });
+                    });
+
+                    return Object.entries(groupedByCategory).map(([category, items], catIdx) => (
+                      <div key={category} className="mb-2">
+                        <p className={`text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 ${catIdx > 0 ? "border-t border-white/10" : "border-t border-white/10"}`}>
+                          {category}
+                        </p>
+                        <div className="flex flex-col px-2 gap-0.5">
+                          {items.map(({ mirror: m, originalIndex: idx }) => {
+                            const flagCode = m.flag ? m.flag.toLowerCase() : "us";
+                            const countryCode = flagCode === "en" ? "us" : flagCode;
+                            const isSelected = activeMirror === idx;
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  selectMirror(idx, mirrors);
+                                }}
+                                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${isSelected ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <img
+                                    src={`https://flagcdn.com/w20/${countryCode}.png`}
+                                    alt={flagCode}
+                                    className="w-4 h-3 object-cover rounded-[1px] shrink-0 border border-white/10"
+                                    onError={(e) => {
+                                      e.currentTarget.src = "https://flagcdn.com/w20/us.png";
+                                    }}
+                                  />
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="truncate text-[11.5px] font-semibold leading-tight text-white font-display">
+                                      {m.cleanName}
+                                    </span>
+                                    {m.audio && (
+                                      <span className="text-[9.5px] text-white/40 font-normal leading-tight mt-0.5">
+                                        {m.audio}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <span className="text-nebula-cyan text-[10px] font-bold shrink-0 ml-2">
+                                    ✓
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ));
+                  })()}
                   {qualities.length > 0 && (
                     <div className="mb-2">
                       <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">
