@@ -19,6 +19,7 @@ import {
   Info,
   RefreshCw,
   Tv,
+  Upload,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -70,10 +71,16 @@ export const parseMirrorDetails = (sourceName: string) => {
   }
 
   if (sourceName.startsWith("VidRock")) {
-    return { category: "VidRock", name: sourceName.replace("VidRock", "").trim() || "Mirror" };
+    return {
+      category: "VidRock",
+      name: sourceName.replace("VidRock", "").trim() || "Mirror",
+    };
   }
   if (sourceName.startsWith("Videasy")) {
-    return { category: "Videasy", name: sourceName.replace("Videasy", "").trim() || "Mirror" };
+    return {
+      category: "Videasy",
+      name: sourceName.replace("Videasy", "").trim() || "Mirror",
+    };
   }
 
   return { category: "VidLink", name: sourceName };
@@ -89,7 +96,7 @@ export const serverSortOrder = [
   "killjoy",
   "fade",
   "omen",
-  "raze"
+  "raze",
 ];
 
 export const getMirrorPriority = (sourceName: string) => {
@@ -138,7 +145,11 @@ const groupMirrors = (mirrorsList: any[]) => {
         qualities: [{ height, url: m.url, originalSource: m.source }],
       };
     } else {
-      groups[groupKey].qualities.push({ height, url: m.url, originalSource: m.source });
+      groups[groupKey].qualities.push({
+        height,
+        url: m.url,
+        originalSource: m.source,
+      });
     }
   });
 
@@ -249,7 +260,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           height: q.height,
           levelId: qIdx,
           url: q.url,
-        }))
+        })),
       );
       setActiveQuality(-1);
       setCurrentHeight(m.qualities[0].height);
@@ -280,6 +291,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const hasAutoSelectedSub = useRef(false);
   const hasLoggedHistory = useRef(false);
   const subTextCache = useRef<Record<string, string>>({}); // Cache for raw VTT text
+  const uploadSubtitleInputRef = useRef<HTMLInputElement>(null);
+  // Track custom-uploaded subtitle blob URLs so we can revoke them on unmount
+  const customSubBlobUrls = useRef<string[]>([]);
+  useEffect(() => {
+    return () => {
+      customSubBlobUrls.current.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, []);
   const navigate = useNavigate();
 
   const hasPrefetchedNextEpisode = useRef(false);
@@ -497,8 +516,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
         // Fetch updated mirrors in the background progressively at 10s, 20s, and 45s to capture slow parallel scrapes
         const runSync = () => {
-          const isVideasy = processedMirrors.some((m) => m.source.includes("Videasy"));
-          const isVidrock = processedMirrors.some((m) => m.source.includes("VidRock"));
+          const isVideasy = processedMirrors.some((m) =>
+            m.source.includes("Videasy"),
+          );
+          const isVidrock = processedMirrors.some((m) =>
+            m.source.includes("VidRock"),
+          );
 
           let fetchUrl = "";
           if (isVideasy) {
@@ -545,7 +568,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   const processed = updatedMirrors.map((m: any) => {
                     if (m.type === "embed") return m;
                     const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
-                    const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+                    const proxyEndpoint = isMp4
+                      ? "/api/proxy/segment"
+                      : "/api/proxy/stream";
                     const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
                     return { ...m, url: proxiedUrl };
                   });
@@ -553,9 +578,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   const newGrouped = groupMirrors(processed);
 
                   // Merge preserving active index mapping
-                  const currentActive = mirrorsRef.current[activeMirrorRef.current];
+                  const currentActive =
+                    mirrorsRef.current[activeMirrorRef.current];
                   if (currentActive) {
-                    const newIdx = newGrouped.findIndex((m: any) => m.source === currentActive.source);
+                    const newIdx = newGrouped.findIndex(
+                      (m: any) => m.source === currentActive.source,
+                    );
                     setMirrors(newGrouped);
                     mirrorsRef.current = newGrouped;
                     if (newIdx !== -1) {
@@ -568,7 +596,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   }
                 }
               })
-              .catch((err) => console.warn("[PLAYER] Background mirrors update failed:", err));
+              .catch((err) =>
+                console.warn("[PLAYER] Background mirrors update failed:", err),
+              );
           }
         };
 
@@ -594,7 +624,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const processedMirrors = data.mirrors.map((m: any) => {
             if (m.type === "embed") return m;
             const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
-            const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+            const proxyEndpoint = isMp4
+              ? "/api/proxy/segment"
+              : "/api/proxy/stream";
             const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
             return { ...m, url: proxiedUrl };
           });
@@ -611,7 +643,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         } else if (data.streamUrl) {
           const isEmb = data.type === "embed";
           const isMp4 = data.type === "mp4" || data.streamUrl.includes(".mp4");
-          const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+          const proxyEndpoint = isMp4
+            ? "/api/proxy/segment"
+            : "/api/proxy/stream";
           setStreamUrl(
             isEmb
               ? data.streamUrl
@@ -647,23 +681,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
   }, [movie.id, season, episode, source, streamReloadKey]);
 
-  // ── Auto-fetch external subtitles in the background ─────────────────────
-  useEffect(() => {
-    if (!streamUrl) return;
-
-    let cancelled = false;
-    setFetchingSubtitles(true);
-
-    const fetchSubs = async () => {
+  // ── Subtitle fetch (auto + manual refetch) ───────────────────────────────
+  const refetchSubtitles = useCallback(
+    async (force = false) => {
+      setFetchingSubtitles(true);
       try {
         let url = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}`;
         if (movie.origin) url += `&origin=${movie.origin}`;
         if (season !== undefined) url += `&season=${season}`;
         if (episode !== undefined) url += `&episode=${episode}`;
+        if (force) url += `&force=1`;
 
         const r = await fetch(url);
         const data = await r.json();
-        if (cancelled) return;
 
         const vrSubUrl =
           movie.type === "tv"
@@ -676,7 +706,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
         try {
           const vrSubResponse = await fetch(vrSubUrl, { method: "HEAD" });
-          if (!cancelled && vrSubResponse.ok) {
+          if (vrSubResponse.ok) {
             fetchedSubs.push({
               url: vrSubUrl,
               lang: "en",
@@ -688,27 +718,36 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           console.warn("VidRock cache subtitle probe failed:", e);
         }
 
-        if (!cancelled) {
-          if (fetchedSubs.length === 0) {
-            showToast("No external subtitles found", "info");
-          }
-          setSubtitles((prev) => processSubtitles(fetchedSubs, prev));
+        if (fetchedSubs.length === 0 && !force) {
+          showToast("No external subtitles found", "info");
+        } else if (force) {
+          showToast(
+            fetchedSubs.length > 0
+              ? `Refetched ${fetchedSubs.length} subtitle track${fetchedSubs.length > 1 ? "s" : ""}`
+              : "No subtitles found from any source",
+            fetchedSubs.length > 0 ? "success" : "info",
+          );
         }
+
+        // Preserve custom-uploaded subs when refetching
+        setSubtitles((prev) => {
+          const customSubs = prev.filter((s) => s.source === "Custom");
+          return processSubtitles(fetchedSubs, customSubs);
+        });
       } catch (e) {
-        if (!cancelled) {
-          console.error("Subtitle fetch error:", e);
-          showToast("Subtitle search failed", "error");
-        }
+        console.error("Subtitle fetch error:", e);
+        showToast("Subtitle search failed", "error");
       } finally {
-        if (!cancelled) setFetchingSubtitles(false);
+        setFetchingSubtitles(false);
       }
-    };
+    },
+    [API, movie.id, movie.type, movie.origin, movie.title, season, episode],
+  );
 
-    fetchSubs();
-
-    return () => {
-      cancelled = true;
-    };
+  // Auto-fetch on stream load
+  useEffect(() => {
+    if (!streamUrl) return;
+    refetchSubtitles(false);
   }, [streamUrl, movie.id, movie.type, season, episode]);
 
   const handleSubtitleChange = (index: number) => {
@@ -773,28 +812,63 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     });
   };
 
+  const activeSubUrl = subtitles[activeSubtitle]?.url;
+
   // ── Production-Grade Sync Effect (Blob Based) ──
   useEffect(() => {
-    if (activeSubtitle === -1 || !subtitles[activeSubtitle]) {
+    if (activeSubtitle === -1 || !activeSubUrl) {
       if (vttBlobUrl) URL.revokeObjectURL(vttBlobUrl);
       setVttBlobUrl(null);
       return;
     }
 
     let cancelled = false;
-    const sub = subtitles[activeSubtitle];
 
     const processSub = async () => {
       try {
-        let text = subTextCache.current[sub.url];
+        let text = subTextCache.current[activeSubUrl];
 
         if (!text) {
-          const r = await fetch(sub.url);
+          const r = await fetch(activeSubUrl);
+          if (!r.ok) {
+            showToast(`Failed to load subtitle: HTTP ${r.status}`, "error");
+            setSubtitles((prev) =>
+              prev.map((s, idx) =>
+                idx === activeSubtitle ? { ...s, failed: true } : s,
+              ),
+            );
+            return;
+          }
           text = await r.text();
           if (cancelled) return;
+
+          // Check if response contains proxy error messages
+          if (
+            text.includes("domain not allowed") ||
+            text.includes("Subtitle proxy failed") ||
+            text.includes("Domain not allowed")
+          ) {
+            showToast(
+              "Failed to load subtitle: source blocked or not allowed",
+              "error",
+            );
+            setSubtitles((prev) =>
+              prev.map((s, idx) =>
+                idx === activeSubtitle ? { ...s, failed: true } : s,
+              ),
+            );
+            return;
+          }
+
           // Store in cache for next time
-          subTextCache.current[sub.url] = text;
+          subTextCache.current[activeSubUrl] = text;
         }
+
+        setSubtitles((prev) =>
+          prev.map((s, idx) =>
+            idx === activeSubtitle && s.failed ? { ...s, failed: false } : s,
+          ),
+        );
 
         const shiftedText = shiftVttTimestamps(text, subtitleOffset);
         const blob = new Blob([shiftedText], { type: "text/vtt" });
@@ -806,6 +880,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         });
       } catch (e) {
         console.error("VTT processing failed", e);
+        showToast("Failed to load subtitle track", "error");
+        setSubtitles((prev) =>
+          prev.map((s, idx) =>
+            idx === activeSubtitle ? { ...s, failed: true } : s,
+          ),
+        );
       }
     };
 
@@ -813,7 +893,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [activeSubtitle, subtitles, subtitleOffset]);
+  }, [activeSubtitle, activeSubUrl, subtitleOffset]);
 
   // ── Auto-select first subtitle ───────────────────────────────────────────
   useEffect(() => {
@@ -861,25 +941,53 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       });
 
       const processGroup = (group: any[]) => {
-        const vidlink = group.filter((s) => s.source === "VidLink");
-        const external = group.filter((s) => s.source !== "VidLink");
+        // Priority sources get labeled cleanly; others get a count + source badge
+        const prioritySources = [
+          "VidVault",
+          "VidLink",
+          "Videasy",
+          "VidRock",
+          "Custom",
+        ];
+        const priority = group.filter((s) =>
+          prioritySources.includes(s.source),
+        );
+        const external = group.filter(
+          (s) => !prioritySources.includes(s.source),
+        );
 
         const processed: any[] = [];
+        const srcCount: Record<string, Record<string, number>> = {};
         const extCount: Record<string, number> = {};
-        const vidCount: Record<string, number> = {};
 
-        vidlink.forEach((s) => {
+        priority.forEach((s) => {
           const lang = s.lang || "unk";
-          vidCount[lang] = (vidCount[lang] || 0) + 1;
-          const isEnglish =
-            lang.startsWith("en") ||
-            s.languageName?.toLowerCase().includes("english");
+          const src = s.source || "Unknown";
+          if (!srcCount[src]) srcCount[src] = {};
+          srcCount[src][lang] = (srcCount[src][lang] || 0) + 1;
+          const n = srcCount[src][lang];
+          const suffix = n > 1 ? ` #${n}` : "";
 
-          let name = s.languageName;
-          if (isEnglish) {
-            name = `English (Vidlink)${vidCount[lang] > 1 ? ` #${vidCount[lang]}` : ""}`;
+          let name: string;
+          if (s.source === "Custom") {
+            name = s.languageName || "Custom (Uploaded)";
           } else {
-            name = `${s.languageName} (Vidlink)${vidCount[lang] > 1 ? ` #${vidCount[lang]}` : ""}`;
+            const srcLabel =
+              s.source === "VidLink"
+                ? "VidLink"
+                : s.source === "VidVault"
+                  ? "VidVault"
+                  : s.source === "Videasy"
+                    ? "Videasy"
+                    : s.source === "VidRock"
+                      ? "VidRock Cache"
+                      : s.source;
+            const base =
+              lang.startsWith("en") ||
+              s.languageName?.toLowerCase().includes("english")
+                ? "English"
+                : s.languageName || lang.toUpperCase();
+            name = `${base} (${srcLabel})${suffix}`;
           }
           processed.push({ ...s, languageName: name });
         });
@@ -1008,7 +1116,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             /\.mp4(\?|$)/i.test(url) ||
             /\.aac(\?|$)/i.test(url) ||
             /(\/seg-|\/segments?\/|\/fragments?\/|index-)/i.test(url) ||
-            (!url.startsWith(API) && !url.startsWith("/") && !url.includes("localhost") && !url.includes("127.0.0.1"));
+            (!url.startsWith(API) &&
+              !url.startsWith("/") &&
+              !url.includes("localhost") &&
+              !url.includes("127.0.0.1"));
 
           if (shouldProxy) {
             xhr.open(
@@ -1258,22 +1369,52 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
             fetch(vidlinkPrefetchUrl)
               .then((r) => r.json())
-              .then((data) => console.log(`[PLAYER] Prefetch VidLink success for S${nextEp.season}E${nextEp.episode}:`, data))
-              .catch((err) => console.warn(`[PLAYER] Prefetch VidLink failed for S${nextEp.season}E${nextEp.episode}:`, err));
+              .then((data) =>
+                console.log(
+                  `[PLAYER] Prefetch VidLink success for S${nextEp.season}E${nextEp.episode}:`,
+                  data,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch VidLink failed for S${nextEp.season}E${nextEp.episode}:`,
+                  err,
+                ),
+              );
 
             // 2. VidRock prefetch
             let vidrockPrefetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
             fetch(vidrockPrefetchUrl)
               .then((r) => r.json())
-              .then((data) => console.log(`[PLAYER] Prefetch VidRock success for S${nextEp.season}E${nextEp.episode}:`, data))
-              .catch((err) => console.warn(`[PLAYER] Prefetch VidRock failed for S${nextEp.season}E${nextEp.episode}:`, err));
+              .then((data) =>
+                console.log(
+                  `[PLAYER] Prefetch VidRock success for S${nextEp.season}E${nextEp.episode}:`,
+                  data,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch VidRock failed for S${nextEp.season}E${nextEp.episode}:`,
+                  err,
+                ),
+              );
 
             // 3. Videasy prefetch
             let videasyPrefetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
             fetch(videasyPrefetchUrl)
               .then((r) => r.json())
-              .then((data) => console.log(`[PLAYER] Prefetch Videasy success for S${nextEp.season}E${nextEp.episode}:`, data))
-              .catch((err) => console.warn(`[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}:`, err));
+              .then((data) =>
+                console.log(
+                  `[PLAYER] Prefetch Videasy success for S${nextEp.season}E${nextEp.episode}:`,
+                  data,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}:`,
+                  err,
+                ),
+              );
           }
         }
 
@@ -1797,8 +1938,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       const m = mirrors[activeMirror];
       if (video && m?.type === "mp4_grouped") {
         const key = getProgressKey();
-        const saved = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
-        saved[key] = { time: video.currentTime, duration: video.duration, timestamp: Date.now() };
+        const saved = JSON.parse(
+          localStorage.getItem("nebula-progress") || "{}",
+        );
+        saved[key] = {
+          time: video.currentTime,
+          duration: video.duration,
+          timestamp: Date.now(),
+        };
         localStorage.setItem("nebula-progress", JSON.stringify(saved));
         const targetId = levelId === -1 ? 0 : levelId;
         setActiveQuality(levelId);
@@ -2064,8 +2211,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       if (data.mirrors && data.mirrors.length > 0) {
                         const processedMirrors = data.mirrors.map((m: any) => {
                           if (m.type === "embed") return m;
-                          const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
-                          const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+                          const isMp4 =
+                            m.type === "mp4" || m.url.includes(".mp4");
+                          const proxyEndpoint = isMp4
+                            ? "/api/proxy/segment"
+                            : "/api/proxy/stream";
                           const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
                           return { ...m, url: proxiedUrl };
                         });
@@ -2077,8 +2227,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         if (data.resolution) setResolution(data.resolution);
                       } else if (data.streamUrl) {
                         const isEmb = data.type === "embed";
-                        const isMp4 = data.type === "mp4" || data.streamUrl.includes(".mp4");
-                        const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+                        const isMp4 =
+                          data.type === "mp4" ||
+                          data.streamUrl.includes(".mp4");
+                        const proxyEndpoint = isMp4
+                          ? "/api/proxy/segment"
+                          : "/api/proxy/stream";
                         setStreamUrl(
                           isEmb
                             ? data.streamUrl
@@ -2613,7 +2767,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
             <div className="flex items-center gap-2 sm:gap-4 relative">
               <button
-                onClick={() => setSourceSelect({ season: season ?? 1, episode: episode ?? 1 })}
+                onClick={() =>
+                  setSourceSelect({
+                    season: season ?? 1,
+                    episode: episode ?? 1,
+                  })
+                }
                 className={`w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1.5 transition-all text-xs font-bold border border-white/10 ${sourceSelect ? "bg-white text-black" : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10"}`}
               >
                 <Tv size={14} />
@@ -2668,12 +2827,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2 animate-in slide-in-from-bottom-2 duration-200">
                   <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 flex items-center justify-between">
                     <span>Subtitles</span>
-                    {fetchingSubtitles && (
-                      <Loader2
-                        size={10}
-                        className="animate-spin text-nebula-cyan"
-                      />
-                    )}
+                    <span className="flex items-center gap-1.5">
+                      {fetchingSubtitles ? (
+                        <Loader2
+                          size={10}
+                          className="animate-spin text-nebula-cyan"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => refetchSubtitles(true)}
+                          title="Refetch from all sources"
+                          className="text-white/30 hover:text-nebula-cyan transition-colors"
+                        >
+                          <RefreshCw size={10} />
+                        </button>
+                      )}
+                    </span>
                   </p>
 
                   {activeSubtitle !== -1 && !fetchingSubtitles && (
@@ -2698,8 +2867,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         >
                           -0.5s
                         </button>
-                        
-                        <span className={`text-xs font-mono font-bold ${subtitleOffset === 0 ? "text-white/60" : "text-nebula-cyan font-black"}`}>
+
+                        <span
+                          className={`text-xs font-mono font-bold ${subtitleOffset === 0 ? "text-white/60" : "text-nebula-cyan font-black"}`}
+                        >
                           {subtitleOffset > 0 ? "+" : ""}
                           {subtitleOffset.toFixed(1)}s
                         </span>
@@ -2725,20 +2896,103 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       <button
                         key={i}
                         onClick={() => handleSubtitleChange(i)}
-                        className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${activeSubtitle === i ? "text-black bg-white font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+                        className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${
+                          sub.failed
+                            ? "text-red-500/50 hover:bg-white/5 line-through decoration-red-500/50"
+                            : activeSubtitle === i
+                              ? "text-black bg-white font-bold"
+                              : "text-white/60 hover:text-white hover:bg-white/5"
+                        }`}
                       >
                         <span className="truncate pr-2">
-                          {sub.languageName}
+                          {sub.languageName} {sub.failed && "(Failed to load)"}
                         </span>
                         {sub.source && (
                           <span
-                            className={`text-[8px] px-1 rounded uppercase font-black ${activeSubtitle === i ? "bg-black/20 text-black/60" : "bg-white/5 text-white/30"}`}
+                            className={`text-[8px] px-1 rounded uppercase font-black ${
+                              sub.failed
+                                ? "bg-red-500/10 text-red-500/60"
+                                : activeSubtitle === i
+                                  ? "bg-black/20 text-black/60"
+                                  : "bg-white/5 text-white/30"
+                            }`}
                           >
                             {sub.source}
                           </span>
                         )}
                       </button>
                     ))}
+                  </div>
+
+                  {/* Upload custom subtitle */}
+                  <div className="mx-2 mt-1 mb-2">
+                    <input
+                      ref={uploadSubtitleInputRef}
+                      type="file"
+                      accept=".vtt,.srt"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const ext = file.name.split(".").pop()?.toLowerCase();
+                        if (ext !== "vtt" && ext !== "srt") {
+                          showToast(
+                            "Only .vtt or .srt files are supported",
+                            "error",
+                          );
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          let content = (ev.target?.result as string) || "";
+                          // Strip BOM
+                          content = content.replace(/^\uFEFF/, "");
+                          // Normalize line endings
+                          content = content
+                            .replace(/\r\n/g, "\n")
+                            .replace(/\r/g, "\n");
+                          if (ext === "srt") {
+                            // SRT → VTT conversion
+                            content = content.replace(
+                              /(\d{2}:\d{2}:\d{2}),(\d{3})/g,
+                              "$1.$2",
+                            );
+                            content = content.replace(
+                              /^\d+\n(?=\d{2}:\d{2}:\d{2})/gm,
+                              "",
+                            );
+                            content = "WEBVTT\n\n" + content.trim() + "\n";
+                          }
+                          const blob = new Blob([content], {
+                            type: "text/vtt",
+                          });
+                          const blobUrl = URL.createObjectURL(blob);
+                          customSubBlobUrls.current.push(blobUrl);
+                          const label = file.name.replace(/\.(srt|vtt)$/i, "");
+                          setSubtitles((prev) => [
+                            {
+                              url: blobUrl,
+                              lang: "custom",
+                              languageName: `Custom: ${label}`,
+                              source: "Custom",
+                            },
+                            ...prev,
+                          ]);
+                          setActiveSubtitle(0);
+                          showToast(`Loaded: ${file.name}`, "success");
+                        };
+                        reader.readAsText(file);
+                        // Reset so the same file can be re-uploaded
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      onClick={() => uploadSubtitleInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 rounded-md border border-dashed border-white/10 hover:border-white/20 transition-all"
+                    >
+                      <Upload size={10} />
+                      <span>Upload .srt or .vtt</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -2761,72 +3015,92 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       ))}
                     </div>
                   </div>
-                  {mirrors.length > 1 && (() => {
-                    const groupedByCategory: Record<string, { mirror: any; originalIndex: number }[]> = {};
-                    mirrors.forEach((m, i) => {
-                      const { category, name } = parseMirrorDetails(m.source);
-                      if (!groupedByCategory[category]) {
-                        groupedByCategory[category] = [];
-                      }
-                      groupedByCategory[category].push({ mirror: { ...m, cleanName: name }, originalIndex: i });
-                    });
-
-                    return Object.entries(groupedByCategory).map(([category, items], catIdx) => {
-                      items.sort((a, b) => {
-                        return getMirrorPriority(a.mirror.source) - getMirrorPriority(b.mirror.source);
+                  {mirrors.length > 1 &&
+                    (() => {
+                      const groupedByCategory: Record<
+                        string,
+                        { mirror: any; originalIndex: number }[]
+                      > = {};
+                      mirrors.forEach((m, i) => {
+                        const { category, name } = parseMirrorDetails(m.source);
+                        if (!groupedByCategory[category]) {
+                          groupedByCategory[category] = [];
+                        }
+                        groupedByCategory[category].push({
+                          mirror: { ...m, cleanName: name },
+                          originalIndex: i,
+                        });
                       });
 
-                      return (
-                        <div key={category} className="mb-2">
-                          <p className={`text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 ${catIdx > 0 ? "border-t border-white/10" : "border-t border-white/10"}`}>
-                            {category}
-                          </p>
-                          <div className="flex flex-col px-2 gap-0.5">
-                            {items.map(({ mirror: m, originalIndex: idx }) => {
-                            const flagCode = m.flag ? m.flag.toLowerCase() : "us";
-                            const countryCode = flagCode === "en" ? "us" : flagCode;
-                            const isSelected = activeMirror === idx;
+                      return Object.entries(groupedByCategory).map(
+                        ([category, items], catIdx) => {
+                          items.sort((a, b) => {
                             return (
-                              <button
-                                key={idx}
-                                onClick={() => {
-                                  selectMirror(idx, mirrors);
-                                }}
-                                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${isSelected ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <img
-                                    src={`https://flagcdn.com/w20/${countryCode}.png`}
-                                    alt={flagCode}
-                                    className="w-4 h-3 object-cover rounded-[1px] shrink-0 border border-white/10"
-                                    onError={(e) => {
-                                      e.currentTarget.src = "https://flagcdn.com/w20/us.png";
-                                    }}
-                                  />
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="truncate text-[11.5px] font-semibold leading-tight text-white font-display">
-                                      {m.cleanName}
-                                    </span>
-                                    {m.audio && (
-                                      <span className="text-[9.5px] text-white/40 font-normal leading-tight mt-0.5">
-                                        {m.audio}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                {isSelected && (
-                                  <span className="text-nebula-cyan text-[10px] font-bold shrink-0 ml-2">
-                                    ✓
-                                  </span>
-                                )}
-                              </button>
+                              getMirrorPriority(a.mirror.source) -
+                              getMirrorPriority(b.mirror.source)
                             );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
+                          });
+
+                          return (
+                            <div key={category} className="mb-2">
+                              <p
+                                className={`text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 ${catIdx > 0 ? "border-t border-white/10" : "border-t border-white/10"}`}
+                              >
+                                {category}
+                              </p>
+                              <div className="flex flex-col px-2 gap-0.5">
+                                {items.map(
+                                  ({ mirror: m, originalIndex: idx }) => {
+                                    const flagCode = m.flag
+                                      ? m.flag.toLowerCase()
+                                      : "us";
+                                    const countryCode =
+                                      flagCode === "en" ? "us" : flagCode;
+                                    const isSelected = activeMirror === idx;
+                                    return (
+                                      <button
+                                        key={idx}
+                                        onClick={() => {
+                                          selectMirror(idx, mirrors);
+                                        }}
+                                        className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${isSelected ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+                                      >
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                          <img
+                                            src={`https://flagcdn.com/w20/${countryCode}.png`}
+                                            alt={flagCode}
+                                            className="w-4 h-3 object-cover rounded-[1px] shrink-0 border border-white/10"
+                                            onError={(e) => {
+                                              e.currentTarget.src =
+                                                "https://flagcdn.com/w20/us.png";
+                                            }}
+                                          />
+                                          <div className="flex flex-col min-w-0">
+                                            <span className="truncate text-[11.5px] font-semibold leading-tight text-white font-display">
+                                              {m.cleanName}
+                                            </span>
+                                            {m.audio && (
+                                              <span className="text-[9.5px] text-white/40 font-normal leading-tight mt-0.5">
+                                                {m.audio}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {isSelected && (
+                                          <span className="text-nebula-cyan text-[10px] font-bold shrink-0 ml-2">
+                                            ✓
+                                          </span>
+                                        )}
+                                      </button>
+                                    );
+                                  },
+                                )}
+                              </div>
+                            </div>
+                          );
+                        },
+                      );
+                    })()}
                   {qualities.length > 0 && (
                     <div className="mb-2">
                       <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">
@@ -2861,7 +3135,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     <button
                       onClick={() => {
                         setShowSettings(false);
-                        setSourceSelect({ season: season ?? 1, episode: episode ?? 1 });
+                        setSourceSelect({
+                          season: season ?? 1,
+                          episode: episode ?? 1,
+                        });
                       }}
                       className="w-full flex items-center gap-2 px-2 py-2 text-[11px] text-nebula-cyan/80 hover:text-nebula-cyan hover:bg-nebula-cyan/10 rounded-md transition-colors"
                     >
@@ -3149,10 +3426,14 @@ export function InPlayerSourcePicker({
   }, [movie.id, season, episode, movie.title, movie.year]);
 
   const vidrockUrl = sources
-    .map((s) => s.url.includes("#") ? s.url : `${s.url}#${s.name}#${s.type}`)
+    .map((s) => (s.url.includes("#") ? s.url : `${s.url}#${s.name}#${s.type}`))
     .join("|");
   const videasyUrl = videasySources
-    .map((s) => s.url.includes("#") ? s.url : `${s.url}#${s.name}#${s.type}#${s.audio || ""}`)
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.audio || ""}`,
+    )
     .join("|");
 
   return (
