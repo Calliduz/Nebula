@@ -29,6 +29,7 @@ import {
   FileDown,
   Globe,
   Tv,
+  RotateCw,
 } from "lucide-react";
 import { API_BASE_URL } from "../config";
 import { handleImageError, triggerPopunder } from "../utils/helpers";
@@ -68,8 +69,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [vidlinkLoading, setVidlinkLoading] = useState(true);
   const [vidlinkError, setVidlinkError] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const isMountedRef = useRef(true);
+
+  const loadAllSources = () => {
     setLoading(true);
     setError("");
     setVideasyLoading(true);
@@ -88,7 +90,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         return res.json();
       })
       .then((data) => {
-        if (!active) return;
+        if (!isMountedRef.current) return;
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
@@ -101,10 +103,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         setSources(activeSources);
       })
       .catch((err) => {
-        if (active) setError(err.message || "Failed to contact proxy.");
+        if (!isMountedRef.current) return;
+        setError(err.message || "Failed to contact proxy.");
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (!isMountedRef.current) return;
+        setLoading(false);
       });
 
     // 2. Videasy Fetch
@@ -118,7 +122,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         return res.json();
       })
       .then((data) => {
-        if (!active) return;
+        if (!isMountedRef.current) return;
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
@@ -131,11 +135,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         setVideasySources(activeSources);
       })
       .catch((err) => {
-        if (active)
-          setVideasyError(err.message || "Failed to contact Videasy.");
+        if (!isMountedRef.current) return;
+        setVideasyError(err.message || "Failed to contact Videasy.");
       })
       .finally(() => {
-        if (active) setVideasyLoading(false);
+        if (!isMountedRef.current) return;
+        setVideasyLoading(false);
       });
 
     // 3. VidLink Fetch
@@ -149,7 +154,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         return res.json();
       })
       .then((data) => {
-        if (!active) return;
+        if (!isMountedRef.current) return;
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
@@ -161,15 +166,20 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         setVidlinkSources(activeSources);
       })
       .catch((err) => {
-        if (active)
-          setVidlinkError(err.message || "Failed to contact VidLink.");
+        if (!isMountedRef.current) return;
+        setVidlinkError(err.message || "Failed to contact VidLink.");
       })
       .finally(() => {
-        if (active) setVidlinkLoading(false);
+        if (!isMountedRef.current) return;
+        setVidlinkLoading(false);
       });
+  };
 
+  useEffect(() => {
+    isMountedRef.current = true;
+    loadAllSources();
     return () => {
-      active = false;
+      isMountedRef.current = false;
     };
   }, [movie.id, movie.type, season, episode, movie.title, movie.year]);
 
@@ -201,10 +211,27 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative z-10 w-full max-w-4xl bg-obsidian/85 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
+        className="relative z-10 w-full max-w-4xl bg-obsidian/85 border border-white/10 rounded-3xl p-5 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
       >
         {/* Glow border element */}
         <div className="absolute inset-0 border border-white/5 rounded-3xl pointer-events-none" />
+
+        {/* Re-scan/Reload Button (Top-Left Symmetrical) */}
+        <button
+          onClick={loadAllSources}
+          disabled={loading || videasyLoading || vidlinkLoading}
+          className="absolute top-4 left-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed z-50 cursor-pointer"
+          title="Re-scan all sources for background results"
+        >
+          <RotateCw
+            size={18}
+            className={
+              loading || videasyLoading || vidlinkLoading
+                ? "animate-spin text-nebula-cyan"
+                : ""
+            }
+          />
+        </button>
 
         {/* Close Button */}
         <button
@@ -215,14 +242,16 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         </button>
 
         {/* Header */}
-        <div className="text-center mb-6 sm:mb-8 shrink-0">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.15em] mb-3 sm:mb-4">
+        <div className="text-center mb-4 sm:mb-6 shrink-0 flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.15em] mb-2 sm:mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse" />
             Provider Selection
           </div>
-          <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-tight mb-2">
+
+          <h3 className="text-xl sm:text-3xl font-display font-black text-white uppercase tracking-tight mb-2">
             Choose Stream Source
           </h3>
+
           <p className="text-xs text-white/50 max-w-md mx-auto">
             {movie.title}{" "}
             {season !== undefined && `• Season ${season} Episode ${episode}`}
