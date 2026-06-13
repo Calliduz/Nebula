@@ -41,6 +41,7 @@ import {
   getTVDetails,
   getTVSeasonEpisodes,
 } from "../services/tmdb";
+import { MovieDetailsSkeleton } from "./MovieDetailsSkeleton";
 
 interface SourceSelectionModalProps {
   movie: any;
@@ -1033,55 +1034,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     }
   }, [activeSeason]);
 
-  if (!movie && isLoading)
-    return (
-      <div className="fixed inset-0 z-[200] bg-obsidian flex flex-col items-center justify-center text-white gap-6">
-        {/* Glow background */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,229,255,0.05)_0%,transparent_60%)] pointer-events-none" />
-
-        {/* Back Button */}
-        <div className="absolute top-8 left-8 sm:top-10 sm:left-10 z-[210]">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-3 text-dim hover:text-white transition-all group w-fit"
-          >
-            <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-nebula-cyan group-hover:bg-white/5 transition-all">
-              <ArrowLeft size={20} />
-            </div>
-            <span className="text-xs font-bold tracking-[0.2em] uppercase">
-              Back to Browse
-            </span>
-          </button>
-        </div>
-
-        <div className="flex flex-col items-center gap-4 relative z-10">
-          <div className="relative">
-            <div className="absolute inset-0 bg-nebula-cyan/20 blur-xl rounded-full scale-150 animate-pulse" />
-            <Loader2
-              className="animate-spin text-nebula-cyan relative z-10"
-              size={40}
-            />
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-white font-display font-black text-xl tracking-tighter uppercase italic animate-pulse">
-              Establishing Satellite Link
-            </p>
-            <div className="h-0.5 w-32 bg-white/10 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ x: "-100%" }}
-                animate={{ x: "100%" }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 1.5,
-                  ease: "linear",
-                }}
-                className="h-full w-full bg-nebula-cyan"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  if (!movie && isLoading) {
+    return <MovieDetailsSkeleton onClose={onClose} />;
+  }
   if (!movie) return null;
 
   const accentColor = movie.accent || "#00E5FF";

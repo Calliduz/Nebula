@@ -15,6 +15,7 @@ import { HomeFeed } from "./components/HomeFeed";
 import { NotFound } from "./components/NotFound";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { Footer } from "./components/Footer";
+import { MovieDetailsSkeleton } from "./components/MovieDetailsSkeleton";
 
 const MediaPlayer = React.lazy(() =>
   import("./components/MediaPlayer").then((module) => ({
@@ -264,9 +265,9 @@ export default function App() {
       {state.selectedMovie && !isWatching && (
         <React.Suspense
           fallback={
-            <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center">
-              <Loader2 className="animate-spin text-nebula-cyan" size={32} />
-            </div>
+            <MovieDetailsSkeleton
+              onClose={() => actions.setSelectedMovie(null)}
+            />
           }
         >
           <MovieDetails
@@ -371,11 +372,7 @@ function MovieDetailPageStub({ actions, state }: any) {
   return (
     <div className="min-h-screen bg-obsidian">
       <React.Suspense
-        fallback={
-          <div className="min-h-screen bg-obsidian flex items-center justify-center">
-            <Loader2 className="animate-spin text-nebula-cyan" size={32} />
-          </div>
-        }
+        fallback={<MovieDetailsSkeleton onClose={() => navigate("/")} />}
       >
         <MovieDetails
           key={`page-details-${id}`}
