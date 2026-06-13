@@ -46,6 +46,7 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const isWatching = location.pathname.includes("/watch/");
+  const isDetailPage = /^\/(movie|tv)\/\d+/.test(location.pathname);
 
   const [selectedMovieForSource, setSelectedMovieForSource] = React.useState<
     any | null
@@ -124,7 +125,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-obsidian font-sans overflow-x-hidden">
-      {!isWatching && (
+      {!isWatching && !isDetailPage && (
         <TopNav
           key="layout-nav"
           activeTab={state.activeTab}
@@ -142,7 +143,7 @@ export default function App() {
         className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 pb-24 lg:pb-0 ${state.isSearchOpen ? "blur-2xl scale-[0.98] opacity-50" : ""}`}
       >
         {/* ── System Banner ── */}
-        {!isWatching && (
+        {!isWatching && !isDetailPage && (
           <div className="relative z-[60] mt-[64px] md:mt-[76px] bg-nebula-cyan/5 border-b border-nebula-cyan/10 px-4 py-2.5 flex items-center justify-center gap-3 backdrop-blur-sm">
             <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shadow-[0_0_10px_#00f3ff]" />
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/50">
@@ -239,8 +240,8 @@ export default function App() {
           </Routes>
         </div>
 
-        {/* Footer — hidden on the watch page */}
-        {!isWatching && <Footer />}
+        {/* Footer — hidden on the watch page and detail pages */}
+        {!isWatching && !isDetailPage && <Footer />}
       </main>
 
       {/* Scroll-to-top button for homepage and category view */}
