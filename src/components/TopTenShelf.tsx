@@ -143,7 +143,8 @@ export const TopTenShelf = memo(
                         </p>
                       </div>
                     ) : (
-                      movie.quality !== "CAM" && movie.quality !== "TBA" && (
+                      movie.quality !== "CAM" &&
+                      movie.quality !== "TBA" && (
                         <div className="px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-white/20 backdrop-blur-md">
                           <p className="text-[8px] font-black text-white/50 uppercase tracking-wider flex items-center gap-1.5">
                             <span className="relative flex h-1.5 w-1.5">

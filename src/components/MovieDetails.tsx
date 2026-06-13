@@ -64,27 +64,31 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [videasyLoading, setVideasyLoading] = useState(true);
   const [videasyError, setVideasyError] = useState("");
 
+  const [vidlinkSources, setVidlinkSources] = useState<any[]>([]);
+  const [vidlinkLoading, setVidlinkLoading] = useState(true);
+  const [vidlinkError, setVidlinkError] = useState("");
+
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
     setVideasyLoading(true);
     setVideasyError("");
+    setVidlinkLoading(true);
+    setVidlinkError("");
 
     // 1. VidRock Fetch
-    let vidrockUrl = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
-    if (season !== undefined) vidrockUrl += `&season=${season}`;
-    if (episode !== undefined) vidrockUrl += `&episode=${episode}`;
+    let vidrockFetchUrl = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+    if (season !== undefined) vidrockFetchUrl += `&season=${season}`;
+    if (episode !== undefined) vidrockFetchUrl += `&episode=${episode}`;
 
-    fetch(vidrockUrl)
+    fetch(vidrockFetchUrl)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to scan VidRock uplink");
         return res.json();
       })
       .then((data) => {
         if (!active) return;
-
-        // Filter out sources that have null url
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
@@ -94,7 +98,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             language: value.language || "English",
             flag: value.flag || "us",
           }));
-
         setSources(activeSources);
       })
       .catch((err) => {
@@ -105,18 +108,17 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       });
 
     // 2. Videasy Fetch
-    let videasyUrl = `${API_BASE_URL}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}`;
-    if (season !== undefined) videasyUrl += `&season=${season}`;
-    if (episode !== undefined) videasyUrl += `&episode=${episode}`;
+    let videasyFetchUrl = `${API_BASE_URL}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}`;
+    if (season !== undefined) videasyFetchUrl += `&season=${season}`;
+    if (episode !== undefined) videasyFetchUrl += `&episode=${episode}`;
 
-    fetch(videasyUrl)
+    fetch(videasyFetchUrl)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to scan Videasy uplink");
         return res.json();
       })
       .then((data) => {
         if (!active) return;
-
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
@@ -126,7 +128,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             audio: value.audio || "Original audio",
             flag: value.flag || "us",
           }));
-
         setVideasySources(activeSources);
       })
       .catch((err) => {
@@ -135,6 +136,36 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       })
       .finally(() => {
         if (active) setVideasyLoading(false);
+      });
+
+    // 3. VidLink Fetch
+    let vidlinkFetchUrl = `${API_BASE_URL}/api/vidlink?tmdbId=${movie.id}&type=${movie.type}`;
+    if (season !== undefined) vidlinkFetchUrl += `&season=${season}`;
+    if (episode !== undefined) vidlinkFetchUrl += `&episode=${episode}`;
+
+    fetch(vidlinkFetchUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan VidLink uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name,
+            url: value.url,
+            type: value.type || "hls",
+            quality: (value as any).quality || "Auto",
+          }));
+        setVidlinkSources(activeSources);
+      })
+      .catch((err) => {
+        if (active)
+          setVidlinkError(err.message || "Failed to contact VidLink.");
+      })
+      .finally(() => {
+        if (active) setVidlinkLoading(false);
       });
 
     return () => {
@@ -155,6 +186,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         : `${src.url}#${src.name}#${src.type}#${src.audio || ""}`,
     )
     .join("|");
+  const vidlinkUrl = vidlinkSources
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
@@ -165,7 +201,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative z-10 w-full max-w-4xl bg-obsidian/85 border border-white/10 rounded-3xl p-5 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden"
+        className="relative z-10 w-full max-w-4xl bg-obsidian/85 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
       >
         {/* Glow border element */}
         <div className="absolute inset-0 border border-white/5 rounded-3xl pointer-events-none" />
@@ -173,14 +209,14 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 z-50 animate-fade-in"
+          className="absolute top-4 right-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 z-50"
         >
           <X size={20} />
         </button>
 
         {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.15em] mb-3 sm:mb-4">
+        <div className="text-center mb-6 sm:mb-8 shrink-0">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.15em] mb-3 sm:mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse" />
             Provider Selection
           </div>
@@ -193,100 +229,91 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[380px] md:max-h-none overflow-y-auto pr-1 sm:pr-0 custom-scrollbar">
-          {/* VidRock Card */}
-          <motion.div
-            whileHover={
-              !loading && sources.length > 0
-                ? { scale: 1.02, translateY: -2 }
-                : {}
-            }
+        {/* Cards container:
+            - Mobile: plain flex-col so each card is naturally sized with no grid row conflicts
+            - md+: 3-column grid where all cards share the same row height
+            - overflow-y-auto here so the modal header stays fixed while cards scroll */}
+        <div className="flex flex-col md:grid md:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar pb-2">
+          {/* ── VidRock Card ── */}
+          <div
             onClick={() => {
-              if (!loading && sources.length > 0) {
-                onSelect(vidrockUrl);
-              }
+              if (!loading && sources.length > 0) onSelect(vidrockUrl);
             }}
-            className={`relative flex flex-col justify-between p-5 rounded-2xl border transition-all h-full min-h-[170px] ${
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
               loading
-                ? "border-nebula-cyan/20 bg-nebula-cyan/5 opacity-80 cursor-wait animate-pulse"
+                ? "border-nebula-cyan/20 bg-slate-950/45 opacity-80 cursor-wait"
                 : sources.length > 0
-                  ? "border-nebula-cyan/35 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 cursor-pointer shadow-[0_0_20px_rgba(0,229,255,0.05)] group"
+                  ? "border-nebula-cyan/35 bg-slate-950/45 hover:border-nebula-cyan/60 hover:bg-slate-950/65 cursor-pointer"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
-            {loading ? (
-              <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-nebula-cyan/30 bg-nebula-cyan/10 text-nebula-cyan text-[8px] font-black uppercase tracking-wider animate-pulse">
-                <Loader2 size={8} className="animate-spin" />
-                <span>SCANNING</span>
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  loading || sources.length > 0
+                    ? "bg-nebula-cyan/15 text-nebula-cyan"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Zap
+                  size={18}
+                  fill={loading || sources.length > 0 ? "currentColor" : "none"}
+                  className={loading ? "animate-pulse" : ""}
+                />
               </div>
-            ) : sources.length > 0 ? (
-              <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-nebula-cyan text-obsidian text-[8px] font-black uppercase tracking-wider animate-pulse shadow-[0_0_10px_rgba(0,229,255,0.3)]">
-                <Sparkles size={8} />
-                <span>RECOMMENDED</span>
-              </div>
-            ) : null}
-
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                    loading || sources.length > 0
-                      ? "bg-nebula-cyan/15 text-nebula-cyan"
-                      : "bg-white/5 text-white/20"
-                  }`}
-                >
-                  <Zap
-                    size={18}
-                    fill={
-                      loading || sources.length > 0 ? "currentColor" : "none"
-                    }
-                    className={loading ? "animate-pulse" : ""}
-                  />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white uppercase tracking-tight flex items-center gap-1.5">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
                     VidRock
-                    <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase">
-                      DEFAULT
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase tracking-wider">
+                    DEFAULT
+                  </span>
+                  {loading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
                     </span>
-                  </h4>
-                  <p className="text-[10px] text-white/60 uppercase font-semibold">
-                    High-Speed Uplink
-                  </p>
+                  ) : sources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan/20 border border-nebula-cyan/35 text-nebula-cyan uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      RECOMMENDED
+                    </span>
+                  ) : null}
                 </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Delivers ultra-fast multi-CDN speeds, rich HLS quality, and
+                  seamless client-side failover between active mirrors.
+                </p>
               </div>
-
-              <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
-                Delivers ultra-fast multi-CDN speeds, rich HLS quality, and
-                seamless client-side failover between active mirrors.
-              </p>
             </div>
 
-            {/* Dynamic Uplinks Footer */}
-            <div className="mt-auto pt-3 border-t border-white/5">
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
               {loading ? (
                 <div className="flex items-center gap-2 text-[9px] text-nebula-cyan/70 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-nebula-cyan opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-nebula-cyan"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-nebula-cyan opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-nebula-cyan" />
                   </span>
-                  <span>Scanning Uplinks...</span>
+                  Scanning Uplinks...
                 </div>
               ) : sources.length > 0 ? (
-                <div>
-                  <p className="text-[10px] text-white/60 uppercase font-bold tracking-wider mb-2">
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
                     Active Mirrors:
                   </p>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5">
                     {sources.map((src) => {
                       let color =
-                        "border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5";
+                        "border-nebula-cyan/30 text-nebula-cyan bg-nebula-cyan/10";
                       if (src.name === "Atlas")
                         color =
-                          "border-amber-500/20 text-amber-400/80 bg-amber-500/5";
+                          "border-amber-500/30 text-amber-400 bg-amber-500/10";
                       if (src.name === "Orion")
                         color =
-                          "border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5";
+                          "border-emerald-500/30 text-emerald-400 bg-emerald-500/10";
                       return (
                         <span
                           key={src.name}
@@ -301,95 +328,83 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : (
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {error
-                    ? "Uplink currently offline"
-                    : "No mirror streams available"}
+                  {error ? "Uplink currently offline" : "No mirrors available"}
                 </p>
               )}
             </div>
-          </motion.div>
+          </div>
 
-          {/* Videasy Card */}
-          <motion.div
-            whileHover={
-              !videasyLoading && videasySources.length > 0
-                ? { scale: 1.02, translateY: -2 }
-                : {}
-            }
+          {/* ── Videasy Card ── */}
+          <div
             onClick={() => {
-              if (!videasyLoading && videasySources.length > 0) {
+              if (!videasyLoading && videasySources.length > 0)
                 onSelect(videasyUrl);
-              }
             }}
-            className={`relative flex flex-col justify-between p-5 rounded-2xl border transition-all h-full min-h-[170px] ${
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
               videasyLoading
-                ? "border-violet-500/20 bg-violet-500/5 opacity-80 cursor-wait animate-pulse"
+                ? "border-violet-500/20 bg-slate-950/45 opacity-80 cursor-wait"
                 : videasySources.length > 0
-                  ? "border-violet-500/35 bg-violet-500/5 hover:bg-violet-500/10 cursor-pointer shadow-[0_0_20px_rgba(168,85,247,0.05)] group"
+                  ? "border-violet-500/35 bg-slate-950/45 hover:border-violet-500/60 hover:bg-slate-950/65 cursor-pointer"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
-            {videasyLoading ? (
-              <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-400 text-[8px] font-black uppercase tracking-wider animate-pulse">
-                <Loader2 size={8} className="animate-spin" />
-                <span>SCANNING</span>
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  videasyLoading || videasySources.length > 0
+                    ? "bg-violet-500/15 text-violet-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Tv
+                  size={18}
+                  className={videasyLoading ? "animate-pulse" : ""}
+                />
               </div>
-            ) : videasySources.length > 0 ? (
-              <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500 text-white text-[8px] font-black uppercase tracking-wider animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.3)]">
-                <Sparkles size={8} />
-                <span>DECRYPTED</span>
-              </div>
-            ) : null}
-
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                    videasyLoading || videasySources.length > 0
-                      ? "bg-violet-500/15 text-violet-400"
-                      : "bg-white/5 text-white/20"
-                  }`}
-                >
-                  <Tv
-                    size={18}
-                    className={videasyLoading ? "animate-pulse" : ""}
-                  />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white group-hover:text-violet-400 transition-colors uppercase tracking-tight flex items-center gap-1.5">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
                     Videasy
-                    <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-violet-400 uppercase">
-                      NEW
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-violet-400 uppercase tracking-wider">
+                    NEW
+                  </span>
+                  {videasyLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
                     </span>
-                  </h4>
-                  <p className="text-[10px] text-white/60 uppercase font-semibold">
-                    Encrypted CDN Nodes
-                  </p>
+                  ) : videasySources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/35 text-violet-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      DECRYPTED
+                    </span>
+                  ) : null}
                 </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Bypasses player protection layers using WebAssembly decryption
+                  to unlock multiple global multi-language audio mirrors.
+                </p>
               </div>
-
-              <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
-                Bypasses player protection layers using WebAssembly decryption
-                to unlock multiple global multi-language audio mirrors.
-              </p>
             </div>
 
-            {/* Dynamic Uplinks Footer */}
-            <div className="mt-auto pt-3 border-t border-white/5">
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
               {videasyLoading ? (
                 <div className="flex items-center gap-2 text-[9px] text-violet-400/70 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500" />
                   </span>
-                  <span>Decrypting Nodes...</span>
+                  Decrypting Nodes...
                 </div>
               ) : videasySources.length > 0 ? (
-                <div>
-                  <p className="text-[10px] text-white/60 uppercase font-bold tracking-wider mb-2">
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
                     Active Mirrors:
                   </p>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5">
                     {videasySources.map((src) => {
                       const mirrorName = src.name
                         .replace("Videasy (", "")
@@ -397,16 +412,16 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <span
                           key={src.name}
-                          className="inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wider"
+                          className="inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/30 text-violet-400 bg-violet-500/10 uppercase tracking-wider"
                         >
                           {src.flag && (
                             <img
                               src={`https://flagcdn.com/16x12/${src.flag}.png`}
                               alt={src.flag}
-                              className="w-3 h-2.5 object-cover rounded-sm"
+                              className="w-3 h-2 object-cover rounded-sm shrink-0"
                             />
                           )}
-                          <span>{mirrorName}</span>
+                          {mirrorName}
                         </span>
                       );
                     })}
@@ -417,54 +432,107 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {videasyError
                     ? "Decryption engine offline"
-                    : "No mirror streams available"}
+                    : "No mirrors available"}
                 </p>
               )}
             </div>
-          </motion.div>
+          </div>
 
-          {/* VidLink Card (Always Active) */}
-          <motion.div
-            whileHover={{ scale: 1.02, translateY: -2 }}
-            onClick={() => onSelect()}
-            className="relative flex flex-col justify-between p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/8 cursor-pointer group min-h-[170px]"
+          {/* ── VidLink Card ── */}
+          <div
+            onClick={() => {
+              if (!vidlinkLoading && vidlinkSources.length > 0)
+                onSelect(vidlinkUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              vidlinkLoading
+                ? "border-white/10 bg-slate-950/45 opacity-80 cursor-wait"
+                : vidlinkSources.length > 0
+                  ? "border-white/10 bg-slate-950/45 hover:border-white/30 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
           >
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-white/70 group-hover:text-nebula-cyan transition-colors">
-                  <Server size={18} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors uppercase tracking-tight">
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  vidlinkLoading || vidlinkSources.length > 0
+                    ? "bg-white/10 text-white/70"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Server
+                  size={18}
+                  className={vidlinkLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
                     VidLink
-                  </h4>
-                  <p className="text-[10px] text-white/60 uppercase font-semibold">
-                    Standard Route
-                  </p>
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/50 uppercase tracking-wider">
+                    STANDARD
+                  </span>
+                  {vidlinkLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vidlinkSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white/60 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ONLINE
+                    </span>
+                  ) : null}
                 </div>
-              </div>
-
-              <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed mb-4">
-                Aggregates comprehensive standard indexes across global hosts to
-                ensure robust content availability.
-              </p>
-            </div>
-
-            {/* Status Footer */}
-            <div className="mt-auto pt-3 border-t border-white/5">
-              <p className="text-[10px] text-white/60 uppercase font-bold tracking-wider mb-2">
-                System Routing:
-              </p>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 uppercase tracking-wider">
-                  Auto-Failover
-                </span>
-                <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 uppercase tracking-wider">
-                  Standard DNS
-                </span>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Aggregates comprehensive standard indexes across global hosts
+                  to ensure robust content availability.
+                </p>
               </div>
             </div>
-          </motion.div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {vidlinkLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-white/40 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/50 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50" />
+                  </span>
+                  Scanning Indexes...
+                </div>
+              ) : vidlinkSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Quality Tiers:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vidlinkSources.map((src) => (
+                      <span
+                        key={src.name}
+                        className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 uppercase tracking-wider"
+                      >
+                        {src.quality !== "Auto"
+                          ? src.quality
+                          : src.name
+                              .replace("VidLink (", "")
+                              .replace(")", "") || "HD"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vidlinkError
+                    ? "Uplink currently offline"
+                    : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>
@@ -1127,7 +1195,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     </div>
                   </>
                 ) : (
-                  movie.quality !== "CAM" && movie.quality !== "TBA" && (
+                  movie.quality !== "CAM" &&
+                  movie.quality !== "TBA" && (
                     <>
                       <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
                       <div className="px-2 py-0.5 rounded border border-white/20 bg-slate-950/80 text-white/50 flex items-center gap-1.5 backdrop-blur-md">
