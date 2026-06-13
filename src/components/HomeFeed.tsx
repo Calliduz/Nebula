@@ -55,7 +55,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         onRandomize={onRandomize}
       />
 
-      <TopTenShelf data={allMovies} onSelect={setSelectedMovie} />
+      <TopTenShelf
+        data={allMovies}
+        onSelect={setSelectedMovie}
+        isLoading={isLoading}
+      />
 
       {rows.map((row: any, rowIndex) => (
         <React.Fragment key={`row-group-${rowIndex}`}>

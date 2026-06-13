@@ -5,7 +5,15 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export const TopTenShelf = memo(
-  ({ data, onSelect }: { data: NebulaMovie[]; onSelect: (m: any) => void }) => {
+  ({
+    data,
+    onSelect,
+    isLoading,
+  }: {
+    data: NebulaMovie[];
+    onSelect: (m: any) => void;
+    isLoading?: boolean;
+  }) => {
     const topMovies = data.slice(0, 10);
     const rowRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -70,96 +78,114 @@ export const TopTenShelf = memo(
             onScroll={updateArrows}
             className="flex gap-4 sm:gap-6 overflow-x-auto overflow-y-hidden py-8 -my-8 px-4 sm:px-0 custom-scrollbar snap-x snap-mandatory scroll-smooth"
           >
-            {topMovies.map((movie, i) => (
-              <div
-                key={`top-shelf-${movie.id}-${i}`}
-                className="flex-shrink-0 relative group/card cursor-pointer snap-start flex items-end pl-[24px] sm:pl-[40px]"
-                onClick={() => onSelect(movie)}
-              >
-                <span
-                  className="absolute left-0 bottom-[-10px] sm:bottom-[-20px] text-[100px] sm:text-[160px] leading-[0.8] font-display font-black transition-all duration-500 group-hover/card:-translate-x-2 z-20 tracking-tighter"
-                  style={{
-                    color: "#0b0f19",
-                    WebkitTextStroke: "2px rgba(255,255,255,0.7)",
-                    textShadow: "0 10px 30px rgba(0,0,0,0.8)",
-                  }}
-                >
-                  {i + 1}
-                </span>
-                <div className="w-[120px] sm:w-[180px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/50 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.2)] group-hover/card:z-30 z-10 origin-bottom relative">
-                  <img
-                    src={movie.image}
-                    className="w-full h-full object-cover opacity-80 group-hover/card:opacity-100 transition-opacity"
-                    alt={movie.title}
-                    referrerPolicy="no-referrer"
-                    onError={handleImageError}
-                  />
-                  <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
-
-                  {/* Status Badges Overlay */}
-                  <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-40 pointer-events-none">
-                    {/* Quality Badge */}
-                    {movie.quality && (
-                      <div
-                        className={`px-1.5 py-0.5 rounded-md border backdrop-blur-md ${
-                          movie.quality === "CAM"
-                            ? "bg-slate-950/80 border-amber-500/30"
-                            : movie.quality === "TBA"
-                              ? "bg-slate-950/80 border-red-500/30"
-                              : "bg-slate-950/80 border-nebula-cyan/30"
-                        }`}
-                      >
-                        <p
-                          className={`text-[8px] font-black uppercase tracking-wider ${
-                            movie.quality === "CAM"
-                              ? "text-amber-400"
-                              : movie.quality === "TBA"
-                                ? "text-red-400"
-                                : "text-nebula-cyan"
-                          }`}
-                        >
-                          {movie.quality}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Status Indicator */}
-                    {movie.isVerified ? (
-                      <div className="px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-emerald-500/30 backdrop-blur-md">
-                        <p className="text-[8px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <span className="relative flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                          </span>
-                          <span>Live</span>
-                        </p>
-                      </div>
-                    ) : movie.isDead ? (
-                      <div className="px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-rose-500/30 backdrop-blur-md">
-                        <p className="text-[8px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                          <span>Dead</span>
-                        </p>
-                      </div>
-                    ) : (
-                      movie.quality !== "CAM" &&
-                      movie.quality !== "TBA" && (
-                        <div className="px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-white/20 backdrop-blur-md">
-                          <p className="text-[8px] font-black text-white/50 uppercase tracking-wider flex items-center gap-1.5">
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
-                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
-                            </span>
-                            <span>Scan</span>
-                          </p>
-                        </div>
-                      )
-                    )}
+            {isLoading
+              ? [...Array(10)].map((_, i) => (
+                  <div
+                    key={`top-shelf-skeleton-${i}`}
+                    className="flex-shrink-0 relative snap-start flex items-end pl-[24px] sm:pl-[40px] animate-pulse"
+                  >
+                    <span
+                      className="absolute left-0 bottom-[-10px] sm:bottom-[-20px] text-[100px] sm:text-[160px] leading-[0.8] font-display font-black z-20 tracking-tighter opacity-10"
+                      style={{
+                        color: "#0b0f19",
+                        WebkitTextStroke: "2px rgba(255,255,255,0.3)",
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="w-[120px] sm:w-[180px] aspect-[2/3] rounded-2xl bg-white/5 border border-white/10 shimmer-bg z-10 origin-bottom relative" />
                   </div>
-                </div>
-              </div>
-            ))}
+                ))
+              : topMovies.map((movie, i) => (
+                  <div
+                    key={`top-shelf-${movie.id}-${i}`}
+                    className="flex-shrink-0 relative group/card cursor-pointer snap-start flex items-end pl-[24px] sm:pl-[40px]"
+                    onClick={() => onSelect(movie)}
+                  >
+                    <span
+                      className="absolute left-0 bottom-[-10px] sm:bottom-[-20px] text-[100px] sm:text-[160px] leading-[0.8] font-display font-black transition-all duration-500 group-hover/card:-translate-x-2 z-20 tracking-tighter"
+                      style={{
+                        color: "#0b0f19",
+                        WebkitTextStroke: "2px rgba(255,255,255,0.7)",
+                        textShadow: "0 10px 30px rgba(0,0,0,0.8)",
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="w-[120px] sm:w-[180px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/50 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.2)] group-hover/card:z-30 z-10 origin-bottom relative">
+                      <img
+                        src={movie.image}
+                        className="w-full h-full object-cover opacity-80 group-hover/card:opacity-100 transition-opacity"
+                        alt={movie.title}
+                        referrerPolicy="no-referrer"
+                        onError={handleImageError}
+                      />
+                      <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+
+                      {/* Status Badges Overlay */}
+                      <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-40 pointer-events-none">
+                        {/* Quality Badge */}
+                        {movie.quality && (
+                          <div
+                            className={`px-1.5 py-0.5 rounded-md border backdrop-blur-md ${
+                              movie.quality === "CAM"
+                                ? "bg-slate-950/80 border-amber-500/30"
+                                : movie.quality === "TBA"
+                                  ? "bg-slate-950/80 border-red-500/30"
+                                  : "bg-slate-950/80 border-nebula-cyan/30"
+                            }`}
+                          >
+                            <p
+                              className={`text-[8px] font-black uppercase tracking-wider ${
+                                movie.quality === "CAM"
+                                  ? "text-amber-400"
+                                  : movie.quality === "TBA"
+                                    ? "text-red-400"
+                                    : "text-nebula-cyan"
+                              }`}
+                            >
+                              {movie.quality}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Status Indicator */}
+                        {movie.isVerified ? (
+                          <div className="px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-emerald-500/30 backdrop-blur-md">
+                            <p className="text-[8px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                              </span>
+                              <span>Live</span>
+                            </p>
+                          </div>
+                        ) : movie.isDead ? (
+                          <div className="px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-rose-500/30 backdrop-blur-md">
+                            <p className="text-[8px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              <span>Dead</span>
+                            </p>
+                          </div>
+                        ) : (
+                          movie.quality !== "CAM" &&
+                          movie.quality !== "TBA" && (
+                            <div className="px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-white/20 backdrop-blur-md">
+                              <p className="text-[8px] font-black text-white/50 uppercase tracking-wider flex items-center gap-1.5">
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
+                                </span>
+                                <span>Scan</span>
+                              </p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
           </div>
 
           <AnimatePresence>
@@ -182,6 +208,7 @@ export const TopTenShelf = memo(
     );
   },
   (prevProps, nextProps) => {
+    if (prevProps.isLoading !== nextProps.isLoading) return false;
     if (prevProps.data.length !== nextProps.data.length) return false;
     const prevSlice = prevProps.data.slice(0, 10);
     const nextSlice = nextProps.data.slice(0, 10);
