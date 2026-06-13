@@ -1093,12 +1093,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   <>
                     <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
                     <div
-                      className={`px-2 py-0.5 rounded border ${
+                      className={`px-2 py-0.5 rounded border backdrop-blur-md ${
                         movie.quality === "CAM"
-                          ? "border-amber-500/50 bg-amber-500/10 text-amber-500"
+                          ? "border-amber-500/30 bg-slate-950/80 text-amber-400"
                           : movie.quality === "TBA"
-                            ? "border-red-500/50 bg-red-500/10 text-red-500"
-                            : "border-nebula-cyan/50 bg-nebula-cyan/10 text-nebula-cyan"
+                            ? "border-red-500/30 bg-slate-950/80 text-red-400"
+                            : "border-nebula-cyan/30 bg-slate-950/80 text-nebula-cyan"
                       }`}
                     >
                       {movie.quality}
@@ -1108,34 +1108,36 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                 {/* Availability Badge */}
                 {movie.isVerified ? (
-                  <div className="px-1.5 md:px-2 py-0.5 rounded border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 flex items-center gap-1.5 md:gap-2 font-black tracking-tighter text-[10px] md:text-xs">
-                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="hidden md:inline">VERIFIED COPY</span>
-                    <span className="md:hidden">VERIFIED</span>
-                  </div>
-                ) : movie.isDead ? (
-                  <div className="px-1.5 md:px-2 py-0.5 rounded border border-rose-500/50 bg-rose-500/10 text-rose-400 flex items-center gap-1.5 md:gap-2 font-black tracking-tighter text-[10px] md:text-xs">
-                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
-                    <span className="hidden md:inline">NO SIGNAL DETECTED</span>
-                    <span className="md:hidden">DEAD SIGNAL</span>
-                  </div>
-                ) : (
-                  movie.quality !== "TBA" && (
-                    <div className="px-1.5 md:px-2 py-0.5 rounded border border-white/10 bg-white/5 text-white/50 font-black tracking-tighter text-[10px] md:text-xs">
-                      {movie.quality === "CAM" ? (
-                        <>
-                          <span className="hidden md:inline">IN THEATERS</span>
-                          <span className="md:hidden">THEATER</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="hidden md:inline">
-                            SEARCHING MIRRORS
-                          </span>
-                          <span className="md:hidden">PENDING</span>
-                        </>
-                      )}
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
+                    <div className="px-2 py-0.5 rounded border border-emerald-500/30 bg-slate-950/80 text-emerald-400 flex items-center gap-1.5 backdrop-blur-md">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                      </span>
+                      <span>LIVE</span>
                     </div>
+                  </>
+                ) : movie.isDead ? (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
+                    <div className="px-2 py-0.5 rounded border border-rose-500/30 bg-slate-950/80 text-rose-400 flex items-center gap-1.5 backdrop-blur-md">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      <span>DEAD</span>
+                    </div>
+                  </>
+                ) : (
+                  movie.quality !== "CAM" && movie.quality !== "TBA" && (
+                    <>
+                      <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
+                      <div className="px-2 py-0.5 rounded border border-white/20 bg-slate-950/80 text-white/50 flex items-center gap-1.5 backdrop-blur-md">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
+                        </span>
+                        <span>SCAN</span>
+                      </div>
+                    </>
                   )
                 )}
               </div>
@@ -1334,15 +1336,6 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         )}
                         <span>{label}</span>
                       </motion.button>
-                      {!movie.isVerified && !isTBA && (
-                        <p
-                          className={`text-[10px] font-bold uppercase tracking-wider text-center ${movie.isDead ? "text-rose-400 animate-pulse" : "text-dim"}`}
-                        >
-                          {movie.isDead
-                            ? "Known Unreachable • Scrapers returned 404"
-                            : "Copy not verified • Search pending"}
-                        </p>
-                      )}
                     </div>
                   );
                 })()}

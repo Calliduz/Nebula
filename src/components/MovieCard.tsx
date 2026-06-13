@@ -73,6 +73,7 @@ export const MovieCard = memo<MovieCardProps>(
             loading="lazy"
           />
 
+          <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-90" />
 
           {/* Info Overlay (Persistent) */}
@@ -91,12 +92,12 @@ export const MovieCard = memo<MovieCardProps>(
                 {/* Quality Badge */}
                 {movie.quality && (
                   <div
-                    className={`px-1.5 md:px-2 py-0.5 rounded-md backdrop-blur-xl border md:border-2 w-fit shadow-2xl ${
+                    className={`px-1.5 md:px-2 py-0.5 rounded-md border backdrop-blur-md w-fit ${
                       movie.quality === "CAM"
-                        ? "bg-amber-500/30 border-amber-500/50"
+                        ? "bg-slate-950/80 border-amber-500/30"
                         : movie.quality === "TBA"
-                          ? "bg-red-500/30 border-red-500/50"
-                          : "bg-nebula-cyan/30 border-nebula-cyan/50"
+                          ? "bg-slate-950/80 border-red-500/30"
+                          : "bg-slate-950/80 border-nebula-cyan/30"
                     }`}
                   >
                     <p
@@ -113,42 +114,33 @@ export const MovieCard = memo<MovieCardProps>(
                   </div>
                 )}
 
-                {/* Verified Status Badge */}
+                {/* Availability Badge */}
                 {movie.isVerified ? (
-                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-emerald-500/30 border md:border-2 border-emerald-500/50 backdrop-blur-xl w-fit shadow-2xl">
-                    <p className="text-[8px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                      <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="hidden md:inline">Verified</span>
-                      <span className="md:hidden">Live</span>
+                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-slate-950/80 border border-emerald-500/30 backdrop-blur-md w-fit">
+                    <p className="text-[8px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                      </span>
+                      <span>Live</span>
                     </p>
                   </div>
                 ) : movie.isDead ? (
-                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-rose-600/40 border md:border-2 border-rose-500/60 backdrop-blur-xl w-fit shadow-2xl">
-                    <p className="text-[8px] md:text-[10px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1">
-                      <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-rose-500" />
-                      <span className="hidden md:inline">No Signal</span>
-                      <span className="md:hidden">Dead</span>
+                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-slate-950/80 border border-rose-500/30 backdrop-blur-md w-fit">
+                    <p className="text-[8px] md:text-[10px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      <span>Dead</span>
                     </p>
                   </div>
                 ) : (
-                  movie.quality !== "TBA" && (
-                    <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-white/10 border md:border-2 border-white/20 backdrop-blur-xl w-fit shadow-2xl">
-                      <p className="text-[8px] md:text-[10px] font-black text-white/80 uppercase tracking-wider">
-                        {movie.quality === "CAM" ? (
-                          <>
-                            <span className="hidden md:inline">
-                              In Theaters
-                            </span>
-                            <span className="md:hidden">Theater</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="hidden md:inline">
-                              Searching Mirrors
-                            </span>
-                            <span className="md:hidden">Pending</span>
-                          </>
-                        )}
+                  movie.quality !== "CAM" && movie.quality !== "TBA" && (
+                    <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-slate-950/80 border border-white/20 backdrop-blur-md w-fit">
+                      <p className="text-[8px] md:text-[10px] font-black text-white/55 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
+                        </span>
+                        <span>Scan</span>
                       </p>
                     </div>
                   )

@@ -1492,6 +1492,9 @@ export function useAppState() {
   useEffect(() => {
     setVisibleCount(12);
     setDramaPage(1); // Reset pagination on category/tab change
+    if (viewingCategory !== "Dramas" && selectedRegion !== "All") {
+      setSelectedRegion("All");
+    }
   }, [viewingCategory, activeTab, selectedRegion]);
 
   const loadMore = () => {

@@ -64,8 +64,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [viewingCategory]);
 
-  const isDramaOrTV =
-    viewingCategory === "Dramas" || viewingCategory === "TV Shows";
+  const isDrama = viewingCategory === "Dramas";
 
   // Helper to render grid with ads every 20 items
   const renderGridWithAds = () => {
@@ -119,7 +118,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         )}
       </div>
 
-      {isDramaOrTV && setSelectedRegion && (
+      {isDrama && setSelectedRegion && (
         <div className="flex flex-wrap gap-3 mb-10 overflow-x-auto pb-4 no-scrollbar">
           {REGIONS.map((region) => (
             <button

@@ -2555,9 +2555,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     <span
                       className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
                         qualityTag === "CAM" || qualityTag === "TC"
-                          ? "bg-amber-500/20 border-amber-500/50 text-amber-400"
+                          ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
                           : qualityTag === "BLURAY"
-                            ? "bg-blue-500/20 border-blue-500/50 text-blue-300"
+                            ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
                             : "bg-nebula-cyan/10 border-nebula-cyan/30 text-nebula-cyan"
                       }`}
                     >
