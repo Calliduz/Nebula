@@ -97,6 +97,9 @@ export const serverSortOrder = [
   "fade",
   "omen",
   "raze",
+  "nova",
+  "atlas",
+  "orion",
 ];
 
 export const getMirrorPriority = (sourceName: string) => {
@@ -185,6 +188,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [isEmbed, setIsEmbed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const errorRef = useRef("");
+  useEffect(() => {
+    errorRef.current = error;
+  }, [error]);
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(80);
@@ -517,10 +524,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         // Fetch updated mirrors in the background progressively at 10s, 20s, and 45s to capture slow parallel scrapes
         const runSync = () => {
           const isVideasy = processedMirrors.some((m) =>
-            m.source.includes("Videasy"),
+            m.source.toLowerCase().includes("videasy"),
           );
           const isVidrock = processedMirrors.some((m) =>
-            m.source.includes("VidRock"),
+            m.source.toLowerCase().includes("vidrock"),
           );
 
           let fetchUrl = "";
@@ -546,7 +553,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   updatedMirrors = Object.entries(data)
                     .filter(([_, v]: any) => v && v.url)
                     .map(([name, v]: any) => ({
-                      source: name,
+                      source: name.toLowerCase().startsWith("videasy")
+                        ? name
+                        : `Videasy (${name})`,
                       url: v.url,
                       type: v.type || "hls",
                       audio: v.audio || "",
@@ -556,7 +565,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   updatedMirrors = Object.entries(data)
                     .filter(([_, v]: any) => v && v.url)
                     .map(([name, v]: any) => ({
-                      source: name,
+                      source: name.toLowerCase().startsWith("vidrock")
+                        ? name
+                        : `VidRock (${name})`,
                       url: v.url,
                       type: v.type || "hls",
                       audio: v.audio || "",
@@ -580,7 +591,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   // Merge preserving active index mapping
                   const currentActive =
                     mirrorsRef.current[activeMirrorRef.current];
-                  if (currentActive) {
+                  if (errorRef.current && newGrouped.length > 0) {
+                    console.log(
+                      "[PLAYER] Recovering from error: clearing error and selecting first discovered mirror.",
+                    );
+                    setError("");
+                    setMirrors(newGrouped);
+                    mirrorsRef.current = newGrouped;
+                    setStreamUrl(null);
+                    setTimeout(() => {
+                      selectMirror(0, newGrouped);
+                    }, 50);
+                  } else if (currentActive) {
                     const newIdx = newGrouped.findIndex(
                       (m: any) => m.source === currentActive.source,
                     );
@@ -1133,6 +1155,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_LOADED, (_, data) => {
+        if (!data.levels || data.levels.length === 0) {
+          console.warn(
+            "[HLS] Loaded manifest has 0 levels. Empty or invalid HLS manifest.",
+          );
+          const nextIdx = activeMirrorRef.current + 1;
+          if (nextIdx < mirrorsRef.current.length) {
+            console.log(
+              `[HLS] Switching to next mirror index ${nextIdx} due to empty manifest.`,
+            );
+            selectMirror(nextIdx, mirrorsRef.current);
+          } else {
+            setError("Empty manifest. All mirrors exhausted.");
+          }
+        }
+      });
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         setQualities(

@@ -402,11 +402,117 @@ export const discoverMedia = async (
 
 export const searchMedia = async (query: string): Promise<NebulaMovie[]> => {
   try {
-    const data = await fetchFromTMDB("/search/multi", { query }, TTL.DETAILS);
-    return data.results
-      .filter((m: any) => m.media_type === "movie" || m.media_type === "tv")
-      .map((m: any) => normalizeMovie(m, m.media_type));
-  } catch {
+    const variations = [query];
+    const splitSpaced = query
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/([a-zA-Z])([0-9])/g, "$1 $2")
+      .replace(/([0-9])([a-zA-Z])/g, "$1 $2")
+      .trim();
+    if (splitSpaced !== query) {
+      variations.push(splitSpaced);
+    }
+
+    // Parallel fetch for all query variations
+    const queryPromises = variations.map((q) =>
+      fetchFromTMDB("/search/multi", { query: q }, TTL.DETAILS)
+        .then((data) => data.results || [])
+        .catch(() => []),
+    );
+    const resultsLists = await Promise.all(queryPromises);
+
+    // Flatten and deduplicate initial multi-search results
+    const seenIds = new Set<string | number>();
+    const directResults: any[] = [];
+    const people: any[] = [];
+
+    for (const list of resultsLists) {
+      for (const item of list) {
+        if (!item || !item.id) continue;
+        if (seenIds.has(item.id)) continue;
+        seenIds.add(item.id);
+
+        if (item.media_type === "person") {
+          people.push(item);
+        } else if (item.media_type === "movie" || item.media_type === "tv") {
+          directResults.push(item);
+        }
+      }
+    }
+
+    // Parallel fetch credits for top 3 people matched
+    const personCreditsPromises = people.slice(0, 3).map(async (p) => {
+      try {
+        const data = await fetchFromTMDB(
+          `/person/${p.id}/combined_credits`,
+          {},
+          TTL.DETAILS,
+        );
+        const cast = data.cast || [];
+        return cast
+          .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0))
+          .slice(0, 10)
+          .map((m: any) => ({
+            ...m,
+            media_type: m.media_type || (m.first_air_date ? "tv" : "movie"),
+          }));
+      } catch {
+        return [];
+      }
+    });
+
+    // Parallel fetch recommendations for top 2 direct movie/TV results
+    const recsPromises = directResults.slice(0, 2).map(async (m) => {
+      try {
+        const data = await fetchFromTMDB(
+          `/${m.media_type}/${m.id}/recommendations`,
+          {},
+          TTL.DETAILS,
+        );
+        return (data.results || []).slice(0, 8).map((rec: any) => ({
+          ...rec,
+          media_type: rec.media_type || m.media_type,
+        }));
+      } catch {
+        return [];
+      }
+    });
+
+    const [creditsLists, recsLists] = await Promise.all([
+      Promise.all(personCreditsPromises),
+      Promise.all(recsPromises),
+    ]);
+
+    // Combine all results
+    const finalResults: NebulaMovie[] = [];
+
+    // 1. Direct results first
+    directResults.forEach((m) => {
+      finalResults.push(normalizeMovie(m, m.media_type));
+    });
+
+    // 2. Credits from people searches next
+    creditsLists.forEach((list) => {
+      list.forEach((m) => {
+        if (!seenIds.has(m.id)) {
+          seenIds.add(m.id);
+          finalResults.push(normalizeMovie(m, m.media_type));
+        }
+      });
+    });
+
+    // 3. Recommendations next
+    recsLists.forEach((list) => {
+      list.forEach((m) => {
+        if (!seenIds.has(m.id)) {
+          seenIds.add(m.id);
+          finalResults.push(normalizeMovie(m, m.media_type));
+        }
+      });
+    });
+
+    return finalResults.slice(0, 50); // limit to top 50
+  } catch (err) {
+    console.error("[TMDB] Intelligent search failed:", err);
     return [];
   }
 };
