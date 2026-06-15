@@ -59,31 +59,35 @@ const parseMirrorName = (name: string) => {
 };
 
 export const parseMirrorDetails = (sourceName: string) => {
-  // e.g. "Videasy (Neon)" -> category: "Videasy", name: "Neon"
-  // e.g. "VidRock (Mirror 1)" -> category: "VidRock", name: "Mirror 1"
-  // e.g. "VidLink" -> category: "VidLink", name: "VidLink"
+  // e.g. "Videasy (Neon)" -> category: "Videasy", name: "NEON"
+  // e.g. "VidRock (Mirror 1)" -> category: "VidRock", name: "MIRROR 1"
+  // e.g. "VidLink" -> category: "VidLink", name: "VIDLINK"
   const match = sourceName.match(/^(.*?)\s*\((.*?)\)$/);
   if (match) {
     return {
       category: match[1].trim(),
-      name: match[2].trim(),
+      name: match[2].trim().toUpperCase(),
     };
   }
 
   if (sourceName.startsWith("VidRock")) {
     return {
       category: "VidRock",
-      name: sourceName.replace("VidRock", "").trim() || "Mirror",
+      name: (
+        sourceName.replace("VidRock", "").trim() || "Mirror"
+      ).toUpperCase(),
     };
   }
   if (sourceName.startsWith("Videasy")) {
     return {
       category: "Videasy",
-      name: sourceName.replace("Videasy", "").trim() || "Mirror",
+      name: (
+        sourceName.replace("Videasy", "").trim() || "Mirror"
+      ).toUpperCase(),
     };
   }
 
-  return { category: "VidLink", name: sourceName };
+  return { category: "VidLink", name: sourceName.toUpperCase() };
 };
 
 export const serverSortOrder = [
@@ -1197,12 +1201,36 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }
       });
 
-      // ── Robust error recovery with retry + mirror fallback ──
+      // Reset retry counters on successful fragment load
       let networkRetries = 0;
       const MAX_NETWORK_RETRIES = 4;
       let mediaRecoveryAttempt = 0;
+      let fragErrorTimeout: NodeJS.Timeout | null = null;
 
       hls.on(Hls.Events.ERROR, (_, d) => {
+        // Track continuous fragment load errors to trigger fallback
+        if (d.details === "fragLoadError") {
+          if (!fragErrorTimeout) {
+            console.warn(
+              "[HLS] Fragment load error detected. Starting 5s mirror fallback timer...",
+            );
+            fragErrorTimeout = setTimeout(() => {
+              console.error(
+                "[HLS] Continuous fragment load errors for 5 seconds. Switching to next mirror...",
+              );
+              const nextIdx = activeMirrorRef.current + 1;
+              if (nextIdx < mirrorsRef.current.length) {
+                selectMirror(nextIdx, mirrorsRef.current);
+              } else {
+                setError(
+                  "Continuous segment loading failures. All mirrors exhausted.",
+                );
+              }
+              fragErrorTimeout = null;
+            }, 5000);
+          }
+        }
+
         // Frag 0 loading failure retry & fallback
         if (
           d.details === "fragLoadError" &&
@@ -1330,10 +1358,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           networkRetries = 0;
         }
         mediaRecoveryAttempt = 0;
+        if (fragErrorTimeout) {
+          console.log(
+            "[HLS] Fragment loaded successfully. Clearing error fallback timer.",
+          );
+          clearTimeout(fragErrorTimeout);
+          fragErrorTimeout = null;
+        }
       });
       return () => {
         hls.destroy();
         hlsRef.current = null;
+        if (fragErrorTimeout) {
+          clearTimeout(fragErrorTimeout);
+          fragErrorTimeout = null;
+        }
         // Note: HLS.js does NOT use the Cache Storage API — it relies on
         // the browser's standard HTTP cache, governed by the
         // Cache-Control: private, max-age=3600 headers set on /api/proxy/segment.
@@ -3417,7 +3456,7 @@ export function InPlayerSourcePicker({
         const list = Object.entries(data)
           .filter(([, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
-            name,
+            name: name.startsWith("VidRock") ? name : `VidRock (${name})`,
             url: v.url,
             type: v.type || "hls",
           }));
@@ -3445,7 +3484,7 @@ export function InPlayerSourcePicker({
         const list = Object.entries(data)
           .filter(([, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
-            name,
+            name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
             url: v.url,
             type: v.type || "hls",
             audio: v.audio || "",
@@ -3517,7 +3556,11 @@ export function InPlayerSourcePicker({
                 key={s.name}
                 className="text-[7px] font-bold px-1 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase"
               >
-                {s.name}
+                {s.name
+                  .replace(/^VidRock\s*\((.*?)\)$/i, "$1")
+                  .replace(/^VidRock/i, "")
+                  .trim()
+                  .toUpperCase()}
               </span>
             ))
           ) : (
@@ -3569,7 +3612,11 @@ export function InPlayerSourcePicker({
                   key={s.name}
                   className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase"
                 >
-                  {s.name.replace("Videasy (", "").replace(")", "")}
+                  {s.name
+                    .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
+                    .replace(/^Videasy/i, "")
+                    .trim()
+                    .toUpperCase()}
                 </span>
               ))}
               {videasySources.length > 3 && (

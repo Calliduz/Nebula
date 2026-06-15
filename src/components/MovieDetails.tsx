@@ -72,7 +72,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
   const isMountedRef = useRef(true);
 
-  const loadAllSources = () => {
+  const loadAllSources = (force = false) => {
     setLoading(true);
     setError("");
     setVideasyLoading(true);
@@ -80,8 +80,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     setVidlinkLoading(true);
     setVidlinkError("");
 
+    const forceParam = force ? "&force=1" : "";
+
     // 1. VidRock Fetch
-    let vidrockFetchUrl = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+    let vidrockFetchUrl = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
     if (season !== undefined) vidrockFetchUrl += `&season=${season}`;
     if (episode !== undefined) vidrockFetchUrl += `&episode=${episode}`;
 
@@ -95,7 +97,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
-            name,
+            name: name.startsWith("VidRock") ? name : `VidRock (${name})`,
             url: value.url,
             type: value.type || "hls",
             language: value.language || "English",
@@ -113,7 +115,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       });
 
     // 2. Videasy Fetch
-    let videasyFetchUrl = `${API_BASE_URL}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}`;
+    let videasyFetchUrl = `${API_BASE_URL}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
     if (season !== undefined) videasyFetchUrl += `&season=${season}`;
     if (episode !== undefined) videasyFetchUrl += `&episode=${episode}`;
 
@@ -127,7 +129,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
-            name,
+            name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
             url: value.url,
             type: value.type || "hls",
             audio: value.audio || "Original audio",
@@ -145,7 +147,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       });
 
     // 3. VidLink Fetch
-    let vidlinkFetchUrl = `${API_BASE_URL}/api/vidlink?tmdbId=${movie.id}&type=${movie.type}`;
+    let vidlinkFetchUrl = `${API_BASE_URL}/api/vidlink?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
     if (season !== undefined) vidlinkFetchUrl += `&season=${season}`;
     if (episode !== undefined) vidlinkFetchUrl += `&episode=${episode}`;
 
@@ -219,7 +221,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
         {/* Re-scan/Reload Button (Top-Left Symmetrical) */}
         <button
-          onClick={loadAllSources}
+          onClick={() => loadAllSources(true)}
           disabled={loading || videasyLoading || vidlinkLoading}
           className="absolute top-4 left-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed z-50 cursor-pointer"
           title="Re-scan all sources for background results"
@@ -336,12 +338,17 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {sources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^VidRock\s*\((.*?)\)$/i, "$1")
+                        .replace(/^VidRock/i, "")
+                        .trim()
+                        .toUpperCase();
                       let color =
                         "border-nebula-cyan/30 text-nebula-cyan bg-nebula-cyan/10";
-                      if (src.name === "Atlas")
+                      if (cleanMirrorName === "ATLAS")
                         color =
                           "border-amber-500/30 text-amber-400 bg-amber-500/10";
-                      if (src.name === "Orion")
+                      if (cleanMirrorName === "ORION")
                         color =
                           "border-emerald-500/30 text-emerald-400 bg-emerald-500/10";
                       return (
@@ -349,7 +356,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           key={src.name}
                           className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}
                         >
-                          {src.name}
+                          {cleanMirrorName}
                         </span>
                       );
                     })}
@@ -437,8 +444,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   <div className="flex flex-wrap gap-1.5">
                     {videasySources.map((src) => {
                       const mirrorName = src.name
-                        .replace("Videasy (", "")
-                        .replace(")", "");
+                        .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Videasy/i, "")
+                        .trim()
+                        .toUpperCase();
                       return (
                         <span
                           key={src.name}
@@ -539,18 +548,25 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     Quality Tiers:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {vidlinkSources.map((src) => (
-                      <span
-                        key={src.name}
-                        className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 uppercase tracking-wider"
-                      >
-                        {src.quality !== "Auto"
-                          ? src.quality
-                          : src.name
-                              .replace("VidLink (", "")
-                              .replace(")", "") || "HD"}
-                      </span>
-                    ))}
+                    {vidlinkSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^VidLink\s*\((.*?)\)$/i, "$1")
+                        .replace(/^VidLink/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName =
+                        src.quality !== "Auto"
+                          ? src.quality.toUpperCase()
+                          : cleanMirrorName || "HD";
+                      return (
+                        <span
+                          key={src.name}
+                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 uppercase tracking-wider"
+                        >
+                          {displayName}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
