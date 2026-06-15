@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL } from "../config";
 import { handleImageError, triggerPopunder } from "../utils/helpers";
+import { getSecurityHeaders } from "../utils/security";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   getMediaDetails,
@@ -87,7 +88,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     if (season !== undefined) vidrockFetchUrl += `&season=${season}`;
     if (episode !== undefined) vidrockFetchUrl += `&episode=${episode}`;
 
-    fetch(vidrockFetchUrl)
+    fetch(vidrockFetchUrl, {
+      headers: getSecurityHeaders("GET", "/api/vidrock"),
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to scan VidRock uplink");
         return res.json();
@@ -119,7 +122,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     if (season !== undefined) videasyFetchUrl += `&season=${season}`;
     if (episode !== undefined) videasyFetchUrl += `&episode=${episode}`;
 
-    fetch(videasyFetchUrl)
+    fetch(videasyFetchUrl, {
+      headers: getSecurityHeaders("GET", "/api/videasy"),
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to scan Videasy uplink");
         return res.json();
@@ -151,7 +156,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     if (season !== undefined) vidlinkFetchUrl += `&season=${season}`;
     if (episode !== undefined) vidlinkFetchUrl += `&episode=${episode}`;
 
-    fetch(vidlinkFetchUrl)
+    fetch(vidlinkFetchUrl, {
+      headers: getSecurityHeaders("GET", "/api/vidlink"),
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to scan VidLink uplink");
         return res.json();

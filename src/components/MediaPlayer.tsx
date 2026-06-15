@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import { getSecurityHeaders } from "../utils/security";
 
 import { API_BASE_URL } from "../config";
 const API = API_BASE_URL;
@@ -558,7 +559,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }
 
           if (fetchUrl && !cancelled) {
-            fetch(fetchUrl)
+            const path = isVideasy ? "/api/videasy" : "/api/vidrock";
+            fetch(fetchUrl, {
+              headers: getSecurityHeaders("GET", path),
+            })
               .then((r) => r.json())
               .then((data) => {
                 if (cancelled) return;
@@ -654,7 +658,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (season !== undefined) url += `&season=${season}`;
     if (episode !== undefined) url += `&episode=${episode}`;
 
-    fetch(url)
+    fetch(url, {
+      headers: getSecurityHeaders("GET", "/api/stream"),
+    })
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -1139,12 +1145,28 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         // with proper CDN headers. Without this, hls.js can fall back to
         // direct CDN requests that get rate-limited or geo-blocked.
         xhrSetup: (xhr, url) => {
-          // Already proxied (manifest rewriter added /api/proxy/segment)
+          let finalUrl = url;
+
+          // Already proxied (manifest rewriter added /api/proxy/segment) or local master playlist
           if (
             url.includes("/api/proxy/segment") ||
-            url.includes("/api/proxy/stream")
-          )
+            url.includes("/api/proxy/stream") ||
+            url.includes("/api/videasy/master.m3u8")
+          ) {
+            if (xhr.readyState === 0) {
+              xhr.open("GET", finalUrl, true);
+            }
+            const path = url.includes("/api/proxy/stream")
+              ? "/api/proxy/stream"
+              : url.includes("/api/videasy/master.m3u8")
+              ? "/api/videasy/master.m3u8"
+              : "/api/proxy/segment";
+            const securityHeaders = getSecurityHeaders("GET", path);
+            Object.entries(securityHeaders).forEach(([k, v]) => {
+              xhr.setRequestHeader(k, v);
+            });
             return;
+          }
 
           const shouldProxy =
             /\.ts(\?|$)/i.test(url) ||
@@ -1160,11 +1182,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               !url.includes("127.0.0.1"));
 
           if (shouldProxy) {
-            xhr.open(
-              "GET",
-              `${API}/api/proxy/segment?url=${encodeURIComponent(url)}`,
-              true,
-            );
+            finalUrl = `${API}/api/proxy/segment?url=${encodeURIComponent(url)}`;
+            xhr.open("GET", finalUrl, true);
+            const securityHeaders = getSecurityHeaders("GET", "/api/proxy/segment");
+            Object.entries(securityHeaders).forEach(([k, v]) => {
+              xhr.setRequestHeader(k, v);
+            });
           }
         },
       });
@@ -1479,7 +1502,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             if (movie.origin) vidlinkPrefetchUrl += `&origin=${movie.origin}`;
             vidlinkPrefetchUrl += `&season=${nextEp.season}&episode=${nextEp.episode}`;
 
-            fetch(vidlinkPrefetchUrl)
+            fetch(vidlinkPrefetchUrl, {
+              headers: getSecurityHeaders("GET", "/api/stream"),
+            })
               .then((r) => r.json())
               .then(() =>
                 console.log(
@@ -1494,7 +1519,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
             // 2. VidRock prefetch
             let vidrockPrefetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
-            fetch(vidrockPrefetchUrl)
+            fetch(vidrockPrefetchUrl, {
+              headers: getSecurityHeaders("GET", "/api/vidrock"),
+            })
               .then((r) => r.json())
               .then(() =>
                 console.log(
@@ -1509,7 +1536,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
             // 3. Videasy prefetch
             let videasyPrefetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
-            fetch(videasyPrefetchUrl)
+            fetch(videasyPrefetchUrl, {
+              headers: getSecurityHeaders("GET", "/api/videasy"),
+            })
               .then((r) => r.json())
               .then(() =>
                 console.log(
@@ -2349,7 +2378,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   if (movie.origin) url += `&origin=${movie.origin}`;
                   if (season !== undefined) url += `&season=${season}`;
                   if (episode !== undefined) url += `&episode=${episode}`;
-                  fetch(url)
+                  fetch(url, {
+                    headers: getSecurityHeaders("GET", "/api/stream"),
+                  })
                     .then((r) => r.json())
                     .then((data) => {
                       if (data.mirrors && data.mirrors.length > 0) {
@@ -3596,7 +3627,9 @@ export function InPlayerSourcePicker({
     if (season !== undefined) vidrockUrl += `&season=${season}`;
     if (episode !== undefined) vidrockUrl += `&episode=${episode}`;
 
-    const pVidrock = fetch(vidrockUrl)
+    const pVidrock = fetch(vidrockUrl, {
+      headers: getSecurityHeaders("GET", "/api/vidrock"),
+    })
       .then((r) => {
         if (!r.ok) throw new Error("Uplink scan failed");
         return r.json();
@@ -3624,7 +3657,9 @@ export function InPlayerSourcePicker({
     if (season !== undefined) videasyUrl += `&season=${season}`;
     if (episode !== undefined) videasyUrl += `&episode=${episode}`;
 
-    const pVideasy = fetch(videasyUrl)
+    const pVideasy = fetch(videasyUrl, {
+      headers: getSecurityHeaders("GET", "/api/videasy"),
+    })
       .then((r) => {
         if (!r.ok) throw new Error("Videasy scan failed");
         return r.json();

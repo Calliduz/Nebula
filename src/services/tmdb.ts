@@ -448,7 +448,9 @@ export const searchMedia = async (query: string): Promise<NebulaMovie[]> => {
           TTL.DETAILS,
         );
         const cast = data.cast || [];
-        return cast
+        const crew = data.crew || [];
+        const credits = (p.known_for_department !== "Acting" && cast.length === 0) ? crew : cast;
+        return credits
           .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0))
           .slice(0, 10)
           .map((m: any) => ({
