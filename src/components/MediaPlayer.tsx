@@ -2427,12 +2427,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="relative pointer-events-none">
-                <Loader2
-                  size={48}
-                  className="animate-spin text-nebula-cyan opacity-80 pointer-events-none"
-                />
-              </div>
+              <h1 className="text-xl md:text-3xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl select-none">
+                {movie.title}
+              </h1>
             )}
             <p className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-bold animate-pulse pointer-events-none">
               Buffering Signal...
