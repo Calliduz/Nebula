@@ -1174,7 +1174,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       hls.on(Hls.Events.FRAG_LOADING, () => {
         activeFragLoads.current++;
-        console.log(`[HLS] Fragment loading started. Active: ${activeFragLoads.current}`);
       });
 
       hls.on(Hls.Events.MANIFEST_LOADED, (_, data) => {
@@ -1229,7 +1228,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         // Track continuous fragment load errors to trigger fallback
         if (d.details === "fragLoadError") {
           activeFragLoads.current = Math.max(0, activeFragLoads.current - 1);
-          console.log(`[HLS] Fragment load failed. Active: ${activeFragLoads.current}`);
           const status = (d.response as any)?.code || (d.response as any)?.status;
           if (status) {
             lastFragErrorStatus = String(status);
@@ -1386,7 +1384,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       hls.on(Hls.Events.FRAG_LOADED, () => {
         activeFragLoads.current = Math.max(0, activeFragLoads.current - 1);
         lastFragLoadedTime.current = Date.now();
-        console.log(`[HLS] Fragment loaded. Active: ${activeFragLoads.current}`);
         frag0LoadRetries.current = 0;
         if (networkRetries > 0) {
           console.log(
@@ -1484,16 +1481,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
             fetch(vidlinkPrefetchUrl)
               .then((r) => r.json())
-              .then((data) =>
+              .then(() =>
                 console.log(
-                  `[PLAYER] Prefetch VidLink success for S${nextEp.season}E${nextEp.episode}:`,
-                  data,
+                  `[PLAYER] Prefetched next episode from VidLink (S${nextEp.season}E${nextEp.episode})`,
                 ),
               )
               .catch((err) =>
                 console.warn(
-                  `[PLAYER] Prefetch VidLink failed for S${nextEp.season}E${nextEp.episode}:`,
-                  err,
+                  `[PLAYER] Prefetch VidLink failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 ),
               );
 
@@ -1501,16 +1496,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             let vidrockPrefetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
             fetch(vidrockPrefetchUrl)
               .then((r) => r.json())
-              .then((data) =>
+              .then(() =>
                 console.log(
-                  `[PLAYER] Prefetch VidRock success for S${nextEp.season}E${nextEp.episode}:`,
-                  data,
+                  `[PLAYER] Prefetched next episode from VidRock (S${nextEp.season}E${nextEp.episode})`,
                 ),
               )
               .catch((err) =>
                 console.warn(
-                  `[PLAYER] Prefetch VidRock failed for S${nextEp.season}E${nextEp.episode}:`,
-                  err,
+                  `[PLAYER] Prefetch VidRock failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 ),
               );
 
@@ -1518,16 +1511,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             let videasyPrefetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
             fetch(videasyPrefetchUrl)
               .then((r) => r.json())
-              .then((data) =>
+              .then(() =>
                 console.log(
-                  `[PLAYER] Prefetch Videasy success for S${nextEp.season}E${nextEp.episode}:`,
-                  data,
+                  `[PLAYER] Prefetched next episode from Videasy (S${nextEp.season}E${nextEp.episode})`,
                 ),
               )
               .catch((err) =>
                 console.warn(
-                  `[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}:`,
-                  err,
+                  `[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 ),
               );
           }
