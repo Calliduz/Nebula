@@ -341,6 +341,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const frag0LoadRetries = useRef(0);
   const bufferingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const serverTipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeFragLoads = useRef(0);
+  const lastFragLoadedTime = useRef(0);
 
   const showBufferingWithDelay = useCallback((delay = 600) => {
     if (bufferingTimeoutRef.current) return;
@@ -1170,6 +1172,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
 
+      hls.on(Hls.Events.FRAG_LOADING, () => {
+        activeFragLoads.current++;
+        console.log(`[HLS] Fragment loading started. Active: ${activeFragLoads.current}`);
+      });
+
       hls.on(Hls.Events.MANIFEST_LOADED, (_, data) => {
         if (!data.levels || data.levels.length === 0) {
           console.warn(
@@ -1221,6 +1228,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       hls.on(Hls.Events.ERROR, (_, d) => {
         // Track continuous fragment load errors to trigger fallback
         if (d.details === "fragLoadError") {
+          activeFragLoads.current = Math.max(0, activeFragLoads.current - 1);
+          console.log(`[HLS] Fragment load failed. Active: ${activeFragLoads.current}`);
           const status = (d.response as any)?.code || (d.response as any)?.status;
           if (status) {
             lastFragErrorStatus = String(status);
@@ -1375,6 +1384,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       // Reset retry counters on successful fragment load
       hls.on(Hls.Events.FRAG_LOADED, () => {
+        activeFragLoads.current = Math.max(0, activeFragLoads.current - 1);
+        lastFragLoadedTime.current = Date.now();
+        console.log(`[HLS] Fragment loaded. Active: ${activeFragLoads.current}`);
         frag0LoadRetries.current = 0;
         if (networkRetries > 0) {
           console.log(
@@ -1687,18 +1699,27 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }
           recoveryCount++;
         } else if (stallCount === 15 && recoveryCount >= 2) {
-          // 15 seconds frozen and recovery already tried twice — switch mirror
-          console.error(
-            "[WATCHDOG] Permanent freeze — switching to next mirror...",
-          );
-          const nextIdx = activeMirrorRef.current + 1;
-          if (nextIdx < mirrorsRef.current.length) {
-            const failingIdx = activeMirrorRef.current;
-            setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "STUCK" }));
-            selectMirror(nextIdx, mirrorsRef.current);
+          // 15 seconds frozen and recovery already tried twice — switch mirror unless slow CDN is active
+          const isSlowCdn = activeFragLoads.current > 0 || (Date.now() - lastFragLoadedTime.current < 20000);
+          if (isSlowCdn) {
+            console.log(
+              `[WATCHDOG] Playback frozen for ${stallCount}s, but CDN is active (loading/loaded). Keeping current mirror and continuing buffer...`,
+            );
+            setIsBuffering(true);
+            if (hlsRef.current) hlsRef.current.startLoad();
+          } else {
+            console.error(
+              "[WATCHDOG] Permanent freeze — switching to next mirror...",
+            );
+            const nextIdx = activeMirrorRef.current + 1;
+            if (nextIdx < mirrorsRef.current.length) {
+              const failingIdx = activeMirrorRef.current;
+              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "STUCK" }));
+              selectMirror(nextIdx, mirrorsRef.current);
+            }
+            stallCount = 0;
+            recoveryCount = 0;
           }
-          stallCount = 0;
-          recoveryCount = 0;
         }
       } else {
         if (stallCount > 0) {
@@ -3639,7 +3660,7 @@ export function InPlayerSourcePicker({
         if (!isBackground) setVideasyLoading(false);
       });
 
-    return Promise.all([pVidrock, pVidasy]);
+    return Promise.all([pVidrock, pVideasy]);
   }, [movie.id, movie.type, season, episode, movie.title, movie.year]);
 
   useEffect(() => {
