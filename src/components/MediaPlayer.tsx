@@ -13,6 +13,7 @@ import {
   Gauge,
   Loader2,
   Subtitles,
+  ChevronLeft,
   ChevronRight,
   List,
   Search,
@@ -224,12 +225,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     season: number;
     episode: number;
   } | null>(null);
+  const [forceRefetchTrigger, setForceRefetchTrigger] = useState(0);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
   const [qualityTag, setQualityTag] = useState<string>(""); // CAM | WEBDL | WEBRIP | BLURAY | etc.
   const [resolution, setResolution] = useState<string>("");
   const [toast, setToast] = useState<{
     message: string;
     type: "error" | "info";
   } | null>(null);
+  const [failedMirrors, setFailedMirrors] = useState<Record<number, string>>({});
 
   const [doubleTapFeedback, setDoubleTapFeedback] = useState<{
     visible: boolean;
@@ -262,6 +266,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (!m) return;
     setActiveMirror(index);
     activeMirrorRef.current = index;
+    setFailedMirrors((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
     setStreamUrl(m.url);
     setIsEmbed(m.type === "embed");
 
@@ -460,6 +469,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setActiveMirror(0);
     mirrorsRef.current = [];
     activeMirrorRef.current = 0;
+    setFailedMirrors({});
     setSubtitles([]);
     setActiveSubtitle(-1);
     hasAutoSelectedSub.current = false;
@@ -1206,10 +1216,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       const MAX_NETWORK_RETRIES = 4;
       let mediaRecoveryAttempt = 0;
       let fragErrorTimeout: NodeJS.Timeout | null = null;
+      let lastFragErrorStatus: string | null = null;
 
       hls.on(Hls.Events.ERROR, (_, d) => {
         // Track continuous fragment load errors to trigger fallback
         if (d.details === "fragLoadError") {
+          const status = (d.response as any)?.code || (d.response as any)?.status;
+          if (status) {
+            lastFragErrorStatus = String(status);
+          }
           if (!fragErrorTimeout) {
             console.warn(
               "[HLS] Fragment load error detected. Starting 5s mirror fallback timer...",
@@ -1220,6 +1235,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               );
               const nextIdx = activeMirrorRef.current + 1;
               if (nextIdx < mirrorsRef.current.length) {
+                const failingIdx = activeMirrorRef.current;
+                setFailedMirrors((prev) => ({ ...prev, [failingIdx]: lastFragErrorStatus || "502/404" }));
                 selectMirror(nextIdx, mirrorsRef.current);
               } else {
                 setError(
@@ -1248,6 +1265,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
+              const failingIdx = activeMirrorRef.current;
+              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "TIMEOUT" }));
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
               setError("Initial playback failed. All mirrors exhausted.");
@@ -1273,12 +1292,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
           const statusCode =
             (d.response as any)?.code || (d.response as any)?.status;
-          if (statusCode === 404 || statusCode === 403) {
+          if ([403, 404, 500, 502, 503, 504].includes(statusCode)) {
             console.warn(
               `[HLS] Fatal network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
             );
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
+              const failingIdx = activeMirrorRef.current;
+              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: String(statusCode) }));
               console.log(
                 `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
               );
@@ -1310,6 +1331,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
+              const failingIdx = activeMirrorRef.current;
+              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "502/504" }));
               console.log(
                 `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
               );
@@ -1335,6 +1358,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             // Last resort — try next mirror (use refs for latest state)
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
+              const failingIdx = activeMirrorRef.current;
+              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "DECODE" }));
               console.log(
                 `[HLS] Media recovery failed. Switching to mirror ${nextIdx}...`,
               );
@@ -1616,6 +1641,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           );
           const nextIdx = activeMirrorRef.current + 1;
           if (nextIdx < mirrorsRef.current.length) {
+            const failingIdx = activeMirrorRef.current;
+            setFailedMirrors((prev) => ({ ...prev, [failingIdx]: `CODE:${err.code}` }));
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             setError(`Playback failed: ${err.message || "Media source error"}`);
@@ -1666,6 +1693,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           );
           const nextIdx = activeMirrorRef.current + 1;
           if (nextIdx < mirrorsRef.current.length) {
+            const failingIdx = activeMirrorRef.current;
+            setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "STUCK" }));
             selectMirror(nextIdx, mirrorsRef.current);
           }
           stallCount = 0;
@@ -2043,33 +2072,50 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   };
 
-  const getNextEpisodeDetails = () => {
-    if (
-      movie.type !== "tv" ||
-      season === undefined ||
-      episode === undefined ||
-      !tvDetails ||
-      !tvDetails.seasons
-    ) {
+  const getPreviousEpisodeFor = useCallback((s: number, e: number) => {
+    if (!tvDetails || !tvDetails.seasons) {
       return null;
     }
     const sortedSeasons = tvDetails.seasons
-      .filter((s: any) => s.season_number > 0)
+      .filter((sInfo: any) => sInfo.season_number > 0)
+      .sort((a: any, b: any) => a.season_number - b.season_number);
+
+    if (e > 1) {
+      return { season: s, episode: e - 1 };
+    }
+
+    const currentSeasonIdx = sortedSeasons.findIndex(
+      (sInfo: any) => sInfo.season_number === s,
+    );
+    if (currentSeasonIdx > 0) {
+      const prevSeason = sortedSeasons[currentSeasonIdx - 1];
+      return { season: prevSeason.season_number, episode: prevSeason.episode_count };
+    }
+
+    return null;
+  }, [tvDetails]);
+
+  const getNextEpisodeFor = useCallback((s: number, e: number) => {
+    if (!tvDetails || !tvDetails.seasons) {
+      return null;
+    }
+    const sortedSeasons = tvDetails.seasons
+      .filter((sInfo: any) => sInfo.season_number > 0)
       .sort((a: any, b: any) => a.season_number - b.season_number);
 
     const currentSeasonInfo = sortedSeasons.find(
-      (s: any) => s.season_number === season,
+      (sInfo: any) => sInfo.season_number === s,
     );
     if (!currentSeasonInfo) return null;
 
     const maxEpisodes = currentSeasonInfo.episode_count;
-    if (episode < maxEpisodes) {
-      return { season, episode: episode + 1 };
+    if (e < maxEpisodes) {
+      return { season: s, episode: e + 1 };
     }
 
     // Check if there is a next season
     const currentSeasonIdx = sortedSeasons.findIndex(
-      (s: any) => s.season_number === season,
+      (sInfo: any) => sInfo.season_number === s,
     );
     if (
       currentSeasonIdx !== -1 &&
@@ -2080,7 +2126,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
 
     return null;
-  };
+  }, [tvDetails]);
+
+  const getNextEpisodeDetails = useCallback(() => {
+    if (movie.type !== "tv" || season === undefined || episode === undefined) {
+      return null;
+    }
+    return getNextEpisodeFor(season, episode);
+  }, [movie.type, season, episode, getNextEpisodeFor]);
 
   const hasNext = !tvDetails || getNextEpisodeDetails() !== null;
 
@@ -2277,6 +2330,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 onClick={() => {
                   setError("");
                   setLoading(true);
+                  setFailedMirrors({});
                   // Re-trigger the stream fetch by bumping streamUrl state
                   setStreamUrl(null);
                   let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
@@ -3093,7 +3147,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       ))}
                     </div>
                   </div>
-                  {mirrors.length > 1 &&
+                  {mirrors.length > 0 &&
                     (() => {
                       const groupedByCategory: Record<
                         string,
@@ -3135,6 +3189,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                     const countryCode =
                                       flagCode === "en" ? "us" : flagCode;
                                     const isSelected = activeMirror === idx;
+                                    const failedReason = failedMirrors[idx];
                                     return (
                                       <button
                                         key={idx}
@@ -3154,9 +3209,16 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                             }}
                                           />
                                           <div className="flex flex-col min-w-0">
-                                            <span className="truncate text-[11.5px] font-semibold leading-tight text-white font-display">
-                                              {m.cleanName}
-                                            </span>
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                              <span className="truncate text-[11.5px] font-semibold leading-tight text-white font-display">
+                                                {m.cleanName}
+                                              </span>
+                                              {failedReason && (
+                                                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 uppercase tracking-wider shrink-0">
+                                                  {failedReason}
+                                                </span>
+                                              )}
+                                            </div>
                                             {m.audio && (
                                               <span className="text-[9.5px] text-white/40 font-normal leading-tight mt-0.5">
                                                 {m.audio}
@@ -3386,12 +3448,72 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       ` · S${sourceSelect.season}E${sourceSelect.episode}`}
                   </p>
                 </div>
-                <button
-                  onClick={() => setSourceSelect(null)}
-                  className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:text-white transition-colors"
-                >
-                  <X size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Previous Episode Button */}
+                  {movie.type === "tv" && (() => {
+                    const prevEp = getPreviousEpisodeFor(sourceSelect.season, sourceSelect.episode);
+                    return (
+                      <button
+                        onClick={() => {
+                          if (prevEp) {
+                            setSourceSelect(prevEp);
+                            setForceRefetchTrigger(0);
+                          }
+                        }}
+                        disabled={!prevEp}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                          prevEp
+                            ? "bg-white/5 hover:bg-white/10 text-white border-white/5"
+                            : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
+                        }`}
+                        title={prevEp ? `Previous Episode (S${prevEp.season}E${prevEp.episode})` : "No Previous Episode"}
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                    );
+                  })()}
+
+                  {/* Refetch Button */}
+                  <button
+                    onClick={() => setForceRefetchTrigger((t) => t + 1)}
+                    disabled={sourcesLoading}
+                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-95 border border-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Force refetch all sources"
+                  >
+                    <RefreshCw size={14} className={sourcesLoading ? "animate-spin text-nebula-cyan" : ""} />
+                  </button>
+
+                  {/* Next Episode Button */}
+                  {movie.type === "tv" && (() => {
+                    const nextEp = getNextEpisodeFor(sourceSelect.season, sourceSelect.episode);
+                    return (
+                      <button
+                        onClick={() => {
+                          if (nextEp) {
+                            setSourceSelect(nextEp);
+                            setForceRefetchTrigger(0);
+                          }
+                        }}
+                        disabled={!nextEp}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                          nextEp
+                            ? "bg-white/5 hover:bg-white/10 text-white border-white/5"
+                            : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
+                        }`}
+                        title={nextEp ? `Next Episode (S${nextEp.season}E${nextEp.episode})` : "No More Episodes"}
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    );
+                  })()}
+
+                  <button
+                    onClick={() => setSourceSelect(null)}
+                    className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Cards — horizontal on landscape, stacked on portrait */}
@@ -3399,6 +3521,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 movie={movie}
                 season={sourceSelect.season}
                 episode={sourceSelect.episode}
+                forceRefetchTrigger={forceRefetchTrigger}
+                onLoadingChange={setSourcesLoading}
                 onSelect={(src) => {
                   setSourceSelect(null);
                   navigate(
@@ -3419,11 +3543,15 @@ export function InPlayerSourcePicker({
   movie,
   season,
   episode,
+  forceRefetchTrigger,
+  onLoadingChange,
   onSelect,
 }: {
   movie: any;
   season?: number;
   episode?: number;
+  forceRefetchTrigger: number;
+  onLoadingChange: (loading: boolean) => void;
   onSelect: (src?: string) => void;
 }) {
   const [sources, setSources] = useState<any[]>([]);
@@ -3434,25 +3562,37 @@ export function InPlayerSourcePicker({
   const [videasyLoading, setVideasyLoading] = useState(true);
   const [videasyError, setVideasyError] = useState("");
 
+  // Keep latest onLoadingChange ref to avoid triggering effect loops
+  const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-    setVideasyLoading(true);
-    setVideasyError("");
+    onLoadingChangeRef.current = onLoadingChange;
+  }, [onLoadingChange]);
+
+  useEffect(() => {
+    onLoadingChangeRef.current?.(loading || videasyLoading);
+  }, [loading, videasyLoading]);
+
+  const fetchSources = useCallback((force = false, isBackground = false) => {
+    if (!isBackground) {
+      setLoading(true);
+      setError("");
+      setVideasyLoading(true);
+      setVideasyError("");
+    }
+
+    const forceParam = force ? "&force=1" : "";
 
     // 1. VidRock Fetch
-    let vidrockUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+    let vidrockUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
     if (season !== undefined) vidrockUrl += `&season=${season}`;
     if (episode !== undefined) vidrockUrl += `&episode=${episode}`;
 
-    fetch(vidrockUrl)
+    const pVidrock = fetch(vidrockUrl)
       .then((r) => {
         if (!r.ok) throw new Error("Uplink scan failed");
         return r.json();
       })
       .then((data) => {
-        if (!active) return;
         const list = Object.entries(data)
           .filter(([, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
@@ -3461,26 +3601,26 @@ export function InPlayerSourcePicker({
             type: v.type || "hls",
           }));
         setSources(list);
+        if (!isBackground) setError("");
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (!isBackground) setError(e.message);
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (!isBackground) setLoading(false);
       });
 
     // 2. Videasy Fetch
-    let videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}`;
+    let videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
     if (season !== undefined) videasyUrl += `&season=${season}`;
     if (episode !== undefined) videasyUrl += `&episode=${episode}`;
 
-    fetch(videasyUrl)
+    const pVideasy = fetch(videasyUrl)
       .then((r) => {
         if (!r.ok) throw new Error("Videasy scan failed");
         return r.json();
       })
       .then((data) => {
-        if (!active) return;
         const list = Object.entries(data)
           .filter(([, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
@@ -3490,18 +3630,43 @@ export function InPlayerSourcePicker({
             audio: v.audio || "",
           }));
         setVideasySources(list);
+        if (!isBackground) setVideasyError("");
       })
       .catch((e) => {
-        if (active) setVideasyError(e.message);
+        if (!isBackground) setVideasyError(e.message);
       })
       .finally(() => {
-        if (active) setVideasyLoading(false);
+        if (!isBackground) setVideasyLoading(false);
       });
 
-    return () => {
-      active = false;
+    return Promise.all([pVidrock, pVidasy]);
+  }, [movie.id, movie.type, season, episode, movie.title, movie.year]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const force = forceRefetchTrigger > 0;
+
+    const runFetch = async (isForce: boolean, isBg: boolean) => {
+      if (cancelled) return;
+      await fetchSources(isForce, isBg);
     };
-  }, [movie.id, season, episode, movie.title, movie.year]);
+
+    runFetch(force, false);
+
+    // Progressive background sync at 10s, 20s, and 45s
+    const syncIntervals = [10000, 20000, 45000];
+    const timers = syncIntervals.map((delay) =>
+      setTimeout(() => {
+        runFetch(false, true);
+      }, delay)
+    );
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, [fetchSources, forceRefetchTrigger, season, episode]);
 
   const vidrockUrl = sources
     .map((s) => (s.url.includes("#") ? s.url : `${s.url}#${s.name}#${s.type}`))
