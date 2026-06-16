@@ -13,6 +13,7 @@ const TTL = {
   DETAILS: 1000 * 60 * 60 * 24 * 7, // 7 days
   LEGACY: 1000 * 60 * 60 * 24 * 365 * 30, // ~30 years for pre-2000 films
   META: 1000 * 60 * 60 * 24 * 7, // 7 days for logos/backdrops
+  SEARCH: 1000 * 60 * 15, // 15 minutes — search queries change, 7 days is too stale
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -175,6 +176,7 @@ const fetchFromTMDB = async (
   endpoint: string,
   params: Record<string, string> = {},
   ttl: number = TTL.DETAILS,
+  signal?: AbortSignal,
 ): Promise<any> => {
   // Safety: never fetch KissKH IDs from TMDB
   const lastPart = endpoint.split("/").pop() || "";
@@ -193,9 +195,11 @@ const fetchFromTMDB = async (
   return fetchWithCache(
     cacheKey,
     async () => {
-      const res = await fetch(
-        `${getApiBase()}/api/tmdb-proxy?${queryParams.toString()}`,
-      );
+      const fetchArgs: [string, RequestInit?] = [`${getApiBase()}/api/tmdb-proxy?${queryParams.toString()}`];
+      if (signal) {
+        fetchArgs.push({ signal });
+      }
+      const res = await fetch(...fetchArgs);
       if (!res.ok) throw new Error(`TMDB Proxy ${res.status}: ${endpoint}`);
       return res.json();
     },
@@ -400,24 +404,102 @@ export const discoverMedia = async (
   }
 };
 
-export const searchMedia = async (query: string): Promise<NebulaMovie[]> => {
+const COMMON_MEDIA_WORDS = [
+  "viral", "hit", "piece", "one", "stranger", "things", "dark", "knight",
+  "breaking", "bad", "demon", "slayer", "bear", "inception", "interstellar",
+  "attack", "titan", "jujutsu", "kaisen", "hunter", "death", "note", "ball",
+  "dragon", "naruto", "bleach", "punch", "solo", "leveling", "avatar", "last",
+  "airbender", "cyber", "punk", "star", "wars", "trek", "dead", "pool",
+  "avengers", "game", "thrones", "spider", "man", "bat", "iron", "super", "loki"
+];
+
+const splitCompoundWords = (query: string): string => {
+  const q = query.toLowerCase().trim();
+  if (!q || q.includes(" ") || q.includes("-") || q.includes("_") || q.includes(".")) {
+    return query;
+  }
+
+  for (let i = 2; i <= q.length - 2; i++) {
+    const left = q.slice(0, i);
+    const right = q.slice(i);
+    if (COMMON_MEDIA_WORDS.includes(left) && COMMON_MEDIA_WORDS.includes(right)) {
+      return left.charAt(0).toUpperCase() + left.slice(1) + " " + right.charAt(0).toUpperCase() + right.slice(1);
+    }
+  }
+
+  return query;
+};
+
+const getNormalizedTitle = (title: string): string => {
+  if (!title) return "";
+  return title
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .replace(/([a-zA-Z])([0-9])/g, "$1 $2")
+    .replace(/([0-9])([a-zA-Z])/g, "$1 $2")
+    .toLowerCase()
+    .replace(/[_\-\.:\/\\()\[\]]/g, " ")
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const getMatchTier = (titleNorm: string, queryNorm: string): number => {
+  if (!queryNorm || !titleNorm) return 0;
+  if (titleNorm === queryNorm) return 3; // Exact match
+  
+  // Collapse spaces for compound word matching (e.g., "viral hit" vs "viralhit")
+  const titleCollapsed = titleNorm.replace(/\s+/g, "");
+  const queryCollapsed = queryNorm.replace(/\s+/g, "");
+  
+  if (titleCollapsed === queryCollapsed) return 3; // Exact match collapsed
+  if (titleCollapsed.startsWith(queryCollapsed)) return 2; // Starts with collapsed
+  if (titleCollapsed.includes(queryCollapsed)) return 1; // Contains collapsed
+  return 0; // No match
+};
+
+export const searchMedia = async (
+  query: string,
+  signal?: AbortSignal,
+): Promise<NebulaMovie[]> => {
   try {
-    const variations = [query];
-    const splitSpaced = query
+    const trimmedQuery = query ? query.trim() : "";
+    if (!trimmedQuery) return [];
+
+    // Split camelCase, abbreviations, and alphanumeric boundaries
+    const splitSpaced = trimmedQuery
       .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
       .replace(/([a-zA-Z])([0-9])/g, "$1 $2")
       .replace(/([0-9])([a-zA-Z])/g, "$1 $2")
+      .replace(/[_\-\.:\/\\()\[\]]/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
-    if (splitSpaced !== query) {
+
+    const variations = [trimmedQuery];
+    if (splitSpaced && splitSpaced.toLowerCase() !== trimmedQuery.toLowerCase()) {
       variations.push(splitSpaced);
     }
 
-    // Parallel fetch for all query variations
-    const queryPromises = variations.map((q) =>
-      fetchFromTMDB("/search/multi", { query: q }, TTL.DETAILS)
+    const compoundSplit = splitCompoundWords(trimmedQuery);
+    if (compoundSplit && compoundSplit.toLowerCase() !== trimmedQuery.toLowerCase() && !variations.includes(compoundSplit)) {
+      variations.push(compoundSplit);
+    }
+
+    // Parallel fetch for all query variations (page 1)
+    const queryPromises: Promise<any[]>[] = variations.map((q) =>
+      fetchFromTMDB("/search/multi", { query: q, page: "1" }, TTL.SEARCH, signal)
         .then((data) => data.results || [])
         .catch(() => []),
     );
+
+    // Also fetch page 2 for the primary query to return more than 20 direct titles
+    queryPromises.push(
+      fetchFromTMDB("/search/multi", { query: trimmedQuery, page: "2" }, TTL.SEARCH, signal)
+        .then((data) => data.results || [])
+        .catch(() => []),
+    );
+
     const resultsLists = await Promise.all(queryPromises);
 
     // Flatten and deduplicate initial multi-search results
@@ -439,6 +521,43 @@ export const searchMedia = async (query: string): Promise<NebulaMovie[]> => {
       }
     }
 
+    // Sort direct results and people by relevance/popularity before slicing
+    const queryNorm = getNormalizedTitle(trimmedQuery);
+
+    const getScore = (item: any) => {
+      const title = item.title || item.name || "";
+      const titleNorm = getNormalizedTitle(title);
+      const tier = getMatchTier(titleNorm, queryNorm);
+      const popularity = item.popularity || 0;
+      return { tier, popularity };
+    };
+
+    directResults.sort((a, b) => {
+      const scoreA = getScore(a);
+      const scoreB = getScore(b);
+      if (scoreA.tier !== scoreB.tier) {
+        return scoreB.tier - scoreA.tier;
+      }
+      return scoreB.popularity - scoreA.popularity;
+    });
+
+    const getPersonScore = (item: any) => {
+      const name = item.name || "";
+      const nameNorm = getNormalizedTitle(name);
+      const tier = getMatchTier(nameNorm, queryNorm);
+      const popularity = item.popularity || 0;
+      return { tier, popularity };
+    };
+
+    people.sort((a, b) => {
+      const scoreA = getPersonScore(a);
+      const scoreB = getPersonScore(b);
+      if (scoreA.tier !== scoreB.tier) {
+        return scoreB.tier - scoreA.tier;
+      }
+      return scoreB.popularity - scoreA.popularity;
+    });
+
     // Parallel fetch credits for top 3 people matched
     const personCreditsPromises = people.slice(0, 3).map(async (p) => {
       try {
@@ -446,9 +565,26 @@ export const searchMedia = async (query: string): Promise<NebulaMovie[]> => {
           `/person/${p.id}/combined_credits`,
           {},
           TTL.DETAILS,
+          signal,
         );
-        const cast = data.cast || [];
-        return cast
+        let credits = [];
+        if (p.known_for_department === "Acting") {
+          credits = data.cast || [];
+        } else {
+          credits = data.crew || data.cast || [];
+        }
+
+        // Deduplicate movies within this person's credits to prevent duplicate crew entries
+        const uniqueCredits: any[] = [];
+        const seenCreditIds = new Set<number | string>();
+        for (const c of credits) {
+          if (!c || !c.id) continue;
+          if (seenCreditIds.has(c.id)) continue;
+          seenCreditIds.add(c.id);
+          uniqueCredits.push(c);
+        }
+
+        return uniqueCredits
           .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0))
           .slice(0, 10)
           .map((m: any) => ({
@@ -467,6 +603,7 @@ export const searchMedia = async (query: string): Promise<NebulaMovie[]> => {
           `/${m.media_type}/${m.id}/recommendations`,
           {},
           TTL.DETAILS,
+          signal,
         );
         return (data.results || []).slice(0, 8).map((rec: any) => ({
           ...rec,
@@ -651,6 +788,7 @@ export const getMediaDetails = async (
 
 export const enrichMovies = async (
   normalized: NebulaMovie[],
+  signal?: AbortSignal,
 ): Promise<NebulaMovie[]> => {
   if (!normalized.length) return normalized;
 
@@ -688,11 +826,17 @@ export const enrichMovies = async (
     const apiBase = getApiBase();
 
     // Parallel fetch for Logos and Availability
+    const metaArgs: [string, RequestInit?] = [`${apiBase}/api/metadata?batch=${comboIds}`];
+    if (signal) metaArgs.push({ signal });
+
+    const availArgs: [string, RequestInit?] = [`${apiBase}/api/stream/availability?ids=${simpleIds}`];
+    if (signal) availArgs.push({ signal });
+
     const [metaRes, availRes] = await Promise.all([
-      fetch(`${apiBase}/api/metadata?batch=${comboIds}`)
+      fetch(...metaArgs)
         .then((r) => r.json())
         .catch(() => ({ results: [] })),
-      fetch(`${apiBase}/api/stream/availability?ids=${simpleIds}`)
+      fetch(...availArgs)
         .then((r) => r.json())
         .catch(() => ({ results: [] })),
     ]);
