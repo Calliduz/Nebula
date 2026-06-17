@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import { useSubtitleManager } from "../hooks/useSubtitleManager";
+import { SubtitleOverlay } from "./SubtitleOverlay";
 
 import { API_BASE_URL } from "../config";
 const API = API_BASE_URL;
@@ -190,6 +192,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         : undefined;
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
+  const {
+    prefs,
+    updatePreference,
+    selectPreset,
+    activeCues,
+    updateActiveCues,
+    cleanupSubtitleState,
+    preferredLanguageISO,
+    setPreferredLanguageISO,
+  } = useSubtitleManager(streamUrl);
+
+  const [showStyleCustomizer, setShowStyleCustomizer] = useState(false);
   const [isEmbed, setIsEmbed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -233,7 +247,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     message: string;
     type: "error" | "info";
   } | null>(null);
-  const [failedMirrors, setFailedMirrors] = useState<Record<number, string>>({});
+  const [failedMirrors, setFailedMirrors] = useState<Record<number, string>>(
+    {},
+  );
 
   const [doubleTapFeedback, setDoubleTapFeedback] = useState<{
     visible: boolean;
@@ -782,6 +798,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     [API, movie.id, movie.type, movie.origin, movie.title, season, episode],
   );
 
+  // Centralized subtitle cleanup on stream URL change
+  useEffect(() => {
+    cleanupSubtitleState(videoRef.current);
+    if (vttBlobUrl) {
+      URL.revokeObjectURL(vttBlobUrl);
+    }
+    setVttBlobUrl(null);
+    setActiveSubtitle(-1);
+    hasAutoSelectedSub.current = false;
+  }, [streamUrl, cleanupSubtitleState]);
+
   // Auto-fetch on stream load
   useEffect(() => {
     if (!streamUrl) return;
@@ -791,7 +818,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const handleSubtitleChange = (index: number) => {
     setActiveSubtitle(index);
     setSubtitleOffset(0);
-    if (index === -1) hasAutoSelectedSub.current = true; // User manually turned off
+    if (index === -1) {
+      hasAutoSelectedSub.current = true; // User manually turned off
+      setPreferredLanguageISO(null);
+    } else {
+      const sub = subtitles[index];
+      if (sub && sub.lang) {
+        setPreferredLanguageISO(sub.lang);
+      }
+    }
   };
 
   const adjustSubtitleDelay = (delta: number) => {
@@ -933,17 +968,29 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
   }, [activeSubtitle, activeSubUrl, subtitleOffset]);
 
-  // ── Auto-select first subtitle ───────────────────────────────────────────
+  // ── Auto-select first subtitle or restore preferred language ──────────────
   useEffect(() => {
-    if (
-      subtitles.length > 0 &&
-      activeSubtitle === -1 &&
-      !hasAutoSelectedSub.current
-    ) {
-      setActiveSubtitle(0);
-      hasAutoSelectedSub.current = true;
+    if (subtitles.length > 0) {
+      // If we already have a valid manual or automatic selection, don't override it
+      if (activeSubtitle !== -1 && subtitles[activeSubtitle]) {
+        return;
+      }
+
+      if (preferredLanguageISO) {
+        const matchIdx = subtitles.findIndex(
+          (s) => s.lang === preferredLanguageISO,
+        );
+        if (matchIdx !== -1) {
+          setActiveSubtitle(matchIdx);
+          return;
+        }
+      }
+      if (activeSubtitle === -1 && !hasAutoSelectedSub.current) {
+        setActiveSubtitle(0);
+        hasAutoSelectedSub.current = true;
+      }
     }
-  }, [subtitles]);
+  }, [subtitles, preferredLanguageISO, activeSubtitle]);
 
   const getProgressKey = useCallback(() => {
     if (movie.type === "tv" && season !== undefined && episode !== undefined) {
@@ -1228,7 +1275,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         // Track continuous fragment load errors to trigger fallback
         if (d.details === "fragLoadError") {
           activeFragLoads.current = Math.max(0, activeFragLoads.current - 1);
-          const status = (d.response as any)?.code || (d.response as any)?.status;
+          const status =
+            (d.response as any)?.code || (d.response as any)?.status;
           if (status) {
             lastFragErrorStatus = String(status);
           }
@@ -1243,7 +1291,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               const nextIdx = activeMirrorRef.current + 1;
               if (nextIdx < mirrorsRef.current.length) {
                 const failingIdx = activeMirrorRef.current;
-                setFailedMirrors((prev) => ({ ...prev, [failingIdx]: lastFragErrorStatus || "502/404" }));
+                setFailedMirrors((prev) => ({
+                  ...prev,
+                  [failingIdx]: lastFragErrorStatus || "502/404",
+                }));
                 selectMirror(nextIdx, mirrorsRef.current);
               } else {
                 setError(
@@ -1273,7 +1324,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
               const failingIdx = activeMirrorRef.current;
-              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "TIMEOUT" }));
+              setFailedMirrors((prev) => ({
+                ...prev,
+                [failingIdx]: "TIMEOUT",
+              }));
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
               setError("Initial playback failed. All mirrors exhausted.");
@@ -1306,7 +1360,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
               const failingIdx = activeMirrorRef.current;
-              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: String(statusCode) }));
+              setFailedMirrors((prev) => ({
+                ...prev,
+                [failingIdx]: String(statusCode),
+              }));
               console.log(
                 `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
               );
@@ -1339,7 +1396,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
               const failingIdx = activeMirrorRef.current;
-              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "502/504" }));
+              setFailedMirrors((prev) => ({
+                ...prev,
+                [failingIdx]: "502/504",
+              }));
               console.log(
                 `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
               );
@@ -1565,6 +1625,28 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }
       }
       setCurrentTime(formatTime(video.currentTime));
+      // Find the active subtitle track (can be showing or hidden)
+      const activeTrack = Array.from(video.textTracks).find(
+        (t: any) => t.mode === "hidden" || t.mode === "showing",
+      ) as any;
+
+      if (activeTrack) {
+        if (!prefs.useNativeSubtitles) {
+          // If custom subtitles are preferred, ensure the mode is "hidden" so the native player doesn't draw them
+          if (activeTrack.mode !== "hidden") {
+            activeTrack.mode = "hidden";
+          }
+          updateActiveCues(activeTrack.activeCues);
+        } else {
+          // If native subtitles are preferred, ensure the mode is "showing"
+          if (activeTrack.mode !== "showing") {
+            activeTrack.mode = "showing";
+          }
+          updateActiveCues(null);
+        }
+      } else if (activeSubtitle === -1) {
+        updateActiveCues(null);
+      }
       if (video.buffered.length > 0) {
         setBuffered(
           (video.buffered.end(video.buffered.length - 1) / video.duration) *
@@ -1645,7 +1727,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const nextIdx = activeMirrorRef.current + 1;
           if (nextIdx < mirrorsRef.current.length) {
             const failingIdx = activeMirrorRef.current;
-            setFailedMirrors((prev) => ({ ...prev, [failingIdx]: `CODE:${err.code}` }));
+            setFailedMirrors((prev) => ({
+              ...prev,
+              [failingIdx]: `CODE:${err.code}`,
+            }));
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             setError(`Playback failed: ${err.message || "Media source error"}`);
@@ -1691,7 +1776,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           recoveryCount++;
         } else if (stallCount === 15 && recoveryCount >= 2) {
           // 15 seconds frozen and recovery already tried twice — switch mirror unless slow CDN is active
-          const isSlowCdn = activeFragLoads.current > 0 || (Date.now() - lastFragLoadedTime.current < 20000);
+          const isSlowCdn =
+            activeFragLoads.current > 0 ||
+            Date.now() - lastFragLoadedTime.current < 20000;
           if (isSlowCdn) {
             console.log(
               `[WATCHDOG] Playback frozen for ${stallCount}s, but CDN is active (loading/loaded). Keeping current mirror and continuing buffer...`,
@@ -2084,61 +2171,70 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   };
 
-  const getPreviousEpisodeFor = useCallback((s: number, e: number) => {
-    if (!tvDetails || !tvDetails.seasons) {
+  const getPreviousEpisodeFor = useCallback(
+    (s: number, e: number) => {
+      if (!tvDetails || !tvDetails.seasons) {
+        return null;
+      }
+      const sortedSeasons = tvDetails.seasons
+        .filter((sInfo: any) => sInfo.season_number > 0)
+        .sort((a: any, b: any) => a.season_number - b.season_number);
+
+      if (e > 1) {
+        return { season: s, episode: e - 1 };
+      }
+
+      const currentSeasonIdx = sortedSeasons.findIndex(
+        (sInfo: any) => sInfo.season_number === s,
+      );
+      if (currentSeasonIdx > 0) {
+        const prevSeason = sortedSeasons[currentSeasonIdx - 1];
+        return {
+          season: prevSeason.season_number,
+          episode: prevSeason.episode_count,
+        };
+      }
+
       return null;
-    }
-    const sortedSeasons = tvDetails.seasons
-      .filter((sInfo: any) => sInfo.season_number > 0)
-      .sort((a: any, b: any) => a.season_number - b.season_number);
+    },
+    [tvDetails],
+  );
 
-    if (e > 1) {
-      return { season: s, episode: e - 1 };
-    }
+  const getNextEpisodeFor = useCallback(
+    (s: number, e: number) => {
+      if (!tvDetails || !tvDetails.seasons) {
+        return null;
+      }
+      const sortedSeasons = tvDetails.seasons
+        .filter((sInfo: any) => sInfo.season_number > 0)
+        .sort((a: any, b: any) => a.season_number - b.season_number);
 
-    const currentSeasonIdx = sortedSeasons.findIndex(
-      (sInfo: any) => sInfo.season_number === s,
-    );
-    if (currentSeasonIdx > 0) {
-      const prevSeason = sortedSeasons[currentSeasonIdx - 1];
-      return { season: prevSeason.season_number, episode: prevSeason.episode_count };
-    }
+      const currentSeasonInfo = sortedSeasons.find(
+        (sInfo: any) => sInfo.season_number === s,
+      );
+      if (!currentSeasonInfo) return null;
 
-    return null;
-  }, [tvDetails]);
+      const maxEpisodes = currentSeasonInfo.episode_count;
+      if (e < maxEpisodes) {
+        return { season: s, episode: e + 1 };
+      }
 
-  const getNextEpisodeFor = useCallback((s: number, e: number) => {
-    if (!tvDetails || !tvDetails.seasons) {
+      // Check if there is a next season
+      const currentSeasonIdx = sortedSeasons.findIndex(
+        (sInfo: any) => sInfo.season_number === s,
+      );
+      if (
+        currentSeasonIdx !== -1 &&
+        currentSeasonIdx < sortedSeasons.length - 1
+      ) {
+        const nextSeason = sortedSeasons[currentSeasonIdx + 1];
+        return { season: nextSeason.season_number, episode: 1 };
+      }
+
       return null;
-    }
-    const sortedSeasons = tvDetails.seasons
-      .filter((sInfo: any) => sInfo.season_number > 0)
-      .sort((a: any, b: any) => a.season_number - b.season_number);
-
-    const currentSeasonInfo = sortedSeasons.find(
-      (sInfo: any) => sInfo.season_number === s,
-    );
-    if (!currentSeasonInfo) return null;
-
-    const maxEpisodes = currentSeasonInfo.episode_count;
-    if (e < maxEpisodes) {
-      return { season: s, episode: e + 1 };
-    }
-
-    // Check if there is a next season
-    const currentSeasonIdx = sortedSeasons.findIndex(
-      (sInfo: any) => sInfo.season_number === s,
-    );
-    if (
-      currentSeasonIdx !== -1 &&
-      currentSeasonIdx < sortedSeasons.length - 1
-    ) {
-      const nextSeason = sortedSeasons[currentSeasonIdx + 1];
-      return { season: nextSeason.season_number, episode: 1 };
-    }
-
-    return null;
-  }, [tvDetails]);
+    },
+    [tvDetails],
+  );
 
   const getNextEpisodeDetails = useCallback(() => {
     if (movie.type !== "tv" || season === undefined || episode === undefined) {
@@ -2168,11 +2264,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[200] bg-black overflow-hidden"
+      className={`fixed inset-0 z-[200] bg-black overflow-hidden nebula-player ${
+        !prefs.useNativeSubtitles && activeSubtitle !== -1
+          ? "custom-subs-active"
+          : ""
+      }`}
       onPointerMove={(e) => {
         if (e.pointerType !== "touch") resetHideTimer();
       }}
-      style={{ cursor: showUi ? "default" : "none" }}
+      style={
+        {
+          cursor: showUi ? "default" : "none",
+          containerType: "inline-size",
+        } as React.CSSProperties
+      }
     >
       <AnimatePresence>
         {toast && (
@@ -2455,22 +2560,44 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }}
         />
       ) : (
-        <video
-          ref={videoRef}
-          className="w-full h-full object-contain"
-          playsInline
-        >
-          {vttBlobUrl && (
-            <track
-              key={vttBlobUrl}
-              kind="subtitles"
-              src={vttBlobUrl}
-              srcLang={subtitles[activeSubtitle]?.lang || "en"}
-              label={subtitles[activeSubtitle]?.languageName || "Active"}
-              default
-            />
-          )}
-        </video>
+        <>
+          <video
+            ref={videoRef}
+            className="w-full h-full object-contain"
+            playsInline
+            crossOrigin="anonymous"
+          >
+            {vttBlobUrl && (
+              <track
+                key={vttBlobUrl}
+                kind="subtitles"
+                src={vttBlobUrl}
+                srcLang={subtitles[activeSubtitle]?.lang || "en"}
+                label={subtitles[activeSubtitle]?.languageName || "Active"}
+                default
+                onLoad={(e) => {
+                  const track = e.currentTarget.track;
+                  if (track) {
+                    if (!prefs.useNativeSubtitles) {
+                      track.mode = "hidden";
+                    } else {
+                      track.mode = "showing";
+                    }
+                    updateActiveCues(track.activeCues);
+                    track.oncuechange = () => {
+                      updateActiveCues(track.activeCues);
+                    };
+                  }
+                }}
+              />
+            )}
+          </video>
+          <SubtitleOverlay
+            activeCues={activeCues}
+            prefs={prefs}
+            showUi={showUi}
+          />
+        </>
       )}
 
       {/* ── Transparent tap layer — covers the screen behind the UI chrome ─────
@@ -3279,6 +3406,214 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       </div>
                     </div>
                   )}
+                  {/* Collapsible Style Customizer */}
+                  <div className="border-t border-white/10 mt-1 pt-2 px-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowStyleCustomizer(!showStyleCustomizer);
+                      }}
+                      className="w-full flex items-center justify-between px-2 py-2 text-[11px] text-white/50 hover:text-white hover:bg-white/5 rounded-md transition-colors font-bold uppercase tracking-wider"
+                    >
+                      <span>Subtitle Styles</span>
+                      <span className="text-[9px]">
+                        {showStyleCustomizer ? "▲" : "▼"}
+                      </span>
+                    </button>
+
+                    {showStyleCustomizer && (
+                      <div className="flex flex-col gap-3 mt-2 pb-2">
+                        {/* Preset Selection */}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                            Preset
+                          </span>
+                          <div className="grid grid-cols-4 gap-1 px-1">
+                            {(
+                              ["vlc", "netflix", "anime", "minimal"] as const
+                            ).map((preset) => (
+                              <button
+                                key={preset}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  selectPreset(preset);
+                                }}
+                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold capitalize ${
+                                  prefs.preset === preset
+                                    ? "text-black bg-white"
+                                    : "text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {preset === "vlc" ? "VLC" : preset}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Font Size Selection */}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                            Font Size
+                          </span>
+                          <div className="grid grid-cols-5 gap-1 px-1">
+                            {[
+                              { label: "75%", value: 0.75 },
+                              { label: "100%", value: 1.0 },
+                              { label: "125%", value: 1.25 },
+                              { label: "150%", value: 1.5 },
+                              { label: "200%", value: 2.0 },
+                            ].map((sz) => (
+                              <button
+                                key={sz.value}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePreference("size", sz.value);
+                                }}
+                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                  prefs.size === sz.value
+                                    ? "text-black bg-white"
+                                    : "text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {sz.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Font Color Selection */}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                            Font Color
+                          </span>
+                          <div className="flex items-center gap-2 px-2">
+                            {[
+                              { name: "White", value: "#ffffff" },
+                              { name: "Yellow", value: "#ffff00" },
+                              { name: "Green", value: "#00ff00" },
+                              { name: "Cyan", value: "#00e5ff" },
+                              { name: "Red", value: "#e50914" },
+                            ].map((color) => (
+                              <button
+                                key={color.value}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePreference("color", color.value);
+                                }}
+                                className={`w-5 h-5 rounded-full border transition-all ${
+                                  prefs.color === color.value
+                                    ? "ring-2 ring-nebula-cyan border-black scale-110"
+                                    : "border-white/20 hover:scale-105"
+                                }`}
+                                style={{ backgroundColor: color.value }}
+                                title={color.name}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Background & Opacity */}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">
+                              Background Color
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {[
+                                { name: "Black", value: "#000000" },
+                                { name: "Dark Gray", value: "#1a1a1a" },
+                                { name: "Blue", value: "#0000ff" },
+                              ].map((color) => (
+                                <button
+                                  key={color.value}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updatePreference("bgColor", color.value);
+                                  }}
+                                  className={`w-3.5 h-3.5 rounded-sm border transition-all ${
+                                    prefs.bgColor === color.value
+                                      ? "border-nebula-cyan scale-110"
+                                      : "border-white/20 hover:scale-105"
+                                  }`}
+                                  style={{ backgroundColor: color.value }}
+                                  title={color.name}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                              Background Opacity
+                            </span>
+                            <div className="grid grid-cols-5 gap-1 px-1">
+                              {[0.0, 0.25, 0.5, 0.75, 1.0].map((op) => (
+                                <button
+                                  key={op}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updatePreference("bgOpacity", op);
+                                  }}
+                                  className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                    prefs.bgOpacity === op
+                                      ? "text-black bg-white"
+                                      : "text-white/60 hover:text-white hover:bg-white/10"
+                                  }`}
+                                >
+                                  {op * 100}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Outline Width */}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                            Outline Width
+                          </span>
+                          <div className="grid grid-cols-4 gap-1 px-1">
+                            {["0px", "1px", "2px", "3px"].map((width) => (
+                              <button
+                                key={width}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePreference("outlineWidth", width);
+                                }}
+                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                  prefs.outlineWidth === width
+                                    ? "text-black bg-white"
+                                    : "text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {width}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Accessibility Toggle */}
+                        <div className="flex items-center justify-between border-t border-white/5 pt-2 px-1">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">
+                            Use Native Subtitles
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={prefs.useNativeSubtitles}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              updatePreference(
+                                "useNativeSubtitles",
+                                e.target.checked,
+                              );
+                            }}
+                            className="cursor-pointer accent-nebula-cyan w-3.5 h-3.5 rounded border-white/20 bg-white/5"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Switch Source */}
                   <div className="mt-1 border-t border-white/10 pt-2 px-2">
                     <button
@@ -3459,28 +3794,36 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Previous Episode Button */}
-                  {movie.type === "tv" && (() => {
-                    const prevEp = getPreviousEpisodeFor(sourceSelect.season, sourceSelect.episode);
-                    return (
-                      <button
-                        onClick={() => {
-                          if (prevEp) {
-                            setSourceSelect(prevEp);
-                            setForceRefetchTrigger(0);
+                  {movie.type === "tv" &&
+                    (() => {
+                      const prevEp = getPreviousEpisodeFor(
+                        sourceSelect.season,
+                        sourceSelect.episode,
+                      );
+                      return (
+                        <button
+                          onClick={() => {
+                            if (prevEp) {
+                              setSourceSelect(prevEp);
+                              setForceRefetchTrigger(0);
+                            }
+                          }}
+                          disabled={!prevEp}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                            prevEp
+                              ? "bg-white/5 hover:bg-white/10 text-white border-white/5"
+                              : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
+                          }`}
+                          title={
+                            prevEp
+                              ? `Previous Episode (S${prevEp.season}E${prevEp.episode})`
+                              : "No Previous Episode"
                           }
-                        }}
-                        disabled={!prevEp}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
-                          prevEp
-                            ? "bg-white/5 hover:bg-white/10 text-white border-white/5"
-                            : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
-                        }`}
-                        title={prevEp ? `Previous Episode (S${prevEp.season}E${prevEp.episode})` : "No Previous Episode"}
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                    );
-                  })()}
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                      );
+                    })()}
 
                   {/* Refetch Button */}
                   <button
@@ -3489,32 +3832,45 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-95 border border-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
                     title="Force refetch all sources"
                   >
-                    <RefreshCw size={14} className={sourcesLoading ? "animate-spin text-nebula-cyan" : ""} />
+                    <RefreshCw
+                      size={14}
+                      className={
+                        sourcesLoading ? "animate-spin text-nebula-cyan" : ""
+                      }
+                    />
                   </button>
 
                   {/* Next Episode Button */}
-                  {movie.type === "tv" && (() => {
-                    const nextEp = getNextEpisodeFor(sourceSelect.season, sourceSelect.episode);
-                    return (
-                      <button
-                        onClick={() => {
-                          if (nextEp) {
-                            setSourceSelect(nextEp);
-                            setForceRefetchTrigger(0);
+                  {movie.type === "tv" &&
+                    (() => {
+                      const nextEp = getNextEpisodeFor(
+                        sourceSelect.season,
+                        sourceSelect.episode,
+                      );
+                      return (
+                        <button
+                          onClick={() => {
+                            if (nextEp) {
+                              setSourceSelect(nextEp);
+                              setForceRefetchTrigger(0);
+                            }
+                          }}
+                          disabled={!nextEp}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                            nextEp
+                              ? "bg-white/5 hover:bg-white/10 text-white border-white/5"
+                              : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
+                          }`}
+                          title={
+                            nextEp
+                              ? `Next Episode (S${nextEp.season}E${nextEp.episode})`
+                              : "No More Episodes"
                           }
-                        }}
-                        disabled={!nextEp}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
-                          nextEp
-                            ? "bg-white/5 hover:bg-white/10 text-white border-white/5"
-                            : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
-                        }`}
-                        title={nextEp ? `Next Episode (S${nextEp.season}E${nextEp.episode})` : "No More Episodes"}
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    );
-                  })()}
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      );
+                    })()}
 
                   <button
                     onClick={() => setSourceSelect(null)}
@@ -3581,75 +3937,78 @@ export function InPlayerSourcePicker({
     onLoadingChangeRef.current?.(loading || videasyLoading);
   }, [loading, videasyLoading]);
 
-  const fetchSources = useCallback((force = false, isBackground = false) => {
-    if (!isBackground) {
-      setLoading(true);
-      setError("");
-      setVideasyLoading(true);
-      setVideasyError("");
-    }
+  const fetchSources = useCallback(
+    (force = false, isBackground = false) => {
+      if (!isBackground) {
+        setLoading(true);
+        setError("");
+        setVideasyLoading(true);
+        setVideasyError("");
+      }
 
-    const forceParam = force ? "&force=1" : "";
+      const forceParam = force ? "&force=1" : "";
 
-    // 1. VidRock Fetch
-    let vidrockUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-    if (season !== undefined) vidrockUrl += `&season=${season}`;
-    if (episode !== undefined) vidrockUrl += `&episode=${episode}`;
+      // 1. VidRock Fetch
+      let vidrockUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+      if (season !== undefined) vidrockUrl += `&season=${season}`;
+      if (episode !== undefined) vidrockUrl += `&episode=${episode}`;
 
-    const pVidrock = fetch(vidrockUrl)
-      .then((r) => {
-        if (!r.ok) throw new Error("Uplink scan failed");
-        return r.json();
-      })
-      .then((data) => {
-        const list = Object.entries(data)
-          .filter(([, v]: any) => v && v.url)
-          .map(([name, v]: any) => ({
-            name: name.startsWith("VidRock") ? name : `VidRock (${name})`,
-            url: v.url,
-            type: v.type || "hls",
-          }));
-        setSources(list);
-        if (!isBackground) setError("");
-      })
-      .catch((e) => {
-        if (!isBackground) setError(e.message);
-      })
-      .finally(() => {
-        if (!isBackground) setLoading(false);
-      });
+      const pVidrock = fetch(vidrockUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Uplink scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name: name.startsWith("VidRock") ? name : `VidRock (${name})`,
+              url: v.url,
+              type: v.type || "hls",
+            }));
+          setSources(list);
+          if (!isBackground) setError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setLoading(false);
+        });
 
-    // 2. Videasy Fetch
-    let videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-    if (season !== undefined) videasyUrl += `&season=${season}`;
-    if (episode !== undefined) videasyUrl += `&episode=${episode}`;
+      // 2. Videasy Fetch
+      let videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
+      if (season !== undefined) videasyUrl += `&season=${season}`;
+      if (episode !== undefined) videasyUrl += `&episode=${episode}`;
 
-    const pVideasy = fetch(videasyUrl)
-      .then((r) => {
-        if (!r.ok) throw new Error("Videasy scan failed");
-        return r.json();
-      })
-      .then((data) => {
-        const list = Object.entries(data)
-          .filter(([, v]: any) => v && v.url)
-          .map(([name, v]: any) => ({
-            name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
-            url: v.url,
-            type: v.type || "hls",
-            audio: v.audio || "",
-          }));
-        setVideasySources(list);
-        if (!isBackground) setVideasyError("");
-      })
-      .catch((e) => {
-        if (!isBackground) setVideasyError(e.message);
-      })
-      .finally(() => {
-        if (!isBackground) setVideasyLoading(false);
-      });
+      const pVideasy = fetch(videasyUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Videasy scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
+              url: v.url,
+              type: v.type || "hls",
+              audio: v.audio || "",
+            }));
+          setVideasySources(list);
+          if (!isBackground) setVideasyError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setVideasyError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setVideasyLoading(false);
+        });
 
-    return Promise.all([pVidrock, pVideasy]);
-  }, [movie.id, movie.type, season, episode, movie.title, movie.year]);
+      return Promise.all([pVidrock, pVideasy]);
+    },
+    [movie.id, movie.type, season, episode, movie.title, movie.year],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -3668,7 +4027,7 @@ export function InPlayerSourcePicker({
     const timers = syncIntervals.map((delay) =>
       setTimeout(() => {
         runFetch(false, true);
-      }, delay)
+      }, delay),
     );
 
     return () => {

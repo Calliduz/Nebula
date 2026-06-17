@@ -167,3 +167,10 @@ input[type="range"].appearance-slider-vertical {
   height: 100%;
   padding: 0 5px;
 }
+
+/* Scoped caption hiding for WebKit/Safari custom subtitle rendering */
+.nebula-player.custom-subs-active video::cue {
+  opacity: 0 !important;
+  color: transparent !important;
+  background: transparent !important;
+}

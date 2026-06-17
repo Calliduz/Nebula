@@ -195,7 +195,9 @@ const fetchFromTMDB = async (
   return fetchWithCache(
     cacheKey,
     async () => {
-      const fetchArgs: [string, RequestInit?] = [`${getApiBase()}/api/tmdb-proxy?${queryParams.toString()}`];
+      const fetchArgs: [string, RequestInit?] = [
+        `${getApiBase()}/api/tmdb-proxy?${queryParams.toString()}`,
+      ];
       if (signal) {
         fetchArgs.push({ signal });
       }
@@ -405,25 +407,82 @@ export const discoverMedia = async (
 };
 
 const COMMON_MEDIA_WORDS = [
-  "viral", "hit", "piece", "one", "stranger", "things", "dark", "knight",
-  "breaking", "bad", "demon", "slayer", "bear", "inception", "interstellar",
-  "attack", "titan", "jujutsu", "kaisen", "hunter", "death", "note", "ball",
-  "dragon", "naruto", "bleach", "punch", "solo", "leveling", "avatar", "last",
-  "airbender", "cyber", "punk", "star", "wars", "trek", "dead", "pool",
-  "avengers", "game", "thrones", "spider", "man", "bat", "iron", "super", "loki"
+  "viral",
+  "hit",
+  "piece",
+  "one",
+  "stranger",
+  "things",
+  "dark",
+  "knight",
+  "breaking",
+  "bad",
+  "demon",
+  "slayer",
+  "bear",
+  "inception",
+  "interstellar",
+  "attack",
+  "titan",
+  "jujutsu",
+  "kaisen",
+  "hunter",
+  "death",
+  "note",
+  "ball",
+  "dragon",
+  "naruto",
+  "bleach",
+  "punch",
+  "solo",
+  "leveling",
+  "avatar",
+  "last",
+  "airbender",
+  "cyber",
+  "punk",
+  "star",
+  "wars",
+  "trek",
+  "dead",
+  "pool",
+  "avengers",
+  "game",
+  "thrones",
+  "spider",
+  "man",
+  "bat",
+  "iron",
+  "super",
+  "loki",
 ];
 
 const splitCompoundWords = (query: string): string => {
   const q = query.toLowerCase().trim();
-  if (!q || q.includes(" ") || q.includes("-") || q.includes("_") || q.includes(".")) {
+  if (
+    !q ||
+    q.includes(" ") ||
+    q.includes("-") ||
+    q.includes("_") ||
+    q.includes(".")
+  ) {
     return query;
   }
 
   for (let i = 2; i <= q.length - 2; i++) {
     const left = q.slice(0, i);
     const right = q.slice(i);
-    if (COMMON_MEDIA_WORDS.includes(left) && COMMON_MEDIA_WORDS.includes(right)) {
-      return left.charAt(0).toUpperCase() + left.slice(1) + " " + right.charAt(0).toUpperCase() + right.slice(1);
+    if (
+      COMMON_MEDIA_WORDS.includes(left) &&
+      COMMON_MEDIA_WORDS.includes(right)
+    ) {
+      return (
+        left.charAt(0).toUpperCase() +
+        left.slice(1) +
+        " " +
+        right.charAt(0).toUpperCase() +
+        right.slice(1)
+      );
     }
   }
 
@@ -447,11 +506,11 @@ const getNormalizedTitle = (title: string): string => {
 const getMatchTier = (titleNorm: string, queryNorm: string): number => {
   if (!queryNorm || !titleNorm) return 0;
   if (titleNorm === queryNorm) return 3; // Exact match
-  
+
   // Collapse spaces for compound word matching (e.g., "viral hit" vs "viralhit")
   const titleCollapsed = titleNorm.replace(/\s+/g, "");
   const queryCollapsed = queryNorm.replace(/\s+/g, "");
-  
+
   if (titleCollapsed === queryCollapsed) return 3; // Exact match collapsed
   if (titleCollapsed.startsWith(queryCollapsed)) return 2; // Starts with collapsed
   if (titleCollapsed.includes(queryCollapsed)) return 1; // Contains collapsed
@@ -477,25 +536,42 @@ export const searchMedia = async (
       .trim();
 
     const variations = [trimmedQuery];
-    if (splitSpaced && splitSpaced.toLowerCase() !== trimmedQuery.toLowerCase()) {
+    if (
+      splitSpaced &&
+      splitSpaced.toLowerCase() !== trimmedQuery.toLowerCase()
+    ) {
       variations.push(splitSpaced);
     }
 
     const compoundSplit = splitCompoundWords(trimmedQuery);
-    if (compoundSplit && compoundSplit.toLowerCase() !== trimmedQuery.toLowerCase() && !variations.includes(compoundSplit)) {
+    if (
+      compoundSplit &&
+      compoundSplit.toLowerCase() !== trimmedQuery.toLowerCase() &&
+      !variations.includes(compoundSplit)
+    ) {
       variations.push(compoundSplit);
     }
 
     // Parallel fetch for all query variations (page 1)
     const queryPromises: Promise<any[]>[] = variations.map((q) =>
-      fetchFromTMDB("/search/multi", { query: q, page: "1" }, TTL.SEARCH, signal)
+      fetchFromTMDB(
+        "/search/multi",
+        { query: q, page: "1" },
+        TTL.SEARCH,
+        signal,
+      )
         .then((data) => data.results || [])
         .catch(() => []),
     );
 
     // Also fetch page 2 for the primary query to return more than 20 direct titles
     queryPromises.push(
-      fetchFromTMDB("/search/multi", { query: trimmedQuery, page: "2" }, TTL.SEARCH, signal)
+      fetchFromTMDB(
+        "/search/multi",
+        { query: trimmedQuery, page: "2" },
+        TTL.SEARCH,
+        signal,
+      )
         .then((data) => data.results || [])
         .catch(() => []),
     );
@@ -826,10 +902,14 @@ export const enrichMovies = async (
     const apiBase = getApiBase();
 
     // Parallel fetch for Logos and Availability
-    const metaArgs: [string, RequestInit?] = [`${apiBase}/api/metadata?batch=${comboIds}`];
+    const metaArgs: [string, RequestInit?] = [
+      `${apiBase}/api/metadata?batch=${comboIds}`,
+    ];
     if (signal) metaArgs.push({ signal });
 
-    const availArgs: [string, RequestInit?] = [`${apiBase}/api/stream/availability?ids=${simpleIds}`];
+    const availArgs: [string, RequestInit?] = [
+      `${apiBase}/api/stream/availability?ids=${simpleIds}`,
+    ];
     if (signal) availArgs.push({ signal });
 
     const [metaRes, availRes] = await Promise.all([

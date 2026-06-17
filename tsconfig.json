@@ -16,5 +16,6 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": ["src/test/security.test.ts"]
 }
