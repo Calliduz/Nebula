@@ -1305,13 +1305,43 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       let lastFragErrorStatus: string | null = null;
 
       hls.on(Hls.Events.ERROR, (_, d) => {
+        const statusCode =
+          (d.response as any)?.code || (d.response as any)?.status;
+
+        // If it's a network error with a hard status code (403, 404, 500, 502, 503, 504),
+        // fallback to the next mirror immediately instead of letting Hls.js retry/stall.
+        if (
+          d.type === Hls.ErrorTypes.NETWORK_ERROR &&
+          statusCode &&
+          [403, 404, 500, 502, 503, 504].includes(statusCode)
+        ) {
+          console.warn(
+            `[HLS] Hard network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
+          );
+          const nextIdx = activeMirrorRef.current + 1;
+          if (nextIdx < mirrorsRef.current.length) {
+            const failingIdx = activeMirrorRef.current;
+            setFailedMirrors((prev) => ({
+              ...prev,
+              [failingIdx]: String(statusCode),
+            }));
+            console.log(
+              `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
+            );
+            selectMirror(nextIdx, mirrorsRef.current);
+          } else {
+            setError(
+              `Stream not found (${statusCode}). All mirrors exhausted.`,
+            );
+          }
+          return;
+        }
+
         // Track continuous fragment load errors to trigger fallback
         if (d.details === "fragLoadError") {
           activeFragLoads.current = Math.max(0, activeFragLoads.current - 1);
-          const status =
-            (d.response as any)?.code || (d.response as any)?.status;
-          if (status) {
-            lastFragErrorStatus = String(status);
+          if (statusCode) {
+            lastFragErrorStatus = String(statusCode);
           }
           if (!fragErrorTimeout) {
             console.warn(
@@ -1384,31 +1414,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         console.error(`[HLS] Fatal error: type=${d.type} details=${d.details}`);
 
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          const statusCode =
-            (d.response as any)?.code || (d.response as any)?.status;
-          if ([403, 404, 500, 502, 503, 504].includes(statusCode)) {
-            console.warn(
-              `[HLS] Fatal network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
-            );
-            const nextIdx = activeMirrorRef.current + 1;
-            if (nextIdx < mirrorsRef.current.length) {
-              const failingIdx = activeMirrorRef.current;
-              setFailedMirrors((prev) => ({
-                ...prev,
-                [failingIdx]: String(statusCode),
-              }));
-              console.log(
-                `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
-              );
-              selectMirror(nextIdx, mirrorsRef.current);
-            } else {
-              setError(
-                `Stream not found (${statusCode}). All mirrors exhausted.`,
-              );
-            }
-            return;
-          }
-
           networkRetries++;
           if (networkRetries <= MAX_NETWORK_RETRIES) {
             const delay = Math.min(
