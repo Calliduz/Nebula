@@ -1342,9 +1342,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
-            setError(
-              `Stream failed (${statusCode}). All mirrors exhausted.`,
-            );
+            setError(`Stream failed (${statusCode}). All mirrors exhausted.`);
           }
           return;
         }

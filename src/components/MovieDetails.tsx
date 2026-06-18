@@ -626,8 +626,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           {/* ── FilmU Card ── */}
           <div
             onClick={() => {
-              if (!filmuLoading && filmuSources.length > 0)
-                onSelect(filmuUrl);
+              if (!filmuLoading && filmuSources.length > 0) onSelect(filmuUrl);
             }}
             className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
               filmuLoading
@@ -672,8 +671,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Aggregates parallel multi-provider CDN streams including Vortex,
-                  Zenith, and Aura mirrors with anime support via Kuro.
+                  Aggregates parallel multi-provider CDN streams including
+                  Vortex, Zenith, and Aura mirrors with anime support via Kuro.
                 </p>
               </div>
             </div>
@@ -697,40 +696,44 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     {(() => {
                       const uniqueProviders = Array.from(
                         new Set(
-                          filmuSources.map((src) =>
-                            src.name
-                              .replace(/^FilmU[\s-]*/i, "")
-                              .replace(/\s*#\d+$/, "")
-                              .trim()
-                              .toUpperCase() || "STREAM"
-                          )
-                        )
+                          filmuSources.map(
+                            (src) =>
+                              src.name
+                                .replace(/^FilmU[\s-]*/i, "")
+                                .replace(/\s*#\d+$/, "")
+                                .trim()
+                                .toUpperCase() || "STREAM",
+                          ),
+                        ),
                       );
-                      return (uniqueProviders as string[]).map((providerName) => {
-                        const colorMap: Record<string, string> = {
-                          VORTEX: "border-amber-500/30 text-amber-400 bg-amber-500/10",
-                          ZENITH: "border-orange-500/30 text-orange-400 bg-orange-500/10",
-                          AURA:   "border-yellow-500/30 text-yellow-400 bg-yellow-500/10",
-                          KURO:   "border-red-500/30 text-red-400 bg-red-500/10",
-                        };
-                        const chipClass =
-                          Object.entries(colorMap).find(([k]) =>
-                            providerName.includes(k),
-                          )?.[1] ??
-                          "border-amber-500/30 text-amber-400 bg-amber-500/10";
-                        return (
-                          <span
-                            key={providerName}
-                            className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${chipClass}`}
-                          >
-                            {providerName}
-                          </span>
-                        );
-                      });
+                      return (uniqueProviders as string[]).map(
+                        (providerName) => {
+                          const colorMap: Record<string, string> = {
+                            VORTEX:
+                              "border-amber-500/30 text-amber-400 bg-amber-500/10",
+                            ZENITH:
+                              "border-orange-500/30 text-orange-400 bg-orange-500/10",
+                            AURA: "border-yellow-500/30 text-yellow-400 bg-yellow-500/10",
+                            KURO: "border-red-500/30 text-red-400 bg-red-500/10",
+                          };
+                          const chipClass =
+                            Object.entries(colorMap).find(([k]) =>
+                              providerName.includes(k),
+                            )?.[1] ??
+                            "border-amber-500/30 text-amber-400 bg-amber-500/10";
+                          return (
+                            <span
+                              key={providerName}
+                              className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${chipClass}`}
+                            >
+                              {providerName}
+                            </span>
+                          );
+                        },
+                      );
                     })()}
                   </div>
                 </div>
-
               ) : (
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
