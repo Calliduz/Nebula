@@ -706,7 +706,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           )
                         )
                       );
-                      return uniqueProviders.map((providerName) => {
+                      return (uniqueProviders as string[]).map((providerName) => {
                         const colorMap: Record<string, string> = {
                           VORTEX: "border-amber-500/30 text-amber-400 bg-amber-500/10",
                           ZENITH: "border-orange-500/30 text-orange-400 bg-orange-500/10",
