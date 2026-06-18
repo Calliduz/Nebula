@@ -1306,14 +1306,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       hls.on(Hls.Events.ERROR, (_, d) => {
         const statusCode =
-          (d.response as any)?.code || (d.response as any)?.status;
+          (d.response as any)?.code ||
+          (d.response as any)?.status ||
+          (d.context as any)?.xhr?.status ||
+          (d.networkDetails as any)?.status ||
+          (d.event as any)?.target?.status;
 
-        // If it's a network error with a hard status code (403, 404, 500, 502, 503, 504),
+        console.warn("[HLS ERROR EVENT]", {
+          type: d.type,
+          details: d.details,
+          fatal: d.fatal,
+          statusCode,
+          url: (d.context as any)?.url || d.frag?.url || "",
+        });
+
+        // If it's a network error with a hard status code >= 400 (e.g. 403, 404, 405, 500, 502, 503, 504),
         // fallback to the next mirror immediately instead of letting Hls.js retry/stall.
         if (
           d.type === Hls.ErrorTypes.NETWORK_ERROR &&
           statusCode &&
-          [403, 404, 500, 502, 503, 504].includes(statusCode)
+          statusCode >= 400
         ) {
           console.warn(
             `[HLS] Hard network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
@@ -1331,8 +1343,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             setError(
-              `Stream not found (${statusCode}). All mirrors exhausted.`,
+              `Stream failed (${statusCode}). All mirrors exhausted.`,
             );
+          }
+          return;
+        }
+
+        // Switch immediately on fatal manifest load error or fatal level load error to avoid slow retry storms
+        if (
+          d.type === Hls.ErrorTypes.NETWORK_ERROR &&
+          (d.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
+            d.details === Hls.ErrorDetails.LEVEL_LOAD_ERROR)
+        ) {
+          console.warn(
+            `[HLS] Fatal load error: ${d.details}. Switching mirror immediately...`,
+          );
+          const nextIdx = activeMirrorRef.current + 1;
+          if (nextIdx < mirrorsRef.current.length) {
+            const failingIdx = activeMirrorRef.current;
+            setFailedMirrors((prev) => ({
+              ...prev,
+              [failingIdx]: statusCode ? String(statusCode) : "LOAD_ERR",
+            }));
+            selectMirror(nextIdx, mirrorsRef.current);
+          } else {
+            setError("Stream loading failed. All mirrors exhausted.");
           }
           return;
         }
