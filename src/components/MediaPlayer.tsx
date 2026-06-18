@@ -62,35 +62,50 @@ const parseMirrorName = (name: string) => {
 };
 
 export const parseMirrorDetails = (sourceName: string) => {
-  // e.g. "Videasy (Neon)" -> category: "Videasy", name: "NEON"
-  // e.g. "VidRock (Mirror 1)" -> category: "VidRock", name: "MIRROR 1"
-  // e.g. "VidLink" -> category: "VidLink", name: "VIDLINK"
-  const match = sourceName.match(/^(.*?)\s*\((.*?)\)$/);
+  // Extract trailing #\d+ if present
+  let suffix = "";
+  const suffixMatch = sourceName.match(/(.*?)\s*#(\d+)$/);
+  let cleanSource = sourceName;
+  if (suffixMatch) {
+    cleanSource = suffixMatch[1].trim();
+    suffix = ` #${suffixMatch[2]}`;
+  }
+
+  // Now parse cleanSource exactly as before
+  const match = cleanSource.match(/^(.*?)\s*\((.*?)\)$/);
   if (match) {
     return {
       category: match[1].trim(),
-      name: match[2].trim().toUpperCase(),
+      name: (match[2].trim() + suffix).toUpperCase(),
     };
   }
 
-  if (sourceName.startsWith("VidRock")) {
+  if (cleanSource.startsWith("VidRock")) {
     return {
       category: "VidRock",
       name: (
-        sourceName.replace("VidRock", "").trim() || "Mirror"
+        (cleanSource.replace("VidRock", "").trim() || "Mirror") + suffix
       ).toUpperCase(),
     };
   }
-  if (sourceName.startsWith("Videasy")) {
+  if (cleanSource.startsWith("Videasy")) {
     return {
       category: "Videasy",
       name: (
-        sourceName.replace("Videasy", "").trim() || "Mirror"
+        (cleanSource.replace("Videasy", "").trim() || "Mirror") + suffix
+      ).toUpperCase(),
+    };
+  }
+  if (cleanSource.startsWith("FilmU")) {
+    return {
+      category: "FilmU",
+      name: (
+        (cleanSource.replace(/^FilmU[\s-]*/i, "").trim() || "Mirror") + suffix
       ).toUpperCase(),
     };
   }
 
-  return { category: "VidLink", name: sourceName.toUpperCase() };
+  return { category: "VidLink", name: (cleanSource + suffix).toUpperCase() };
 };
 
 export const serverSortOrder = [
@@ -556,10 +571,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         // Fetch updated mirrors in the background progressively at 10s, 20s, and 45s to capture slow parallel scrapes
         const runSync = () => {
           const isVideasy = processedMirrors.some((m) =>
-            m.source.toLowerCase().includes("videasy"),
+            m.source.toLowerCase().startsWith("videasy"),
           );
           const isVidrock = processedMirrors.some((m) =>
-            m.source.toLowerCase().includes("vidrock"),
+            m.source.toLowerCase().startsWith("vidrock"),
+          );
+          const isFilmu = processedMirrors.some((m) =>
+            m.source.toLowerCase().startsWith("filmu"),
           );
 
           let fetchUrl = "";
@@ -569,6 +587,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             if (episode !== undefined) fetchUrl += `&episode=${episode}`;
           } else if (isVidrock) {
             fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+            if (season !== undefined) fetchUrl += `&season=${season}`;
+            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+          } else if (isFilmu) {
+            fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
             if (season !== undefined) fetchUrl += `&season=${season}`;
             if (episode !== undefined) fetchUrl += `&episode=${episode}`;
           }
@@ -604,6 +626,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       type: v.type || "hls",
                       audio: v.audio || "",
                       flag: v.flag || "us",
+                    }));
+                } else if (isFilmu) {
+                  updatedMirrors = Object.entries(data)
+                    .filter(([_, v]: any) => v && v.url)
+                    .map(([name, v]: any) => ({
+                      source: name.toLowerCase().startsWith("filmu")
+                        ? name
+                        : `FilmU-${name}`,
+                      url: v.url,
+                      type: v.type || "hls",
+                      quality: (v as any).quality || "Auto",
                     }));
                 }
 
@@ -1579,6 +1612,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               .catch((err) =>
                 console.warn(
                   `[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
+                ),
+              );
+
+            // 4. FilmU prefetch
+            let filmuPrefetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(filmuPrefetchUrl)
+              .then((r) => r.json())
+              .then(() =>
+                console.log(
+                  `[PLAYER] Prefetched next episode from FilmU (S${nextEp.season}E${nextEp.episode})`,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch FilmU failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 ),
               );
           }
@@ -3927,6 +3975,10 @@ export function InPlayerSourcePicker({
   const [videasyLoading, setVideasyLoading] = useState(true);
   const [videasyError, setVideasyError] = useState("");
 
+  const [filmuSources, setFilmuSources] = useState<any[]>([]);
+  const [filmuLoading, setFilmuLoading] = useState(true);
+  const [filmuError, setFilmuError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -3934,8 +3986,8 @@ export function InPlayerSourcePicker({
   }, [onLoadingChange]);
 
   useEffect(() => {
-    onLoadingChangeRef.current?.(loading || videasyLoading);
-  }, [loading, videasyLoading]);
+    onLoadingChangeRef.current?.(loading || videasyLoading || filmuLoading);
+  }, [loading, videasyLoading, filmuLoading]);
 
   const fetchSources = useCallback(
     (force = false, isBackground = false) => {
@@ -3944,6 +3996,8 @@ export function InPlayerSourcePicker({
         setError("");
         setVideasyLoading(true);
         setVideasyError("");
+        setFilmuLoading(true);
+        setFilmuError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -4005,7 +4059,36 @@ export function InPlayerSourcePicker({
           if (!isBackground) setVideasyLoading(false);
         });
 
-      return Promise.all([pVidrock, pVideasy]);
+      // 3. FilmU Fetch
+      let filmuUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
+      if (season !== undefined) filmuUrl += `&season=${season}`;
+      if (episode !== undefined) filmuUrl += `&episode=${episode}`;
+
+      const pFilmu = fetch(filmuUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("FilmU scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+          setFilmuSources(list);
+          if (!isBackground) setFilmuError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setFilmuError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setFilmuLoading(false);
+        });
+
+      return Promise.all([pVidrock, pVideasy, pFilmu]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
   );
@@ -4046,9 +4129,16 @@ export function InPlayerSourcePicker({
         : `${s.url}#${s.name}#${s.type}#${s.audio || ""}`,
     )
     .join("|");
+  const filmuUrl = filmuSources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 overflow-y-auto max-h-[70vh]">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 overflow-y-auto max-h-[70vh]">
       {/* VidRock */}
       <button
         onClick={() => sources.length > 0 && onSelect(vidrockUrl)}
@@ -4161,6 +4251,60 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase">
               {videasyError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* FilmU */}
+      <button
+        onClick={() => filmuSources.length > 0 && onSelect(filmuUrl)}
+        disabled={filmuLoading || filmuSources.length === 0}
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          filmuLoading
+            ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+            : filmuSources.length > 0
+              ? "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95"
+              : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400">
+            {filmuLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Info size={14} />
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-black text-white uppercase tracking-tight">
+              FilmU
+            </p>
+            <p className="text-[8px] text-white/40 uppercase">
+              {filmuLoading ? "Scanning..." : "Active"}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {filmuLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Running uplink check...
+            </span>
+          ) : filmuSources.length > 0 ? (
+            filmuSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7px] font-bold px-1 py-0.5 rounded border border-amber-500/20 text-amber-400/80 bg-amber-500/5 uppercase"
+              >
+                {s.name
+                  .replace(/^FilmU[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">
+              {filmuError || "No mirrors"}
             </span>
           )}
         </div>
