@@ -105,7 +105,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = memo(
     const textShadowStyle =
       prefs.outlineWidth === "0px"
         ? "1px 1px 3px rgba(0, 0, 0, 0.8)" // Netflix style soft shadow fallback
-        : `${prefs.outlineWidth} ${prefs.outlineWidth} 2px ${prefs.outlineColor}, 0 0 1px ${prefs.outlineColor}`;
+        : `0 2px 4px rgba(0, 0, 0, 0.8)`; // Clean, soft drop shadow instead of heavy offset shadow to avoid WebKit double-rendering bugs
 
     const textStrokeStyle =
       prefs.outlineWidth !== "0px"
@@ -131,6 +131,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = memo(
                 backgroundColor: bgColor,
                 WebkitTextStroke: textStrokeStyle,
                 textShadow: textShadowStyle,
+                paintOrder: "stroke fill", // Ensure outline paints under fill, keeping text sharp on mobile
                 maxWidth: "95%",
                 lineHeight: 1.35,
                 wordBreak: "break-word",
