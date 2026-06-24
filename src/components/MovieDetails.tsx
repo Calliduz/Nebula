@@ -751,7 +751,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 interface MovieDetailsProps {
   movie?: any;
   onClose: () => void;
-  onPlay: (season?: number, episode?: number, source?: string) => void;
+  onPlay: (season?: number, episode?: number, source?: string, loadedMovie?: any) => void;
   onSelectMovie?: (m: any) => void;
   isInList: boolean;
   onToggleList: () => void;
@@ -1091,7 +1091,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
   const handleSelectSource = (sourceUrl?: string) => {
     setShowSourceModal(false);
-    onPlay(selectedEpForModal?.season, selectedEpForModal?.episode, sourceUrl);
+    onPlay(selectedEpForModal?.season, selectedEpForModal?.episode, sourceUrl, movie);
   };
 
   useEffect(() => {

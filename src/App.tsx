@@ -274,8 +274,8 @@ export default function App() {
             key={`movie-details-${state.selectedMovie.id}`}
             movie={state.selectedMovie}
             onClose={() => actions.setSelectedMovie(null)}
-            onPlay={(s, e, src) =>
-              actions.startPlayback(state.selectedMovie, s, e, src)
+            onPlay={(s, e, src, loadedMovie) =>
+              actions.startPlayback(loadedMovie || state.selectedMovie, s, e, src)
             }
             onSelectMovie={actions.setSelectedMovie}
             isInList={state.myList.includes(state.selectedMovie.id.toString())}
@@ -378,8 +378,9 @@ function MovieDetailPageStub({ actions, state }: any) {
           key={`page-details-${id}`}
           movie={catalogMovie || null}
           onClose={() => actions.setSelectedMovie(null)}
-          onPlay={(s: number, e: number, src?: string) => {
-            if (catalogMovie) actions.startPlayback(catalogMovie, s, e, src);
+          onPlay={(s: number, e: number, src?: string, loadedMovie?: any) => {
+            const playMovie = catalogMovie || loadedMovie;
+            if (playMovie) actions.startPlayback(playMovie, s, e, src);
           }}
           onSelectMovie={actions.setSelectedMovie}
           isInList={
