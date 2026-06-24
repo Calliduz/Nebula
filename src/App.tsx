@@ -42,6 +42,8 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import { getMediaBasicInfo } from "./services/tmdb";
+
 export default function App() {
   const { state, actions, refs } = useAppState();
   const location = useLocation();
@@ -401,12 +403,20 @@ function MediaPlayerStub({ actions, state }: any) {
   const { type, id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const movie =
-    state.allMovies.find(
-      (m: any) =>
-        m.id.toString() === (id || "0").toString() &&
-        (m.type === type || (!m.type && type === "movie")),
-    ) || state.selectedMovie;
+
+  const [localMovie, setLocalMovie] = React.useState<any>(null);
+  const [localLoading, setLocalLoading] = React.useState(false);
+  const [localError, setLocalError] = React.useState(false);
+
+  const catalogMovie = id
+    ? state.allMovies.find(
+        (m: any) =>
+          m.id.toString() === id.toString() &&
+          (m.type === type || (!m.type && type === "movie")),
+      ) || state.selectedMovie
+    : null;
+
+  const movie = catalogMovie || localMovie;
 
   const season = searchParams.get("season")
     ? parseInt(searchParams.get("season")!)
@@ -416,9 +426,30 @@ function MediaPlayerStub({ actions, state }: any) {
     : undefined;
   const source = searchParams.get("source") || undefined;
 
-  // While the global catalog is still loading, show a themed skeleton
-  // permanently render the error state for a movie that simply isn't fetched yet.
-  if (!movie && state.isLoading) {
+  React.useEffect(() => {
+    if (!catalogMovie && id && type) {
+      setLocalLoading(true);
+      setLocalError(false);
+      getMediaBasicInfo(id, type as "movie" | "tv")
+        .then((data) => {
+          if (data) {
+            setLocalMovie(data);
+          } else {
+            setLocalError(true);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load movie for player:", err);
+          setLocalError(true);
+        })
+        .finally(() => {
+          setLocalLoading(false);
+        });
+    }
+  }, [catalogMovie, id, type]);
+
+  // While the global catalog is still loading OR local fetch is running, show themed skeleton
+  if (!movie && (state.isLoading || localLoading)) {
     return (
       <div className="h-screen bg-obsidian flex items-center justify-center p-8">
         <div className="max-w-md w-full space-y-8">
