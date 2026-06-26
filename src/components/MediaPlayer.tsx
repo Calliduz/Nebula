@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Tv,
   Upload,
+  Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -50,6 +51,15 @@ function formatTime(s: number) {
 }
 
 const parseMirrorName = (name: string) => {
+  // First try parenthesized format: "Vidnest (1080p)"
+  const parenMatch = name.match(
+    /^(.*?)\s*\((1080p|720p|480p|360p|Auto|Original)\)$/i,
+  );
+  if (parenMatch) {
+    return { base: parenMatch[1].trim(), quality: parenMatch[2].trim() };
+  }
+
+  // Next try hyphen format: "VidRock - 1080p"
   const match = name.match(/^(.*?)\s*-\s*(\d+p|Auto|Original)\s*\)?$/i);
   if (match) {
     let base = match[1].trim();
@@ -94,6 +104,13 @@ export const parseMirrorDetails = (sourceName: string) => {
       name: (
         (cleanSource.replace("Videasy", "").trim() || "Mirror") + suffix
       ).toUpperCase(),
+    };
+  }
+  if (cleanSource.startsWith("Vidnest")) {
+    const rest = cleanSource.replace(/^Vidnest[\s-]*/i, "").trim();
+    return {
+      category: "Vidnest",
+      name: ((rest || "Stream") + suffix).toUpperCase(),
     };
   }
   if (cleanSource.startsWith("FilmU")) {
@@ -579,6 +596,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isFilmu = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("filmu"),
           );
+          const isVidnest = processedMirrors.some((m) =>
+            m.source.toLowerCase().startsWith("vidnest"),
+          );
 
           let fetchUrl = "";
           if (isVideasy) {
@@ -591,6 +611,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             if (episode !== undefined) fetchUrl += `&episode=${episode}`;
           } else if (isFilmu) {
             fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
+            if (season !== undefined) fetchUrl += `&season=${season}`;
+            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+          } else if (isVidnest) {
+            fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}`;
             if (season !== undefined) fetchUrl += `&season=${season}`;
             if (episode !== undefined) fetchUrl += `&episode=${episode}`;
           }
@@ -636,6 +660,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         : `FilmU-${name}`,
                       url: v.url,
                       type: v.type || "hls",
+                      quality: (v as any).quality || "Auto",
+                    }));
+                } else if (isVidnest) {
+                  updatedMirrors = Object.entries(data)
+                    .filter(([_, v]: any) => v && v.url)
+                    .map(([name, v]: any) => ({
+                      source: name.toLowerCase().startsWith("vidnest")
+                        ? name
+                        : `Vidnest (${name})`,
+                      url: v.url,
+                      type: v.type || "mp4",
                       quality: (v as any).quality || "Auto",
                     }));
                 }
@@ -1665,6 +1700,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               .catch((err) =>
                 console.warn(
                   `[PLAYER] Prefetch FilmU failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
+                ),
+              );
+
+            // 5. Vidnest prefetch
+            let vidnestPrefetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(vidnestPrefetchUrl)
+              .then((r) => r.json())
+              .then(() =>
+                console.log(
+                  `[PLAYER] Prefetched next episode from Vidnest (S${nextEp.season}E${nextEp.episode})`,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch Vidnest failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 ),
               );
           }
@@ -4017,6 +4067,10 @@ export function InPlayerSourcePicker({
   const [filmuLoading, setFilmuLoading] = useState(true);
   const [filmuError, setFilmuError] = useState("");
 
+  const [vidnestSources, setVidnestSources] = useState<any[]>([]);
+  const [vidnestLoading, setVidnestLoading] = useState(true);
+  const [vidnestError, setVidnestError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -4024,8 +4078,10 @@ export function InPlayerSourcePicker({
   }, [onLoadingChange]);
 
   useEffect(() => {
-    onLoadingChangeRef.current?.(loading || videasyLoading || filmuLoading);
-  }, [loading, videasyLoading, filmuLoading]);
+    onLoadingChangeRef.current?.(
+      loading || videasyLoading || filmuLoading || vidnestLoading,
+    );
+  }, [loading, videasyLoading, filmuLoading, vidnestLoading]);
 
   const fetchSources = useCallback(
     (force = false, isBackground = false) => {
@@ -4036,6 +4092,8 @@ export function InPlayerSourcePicker({
         setVideasyError("");
         setFilmuLoading(true);
         setFilmuError("");
+        setVidnestLoading(true);
+        setVidnestError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -4126,7 +4184,36 @@ export function InPlayerSourcePicker({
           if (!isBackground) setFilmuLoading(false);
         });
 
-      return Promise.all([pVidrock, pVideasy, pFilmu]);
+      // 4. Vidnest Fetch
+      let vidnestUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+      if (season !== undefined) vidnestUrl += `&season=${season}`;
+      if (episode !== undefined) vidnestUrl += `&episode=${episode}`;
+
+      const pVidnest = fetch(vidnestUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Vidnest scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name,
+              url: v.url,
+              type: v.type || "mp4",
+              quality: (v as any).quality || "Auto",
+            }));
+          setVidnestSources(list);
+          if (!isBackground) setVidnestError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setVidnestError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setVidnestLoading(false);
+        });
+
+      return Promise.all([pVidrock, pVideasy, pFilmu, pVidnest]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
   );
@@ -4168,6 +4255,13 @@ export function InPlayerSourcePicker({
     )
     .join("|");
   const filmuUrl = filmuSources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
+  const vidnestUrl = vidnestSources
     .map((s) =>
       s.url.includes("#")
         ? s.url
@@ -4343,6 +4437,60 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase">
               {filmuError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Vidnest */}
+      <button
+        onClick={() => vidnestSources.length > 0 && onSelect(vidnestUrl)}
+        disabled={vidnestLoading || vidnestSources.length === 0}
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          vidnestLoading
+            ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+            : vidnestSources.length > 0
+              ? "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95"
+              : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+            {vidnestLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Zap size={14} />
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-black text-white uppercase tracking-tight">
+              Vidnest
+            </p>
+            <p className="text-[8px] text-white/40 uppercase">
+              {vidnestLoading ? "Scanning..." : "Active"}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {vidnestLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Running uplink check...
+            </span>
+          ) : vidnestSources.length > 0 ? (
+            vidnestSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7px] font-bold px-1 py-0.5 rounded border border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5 uppercase"
+              >
+                {s.name
+                  .replace(/^Vidnest[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">
+              {vidnestError || "No mirrors"}
             </span>
           )}
         </div>

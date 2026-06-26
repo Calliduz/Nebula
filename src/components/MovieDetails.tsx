@@ -75,6 +75,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [filmuLoading, setFilmuLoading] = useState(true);
   const [filmuError, setFilmuError] = useState("");
 
+  const [vidnestSources, setVidnestSources] = useState<any[]>([]);
+  const [vidnestLoading, setVidnestLoading] = useState(true);
+  const [vidnestError, setVidnestError] = useState("");
+
   const isMountedRef = useRef(true);
 
   const loadAllSources = (force = false) => {
@@ -86,6 +90,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     setVidlinkError("");
     setFilmuLoading(true);
     setFilmuError("");
+    setVidnestLoading(true);
+    setVidnestError("");
 
     const forceParam = force ? "&force=1" : "";
 
@@ -214,6 +220,37 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (!isMountedRef.current) return;
         setFilmuLoading(false);
       });
+
+    // 5. Vidnest Fetch
+    let vidnestFetchUrl = `${API_BASE_URL}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+    if (season !== undefined) vidnestFetchUrl += `&season=${season}`;
+    if (episode !== undefined) vidnestFetchUrl += `&episode=${episode}`;
+
+    fetch(vidnestFetchUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan Vidnest uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!isMountedRef.current) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name,
+            url: value.url,
+            type: value.type || "mp4",
+            quality: (value as any).quality || "Auto",
+          }));
+        setVidnestSources(activeSources);
+      })
+      .catch((err) => {
+        if (!isMountedRef.current) return;
+        setVidnestError(err.message || "Failed to contact Vidnest.");
+      })
+      .finally(() => {
+        if (!isMountedRef.current) return;
+        setVidnestLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -247,6 +284,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
     )
     .join("|");
+  const vidnestUrl = vidnestSources
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
@@ -265,14 +307,24 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         {/* Re-scan/Reload Button (Top-Left Symmetrical) */}
         <button
           onClick={() => loadAllSources(true)}
-          disabled={loading || videasyLoading || vidlinkLoading || filmuLoading}
+          disabled={
+            loading ||
+            videasyLoading ||
+            vidlinkLoading ||
+            filmuLoading ||
+            vidnestLoading
+          }
           className="absolute top-4 left-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed z-50 cursor-pointer"
           title="Re-scan all sources for background results"
         >
           <RotateCw
             size={18}
             className={
-              loading || videasyLoading || vidlinkLoading || filmuLoading
+              loading ||
+              videasyLoading ||
+              vidlinkLoading ||
+              filmuLoading ||
+              vidnestLoading
                 ? "animate-spin text-nebula-cyan"
                 : ""
             }
@@ -742,6 +794,107 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               )}
             </div>
           </div>
+
+          {/* ── Vidnest Card ── */}
+          <div
+            onClick={() => {
+              if (!vidnestLoading && vidnestSources.length > 0)
+                onSelect(vidnestUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              vidnestLoading
+                ? "border-emerald-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : vidnestSources.length > 0
+                  ? "border-emerald-500/35 bg-slate-950/45 hover:border-emerald-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  vidnestLoading || vidnestSources.length > 0
+                    ? "bg-emerald-500/15 text-emerald-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Zap
+                  size={18}
+                  className={vidnestLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Vidnest
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase tracking-wider">
+                    FAST STREAM
+                  </span>
+                  {vidnestLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vidnestSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  High-speed direct MP4 CDN delivery mapping high quality
+                  mirrors with multi-language subtitle integration.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {vidnestLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                  </span>
+                  Probing Mirrors...
+                </div>
+              ) : vidnestSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Available Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vidnestSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Vidnest\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Vidnest/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName =
+                        src.quality !== "Auto"
+                          ? src.quality.toUpperCase()
+                          : cleanMirrorName || "HD";
+                      return (
+                        <span
+                          key={src.name}
+                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 uppercase tracking-wider"
+                        >
+                          {displayName}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vidnestError ? "Providers offline" : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>
@@ -751,7 +904,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 interface MovieDetailsProps {
   movie?: any;
   onClose: () => void;
-  onPlay: (season?: number, episode?: number, source?: string, loadedMovie?: any) => void;
+  onPlay: (
+    season?: number,
+    episode?: number,
+    source?: string,
+    loadedMovie?: any,
+  ) => void;
   onSelectMovie?: (m: any) => void;
   isInList: boolean;
   onToggleList: () => void;
@@ -1091,7 +1249,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
   const handleSelectSource = (sourceUrl?: string) => {
     setShowSourceModal(false);
-    onPlay(selectedEpForModal?.season, selectedEpForModal?.episode, sourceUrl, movie);
+    onPlay(
+      selectedEpForModal?.season,
+      selectedEpForModal?.episode,
+      sourceUrl,
+      movie,
+    );
   };
 
   useEffect(() => {
