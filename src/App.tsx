@@ -150,8 +150,8 @@ export default function App() {
           <div className="relative z-[60] mt-[64px] md:mt-[76px] bg-nebula-cyan/5 border-b border-nebula-cyan/10 px-4 py-2.5 flex items-center justify-center gap-3 backdrop-blur-sm">
             <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shadow-[0_0_10px_#00f3ff]" />
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/50">
-              <span className="text-nebula-cyan/80">Announcement:</span> Videasy
-              source is temporarily blocked you may see "no mirrors available"
+              <span className="text-nebula-cyan/80">Announcement:</span> New
+              source "Vidnest", Videasy source now available
             </p>
           </div>
         )}

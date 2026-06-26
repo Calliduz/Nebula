@@ -4024,10 +4024,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 episode={sourceSelect.episode}
                 forceRefetchTrigger={forceRefetchTrigger}
                 onLoadingChange={setSourcesLoading}
+                activeSource={
+                  mirrors[activeMirror]
+                    ? parseMirrorDetails(mirrors[activeMirror].source).category
+                    : ""
+                }
                 onSelect={(src) => {
                   setSourceSelect(null);
+                  const queryParams = new URLSearchParams();
+                  if (movie.type === "tv") {
+                    queryParams.set("season", String(sourceSelect.season));
+                    queryParams.set("episode", String(sourceSelect.episode));
+                  }
+                  if (src) {
+                    queryParams.set("source", src);
+                  }
+                  const queryString = queryParams.toString();
                   navigate(
-                    `/watch/tv/${movie.id}?season=${sourceSelect.season}&episode=${sourceSelect.episode}${src ? `&source=${encodeURIComponent(src)}` : ""}`,
+                    `/watch/${movie.type || "movie"}/${movie.id}${queryString ? `?${queryString}` : ""}`,
                   );
                 }}
               />
@@ -4046,6 +4060,7 @@ export function InPlayerSourcePicker({
   episode,
   forceRefetchTrigger,
   onLoadingChange,
+  activeSource,
   onSelect,
 }: {
   movie: any;
@@ -4053,6 +4068,7 @@ export function InPlayerSourcePicker({
   episode?: number;
   forceRefetchTrigger: number;
   onLoadingChange: (loading: boolean) => void;
+  activeSource?: string;
   onSelect: (src?: string) => void;
 }) {
   const [sources, setSources] = useState<any[]>([]);
@@ -4274,13 +4290,15 @@ export function InPlayerSourcePicker({
       {/* VidRock */}
       <button
         onClick={() => sources.length > 0 && onSelect(vidrockUrl)}
-        disabled={loading || sources.length === 0}
+        disabled={loading || sources.length === 0 || activeSource === "VidRock"}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          loading
-            ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-            : sources.length > 0
-              ? "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95"
-              : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          activeSource === "VidRock"
+            ? "border-nebula-cyan bg-nebula-cyan/10 shadow-[0_0_15px_rgba(0,229,255,0.12)] ring-1 ring-nebula-cyan/35 scale-[1.01] cursor-default"
+            : loading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : sources.length > 0
+                ? "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
         }`}
       >
         <div className="flex items-center gap-2">
@@ -4292,9 +4310,16 @@ export function InPlayerSourcePicker({
             )}
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-tight">
-              VidRock
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                VidRock
+              </p>
+              {activeSource === "VidRock" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
             <p className="text-[8px] text-white/40 uppercase">
               {loading ? "Scanning..." : "High-Speed"}
             </p>
@@ -4329,13 +4354,15 @@ export function InPlayerSourcePicker({
       {/* Videasy */}
       <button
         onClick={() => videasySources.length > 0 && onSelect(videasyUrl)}
-        disabled={videasyLoading || videasySources.length === 0}
+        disabled={videasyLoading || videasySources.length === 0 || activeSource === "Videasy"}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          videasyLoading
-            ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-            : videasySources.length > 0
-              ? "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95"
-              : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          activeSource === "Videasy"
+            ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default"
+            : videasyLoading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : videasySources.length > 0
+                ? "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
         }`}
       >
         <div className="flex items-center gap-2">
@@ -4347,9 +4374,16 @@ export function InPlayerSourcePicker({
             )}
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-tight">
-              Videasy
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                Videasy
+              </p>
+              {activeSource === "Videasy" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-indigo-500 text-white uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
             <p className="text-[8px] text-white/40 uppercase">
               {videasyLoading ? "Decrypting..." : "Decrypted"}
             </p>
@@ -4391,13 +4425,15 @@ export function InPlayerSourcePicker({
       {/* FilmU */}
       <button
         onClick={() => filmuSources.length > 0 && onSelect(filmuUrl)}
-        disabled={filmuLoading || filmuSources.length === 0}
+        disabled={filmuLoading || filmuSources.length === 0 || activeSource === "FilmU"}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          filmuLoading
-            ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-            : filmuSources.length > 0
-              ? "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95"
-              : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          activeSource === "FilmU"
+            ? "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default"
+            : filmuLoading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : filmuSources.length > 0
+                ? "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
         }`}
       >
         <div className="flex items-center gap-2">
@@ -4409,9 +4445,16 @@ export function InPlayerSourcePicker({
             )}
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-tight">
-              FilmU
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                FilmU
+              </p>
+              {activeSource === "FilmU" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
             <p className="text-[8px] text-white/40 uppercase">
               {filmuLoading ? "Scanning..." : "Active"}
             </p>
@@ -4445,13 +4488,15 @@ export function InPlayerSourcePicker({
       {/* Vidnest */}
       <button
         onClick={() => vidnestSources.length > 0 && onSelect(vidnestUrl)}
-        disabled={vidnestLoading || vidnestSources.length === 0}
+        disabled={vidnestLoading || vidnestSources.length === 0 || activeSource === "Vidnest"}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          vidnestLoading
-            ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-            : vidnestSources.length > 0
-              ? "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95"
-              : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          activeSource === "Vidnest"
+            ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default"
+            : vidnestLoading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : vidnestSources.length > 0
+                ? "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
         }`}
       >
         <div className="flex items-center gap-2">
@@ -4463,9 +4508,16 @@ export function InPlayerSourcePicker({
             )}
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-tight">
-              Vidnest
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                Vidnest
+              </p>
+              {activeSource === "Vidnest" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
             <p className="text-[8px] text-white/40 uppercase">
               {vidnestLoading ? "Scanning..." : "Active"}
             </p>
@@ -4499,16 +4551,28 @@ export function InPlayerSourcePicker({
       {/* VidLink */}
       <button
         onClick={() => onSelect()}
-        className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-left transition-all"
+        disabled={activeSource === "VidLink"}
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          activeSource === "VidLink"
+            ? "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default"
+            : "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer"
+        }`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white/60">
             <Search size={14} />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-tight">
-              VidLink
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                VidLink
+              </p>
+              {activeSource === "VidLink" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
             <p className="text-[8px] text-white/40 uppercase">Standard</p>
           </div>
         </div>

@@ -22,7 +22,7 @@ export const DEFAULT_PREFERENCES: SubtitlePreferences = {
   color: "#ffffff",
   bgColor: "#000000",
   bgOpacity: 0.0,
-  outlineWidth: "0px",
+  outlineWidth: "2px",
   outlineColor: "#000000",
   useNativeSubtitles: false,
 };
@@ -44,7 +44,7 @@ const PRESETS: Record<
     color: "#ffffff",
     bgColor: "#000000",
     bgOpacity: 0.0,
-    outlineWidth: "0px",
+    outlineWidth: "2px",
     outlineColor: "#000000",
   },
   anime: {
