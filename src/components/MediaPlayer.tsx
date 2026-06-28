@@ -1720,6 +1720,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   `[PLAYER] Prefetch Vidnest failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 ),
               );
+
+            // 6. Vidsrc prefetch
+            let vidsrcPrefetchUrl = `${API}/api/vidsrc?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(vidsrcPrefetchUrl)
+              .then((r) => r.json())
+              .then(() =>
+                console.log(
+                  `[PLAYER] Prefetched next episode from Vidsrc (S${nextEp.season}E${nextEp.episode})`,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch Vidsrc failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
+                ),
+              );
           }
         }
 
@@ -2696,12 +2711,40 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         </div>
       )}
 
-      {isEmbed ? (
+      {isEmbed && streamUrl?.includes("vsembed.ru") ? (
+        <div className="w-full h-full absolute inset-0 z-0 flex flex-col bg-black">
+          <iframe
+            src={streamUrl!}
+            className="w-full border-0 flex-1 bg-black"
+            allowFullScreen
+            allow="autoplay; encrypted-media; picture-in-picture"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+            title="Nebula Secure Mirror"
+            onLoad={() => {
+              setLoading(false);
+              setIsBuffering(false);
+            }}
+          />
+          <div className="w-full bg-amber-950/90 backdrop-blur-sm border-t border-amber-500/25 px-4 py-2.5 flex items-center gap-3 shrink-0 z-10">
+            <span className="text-amber-400 shrink-0">⚠</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">
+                Vidsrc Embed Mode
+              </p>
+              <p className="text-[9px] text-amber-400/70 leading-relaxed mt-0.5">
+                This source uses an embedded player. Nebula subtitles &amp;
+                custom controls are unavailable. Third-party ads may appear.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : isEmbed ? (
         <iframe
           src={streamUrl!}
           className="w-full h-full border-0 bg-black absolute inset-0 z-0"
           allowFullScreen
           allow="autoplay; encrypted-media; picture-in-picture"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           title="Nebula Secure Mirror"
           onLoad={() => {
             setLoading(false);
@@ -4107,6 +4150,10 @@ export function InPlayerSourcePicker({
   const [vidnestLoading, setVidnestLoading] = useState(true);
   const [vidnestError, setVidnestError] = useState("");
 
+  const [vidsrcSources, setVidsrcSources] = useState<any[]>([]);
+  const [vidsrcLoading, setVidsrcLoading] = useState(true);
+  const [vidsrcError, setVidsrcError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -4115,9 +4162,13 @@ export function InPlayerSourcePicker({
 
   useEffect(() => {
     onLoadingChangeRef.current?.(
-      loading || videasyLoading || filmuLoading || vidnestLoading,
+      loading ||
+        videasyLoading ||
+        filmuLoading ||
+        vidnestLoading ||
+        vidsrcLoading,
     );
-  }, [loading, videasyLoading, filmuLoading, vidnestLoading]);
+  }, [loading, videasyLoading, filmuLoading, vidnestLoading, vidsrcLoading]);
 
   const fetchSources = useCallback(
     (force = false, isBackground = false) => {
@@ -4130,6 +4181,8 @@ export function InPlayerSourcePicker({
         setFilmuError("");
         setVidnestLoading(true);
         setVidnestError("");
+        setVidsrcLoading(true);
+        setVidsrcError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -4249,7 +4302,36 @@ export function InPlayerSourcePicker({
           if (!isBackground) setVidnestLoading(false);
         });
 
-      return Promise.all([pVidrock, pVideasy, pFilmu, pVidnest]);
+      // 5. Vidsrc Fetch
+      let vidsrcUrl = `${API}/api/vidsrc?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+      if (season !== undefined) vidsrcUrl += `&season=${season}`;
+      if (episode !== undefined) vidsrcUrl += `&episode=${episode}`;
+
+      const pVidsrc = fetch(vidsrcUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Vidsrc scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+          setVidsrcSources(list);
+          if (!isBackground) setVidsrcError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setVidsrcError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setVidsrcLoading(false);
+        });
+
+      return Promise.all([pVidrock, pVideasy, pFilmu, pVidnest, pVidsrc]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
   );
@@ -4298,6 +4380,14 @@ export function InPlayerSourcePicker({
     )
     .join("|");
   const vidnestUrl = vidnestSources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
+
+  const vidsrcUrl = vidsrcSources
     .map((s) =>
       s.url.includes("#")
         ? s.url
@@ -4573,6 +4663,80 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase">
               {vidnestError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Vidsrc */}
+      <button
+        onClick={() => vidsrcSources.length > 0 && onSelect(vidsrcUrl)}
+        disabled={
+          vidsrcLoading ||
+          vidsrcSources.length === 0 ||
+          activeSource === "Vidsrc"
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          activeSource === "Vidsrc"
+            ? "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default"
+            : vidsrcLoading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : vidsrcSources.length > 0
+                ? "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+          <div className="flex items-center gap-2">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+            vidsrcLoading || vidsrcSources.length > 0
+              ? "bg-amber-500/15 text-amber-400"
+              : "bg-white/5 text-white/20"
+          }`}>
+            {vidsrcLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Zap size={14} />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                Vidsrc
+              </p>
+              <span className="text-[7px] font-black px-1 py-0.5 rounded bg-amber-500/15 border border-amber-500/25 text-amber-400 uppercase tracking-wider">
+                EMBED
+              </span>
+              {activeSource === "Vidsrc" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-cyan-500 text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
+            <p className="text-[8px] text-white/40 uppercase">
+              {vidsrcLoading ? "Checking..." : "Embed Player"}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {vidsrcLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Checking availability...
+            </span>
+          ) : vidsrcSources.length > 0 ? (
+            <>
+              <span className="text-[7px] font-bold px-1 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase">
+                Player Ready
+              </span>
+              <span className="text-[7px] font-bold px-1 py-0.5 rounded border border-amber-500/20 text-amber-400/70 bg-amber-500/5 uppercase">
+                ⚠ Ads
+              </span>
+              <span className="text-[7px] font-bold px-1 py-0.5 rounded border border-white/8 text-white/25 bg-white/3 uppercase">
+                No Subs
+              </span>
+            </>
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">
+              {vidsrcError || "Unavailable"}
             </span>
           )}
         </div>

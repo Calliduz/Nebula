@@ -79,6 +79,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [vidnestLoading, setVidnestLoading] = useState(true);
   const [vidnestError, setVidnestError] = useState("");
 
+  const [vidsrcSources, setVidsrcSources] = useState<any[]>([]);
+  const [vidsrcLoading, setVidsrcLoading] = useState(true);
+  const [vidsrcError, setVidsrcError] = useState("");
+
   const isMountedRef = useRef(true);
 
   const loadAllSources = (force = false) => {
@@ -92,6 +96,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     setFilmuError("");
     setVidnestLoading(true);
     setVidnestError("");
+    setVidsrcLoading(true);
+    setVidsrcError("");
 
     const forceParam = force ? "&force=1" : "";
 
@@ -251,6 +257,37 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (!isMountedRef.current) return;
         setVidnestLoading(false);
       });
+
+    // 6. Vidsrc Fetch
+    let vidsrcFetchUrl = `${API_BASE_URL}/api/vidsrc?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+    if (season !== undefined) vidsrcFetchUrl += `&season=${season}`;
+    if (episode !== undefined) vidsrcFetchUrl += `&episode=${episode}`;
+
+    fetch(vidsrcFetchUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan Vidsrc uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!isMountedRef.current) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name,
+            url: value.url,
+            type: value.type || "hls",
+            quality: (value as any).quality || "Auto",
+          }));
+        setVidsrcSources(activeSources);
+      })
+      .catch((err) => {
+        if (!isMountedRef.current) return;
+        setVidsrcError(err.message || "Failed to contact Vidsrc.");
+      })
+      .finally(() => {
+        if (!isMountedRef.current) return;
+        setVidsrcLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -285,6 +322,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     )
     .join("|");
   const vidnestUrl = vidnestSources
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
+
+  const vidsrcUrl = vidsrcSources
     .map((src) =>
       src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
     )
@@ -892,6 +935,98 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {vidnestError ? "Providers offline" : "No mirrors available"}
                 </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Vidsrc Card ── */}
+          <div
+            onClick={() => {
+              if (!vidsrcLoading && vidsrcSources.length > 0)
+                onSelect(vidsrcUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              vidsrcLoading
+                ? "border-cyan-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : vidsrcSources.length > 0
+                  ? "border-cyan-500/35 bg-slate-950/45 hover:border-cyan-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  vidsrcLoading || vidsrcSources.length > 0
+                    ? "bg-cyan-500/15 text-cyan-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Zap
+                  size={18}
+                  className={vidsrcLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Vidsrc
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 uppercase tracking-wider">
+                    EMBED
+                  </span>
+                  {vidsrcLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vidsrcSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/35 text-cyan-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Embeds the Vidsrc player directly. Stream works in-browser but
+                  uses the provider's own controls.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3 space-y-2">
+              {/* Availability row */}
+              {vidsrcLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-cyan-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
+                  </span>
+                  Checking...
+                </div>
+              ) : vidsrcSources.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 uppercase tracking-wider">
+                    Player Ready
+                  </span>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vidsrcError ? "Provider offline" : "Unavailable"}
+                </p>
+              )}
+              {/* Disclaimer row */}
+              {vidsrcSources.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded border border-amber-500/25 text-amber-400/80 bg-amber-500/5 uppercase tracking-wider">
+                    ⚠ May contain ads
+                  </span>
+                  <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/30 bg-white/3 uppercase tracking-wider">
+                    No subtitle support
+                  </span>
+                </div>
               )}
             </div>
           </div>
