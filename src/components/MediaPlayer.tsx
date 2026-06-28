@@ -351,7 +351,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
   }, []);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
   const [dragProgress, setDragProgress] = useState(0);
+  const dragProgressRef = useRef(0);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState(0);
   const [showSubtitles, setShowSubtitles] = useState(false);
@@ -1597,6 +1599,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setDuration("0:00");
     setBuffered(0);
     setIsDragging(false);
+    setIsSeeking(false);
     setDragProgress(0);
     setHoverTime(null);
     hasPrefetchedNextEpisode.current = false;
@@ -1948,6 +1951,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       lastWatchdogTime = video.currentTime;
     }, 1000);
 
+    const onSeeking = () => setIsSeeking(true);
+    const onSeeked = () => setIsSeeking(false);
+
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     video.addEventListener("timeupdate", onTime);
     video.addEventListener("durationchange", onDuration);
@@ -1960,6 +1966,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     video.addEventListener("stalled", onStalled);
     video.addEventListener("suspend", onSuspend);
     video.addEventListener("error", onVideoError);
+    video.addEventListener("seeking", onSeeking);
+    video.addEventListener("seeked", onSeeked);
 
     // ── Visibility Change: Handle mobile resume from background ──
     const handleVisibilityChange = () => {
@@ -1994,6 +2002,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       video.removeEventListener("stalled", onStalled);
       video.removeEventListener("suspend", onSuspend);
       video.removeEventListener("error", onVideoError);
+      video.removeEventListener("seeking", onSeeking);
+      video.removeEventListener("seeked", onSeeked);
     };
   }, [streamUrl, movie.id, getProgressKey, selectMirror]);
 
@@ -2206,6 +2216,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         0,
         Math.min(100, ((clientX - r.left) / r.width) * 100),
       );
+      dragProgressRef.current = p;
       setDragProgress(p);
     },
     [isDragging],
@@ -2216,9 +2227,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setIsDragging(false);
     const v = videoRef.current;
     if (v && isFinite(v.duration)) {
-      v.currentTime = (dragProgress / 100) * v.duration;
+      setIsSeeking(true);
+      v.currentTime = (dragProgressRef.current / 100) * v.duration;
     }
-  }, [isDragging, dragProgress]);
+  }, [isDragging]);
 
   useEffect(() => {
     if (isDragging) {
@@ -2243,6 +2255,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const clientX =
       "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const p = Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100));
+    dragProgressRef.current = p;
     setDragProgress(p);
   };
 
@@ -3033,11 +3046,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 />
                 <div
                   className="absolute inset-y-0 left-0 bg-white rounded-full transition-all duration-75"
-                  style={{ width: `${isDragging ? dragProgress : progress}%` }}
+                  style={{
+                    width: `${isDragging || isSeeking ? dragProgress : progress}%`,
+                  }}
                 />
                 <div
                   className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg group-hover:scale-125 transition-transform"
-                  style={{ left: `${isDragging ? dragProgress : progress}%` }}
+                  style={{
+                    left: `${isDragging || isSeeking ? dragProgress : progress}%`,
+                  }}
                 />
               </div>
             </div>
@@ -4025,6 +4042,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 forceRefetchTrigger={forceRefetchTrigger}
                 onLoadingChange={setSourcesLoading}
                 activeSource={
+                  (movie.type !== "tv" ||
+                    (sourceSelect.season === season &&
+                      sourceSelect.episode === episode)) &&
                   mirrors[activeMirror]
                     ? parseMirrorDetails(mirrors[activeMirror].source).category
                     : ""
@@ -4354,7 +4374,11 @@ export function InPlayerSourcePicker({
       {/* Videasy */}
       <button
         onClick={() => videasySources.length > 0 && onSelect(videasyUrl)}
-        disabled={videasyLoading || videasySources.length === 0 || activeSource === "Videasy"}
+        disabled={
+          videasyLoading ||
+          videasySources.length === 0 ||
+          activeSource === "Videasy"
+        }
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
           activeSource === "Videasy"
             ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default"
@@ -4425,7 +4449,9 @@ export function InPlayerSourcePicker({
       {/* FilmU */}
       <button
         onClick={() => filmuSources.length > 0 && onSelect(filmuUrl)}
-        disabled={filmuLoading || filmuSources.length === 0 || activeSource === "FilmU"}
+        disabled={
+          filmuLoading || filmuSources.length === 0 || activeSource === "FilmU"
+        }
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
           activeSource === "FilmU"
             ? "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default"
@@ -4488,7 +4514,11 @@ export function InPlayerSourcePicker({
       {/* Vidnest */}
       <button
         onClick={() => vidnestSources.length > 0 && onSelect(vidnestUrl)}
-        disabled={vidnestLoading || vidnestSources.length === 0 || activeSource === "Vidnest"}
+        disabled={
+          vidnestLoading ||
+          vidnestSources.length === 0 ||
+          activeSource === "Vidnest"
+        }
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
           activeSource === "Vidnest"
             ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default"

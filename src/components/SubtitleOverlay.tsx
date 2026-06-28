@@ -114,9 +114,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = memo(
 
     return (
       <div
-        className={`absolute left-1/2 -translate-x-1/2 z-[25] pointer-events-none text-center select-none w-[96%] max-w-5xl transition-all duration-300 ${
-          showUi ? "bottom-[13%]" : "bottom-[5%]"
-        }`}
+        className="absolute left-1/2 -translate-x-1/2 z-[25] pointer-events-none text-center select-none w-[96%] max-w-5xl bottom-[5%]"
         data-testid="subtitle-overlay"
       >
         <div className="flex flex-col items-center gap-1.5">
@@ -126,6 +124,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = memo(
               className="inline-block px-4 py-1.5 rounded-lg whitespace-pre-line text-center"
               style={{
                 fontFamily: "Arial, Helvetica, sans-serif",
+                letterSpacing: "0.5px",
                 color: prefs.color,
                 fontSize: `clamp(calc(12px * ${prefs.size}), calc(2.8cqi * ${prefs.size}), calc(30px * ${prefs.size}))`,
                 backgroundColor: bgColor,

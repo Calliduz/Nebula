@@ -18,7 +18,7 @@ export interface ActiveCue {
 
 export const DEFAULT_PREFERENCES: SubtitlePreferences = {
   preset: "netflix",
-  size: 1.0,
+  size: 0.75,
   color: "#ffffff",
   bgColor: "#000000",
   bgOpacity: 0.0,
@@ -32,7 +32,7 @@ const PRESETS: Record<
   Omit<SubtitlePreferences, "preset" | "useNativeSubtitles">
 > = {
   vlc: {
-    size: 1.0,
+    size: 0.75,
     color: "#ffffff",
     bgColor: "#000000",
     bgOpacity: 0.0,
@@ -40,7 +40,7 @@ const PRESETS: Record<
     outlineColor: "#000000",
   },
   netflix: {
-    size: 1.0,
+    size: 0.75,
     color: "#ffffff",
     bgColor: "#000000",
     bgOpacity: 0.0,
@@ -48,7 +48,7 @@ const PRESETS: Record<
     outlineColor: "#000000",
   },
   anime: {
-    size: 1.25,
+    size: 0.94,
     color: "#ffffff",
     bgColor: "#000000",
     bgOpacity: 0.0,
@@ -56,7 +56,7 @@ const PRESETS: Record<
     outlineColor: "#000000",
   },
   minimal: {
-    size: 1.0,
+    size: 0.75,
     color: "#ffffff",
     bgColor: "#000000",
     bgOpacity: 0.0,
