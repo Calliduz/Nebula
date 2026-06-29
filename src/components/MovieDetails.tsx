@@ -79,6 +79,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [vidnestLoading, setVidnestLoading] = useState(true);
   const [vidnestError, setVidnestError] = useState("");
 
+  const [vaplayerSources, setVaplayerSources] = useState<any[]>([]);
+  const [vaplayerLoading, setVaplayerLoading] = useState(true);
+  const [vaplayerError, setVaplayerError] = useState("");
+
   const isMountedRef = useRef(true);
 
   const loadAllSources = (force = false) => {
@@ -92,6 +96,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     setFilmuError("");
     setVidnestLoading(true);
     setVidnestError("");
+    setVaplayerLoading(true);
+    setVaplayerError("");
 
     const forceParam = force ? "&force=1" : "";
 
@@ -251,6 +257,37 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (!isMountedRef.current) return;
         setVidnestLoading(false);
       });
+
+    // 6. Vaplayer Fetch
+    let vaplayerFetchUrl = `${API_BASE_URL}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+    if (season !== undefined) vaplayerFetchUrl += `&season=${season}`;
+    if (episode !== undefined) vaplayerFetchUrl += `&episode=${episode}`;
+
+    fetch(vaplayerFetchUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan Vaplayer uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!isMountedRef.current) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name,
+            url: value.url,
+            type: value.type || "hls",
+            quality: (value as any).quality || "Auto",
+          }));
+        setVaplayerSources(activeSources);
+      })
+      .catch((err) => {
+        if (!isMountedRef.current) return;
+        setVaplayerError(err.message || "Failed to contact Vaplayer.");
+      })
+      .finally(() => {
+        if (!isMountedRef.current) return;
+        setVaplayerLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -289,6 +326,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
     )
     .join("|");
+  const vaplayerUrl = vaplayerSources
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
@@ -312,7 +354,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             videasyLoading ||
             vidlinkLoading ||
             filmuLoading ||
-            vidnestLoading
+            vidnestLoading ||
+            vaplayerLoading
           }
           className="absolute top-4 left-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed z-50 cursor-pointer"
           title="Re-scan all sources for background results"
@@ -324,7 +367,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               videasyLoading ||
               vidlinkLoading ||
               filmuLoading ||
-              vidnestLoading
+              vidnestLoading ||
+              vaplayerLoading
                 ? "animate-spin text-nebula-cyan"
                 : ""
             }
@@ -891,6 +935,107 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {vidnestError ? "Providers offline" : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Vaplayer Card ── */}
+          <div
+            onClick={() => {
+              if (!vaplayerLoading && vaplayerSources.length > 0)
+                onSelect(vaplayerUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              vaplayerLoading
+                ? "border-cyan-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : vaplayerSources.length > 0
+                  ? "border-cyan-500/35 bg-slate-950/45 hover:border-cyan-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  vaplayerLoading || vaplayerSources.length > 0
+                    ? "bg-cyan-500/15 text-cyan-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Tv
+                  size={18}
+                  className={vaplayerLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Vaplayer
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 uppercase tracking-wider">
+                    FAST HLS
+                  </span>
+                  {vaplayerLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vaplayerSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/35 text-cyan-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  High-speed direct HLS stream delivery mapping high quality
+                  mirrors with multi-language subtitle integration.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {vaplayerLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-cyan-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
+                  </span>
+                  Probing Mirrors...
+                </div>
+              ) : vaplayerSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Available Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vaplayerSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Vaplayer\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Vaplayer/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName =
+                        src.quality !== "Auto"
+                          ? src.quality.toUpperCase()
+                          : cleanMirrorName || "HD";
+                      return (
+                        <span
+                          key={src.name}
+                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 uppercase tracking-wider"
+                        >
+                          {displayName}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vaplayerError ? "Providers offline" : "No mirrors available"}
                 </p>
               )}
             </div>

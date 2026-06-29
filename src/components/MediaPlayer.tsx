@@ -113,6 +113,13 @@ export const parseMirrorDetails = (sourceName: string) => {
       name: ((rest || "Stream") + suffix).toUpperCase(),
     };
   }
+  if (cleanSource.startsWith("Vaplayer")) {
+    const rest = cleanSource.replace(/^Vaplayer[\s-]*/i, "").trim();
+    return {
+      category: "Vaplayer",
+      name: ((rest || "Mirror") + suffix).toUpperCase(),
+    };
+  }
   if (cleanSource.startsWith("FilmU")) {
     return {
       category: "FilmU",
@@ -601,6 +608,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isVidnest = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("vidnest"),
           );
+          const isVaplayer = processedMirrors.some((m) =>
+            m.source.toLowerCase().startsWith("vaplayer"),
+          );
 
           let fetchUrl = "";
           if (isVideasy) {
@@ -617,6 +627,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             if (episode !== undefined) fetchUrl += `&episode=${episode}`;
           } else if (isVidnest) {
             fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}`;
+            if (season !== undefined) fetchUrl += `&season=${season}`;
+            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+          } else if (isVaplayer) {
+            fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}`;
             if (season !== undefined) fetchUrl += `&season=${season}`;
             if (episode !== undefined) fetchUrl += `&episode=${episode}`;
           }
@@ -673,6 +687,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         : `Vidnest (${name})`,
                       url: v.url,
                       type: v.type || "mp4",
+                      quality: (v as any).quality || "Auto",
+                    }));
+                } else if (isVaplayer) {
+                  updatedMirrors = Object.entries(data)
+                    .filter(([_, v]: any) => v && v.url)
+                    .map(([name, v]: any) => ({
+                      source: name.toLowerCase().startsWith("vaplayer")
+                        ? name
+                        : `Vaplayer (${name})`,
+                      url: v.url,
+                      type: v.type || "hls",
                       quality: (v as any).quality || "Auto",
                     }));
                 }
@@ -1718,6 +1743,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               .catch((err) =>
                 console.warn(
                   `[PLAYER] Prefetch Vidnest failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
+                ),
+              );
+
+            // 6. Vaplayer prefetch
+            let vaplayerPrefetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(vaplayerPrefetchUrl)
+              .then((r) => r.json())
+              .then(() =>
+                console.log(
+                  `[PLAYER] Prefetched next episode from Vaplayer (S${nextEp.season}E${nextEp.episode})`,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch Vaplayer failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 ),
               );
           }
@@ -4107,6 +4147,10 @@ export function InPlayerSourcePicker({
   const [vidnestLoading, setVidnestLoading] = useState(true);
   const [vidnestError, setVidnestError] = useState("");
 
+  const [vaplayerSources, setVaplayerSources] = useState<any[]>([]);
+  const [vaplayerLoading, setVaplayerLoading] = useState(true);
+  const [vaplayerError, setVaplayerError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -4115,9 +4159,13 @@ export function InPlayerSourcePicker({
 
   useEffect(() => {
     onLoadingChangeRef.current?.(
-      loading || videasyLoading || filmuLoading || vidnestLoading,
+      loading ||
+        videasyLoading ||
+        filmuLoading ||
+        vidnestLoading ||
+        vaplayerLoading,
     );
-  }, [loading, videasyLoading, filmuLoading, vidnestLoading]);
+  }, [loading, videasyLoading, filmuLoading, vidnestLoading, vaplayerLoading]);
 
   const fetchSources = useCallback(
     (force = false, isBackground = false) => {
@@ -4130,6 +4178,8 @@ export function InPlayerSourcePicker({
         setFilmuError("");
         setVidnestLoading(true);
         setVidnestError("");
+        setVaplayerLoading(true);
+        setVaplayerError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -4249,7 +4299,36 @@ export function InPlayerSourcePicker({
           if (!isBackground) setVidnestLoading(false);
         });
 
-      return Promise.all([pVidrock, pVideasy, pFilmu, pVidnest]);
+      // 5. Vaplayer Fetch
+      let vaplayerUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+      if (season !== undefined) vaplayerUrl += `&season=${season}`;
+      if (episode !== undefined) vaplayerUrl += `&episode=${episode}`;
+
+      const pVaplayer = fetch(vaplayerUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Vaplayer scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+          setVaplayerSources(list);
+          if (!isBackground) setVaplayerError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setVaplayerError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setVaplayerLoading(false);
+        });
+
+      return Promise.all([pVidrock, pVideasy, pFilmu, pVidnest, pVaplayer]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
   );
@@ -4298,6 +4377,13 @@ export function InPlayerSourcePicker({
     )
     .join("|");
   const vidnestUrl = vidnestSources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
+  const vaplayerUrl = vaplayerSources
     .map((s) =>
       s.url.includes("#")
         ? s.url
@@ -4573,6 +4659,73 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase">
               {vidnestError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Vaplayer */}
+      <button
+        onClick={() => vaplayerSources.length > 0 && onSelect(vaplayerUrl)}
+        disabled={
+          vaplayerLoading ||
+          vaplayerSources.length === 0 ||
+          activeSource === "Vaplayer"
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          activeSource === "Vaplayer"
+            ? "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default"
+            : vaplayerLoading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : vaplayerSources.length > 0
+                ? "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400">
+            {vaplayerLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Tv size={14} />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                Vaplayer
+              </p>
+              {activeSource === "Vaplayer" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-cyan-500 text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
+            <p className="text-[8px] text-white/40 uppercase">
+              {vaplayerLoading ? "Scanning..." : "Active"}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {vaplayerLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Running direct scan...
+            </span>
+          ) : vaplayerSources.length > 0 ? (
+            vaplayerSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7px] font-bold px-1 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase"
+              >
+                {s.name
+                  .replace(/^Vaplayer[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">
+              {vaplayerError || "No mirrors"}
             </span>
           )}
         </div>
