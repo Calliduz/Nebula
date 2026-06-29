@@ -273,6 +273,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   } | null>(null);
   const [forceRefetchTrigger, setForceRefetchTrigger] = useState(0);
   const [sourcesLoading, setSourcesLoading] = useState(false);
+  const [showVidsrcBanner, setShowVidsrcBanner] = useState(true);
   const [qualityTag, setQualityTag] = useState<string>(""); // CAM | WEBDL | WEBRIP | BLURAY | etc.
   const [resolution, setResolution] = useState<string>("");
   const [toast, setToast] = useState<{
@@ -299,6 +300,33 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       return () => clearTimeout(timer);
     }
   }, [doubleTapFeedback?.key]);
+
+  // Reset and auto-hide Vidsrc warning banner on stream/source shifts
+  useEffect(() => {
+    if (isEmbed && streamUrl?.includes("vsembed.ru")) {
+      setShowVidsrcBanner(true);
+      const timer = setTimeout(() => {
+        setShowVidsrcBanner(false);
+      }, 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [streamUrl, isEmbed]);
+
+  // Prevent frame-busting redirects when in embed mode
+  useEffect(() => {
+    if (!isEmbed) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Are you sure you want to leave?";
+      return "Are you sure you want to leave?";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isEmbed]);
 
   const showToast = useCallback(
     (message: string, type: "error" | "info" = "info") => {
@@ -2030,10 +2058,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setShowUi(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      if (!isPaused && !showSettings && !showSubtitles && !showEpisodeDrawer)
+      const canHide =
+        isEmbed ||
+        (!isPaused && !showSettings && !showSubtitles && !showEpisodeDrawer);
+      if (canHide && !showSettings && !showSubtitles && !showEpisodeDrawer)
         setShowUi(false);
     }, 3000);
-  }, [isPaused, showSettings, showSubtitles, showEpisodeDrawer]);
+  }, [isPaused, isEmbed, showSettings, showSubtitles, showEpisodeDrawer]);
 
   // Tap on the video/empty area:
   //  - If a menu is open → close it
@@ -2718,25 +2749,37 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             className="w-full border-0 flex-1 bg-black"
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+            referrerPolicy="no-referrer"
             title="Nebula Secure Mirror"
             onLoad={() => {
               setLoading(false);
               setIsBuffering(false);
             }}
           />
-          <div className="w-full bg-amber-950/90 backdrop-blur-sm border-t border-amber-500/25 px-4 py-2.5 flex items-center gap-3 shrink-0 z-10">
-            <span className="text-amber-400 shrink-0">⚠</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">
-                Vidsrc Embed Mode
-              </p>
-              <p className="text-[9px] text-amber-400/70 leading-relaxed mt-0.5">
-                This source uses an embedded player. Nebula subtitles &amp;
-                custom controls are unavailable. Third-party ads may appear.
-              </p>
+          {showVidsrcBanner && (
+            <div className="w-full bg-amber-950/90 backdrop-blur-sm border-t border-amber-500/25 px-4 py-2.5 flex items-center gap-3 shrink-0 z-10">
+              <span className="text-amber-400 shrink-0 text-sm">⚠</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">
+                  Vidsrc Embed Mode
+                </p>
+                <p className="text-[9px] text-amber-400/70 leading-relaxed mt-0.5">
+                  This source uses an embedded player. Nebula subtitles &amp;
+                  custom controls are unavailable. Third-party ads may appear.
+                </p>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowVidsrcBanner(false);
+                }}
+                className="text-amber-400/60 hover:text-amber-300 p-1 rounded-full hover:bg-white/5 transition-colors flex items-center justify-center shrink-0"
+                title="Dismiss warning"
+              >
+                <X size={14} />
+              </button>
             </div>
-          </div>
+          )}
         </div>
       ) : isEmbed ? (
         <iframe
@@ -2940,9 +2983,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       <div
         className="absolute inset-0 flex flex-col justify-between z-20"
         style={{
-          opacity: showUi ? 1 : 0,
+          opacity: isEmbed ? 1 : showUi ? 1 : 0,
           transition: "opacity 0.25s",
-          pointerEvents: showUi ? "auto" : "none",
+          pointerEvents: isEmbed ? "none" : showUi ? "auto" : "none",
         }}
         // Tap on empty space (not the bars) → toggle UI visibility
         onClick={handleDesktopClick}
@@ -2984,6 +3027,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       >
         <div
           className={`flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 ${!isEmbed ? "bg-gradient-to-b from-black/80 to-transparent" : ""}`}
+          style={{
+            pointerEvents: "auto",
+            opacity: isEmbed ? (showUi ? 1 : 0) : undefined,
+            transition: isEmbed ? "opacity 0.25s" : undefined,
+          }}
+          onMouseEnter={
+            isEmbed
+              ? () => {
+                  setShowUi(true);
+                  resetHideTimer();
+                }
+              : undefined
+          }
           // Stop taps on the top bar from bubbling to the tap layer
           onClick={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
@@ -3040,7 +3096,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         </div>
 
         <div
-          className={`px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 ${!isEmbed ? "bg-gradient-to-t from-black/90 to-transparent" : ""}`}
+          className={`px-3 sm:px-6 pb-4 sm:pb-6 ${!isEmbed ? "pt-12 sm:pt-16 bg-gradient-to-t from-black/90 to-transparent" : ""}`}
+          style={{
+            pointerEvents: "auto",
+            opacity: isEmbed ? (showUi ? 1 : 0) : undefined,
+            transition: isEmbed ? "opacity 0.25s" : undefined,
+          }}
+          onMouseEnter={
+            isEmbed
+              ? () => {
+                  setShowUi(true);
+                  resetHideTimer();
+                }
+              : undefined
+          }
           // Stop taps on the bottom bar from bubbling to the tap layer
           onClick={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
@@ -4686,12 +4755,14 @@ export function InPlayerSourcePicker({
                 : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
         }`}
       >
-          <div className="flex items-center gap-2">
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-            vidsrcLoading || vidsrcSources.length > 0
-              ? "bg-amber-500/15 text-amber-400"
-              : "bg-white/5 text-white/20"
-          }`}>
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+              vidsrcLoading || vidsrcSources.length > 0
+                ? "bg-amber-500/15 text-amber-400"
+                : "bg-white/5 text-white/20"
+            }`}
+          >
             {vidsrcLoading ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
