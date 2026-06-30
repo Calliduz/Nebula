@@ -21,6 +21,7 @@ interface HomeFeedProps {
   setViewingCategory: (category: string | null) => void;
   onRandomize: () => void;
   allMovies: any[];
+  topTenMovies: any[];
   removeFromHistory: (id: string | number, type?: string) => void;
   removeFromProgress: (id: string) => void;
 }
@@ -42,6 +43,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   onRandomize,
   rows,
   allMovies,
+  topTenMovies,
   removeFromHistory,
   removeFromProgress,
 }) => {
@@ -56,7 +58,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       />
 
       <TopTenShelf
-        data={allMovies}
+        data={topTenMovies}
         onSelect={setSelectedMovie}
         isLoading={isLoading}
       />

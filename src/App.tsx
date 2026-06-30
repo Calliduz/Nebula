@@ -190,6 +190,7 @@ export default function App() {
                       onRandomize={actions.handleRandomize}
                       rows={state.rows}
                       allMovies={state.allMovies}
+                      topTenMovies={state.topTenMovies}
                       removeFromHistory={actions.removeFromHistory}
                       removeFromProgress={actions.removeFromProgress}
                     />

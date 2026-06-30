@@ -5,7 +5,6 @@ const BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/original";
 
 const CACHE_VERSION = "v2.0"; // Bump to invalidate all old caches
 
-// ─── TTL Constants ────────────────────────────────────────────────────────────
 const TTL = {
   TRENDING: 1000 * 60 * 60 * 4, // 4 hours — changes frequently
   POPULAR: 1000 * 60 * 60 * 24, // 24 hours
@@ -14,6 +13,7 @@ const TTL = {
   LEGACY: 1000 * 60 * 60 * 24 * 365 * 30, // ~30 years for pre-2000 films
   META: 1000 * 60 * 60 * 24 * 7, // 7 days for logos/backdrops
   SEARCH: 1000 * 60 * 15, // 15 minutes — search queries change, 7 days is too stale
+  RECOMMENDATIONS: 1000 * 60 * 60 * 4, // 4 hours — recommendations change on activity
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -740,7 +740,7 @@ export const getRecommendations = async (
     const data = await fetchFromTMDB(
       `/${type}/${id}/recommendations`,
       { page },
-      TTL.DETAILS,
+      TTL.RECOMMENDATIONS,
     );
     const results = (data.results || []).map((m: any) =>
       normalizeMovie(m, type),
@@ -750,7 +750,7 @@ export const getRecommendations = async (
     const fallback = await fetchFromTMDB(
       `/${type}/${id}/similar`,
       { page },
-      TTL.DETAILS,
+      TTL.RECOMMENDATIONS,
     );
     return (fallback.results || []).map((m: any) => normalizeMovie(m, type));
   } catch {
@@ -1048,5 +1048,23 @@ export const getPopularActors = async (): Promise<
     }));
   } catch {
     return [];
+  }
+};
+
+export const invalidateRecommendationCache = (
+  id: string | number,
+  type: "movie" | "tv",
+) => {
+  const versionedPrefix = `${CACHE_VERSION}-tmdb-proxy-/${type}/${id}/`;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(versionedPrefix)) {
+        localStorage.removeItem(key);
+        i--;
+      }
+    }
+  } catch (e) {
+    console.error("Error clearing recommendation cache", e);
   }
 };
