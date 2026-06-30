@@ -62,7 +62,7 @@ export interface RowConfig {
 }
 
 export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
-  "Trending Missions: Global Feed": {
+  "Trending Now": {
     mediaType: "all",
     discoverParams: {},
     filterFn: () => true,
@@ -72,7 +72,7 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     discoverParams: { sort_by: "popularity.desc" },
     filterFn: (m) => m.type === "tv",
   },
-  "Critically Acclaimed: Missions": {
+  "Critically Acclaimed": {
     mediaType: "movie",
     discoverParams: {
       "vote_average.gte": "7.5",
@@ -81,7 +81,7 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     },
     filterFn: (m) => (m.imdb ?? 0) >= 7.5,
   },
-  "New Intel: 2025 Releases": {
+  "New Releases": {
     mediaType: "movie",
     discoverParams: {
       primary_release_year: new Date().getFullYear().toString(),
@@ -501,12 +501,15 @@ export function isWatchItAgainItem(
   }
 }
 
-export function seededShuffle<T>(arr: T[]): T[] {
-  const seed = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+export function seededShuffle<T>(arr: T[], seed?: number): T[] {
   let m = 0x80000000;
   let a = 1103515245;
   let c = 12345;
-  let state = seed ? seed : 1;
+  const activeSeed =
+    seed !== undefined
+      ? Math.abs(seed)
+      : Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+  let state = activeSeed ? activeSeed : 1;
 
   const nextRand = () => {
     state = (a * state + c) % m;
@@ -521,6 +524,16 @@ export function seededShuffle<T>(arr: T[]): T[] {
     copy[j] = temp;
   }
   return copy;
+}
+
+export function rotateItems<T>(arr: T[], seed?: number): T[] {
+  if (arr.length <= 6) return arr;
+  const activeSeed =
+    seed !== undefined
+      ? Math.abs(seed)
+      : Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+  const shift = activeSeed % arr.length;
+  return [...arr.slice(shift), ...arr.slice(0, shift)];
 }
 
 export function useAppState() {
@@ -574,6 +587,9 @@ export function useAppState() {
   };
 
   const [activeTab, setActiveTab] = useState("home");
+  const [feedSeed, setFeedSeed] = useState(() =>
+    Math.floor(Date.now() / (1000 * 60 * 60 * 24)),
+  );
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [isHoveringHero, setIsHoveringHero] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -766,10 +782,10 @@ export function useAppState() {
     rows.forEach((r) => {
       const isPersonalized =
         r.title === "Continue Watching" ||
-        r.title === "My Secure Records" ||
+        r.title === "My List" ||
         r.title === "Watch It Again" ||
-        r.title.startsWith("Since you watched ") ||
-        r.title.startsWith("More like ") ||
+        r.title.startsWith("Because you watched ") ||
+        r.title.startsWith("More Like ") ||
         r.title.startsWith("Because you like ");
       if (!isPersonalized) {
         r.items.forEach((m) => {
@@ -811,15 +827,16 @@ export function useAppState() {
     for (const item of resolvedRecs) {
       if (!item) continue;
       const { movie, recs, histIdx, histRawId } = item;
-      const filtered = recs
+      const rotatedRecs = rotateItems(recs, feedSeed);
+      const filtered = rotatedRecs
         .filter((m) => m && m.id && !globalShown.has(m.id.toString()))
         .slice(0, 20);
       if (filtered.length > 5) {
         filtered.forEach((m) => globalShown.add(m.id.toString()));
         const label =
           histIdx === 0
-            ? `Since you watched ${movie.title}`
-            : `More like ${movie.title}`;
+            ? `Because you watched ${movie.title}`
+            : `More Like ${movie.title}`;
         recommendationRows.push({
           title: label,
           items: filtered,
@@ -911,10 +928,10 @@ export function useAppState() {
       prev.forEach((r) => {
         const isPersonalized =
           r.title === "Continue Watching" ||
-          r.title === "My Secure Records" ||
+          r.title === "My List" ||
           r.title === "Watch It Again" ||
-          r.title.startsWith("Since you watched ") ||
-          r.title.startsWith("More like ") ||
+          r.title.startsWith("Because you watched ") ||
+          r.title.startsWith("More Like ") ||
           r.title.startsWith("Because you like ");
         if (!isPersonalized) {
           staticRowsMap.set(r.title, r);
@@ -931,13 +948,13 @@ export function useAppState() {
         });
       }
 
-      // 2. Trending Missions: Global Feed
-      const trendingRow = staticRowsMap.get("Trending Missions: Global Feed");
+      // 2. Trending Now
+      const trendingRow = staticRowsMap.get("Trending Now");
       if (trendingRow) rebuiltRows.push(trendingRow);
 
-      // 3. My Secure Records
+      // 3. My List
       if (myListItems.length > 0) {
-        rebuiltRows.push({ title: "My Secure Records", items: myListItems });
+        rebuiltRows.push({ title: "My List", items: myListItems });
       }
 
       // 4. Recommendation Rows
@@ -951,8 +968,8 @@ export function useAppState() {
         });
       }
 
-      // 6. Popular Asian Dramas
-      const dramaRow = staticRowsMap.get("Popular Asian Dramas");
+      // 6. Trending TV Shows
+      const dramaRow = staticRowsMap.get("Trending TV Shows");
       if (dramaRow) rebuiltRows.push(dramaRow);
 
       // 7. Because you like [Genre]
@@ -962,15 +979,15 @@ export function useAppState() {
       prev.forEach((r) => {
         const isPersonalized =
           r.title === "Continue Watching" ||
-          r.title === "My Secure Records" ||
+          r.title === "My List" ||
           r.title === "Watch It Again" ||
-          r.title.startsWith("Since you watched ") ||
-          r.title.startsWith("More like ") ||
+          r.title.startsWith("Because you watched ") ||
+          r.title.startsWith("More Like ") ||
           r.title.startsWith("Because you like ");
         if (
           !isPersonalized &&
-          r.title !== "Trending Missions: Global Feed" &&
-          r.title !== "Popular Asian Dramas"
+          r.title !== "Trending Now" &&
+          r.title !== "Trending TV Shows"
         ) {
           rebuiltRows.push(r);
         }
@@ -990,7 +1007,8 @@ export function useAppState() {
     });
   }, [allMovies, history, myList, tvDetailsCache, featuredMovies, rows]);
 
-  const fetchInitialData = async () => {
+  const fetchInitialData = async (overrideSeed?: number) => {
+    const activeSeed = overrideSeed !== undefined ? overrideSeed : feedSeed;
     // 0. Hydrate from Cache for instant load
     let currentPool = allMovies;
     const cachedFeed = localStorage.getItem("nebula-feed-cache");
@@ -1226,10 +1244,8 @@ export function useAppState() {
       const spotlightMovies = hardDedupe(spotlightData.results || []);
       const spotlightActor = spotlightData.actor || "Leonardo DiCaprio";
       const spotlightActorId = spotlightData.actorId || "6193";
-      const topDramas = dramaRes.results || [];
-      const pinoyDramas = (pinoyRes.results || []).filter(
-        (p: any) => !topDramas.some((t: any) => t.id === p.id),
-      );
+      const topDramas = tvShows;
+      const pinoyDramas: any[] = [];
 
       const warMovies = hardDedupe(warRaw);
       const thrillerMovies = hardDedupe(thrillerRaw);
@@ -1310,7 +1326,8 @@ export function useAppState() {
             histRawId,
             movie.type || "movie",
           ).catch(() => []);
-          const filtered = recs
+          const rotatedRecs = rotateItems(recs, activeSeed);
+          const filtered = rotatedRecs
             .filter((m) => !globalShown.has(m.id.toString()))
             .slice(0, 20);
           if (filtered.length > 5) {
@@ -1318,8 +1335,8 @@ export function useAppState() {
             const histIdx = historyItems.indexOf(hist);
             const label =
               histIdx === 0
-                ? `Since you watched ${movie.title}`
-                : `More like ${movie.title}`;
+                ? `Because you watched ${movie.title}`
+                : `More Like ${movie.title}`;
             recommendationRows.push({
               title: label,
               items: filtered,
@@ -1477,43 +1494,116 @@ export function useAppState() {
         .map((e) => e[0])
         .slice(0, 2);
 
-      const dynamicGenreRows = seededShuffle(
-        [
-          { title: "Critically Acclaimed: Missions", items: acclaimedFiltered },
-          { title: "Cinematic Masterpieces", items: filteredTop.slice(0, 15) },
-          { title: "Award-Winning Hits", items: awardFiltered },
-          { title: "Action Packed Missions", items: actionFiltered },
-          { title: "Hidden Gems", items: gemFiltered },
-          { title: "Comedy Gold", items: comedyFiltered },
-          { title: "Scary Nights (Horror)", items: horrorFiltered },
-          { title: "Mystery & Suspense", items: mysteryFiltered },
-          { title: "Animation Favorites", items: animationFiltered },
-          { title: "Sci-Fi Spectacles", items: sciFiFiltered },
-          { title: "Documentary Collection", items: docFiltered },
-          { title: "Epic Fantasy Worlds", items: fantasyFiltered },
-          { title: "Feel-Good Romance", items: romanceFiltered },
-          { title: "Crime & Investigation", items: crimeFiltered },
-          { title: "Historical Epics", items: historyFiltered },
-          { title: "Family Movie Night", items: familyFiltered },
-          { title: "Top Rated Movies", items: filteredTop.slice(15) },
-          { title: "War & Military", items: warFiltered },
-          { title: "Heart-Pounding Thrillers", items: thrillerFiltered },
-          { title: "Musical & Music", items: musicFiltered },
-          { title: "Western Frontier", items: westernFiltered },
-          { title: "TV Dramas", items: tvDramaFiltered },
-          { title: "Anime Series", items: animeFiltered },
-          { title: "2010s Hits", items: hits2010sFiltered },
-          { title: "90s Classics", items: classics90sFiltered },
-        ].filter((r) => r.items.length > 0),
+      const getGenreNameFromTitle = (title: string): string => {
+        if (title.includes("Action")) return "Action";
+        if (title.includes("Comedy")) return "Comedy";
+        if (title.includes("Sci-Fi")) return "Sci-Fi";
+        if (title.includes("Horror")) return "Horror";
+        if (title.includes("Thriller")) return "Thriller";
+        if (title.includes("Romance")) return "Romance";
+        if (title.includes("Mystery")) return "Mystery";
+        if (title.includes("Crime")) return "Crime";
+        if (title.includes("Historical")) return "History";
+        if (title.includes("Family")) return "Family";
+        if (title.includes("War")) return "War";
+        if (title.includes("Music")) return "Music";
+        if (title.includes("Western")) return "Western";
+        if (title.includes("Fantasy")) return "Fantasy";
+        if (title.includes("Documentary")) return "Documentary";
+        if (title.includes("Animation")) return "Animation";
+        return "";
+      };
+
+      const allGenreRows = [
+        { title: "Critically Acclaimed: Missions", items: acclaimedFiltered },
+        { title: "Cinematic Masterpieces", items: filteredTop.slice(0, 15) },
+        { title: "Award-Winning Hits", items: awardFiltered },
+        { title: "Action Packed Missions", items: actionFiltered },
+        { title: "Hidden Gems", items: gemFiltered },
+        { title: "Comedy Gold", items: comedyFiltered },
+        { title: "Scary Nights (Horror)", items: horrorFiltered },
+        { title: "Mystery & Suspense", items: mysteryFiltered },
+        { title: "Animation Favorites", items: animationFiltered },
+        { title: "Sci-Fi Spectacles", items: sciFiFiltered },
+        { title: "Documentary Collection", items: docFiltered },
+        { title: "Epic Fantasy Worlds", items: fantasyFiltered },
+        { title: "Feel-Good Romance", items: romanceFiltered },
+        { title: "Crime & Investigation", items: crimeFiltered },
+        { title: "Historical Epics", items: historyFiltered },
+        { title: "Family Movie Night", items: familyFiltered },
+        { title: "Top Rated Movies", items: filteredTop.slice(15) },
+        { title: "War & Military", items: warFiltered },
+        { title: "Heart-Pounding Thrillers", items: thrillerFiltered },
+        { title: "Musical & Music", items: musicFiltered },
+        { title: "Western Frontier", items: westernFiltered },
+        { title: "TV Dramas", items: tvDramaFiltered },
+        { title: "Anime Series", items: animeFiltered },
+        { title: "2010s Hits", items: hits2010sFiltered },
+        { title: "90s Classics", items: classics90sFiltered },
+      ].filter((r) => r.items.length > 0);
+
+      const favoriteRows = allGenreRows.filter((r) => {
+        const genre = getGenreNameFromTitle(r.title);
+        return genre && topGenres.includes(genre);
+      });
+      const nonFavoriteRows = allGenreRows.filter(
+        (r) => !favoriteRows.includes(r),
       );
+
+      const dynamicGenreRows = [
+        ...favoriteRows,
+        ...seededShuffle(nonFavoriteRows, activeSeed).slice(
+          0,
+          Math.max(4, 6 - favoriteRows.length),
+        ),
+      ];
+
+      // 3e. Curation Rows
+      const dayOfWeek = new Date().getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
+      const contextRow = isWeekend
+        ? {
+            title: "Weekend Blockbuster Curation",
+            items: seededShuffle(
+              localPool.filter(
+                (m) =>
+                  m.genre.includes("Action") ||
+                  m.genre.includes("Sci-Fi") ||
+                  m.genre.includes("Thriller"),
+              ),
+              activeSeed,
+            ).slice(0, 15),
+          }
+        : {
+            title: "Weekday Deep-Dive Series",
+            items: seededShuffle(
+              localPool.filter(
+                (m) =>
+                  m.genre.includes("Documentary") ||
+                  m.type === "tv" ||
+                  m.genre.includes("Drama"),
+              ),
+              activeSeed,
+            ).slice(0, 15),
+          };
+
+      const dailyDiscoveries = seededShuffle(
+        localPool.filter((m) => (m.imdb ?? 0) >= 7.0),
+        activeSeed,
+      ).slice(0, 15);
+
+      const underTheRadar = seededShuffle(
+        localPool.filter((m) => (m.imdb ?? 0) >= 7.5 && m.quality === "HD"),
+        activeSeed,
+      ).slice(0, 15);
 
       const initialRows = [
         ...(continueWatchingItems.length > 0
           ? [{ title: "Continue Watching", items: continueWatchingItems }]
           : []),
-        { title: "Trending Missions: Global Feed", items: filteredTrending },
+        { title: "Trending Now", items: filteredTrending },
         ...(myListItems.length > 0
-          ? [{ title: "My Secure Records", items: myListItems }]
+          ? [{ title: "My List", items: myListItems }]
           : []),
         ...recommendationRows,
         {
@@ -1533,7 +1623,7 @@ export function useAppState() {
             .filter(Boolean)
             .slice(0, 10),
         },
-        { title: "Popular Asian Dramas", items: topDramas, isDramaRow: true },
+        { title: "Trending TV Shows", items: topDramas },
         ...topGenres.map((g) => {
           const gId = Object.entries(GENRE_MAP).find(
             ([_, name]) => name === g,
@@ -1556,20 +1646,31 @@ export function useAppState() {
               : undefined,
           };
         }),
+        ...(dailyDiscoveries.length > 0
+          ? [
+              {
+                title: "Daily Declassified Discoveries",
+                items: dailyDiscoveries,
+              },
+            ]
+          : []),
+        ...(contextRow.items.length > 0 ? [contextRow] : []),
+        ...(underTheRadar.length > 0
+          ? [{ title: "Under the Radar Missions", items: underTheRadar }]
+          : []),
         (() => {
-          const pinoy1 = pinoyDramas
+          const popNearYou = popMovies
             .filter((m) => !globalShown.has(m.id.toString()))
-            .slice(0, 10);
-          pinoy1.forEach((m) => globalShown.add(m.id.toString()));
+            .slice(0, 15);
+          popNearYou.forEach((m) => globalShown.add(m.id.toString()));
           return {
-            title: "Trending in your Sector: Philippines",
-            items: pinoy1,
-            isDramaRow: true,
+            title: "Popular Near You",
+            items: popNearYou,
           };
         })(),
-        { title: "New Intel: 2025 Releases", items: newFiltered },
+        { title: "New Releases", items: newFiltered },
         {
-          title: `Actor Spotlight: ${spotlightActor}`,
+          title: `Spotlight: ${spotlightActor}`,
           items: spotlightFiltered,
           config: {
             mediaType: "movie",
@@ -1583,21 +1684,19 @@ export function useAppState() {
         { title: "Bingeworthy TV Shows", items: filteredTV },
         { title: "Popular Movies", items: filteredPop },
         ...dynamicGenreRows,
-        (() => {
-          const pinoy2 = pinoyDramas
-            .filter((m) => !globalShown.has(m.id.toString()))
-            .slice(0, 20);
-          pinoy2.forEach((m) => globalShown.add(m.id.toString()));
-          return {
-            title: "Pinoy Movies & TV",
-            items: pinoy2,
-            isDramaRow: true,
-          };
-        })(),
       ].filter((r) => r.items?.length > 0);
 
       // 4. Set Initial State
-      const initialFeatured = trending.slice(0, 5);
+      let initialFeatured = trending.slice(0, 5);
+      if (topGenres.length > 0) {
+        initialFeatured = [...initialFeatured].sort((a, b) => {
+          const matchA = topGenres.some((g) => a.genre?.includes(g)) ? 1 : 0;
+          const matchB = topGenres.some((g) => b.genre?.includes(g)) ? 1 : 0;
+          return matchB - matchA;
+        });
+      } else {
+        initialFeatured = rotateItems(initialFeatured, activeSeed);
+      }
       setFeaturedMovies(initialFeatured);
       setTopTenMovies(topTenItems);
       setRows(initialRows);
@@ -2266,9 +2365,7 @@ export function useAppState() {
         selectedGenre === "All" || m.genre.includes(selectedGenre);
       const matchesMood =
         activeMood === "All Moods" ||
-        m.genre
-          .toLowerCase()
-          .includes(activeMood.toLowerCase().split(" ")[0]);
+        m.genre.toLowerCase().includes(activeMood.toLowerCase().split(" ")[0]);
       // Regional filter for Dramas
       const mRegion = (m as any).countryId?.toString();
       const matchesRegion =
@@ -2425,9 +2522,18 @@ export function useAppState() {
     setTimeout(() => setIsTransitioning(false), 500);
   };
 
+  const refreshFeed = async () => {
+    const newSeed = Math.floor(Math.random() * 1000000);
+    setFeedSeed(newSeed);
+    localStorage.removeItem("nebula-feed-cache");
+    setIsLoading(true);
+    await fetchInitialData(newSeed);
+  };
+
   return {
     state: {
       activeTab,
+      feedSeed,
       currentHeroIndex,
       isHoveringHero,
       isPlaying,
@@ -2480,6 +2586,7 @@ export function useAppState() {
       handleRandomize,
       setIsTransitioning,
       handleBack,
+      refreshFeed,
     },
     refs: {
       searchInputRef,

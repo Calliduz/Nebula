@@ -20,6 +20,8 @@ interface HomeFeedProps {
   toggleMyList: (id: number) => void;
   setViewingCategory: (category: string | null) => void;
   onRandomize: () => void;
+  onRefreshFeed: () => void;
+  rows: any[];
   allMovies: any[];
   topTenMovies: any[];
   removeFromHistory: (id: string | number, type?: string) => void;
@@ -41,6 +43,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   toggleMyList,
   setViewingCategory,
   onRandomize,
+  onRefreshFeed,
   rows,
   allMovies,
   topTenMovies,
@@ -55,6 +58,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         activeMood={activeMood}
         setActiveMood={setActiveMood}
         onRandomize={onRandomize}
+        onRefreshFeed={onRefreshFeed}
       />
 
       <TopTenShelf
@@ -86,7 +90,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                       onRemove={
                         row.title === "Continue Watching"
                           ? () => removeFromProgress(m.id.toString())
-                          : row.title === "My Secure Records"
+                          : row.title === "My List"
                             ? () => toggleMyList(m.id)
                             : undefined
                       }
@@ -98,8 +102,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       ))}
 
       {/* Fallback Recommendation Row if not already in rows */}
-      {!rows.some((r) => r.title === "Based on Mission History") && (
-        <MovieRow title="Based on Mission History">
+      {!rows.some((r) => r.title === "Based on Watch History") && (
+        <MovieRow title="Based on Watch History">
           {isLoading
             ? [...Array(6)].map((_, i) => <MovieSkeleton key={`sk-rec-${i}`} />)
             : recommendations.map((m, i) => (

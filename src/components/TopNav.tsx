@@ -38,8 +38,7 @@ export const TopNav = ({
               <button
                 key={item.id}
                 onClick={() => {
-                  if (item.id === "my-list")
-                    setViewingCategory("My Secure Records");
+                  if (item.id === "my-list") setViewingCategory("My List");
                   else {
                     onTabChange(item.id);
                   }
@@ -71,8 +70,7 @@ export const TopNav = ({
               key={`mobile-nav-${item.id}`}
               onClick={() => {
                 if (item.id === "search") onSearchClick();
-                else if (item.id === "my-list")
-                  setViewingCategory("My Secure Records");
+                else if (item.id === "my-list") setViewingCategory("My List");
                 else onTabChange(item.id);
               }}
               className={`flex flex-col items-center gap-1 transition-all ${isActive ? "text-nebula-cyan" : "text-white/40 hover:text-white/80"}`}

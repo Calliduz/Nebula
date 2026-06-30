@@ -188,6 +188,7 @@ export default function App() {
                       toggleMyList={actions.toggleMyList}
                       setViewingCategory={actions.setViewingCategory}
                       onRandomize={actions.handleRandomize}
+                      onRefreshFeed={actions.refreshFeed}
                       rows={state.rows}
                       allMovies={state.allMovies}
                       topTenMovies={state.topTenMovies}

@@ -1,8 +1,13 @@
 import React, { useState } from "react";
-import { History, ChevronDown, Dices } from "lucide-react";
+import { History, ChevronDown, Dices, RefreshCw } from "lucide-react";
 import { SORTS } from "../data/constants";
 
-export const DiscoveryBar = ({ sortBy, setSortBy, onRandomize }: any) => {
+export const DiscoveryBar = ({
+  sortBy,
+  setSortBy,
+  onRandomize,
+  onRefreshFeed,
+}: any) => {
   const [isSortOpen, setIsSortOpen] = useState(false);
 
   return (
@@ -44,6 +49,14 @@ export const DiscoveryBar = ({ sortBy, setSortBy, onRandomize }: any) => {
             </>
           )}
         </div>
+
+        <button
+          onClick={onRefreshFeed}
+          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-nebula-cyan/10 border border-nebula-cyan/30 text-nebula-cyan text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hover:bg-nebula-cyan hover:text-obsidian transition-all flex-1 md:flex-none"
+        >
+          <RefreshCw size={14} className="shrink-0" />
+          <span className="truncate">Refresh Feed</span>
+        </button>
 
         <button
           onClick={onRandomize}

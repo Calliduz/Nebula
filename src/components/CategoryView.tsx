@@ -141,7 +141,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
           <section>
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-display font-medium tracking-tight text-white">
-                My Secure Records
+                My List
               </h3>
               {myList.length > 0 && (
                 <button
@@ -189,7 +189,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
           <section>
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-display font-medium tracking-tight text-white">
-                Operational History
+                Watch History
               </h3>
               {history.length > 0 && (
                 <button
@@ -290,7 +290,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               "Trending Operations",
               "Movies",
               "TV Shows",
-              "Trending Missions: Global Feed",
+              "Trending Now",
             ].includes(viewingCategory || "") ||
             ROW_FETCH_CONFIG[viewingCategory || ""]) &&
             viewingCategory !== "Library" && (
@@ -300,7 +300,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                   className="px-8 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] uppercase font-bold tracking-[0.2em] transition-all group"
                 >
                   <span className="group-hover:text-nebula-cyan transition-colors">
-                    Decrypt More Records
+                    Load More
                   </span>
                 </button>
               </div>
