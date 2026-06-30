@@ -916,6 +916,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (index === -1) {
       hasAutoSelectedSub.current = true; // User manually turned off
       setPreferredLanguageISO(null);
+      updateActiveCues(null);
     } else {
       const sub = subtitles[index];
       if (sub && sub.lang) {
@@ -987,6 +988,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (activeSubtitle === -1 || !activeSubUrl) {
       if (vttBlobUrl) URL.revokeObjectURL(vttBlobUrl);
       setVttBlobUrl(null);
+      updateActiveCues(null);
       return;
     }
 
@@ -1061,7 +1063,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [activeSubtitle, activeSubUrl, subtitleOffset]);
+  }, [activeSubtitle, activeSubUrl, subtitleOffset, updateActiveCues]);
 
   // ── Auto-select first subtitle or restore preferred language ──────────────
   useEffect(() => {
