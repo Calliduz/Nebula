@@ -74,7 +74,7 @@ export const MovieCard = memo<MovieCardProps>(
           />
 
           <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-0 sm:opacity-90" />
 
           {/* Info Overlay (Persistent) */}
           <div className="absolute top-3 left-3 right-3 z-30 flex justify-between items-start">
@@ -92,7 +92,7 @@ export const MovieCard = memo<MovieCardProps>(
                 {/* Quality Badge */}
                 {movie.quality && (
                   <div
-                    className={`px-1.5 md:px-2 py-0.5 rounded-md border backdrop-blur-md w-fit ${
+                    className={`px-1 md:px-2 py-0.5 rounded-md border backdrop-blur-md w-fit ${
                       movie.quality === "CAM"
                         ? "bg-slate-950/80 border-amber-500/30"
                         : movie.quality === "TBA"
@@ -101,7 +101,7 @@ export const MovieCard = memo<MovieCardProps>(
                     }`}
                   >
                     <p
-                      className={`text-[8px] md:text-[10px] font-black uppercase tracking-wider ${
+                      className={`text-[7px] md:text-[10px] font-black uppercase tracking-wider ${
                         movie.quality === "CAM"
                           ? "text-amber-400"
                           : movie.quality === "TBA"
@@ -116,33 +116,33 @@ export const MovieCard = memo<MovieCardProps>(
 
                 {/* Availability Badge */}
                 {movie.isVerified ? (
-                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-slate-950/80 border border-emerald-500/30 backdrop-blur-md w-fit">
-                    <p className="text-[8px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                      </span>
-                      <span>Live</span>
-                    </p>
+                  <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-emerald-500/30 backdrop-blur-md w-fit flex items-center justify-center sm:gap-1">
+                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                    </span>
+                    <span className="hidden sm:inline text-[10px] font-black text-emerald-400 uppercase tracking-wider">
+                      Live
+                    </span>
                   </div>
                 ) : movie.isDead ? (
-                  <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-slate-950/80 border border-rose-500/30 backdrop-blur-md w-fit">
-                    <p className="text-[8px] md:text-[10px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                      <span>Dead</span>
-                    </p>
+                  <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-rose-500/30 backdrop-blur-md w-fit flex items-center justify-center sm:gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                    <span className="hidden sm:inline text-[10px] font-black text-rose-400 uppercase tracking-wider">
+                      Dead
+                    </span>
                   </div>
                 ) : (
                   movie.quality !== "CAM" &&
                   movie.quality !== "TBA" && (
-                    <div className="px-1.5 md:px-2 py-0.5 rounded-md bg-slate-950/80 border border-white/20 backdrop-blur-md w-fit">
-                      <p className="text-[8px] md:text-[10px] font-black text-white/55 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="relative flex h-1.5 w-1.5">
-                          <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
-                        </span>
-                        <span>Scan</span>
-                      </p>
+                    <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-white/20 backdrop-blur-md w-fit flex items-center justify-center sm:gap-1">
+                      <span className="relative flex h-1.5 w-1.5 shrink-0">
+                        <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
+                      </span>
+                      <span className="hidden sm:inline text-[10px] font-black text-white/55 uppercase tracking-wider">
+                        Scan
+                      </span>
                     </div>
                   )
                 )}
@@ -178,7 +178,7 @@ export const MovieCard = memo<MovieCardProps>(
               )}
             </div>
             <div className="flex items-center gap-3">
-              <p className="text-[10px] text-white/30 font-extrabold uppercase tracking-[0.2em]">
+              <p className="hidden sm:block text-[9px] text-white/40 font-extrabold uppercase tracking-[0.2em] px-1.5 py-0.5 rounded bg-white/[0.04] backdrop-blur-sm border border-white/[0.05] w-fit">
                 {movie.genre.split(", ")[0]}
               </p>
               <div className="w-1 h-1 rounded-full bg-white/10 opacity-0 group-hover/card:opacity-100 transition-opacity" />

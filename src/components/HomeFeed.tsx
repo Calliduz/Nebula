@@ -4,6 +4,20 @@ import { TopTenShelf } from "./TopTenShelf";
 import { MovieRow } from "./MovieRow";
 import { MovieCard } from "./MovieCard";
 import { MovieSkeleton } from "./MovieSkeleton";
+import { ProvidersShelf } from "./ProvidersShelf";
+import { CategoriesBar } from "./CategoriesBar";
+
+const SectionDivider = ({ label }: { label?: string }) => (
+  <div className="flex items-center gap-6 my-4 md:my-8 px-4 sm:px-0">
+    <div className="h-px flex-1 bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent" />
+    {label && (
+      <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/20 shrink-0">
+        {label}
+      </span>
+    )}
+    <div className="h-px flex-1 bg-gradient-to-l from-white/[0.06] via-white/[0.03] to-transparent" />
+  </div>
+);
 
 interface HomeFeedProps {
   sortBy: string;
@@ -50,8 +64,72 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   removeFromHistory,
   removeFromProgress,
 }) => {
+  const priorityTitles = [
+    "Continue Watching",
+    "Top in Philippines",
+    "Trending Now",
+  ];
+
+  // Explicitly order priority rows based on priorityTitles sequence
+  const priorityRows = priorityTitles
+    .map((title) => rows.find((r) => r.title === title))
+    .filter(Boolean);
+
+  const isPersonalized = (title: string) => {
+    return (
+      title.startsWith("Because you watched") ||
+      title.startsWith("More Like") ||
+      title.startsWith("Because you like") ||
+      title === "Watch It Again" ||
+      title === "Under the Radar Missions"
+    );
+  };
+
+  const catalogRows = rows.filter(
+    (r) => !priorityTitles.includes(r.title) && !isPersonalized(r.title),
+  );
+
+  const personalizedRows = rows.filter((r) => isPersonalized(r.title));
+
+  const renderRow = (row: any, rowIndex: number) => (
+    <React.Fragment key={`row-group-${row.title}-${rowIndex}`}>
+      {row.items.length > 0 && (
+        <MovieRow
+          title={row.title}
+          onTitleClick={() => setViewingCategory(row.title)}
+        >
+          {isLoading
+            ? [...Array(6)].map((_, i) => (
+                <MovieSkeleton key={`sk-${row.title}-${rowIndex}-${i}`} />
+              ))
+            : row.items.map((m: any, i: number) => (
+                <MovieCard
+                  key={`card-${row.title}-${rowIndex}-${m.id}-${i}`}
+                  movie={m}
+                  snap
+                  aspect="portrait"
+                  onSelect={setSelectedMovie}
+                  isInList={myList.includes(m.id)}
+                  onToggleList={() => toggleMyList(m.id)}
+                  onRemove={
+                    row.title === "Continue Watching"
+                      ? () => removeFromProgress(m.id.toString())
+                      : row.title === "My List"
+                        ? () => toggleMyList(m.id)
+                        : undefined
+                  }
+                />
+              ))}
+        </MovieRow>
+      )}
+    </React.Fragment>
+  );
+
   return (
-    <div className="px-4 sm:px-6 md:px-12 mt-6 md:-mt-10 pb-20 relative z-30 flex flex-col gap-8">
+    <div className="px-4 sm:px-6 md:px-12 mt-6 md:mt-0 pb-20 relative z-30 flex flex-col gap-8">
+      {/* Cinematic transition zone — hero fades into feed */}
+      <div className="h-8 md:h-16 -mt-8 md:-mt-16 bg-gradient-to-b from-transparent to-obsidian pointer-events-none" />
+
       <DiscoveryBar
         sortBy={sortBy}
         setSortBy={setSortBy}
@@ -61,45 +139,31 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         onRefreshFeed={onRefreshFeed}
       />
 
+      {/* 1. Priority Rows (Continue Watching, Top in PH, Trending) */}
+      {priorityRows.map((row, idx) => renderRow(row, idx))}
+
+      {/* 2. Top Ten Shelf */}
       <TopTenShelf
         data={topTenMovies}
         onSelect={setSelectedMovie}
         isLoading={isLoading}
       />
 
-      {rows.map((row: any, rowIndex) => (
-        <React.Fragment key={`row-group-${rowIndex}`}>
-          {row.items.length > 0 && (
-            <MovieRow
-              title={row.title}
-              onTitleClick={() => setViewingCategory(row.title)}
-            >
-              {isLoading
-                ? [...Array(6)].map((_, i) => (
-                    <MovieSkeleton key={`sk-${rowIndex}-${i}`} />
-                  ))
-                : row.items.map((m: any, i: number) => (
-                    <MovieCard
-                      key={`card-${rowIndex}-${m.id}-${i}`}
-                      movie={m}
-                      snap
-                      aspect="portrait"
-                      onSelect={setSelectedMovie}
-                      isInList={myList.includes(m.id)}
-                      onToggleList={() => toggleMyList(m.id)}
-                      onRemove={
-                        row.title === "Continue Watching"
-                          ? () => removeFromProgress(m.id.toString())
-                          : row.title === "My List"
-                            ? () => toggleMyList(m.id)
-                            : undefined
-                      }
-                    />
-                  ))}
-            </MovieRow>
-          )}
-        </React.Fragment>
-      ))}
+      <SectionDivider />
+
+      {/* 3. Providers Shelf & Categories Bar */}
+      <ProvidersShelf setViewingCategory={setViewingCategory} />
+      <CategoriesBar setViewingCategory={setViewingCategory} />
+
+      <SectionDivider label="Catalog" />
+
+      {/* 4. Catalog Rows (My List, New Releases, Genre rows) */}
+      {catalogRows.map((row, idx) => renderRow(row, idx))}
+
+      <SectionDivider label="Recommended For You" />
+
+      {/* 5. Personalized Recommendation Rows */}
+      {personalizedRows.map((row, idx) => renderRow(row, idx))}
 
       {/* Fallback Recommendation Row if not already in rows */}
       {!rows.some((r) => r.title === "Based on Watch History") && (

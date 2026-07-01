@@ -316,6 +316,87 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
       return y >= 1990 && y <= 1999 && m.type === "movie";
     },
   },
+  "Top in Philippines": {
+    mediaType: "all",
+    discoverParams: {
+      region: "PH",
+      watch_region: "PH",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  Netflix: {
+    mediaType: "all",
+    discoverParams: {
+      with_watch_providers: "8",
+      watch_region: "US",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  "Prime Video": {
+    mediaType: "all",
+    discoverParams: {
+      with_watch_providers: "9",
+      watch_region: "US",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  "Disney+": {
+    mediaType: "all",
+    discoverParams: {
+      with_watch_providers: "337",
+      watch_region: "US",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  "Apple TV+": {
+    mediaType: "all",
+    discoverParams: {
+      with_watch_providers: "350",
+      watch_region: "US",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  Hulu: {
+    mediaType: "all",
+    discoverParams: {
+      with_watch_providers: "15",
+      watch_region: "US",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  Max: {
+    mediaType: "all",
+    discoverParams: {
+      with_watch_providers: "1899|1825",
+      watch_region: "US",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  "Paramount+": {
+    mediaType: "all",
+    discoverParams: {
+      with_watch_providers: "2303|2616|582",
+      watch_region: "US",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  Peacock: {
+    mediaType: "all",
+    discoverParams: {
+      with_watch_providers: "386|387|2553",
+      watch_region: "US",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
 };
 
 const hardDedupe = (arr: any[]) => {
@@ -578,11 +659,11 @@ export function useAppState() {
     } catch {}
   };
 
-  const markInitialPagesAsFetched = () => {
+  const markInitialPagesAsFetched = (rowsToMark: { title: string }[]) => {
     markPageAsFetched("Dramas", "All", 1);
     markPageAsFetched("Dramas", "8", 1);
-    Object.keys(ROW_FETCH_CONFIG).forEach((title) => {
-      markPageAsFetched(title, "All", 1);
+    rowsToMark.forEach((row) => {
+      markPageAsFetched(row.title, "All", 1);
     });
   };
 
@@ -1008,8 +1089,11 @@ export function useAppState() {
   }, [allMovies, history, myList, tvDetailsCache, featuredMovies, rows]);
 
   const fetchInitialData = async (overrideSeed?: number) => {
+    // 0. Always clear sessionStorage pagination flags on app boot/refresh
+    clearCategoryPageCache();
+
     const activeSeed = overrideSeed !== undefined ? overrideSeed : feedSeed;
-    // 0. Hydrate from Cache for instant load
+    // 1. Hydrate from Cache for instant load
     let currentPool = allMovies;
     const cachedFeed = localStorage.getItem("nebula-feed-cache");
     if (cachedFeed) {
@@ -1023,7 +1107,13 @@ export function useAppState() {
         } = JSON.parse(cachedFeed);
         const cacheAge = Date.now() - timestamp;
         // If cache is fresh (< 4 hours), use it to skip initial loader
-        if (cacheAge < 1000 * 60 * 60 * 4) {
+        const hasStaleTitles = cRows?.some(
+          (r: any) =>
+            r.title === "Trending Missions: Global Feed" ||
+            r.title === "Trending in your Sector: Philippines" ||
+            r.title === "New Intel: 2025 Releases",
+        );
+        if (cacheAge < 1000 * 60 * 60 * 4 && !hasStaleTitles) {
           setRows(cRows);
           setFeaturedMovies(cFeatured);
           if (cTopTen) {
@@ -1034,11 +1124,13 @@ export function useAppState() {
           }
           setAllMovies(cAll);
           setIsLoading(false);
-          markInitialPagesAsFetched();
+          markInitialPagesAsFetched(cRows);
           // Return early if cache is very fresh (< 3 hours) AND topTen is hydrated
           if (cacheAge < 1000 * 60 * 60 * 3 && cTopTen) {
             return;
           }
+        } else {
+          localStorage.removeItem("nebula-feed-cache");
         }
         currentPool = cAll || [];
       } catch (e) {
@@ -1091,7 +1183,25 @@ export function useAppState() {
         getTopRatedMovies().catch(() => []),
         getPopularTV().catch(() => []),
         Promise.resolve({ results: [] }),
-        Promise.resolve({ results: [] }),
+        (async () => {
+          try {
+            const [mRes, tvRes] = await Promise.all([
+              discoverMedia("movie", {
+                region: "PH",
+                watch_region: "PH",
+                sort_by: "popularity.desc",
+              }).catch(() => []),
+              discoverMedia("tv", {
+                region: "PH",
+                watch_region: "PH",
+                sort_by: "popularity.desc",
+              }).catch(() => []),
+            ]);
+            return hardDedupe([...mRes, ...tvRes]);
+          } catch {
+            return [];
+          }
+        })(),
         discoverMedia("movie", {
           with_genres: "878",
           sort_by: "vote_count.desc",
@@ -1245,7 +1355,7 @@ export function useAppState() {
       const spotlightActor = spotlightData.actor || "Leonardo DiCaprio";
       const spotlightActorId = spotlightData.actorId || "6193";
       const topDramas = tvShows;
-      const pinoyDramas: any[] = [];
+      const pinoyDramas = hardDedupe(pinoyRes || []).slice(0, 20);
 
       const warMovies = hardDedupe(warRaw);
       const thrillerMovies = hardDedupe(thrillerRaw);
@@ -1601,6 +1711,9 @@ export function useAppState() {
         ...(continueWatchingItems.length > 0
           ? [{ title: "Continue Watching", items: continueWatchingItems }]
           : []),
+        ...(pinoyDramas.length > 0
+          ? [{ title: "Top in Philippines", items: pinoyDramas }]
+          : []),
         { title: "Trending Now", items: filteredTrending },
         ...(myListItems.length > 0
           ? [{ title: "My List", items: myListItems }]
@@ -1745,7 +1858,7 @@ export function useAppState() {
         ...classics90sMovies,
       ]);
       setAllMovies(finalPool);
-      markInitialPagesAsFetched();
+      markInitialPagesAsFetched(initialRows);
 
       // 6. Background enrichment for all rows (Skip Dramas as requested)
       initialRows.forEach(async (row) => {
@@ -1859,6 +1972,19 @@ export function useAppState() {
     if (config) {
       if (row) {
         return row.items;
+      }
+      const PROVIDERS = [
+        "Netflix",
+        "Prime Video",
+        "Disney+",
+        "Apple TV+",
+        "Hulu",
+        "Max",
+        "Paramount+",
+        "Peacock",
+      ];
+      if (PROVIDERS.includes(viewingCategory || "")) {
+        return [];
       }
       return allMovies.filter(config.filterFn);
     }
@@ -2318,12 +2444,35 @@ export function useAppState() {
 
           try {
             let more: NebulaMovie[] = [];
+            const PROVIDERS = [
+              "Netflix",
+              "Prime Video",
+              "Disney+",
+              "Apple TV+",
+              "Hulu",
+              "Max",
+              "Paramount+",
+              "Peacock",
+            ];
             if (config.type === "recommendations" && config.targetId) {
               more = await getRecommendations(
                 config.targetId,
                 config.mediaType as any,
                 dramaPage.toString(),
               );
+            } else if (PROVIDERS.includes(viewingCategory || "")) {
+              // Parallel movie and TV fetch for providers
+              const [mRes, tvRes] = await Promise.all([
+                discoverMedia("movie", {
+                  ...config.discoverParams,
+                  page: dramaPage.toString(),
+                }).catch(() => []),
+                discoverMedia("tv", {
+                  ...config.discoverParams,
+                  page: dramaPage.toString(),
+                }).catch(() => []),
+              ]);
+              more = hardDedupe([...mRes, ...tvRes]);
             } else if (config.mediaType === "all") {
               more = await getTrending("all", dramaPage.toString());
             } else {
@@ -2336,13 +2485,21 @@ export function useAppState() {
             if (more.length > 0) {
               updateGlobalPool(more);
               // For dynamic rows, also update the row state so getCategoryMovies/CategoryView sees them
-              setRows((prev) =>
-                prev.map((r) =>
-                  r.title === viewingCategory
-                    ? { ...r, items: hardDedupe([...r.items, ...more]) }
-                    : r,
-                ),
-              );
+              setRows((prev) => {
+                const exists = prev.some((r) => r.title === viewingCategory);
+                if (exists) {
+                  return prev.map((r) =>
+                    r.title === viewingCategory
+                      ? { ...r, items: hardDedupe([...r.items, ...more]) }
+                      : r,
+                  );
+                } else {
+                  return [
+                    ...prev,
+                    { title: viewingCategory || "", items: more },
+                  ];
+                }
+              });
             }
             markPageAsFetched(viewingCategory, selectedRegion, dramaPage);
           } catch (e) {

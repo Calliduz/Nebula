@@ -2,7 +2,9 @@ import React from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Play, Search, Plus, Shield } from "lucide-react";
 import { MovieCard } from "./MovieCard";
+import { MovieSkeleton } from "./MovieSkeleton";
 import { ROW_FETCH_CONFIG } from "../hooks/useAppState";
+import { STREAMING_PROVIDERS } from "./ProvidersShelf";
 
 interface CategoryViewProps {
   viewingCategory: string;
@@ -107,8 +109,25 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
             </span>
           </button>
           <h2 className="text-4xl md:text-6xl font-display font-black tracking-tighter uppercase">
-            {viewingCategory}
+            {STREAMING_PROVIDERS.some((p) => p.name === viewingCategory)
+              ? `Popular on ${viewingCategory}`
+              : viewingCategory}
           </h2>
+          {(() => {
+            const provider = STREAMING_PROVIDERS.find(
+              (p) => p.name === viewingCategory,
+            );
+            if (!provider) return null;
+            return (
+              <div
+                className="h-0.5 mt-3 rounded"
+                style={{
+                  backgroundImage: `linear-gradient(to right, ${provider.color}, transparent)`,
+                  width: "120px",
+                }}
+              />
+            );
+          })()}
         </div>
 
         {viewingCategory === "Trending Operations" && (
@@ -282,17 +301,23 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
-            {renderGridWithAds()}
+            {isLoading && data.length === 0
+              ? [...Array(12)].map((_, i) => (
+                  <MovieSkeleton key={`sk-cat-${i}`} />
+                ))
+              : renderGridWithAds()}
           </div>
-          {(data.length > visibleCount ||
-            [
-              "Dramas",
-              "Trending Operations",
-              "Movies",
-              "TV Shows",
-              "Trending Now",
-            ].includes(viewingCategory || "") ||
-            ROW_FETCH_CONFIG[viewingCategory || ""]) &&
+          {!isLoading &&
+            data.length > 0 &&
+            (data.length > visibleCount ||
+              [
+                "Dramas",
+                "Trending Operations",
+                "Movies",
+                "TV Shows",
+                "Trending Now",
+              ].includes(viewingCategory || "") ||
+              ROW_FETCH_CONFIG[viewingCategory || ""]) &&
             viewingCategory !== "Library" && (
               <div className="mt-16 flex justify-center">
                 <button
@@ -311,6 +336,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       {viewingCategory &&
         (ROW_FETCH_CONFIG[viewingCategory] || viewingCategory === "Dramas") &&
         visibleCount >= data.length &&
+        data.length > 0 &&
         isLoading && (
           <div className="py-20 text-center">
             <div className="w-10 h-10 border-2 border-nebula-cyan border-t-transparent rounded-full animate-spin mx-auto mb-4" />
