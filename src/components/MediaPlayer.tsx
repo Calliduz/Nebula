@@ -296,6 +296,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     x: number;
     y: number;
     key: number;
+    seconds: number;
   } | null>(null);
 
   useEffect(() => {
@@ -393,6 +394,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const activeMirrorRef = useRef<number>(0);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const isLongPressing = useRef(false);
+  const isLocalSeekingRef = useRef(false);
+  const localCurrentTimeRef = useRef(0);
+  const seekFlagTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const hasReportedSuccess = useRef(false);
   const frag0LoadRetries = useRef(0);
@@ -427,6 +431,75 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setIsBuffering(false);
     setShowServerTip(false);
   }, []);
+
+  const seekBy = useCallback(
+    (amount: number, customX?: number, customY?: number) => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      const isForward = amount > 0;
+      const dir = isForward ? "forward" : "rewind";
+
+      const duration = isFinite(video.duration) ? video.duration : 0;
+      const newTime = Math.max(
+        0,
+        Math.min(
+          duration || video.currentTime + amount,
+          video.currentTime + amount,
+        ),
+      );
+
+      // Set local seeking flag to prevent timeupdate from overriding UI
+      isLocalSeekingRef.current = true;
+      localCurrentTimeRef.current = newTime;
+
+      // Update UI immediately (prevent rubberbanding)
+      setCurrentTime(formatTime(newTime));
+      setProgress((newTime / (duration || 1)) * 100);
+
+      video.currentTime = newTime;
+
+      // Reset seeking flag release timer
+      if (seekFlagTimerRef.current) clearTimeout(seekFlagTimerRef.current);
+      seekFlagTimerRef.current = setTimeout(() => {
+        isLocalSeekingRef.current = false;
+      }, 800);
+
+      // Double Tap / Click / Key Feedback with Stacking
+      const container = containerRef.current;
+      const width = container ? container.clientWidth : window.innerWidth;
+      const height = container ? container.clientHeight : window.innerHeight;
+
+      const x =
+        customX !== undefined
+          ? customX
+          : isForward
+            ? (width * 3) / 4
+            : width / 4;
+      const y = customY !== undefined ? customY : height / 2;
+
+      const now = Date.now();
+
+      setDoubleTapFeedback((prev) => {
+        const isStacking =
+          prev && prev.visible && prev.type === dir && now - prev.key < 650;
+
+        const newSeconds = isStacking
+          ? prev.seconds + Math.abs(amount)
+          : Math.abs(amount);
+
+        return {
+          visible: true,
+          type: dir,
+          x,
+          y,
+          key: now,
+          seconds: newSeconds,
+        };
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     return () => {
@@ -533,6 +606,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setActiveSubtitle(-1);
     hasAutoSelectedSub.current = false;
     subTextCache.current = {}; // Clear subtitle text cache on stream change
+    // Reset seek refs so the drift guard doesn't suppress the new stream's initial timeupdate
+    isLocalSeekingRef.current = false;
+    localCurrentTimeRef.current = 0;
     if (vttBlobUrl) {
       URL.revokeObjectURL(vttBlobUrl);
       setVttBlobUrl(null);
@@ -994,6 +1070,28 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     let cancelled = false;
 
+    const markFailedAndFallback = () => {
+      setSubtitles((prev) => {
+        const updated = prev.map((s, idx) =>
+          idx === activeSubtitle ? { ...s, failed: true } : s,
+        );
+        // Auto-select the next non-failed subtitle track
+        const nextIdx = updated.findIndex(
+          (s, idx) => idx > activeSubtitle && !s.failed,
+        );
+        if (nextIdx !== -1) {
+          console.log(
+            `[SUBTITLES] Track ${activeSubtitle} failed, auto-falling back to track ${nextIdx}`,
+          );
+          // Defer state update to avoid React batching conflicts
+          setTimeout(() => setActiveSubtitle(nextIdx), 0);
+        } else {
+          console.warn("[SUBTITLES] All subtitle tracks failed or exhausted.");
+        }
+        return updated;
+      });
+    };
+
     const processSub = async () => {
       try {
         let text = subTextCache.current[activeSubUrl];
@@ -1002,11 +1100,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const r = await fetch(activeSubUrl);
           if (!r.ok) {
             showToast(`Failed to load subtitle: HTTP ${r.status}`, "error");
-            setSubtitles((prev) =>
-              prev.map((s, idx) =>
-                idx === activeSubtitle ? { ...s, failed: true } : s,
-              ),
-            );
+            markFailedAndFallback();
             return;
           }
           text = await r.text();
@@ -1022,11 +1116,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               "Failed to load subtitle: source blocked or not allowed",
               "error",
             );
-            setSubtitles((prev) =>
-              prev.map((s, idx) =>
-                idx === activeSubtitle ? { ...s, failed: true } : s,
-              ),
-            );
+            markFailedAndFallback();
             return;
           }
 
@@ -1051,11 +1141,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       } catch (e) {
         console.error("VTT processing failed", e);
         showToast("Failed to load subtitle track", "error");
-        setSubtitles((prev) =>
-          prev.map((s, idx) =>
-            idx === activeSubtitle ? { ...s, failed: true } : s,
-          ),
-        );
+        markFailedAndFallback();
       }
     };
 
@@ -1653,6 +1739,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     const lastSaveTime = { current: 0 };
     const onTime = () => {
+      // Guard against rubberbanding: suppress timeupdate when we've set a
+      // local seek target that hasn't been confirmed by the browser yet.
+      // HLS.js fires `seeked` before video.currentTime reaches the target,
+      // so we also gate on the secondary drift check here.
+      if (isLocalSeekingRef.current) {
+        return;
+      }
+      if (localCurrentTimeRef.current > 0) {
+        if (Math.abs(video.currentTime - localCurrentTimeRef.current) > 2) {
+          // video.currentTime hasn't caught up to the seek target yet – suppress
+          return;
+        }
+        // video.currentTime is now close to our target → lift the drift guard
+        localCurrentTimeRef.current = 0;
+      }
       if (video.duration > 0) {
         const cur = video.currentTime;
         setProgress((cur / video.duration) * 100);
@@ -1993,8 +2094,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       lastWatchdogTime = video.currentTime;
     }, 1000);
 
+    const onSeeked = () => {
+      isLocalSeekingRef.current = false;
+      // NOTE: Do NOT clear localCurrentTimeRef here.
+      // HLS.js fires `seeked` before video.currentTime actually moves to the
+      // target — reading video.currentTime now would give 0 or the old position
+      // and cause the visible rubber-band back to 0:00.
+      // Instead we display our known-correct seek target, and let onTime clear
+      // localCurrentTimeRef once video.currentTime confirms proximity.
+      setIsSeeking(false);
+      const displayTime =
+        localCurrentTimeRef.current > 0
+          ? localCurrentTimeRef.current
+          : video.currentTime;
+      setCurrentTime(formatTime(displayTime));
+      if (video.duration > 0) {
+        setProgress((displayTime / video.duration) * 100);
+      }
+    };
     const onSeeking = () => setIsSeeking(true);
-    const onSeeked = () => setIsSeeking(false);
 
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     video.addEventListener("timeupdate", onTime);
@@ -2115,32 +2233,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       ) {
         lastTouchRef.current = null;
 
-        const v = videoRef.current;
-        if (v) {
-          const isLeft = x < width / 2;
-          if (isLeft) {
-            v.currentTime = Math.max(0, v.currentTime - 10);
-            setDoubleTapFeedback({
-              visible: true,
-              type: "rewind",
-              x,
-              y,
-              key: Date.now(),
-            });
-          } else {
-            const maxTime =
-              isNaN(v.duration) || v.duration === 0
-                ? v.currentTime
-                : v.duration;
-            v.currentTime = Math.min(maxTime, v.currentTime + 10);
-            setDoubleTapFeedback({
-              visible: true,
-              type: "forward",
-              x,
-              y,
-              key: Date.now(),
-            });
-          }
+        const isLeft = x < width / 2;
+        if (isLeft) {
+          seekBy(-10, x, y);
+        } else {
+          seekBy(10, x, y);
         }
       } else {
         lastTouchRef.current = { time: now, x, y };
@@ -2151,7 +2248,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }, 300);
       }
     },
-    [handleTap],
+    [handleTap, seekBy],
   );
 
   const handleDesktopClick = useCallback(
@@ -2204,16 +2301,16 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           else document.exitFullscreen();
           break;
         case "KeyL":
-          if (v) v.currentTime = Math.min(v.duration, v.currentTime + 10);
+          if (v) seekBy(10);
           break;
         case "KeyJ":
-          if (v) v.currentTime = Math.max(0, v.currentTime - 10);
+          if (v) seekBy(-10);
           break;
         case "ArrowRight":
-          if (v) v.currentTime = Math.min(v.duration, v.currentTime + 5);
+          if (v) seekBy(5);
           break;
         case "ArrowLeft":
-          if (v) v.currentTime = Math.max(0, v.currentTime - 5);
+          if (v) seekBy(-5);
           break;
         case "ArrowUp":
           e.preventDefault();
@@ -2230,7 +2327,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose, showSettings]);
+  }, [onClose, showSettings, seekBy]);
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -2269,8 +2366,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setIsDragging(false);
     const v = videoRef.current;
     if (v && isFinite(v.duration)) {
+      const targetTime = (dragProgressRef.current / 100) * v.duration;
       setIsSeeking(true);
-      v.currentTime = (dragProgressRef.current / 100) * v.duration;
+      isLocalSeekingRef.current = true;
+      localCurrentTimeRef.current = targetTime;
+      setCurrentTime(formatTime(targetTime));
+      setProgress(dragProgressRef.current);
+      v.currentTime = targetTime;
+
+      if (seekFlagTimerRef.current) clearTimeout(seekFlagTimerRef.current);
+      seekFlagTimerRef.current = setTimeout(() => {
+        isLocalSeekingRef.current = false;
+      }, 800);
     }
   }, [isDragging]);
 
@@ -2926,7 +3033,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               )}
             </div>
             <span className="text-white text-xs font-black tracking-widest uppercase bg-black/40 px-2 py-0.5 rounded border border-white/5 font-mono">
-              {doubleTapFeedback.type === "rewind" ? "-10s" : "+10s"}
+              {doubleTapFeedback.type === "rewind"
+                ? `-${doubleTapFeedback.seconds}s`
+                : `+${doubleTapFeedback.seconds}s`}
             </span>
           </motion.div>
         </div>
@@ -3085,13 +3194,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <div
                   className="absolute inset-y-0 left-0 bg-white rounded-full transition-all duration-75"
                   style={{
-                    width: `${isDragging || isSeeking ? dragProgress : progress}%`,
+                    width: `${isDragging ? dragProgress : progress}%`,
                   }}
                 />
                 <div
                   className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg group-hover:scale-125 transition-transform"
                   style={{
-                    left: `${isDragging || isSeeking ? dragProgress : progress}%`,
+                    left: `${isDragging ? dragProgress : progress}%`,
                   }}
                 />
               </div>
@@ -3103,13 +3212,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               {!isEmbed && (
                 <>
                   <button
-                    onClick={() => {
-                      if (videoRef.current)
-                        videoRef.current.currentTime = Math.max(
-                          0,
-                          videoRef.current.currentTime - 10,
-                        );
-                    }}
+                    onClick={() => seekBy(-10)}
                     className="hidden sm:block text-white/70 hover:text-white transition-colors p-1"
                     title="–10s (J)"
                   >
@@ -3127,13 +3230,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     )}
                   </button>
                   <button
-                    onClick={() => {
-                      if (videoRef.current)
-                        videoRef.current.currentTime = Math.min(
-                          videoRef.current.duration,
-                          videoRef.current.currentTime + 10,
-                        );
-                    }}
+                    onClick={() => seekBy(10)}
                     className="hidden sm:block text-white/70 hover:text-white transition-colors p-1"
                     title="+10s (L)"
                   >
