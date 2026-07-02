@@ -907,7 +907,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : vidnestSources.length > 0 ? (
                 <div className="space-y-1.5">
                   <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
-                    Available Mirrors:
+                    Quality Tiers:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {vidnestSources.map((src) => {

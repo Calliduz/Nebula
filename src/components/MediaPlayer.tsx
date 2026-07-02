@@ -174,7 +174,7 @@ const groupMirrors = (mirrorsList: any[]) => {
   const groups: Record<string, any> = {};
 
   mirrorsList.forEach((m) => {
-    if (m.type !== "mp4") {
+    if (m.type !== "mp4" && m.type !== "hls") {
       const groupKey = `${m.source}_${m.audio || ""}`;
       groups[groupKey] = { ...m };
       return;
@@ -188,7 +188,7 @@ const groupMirrors = (mirrorsList: any[]) => {
       groups[groupKey] = {
         source: base,
         url: m.url,
-        type: "mp4_grouped",
+        type: m.type === "hls" ? "hls_grouped" : "mp4_grouped",
         audio: m.audio,
         flag: m.flag,
         qualities: [{ height, url: m.url, originalSource: m.source }],
@@ -203,7 +203,7 @@ const groupMirrors = (mirrorsList: any[]) => {
   });
 
   const groupedList = Object.values(groups).map((group: any) => {
-    if (group.type === "mp4_grouped") {
+    if (group.type === "mp4_grouped" || group.type === "hls_grouped") {
       group.qualities.sort((a: any, b: any) => b.height - a.height);
       group.url = group.qualities[0].url;
     }
@@ -329,7 +329,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setStreamUrl(m.url);
     setIsEmbed(m.type === "embed");
 
-    if (m.type === "mp4_grouped" && m.qualities) {
+    if ((m.type === "mp4_grouped" || m.type === "hls_grouped") && m.qualities) {
       setQualities(
         m.qualities.map((q: any, qIdx: number) => ({
           height: q.height,
@@ -2328,27 +2328,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const setQuality = (levelId: number) => {
     setActiveQuality(levelId);
-    if (hlsRef.current) {
+    const m = mirrors[activeMirror];
+    const video = videoRef.current;
+
+    if (video && (m?.type === "mp4_grouped" || m?.type === "hls_grouped")) {
+      const key = getProgressKey();
+      const saved = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+      saved[key] = {
+        time: video.currentTime,
+        duration: video.duration,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem("nebula-progress", JSON.stringify(saved));
+      const targetId = levelId === -1 ? 0 : levelId;
+      setCurrentHeight(m.qualities[targetId].height);
+      setStreamUrl(m.qualities[targetId].url);
+    } else if (hlsRef.current) {
       hlsRef.current.currentLevel = levelId;
-    } else {
-      const video = videoRef.current;
-      const m = mirrors[activeMirror];
-      if (video && m?.type === "mp4_grouped") {
-        const key = getProgressKey();
-        const saved = JSON.parse(
-          localStorage.getItem("nebula-progress") || "{}",
-        );
-        saved[key] = {
-          time: video.currentTime,
-          duration: video.duration,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem("nebula-progress", JSON.stringify(saved));
-        const targetId = levelId === -1 ? 0 : levelId;
-        setActiveQuality(levelId);
-        setCurrentHeight(m.qualities[targetId].height);
-        setStreamUrl(m.qualities[targetId].url);
-      }
     }
   };
 
