@@ -315,6 +315,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     },
     [],
   );
+
+  const reportDeadMirror = useCallback(
+    (url: string) => {
+      fetch(`${API}/api/stream/report-dead`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tmdbId: movie.id.toString(),
+          type: movie.type,
+          season: season || 1,
+          episode: episode || 1,
+          url,
+        }),
+      }).catch((err) => {
+        console.warn("[PLAYER] Failed to report dead mirror:", err);
+      });
+    },
+    [movie.id, movie.type, season, episode],
+  );
+
   const [mirrors, setMirrors] = useState<any[]>([]);
   const [activeMirror, setActiveMirror] = useState<number>(0);
   const selectMirror = useCallback((index: number, mirrorsList: any[]) => {
@@ -1318,8 +1338,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             `[PLAYER] mp4 mirror has duration ${video.duration.toFixed(1)}s (≤3s) — skipping.`,
           );
           const nextIdx = activeMirrorRef.current + 1;
+          const failingIdx = activeMirrorRef.current;
+          const failingMirror = mirrorsRef.current[failingIdx];
+          if (failingMirror?.url) {
+            reportDeadMirror(failingMirror.url);
+          }
           if (nextIdx < mirrorsRef.current.length) {
-            setFailedMirrors((prev) => ({ ...prev, [activeMirrorRef.current]: "SHORT" }));
+            setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "SHORT" }));
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             setError("Short/restricted video on all mirrors.");
@@ -1469,8 +1494,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               `[PLAYER] HLS mirror has duration ${video.duration.toFixed(1)}s (≤3s) — skipping.`,
             );
             const nextIdx = activeMirrorRef.current + 1;
+            const failingIdx = activeMirrorRef.current;
+            const failingMirror = mirrorsRef.current[failingIdx];
+            if (failingMirror?.url) {
+              reportDeadMirror(failingMirror.url);
+            }
             if (nextIdx < mirrorsRef.current.length) {
-              setFailedMirrors((prev) => ({ ...prev, [activeMirrorRef.current]: "SHORT" }));
+              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "SHORT" }));
               hls.destroy();
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
@@ -1531,8 +1561,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             `[HLS] Hard network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
           );
           const nextIdx = activeMirrorRef.current + 1;
+          const failingIdx = activeMirrorRef.current;
+          const failingMirror = mirrorsRef.current[failingIdx];
+          if (failingMirror?.url) {
+            reportDeadMirror(failingMirror.url);
+          }
           if (nextIdx < mirrorsRef.current.length) {
-            const failingIdx = activeMirrorRef.current;
             setFailedMirrors((prev) => ({
               ...prev,
               [failingIdx]: String(statusCode),
@@ -1557,8 +1591,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             `[HLS] Fatal load error: ${d.details}. Switching mirror immediately...`,
           );
           const nextIdx = activeMirrorRef.current + 1;
+          const failingIdx = activeMirrorRef.current;
+          const failingMirror = mirrorsRef.current[failingIdx];
+          if (failingMirror?.url) {
+            reportDeadMirror(failingMirror.url);
+          }
           if (nextIdx < mirrorsRef.current.length) {
-            const failingIdx = activeMirrorRef.current;
             setFailedMirrors((prev) => ({
               ...prev,
               [failingIdx]: statusCode ? String(statusCode) : "LOAD_ERR",
@@ -1585,8 +1623,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 "[HLS] Continuous fragment load errors for 5 seconds. Switching to next mirror...",
               );
               const nextIdx = activeMirrorRef.current + 1;
+              const failingIdx = activeMirrorRef.current;
+              const failingMirror = mirrorsRef.current[failingIdx];
+              if (failingMirror?.url) {
+                reportDeadMirror(failingMirror.url);
+              }
               if (nextIdx < mirrorsRef.current.length) {
-                const failingIdx = activeMirrorRef.current;
                 setFailedMirrors((prev) => ({
                   ...prev,
                   [failingIdx]: lastFragErrorStatus || "502/404",
@@ -1618,8 +1660,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               "[HLS] Fragment 0 load failed 3 times. Escalating to fatal mirror switch.",
             );
             const nextIdx = activeMirrorRef.current + 1;
+            const failingIdx = activeMirrorRef.current;
+            const failingMirror = mirrorsRef.current[failingIdx];
+            if (failingMirror?.url) {
+              reportDeadMirror(failingMirror.url);
+            }
             if (nextIdx < mirrorsRef.current.length) {
-              const failingIdx = activeMirrorRef.current;
               setFailedMirrors((prev) => ({
                 ...prev,
                 [failingIdx]: "TIMEOUT",
@@ -1751,7 +1797,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         showToast("Playback failed to start.", "error");
       });
     }
-  }, [streamUrl, isEmbed]);
+  }, [streamUrl, isEmbed, reportDeadMirror]);
 
   // ─── Reset playback UI state on episode/season change ────────────────────
   // Prevents stale progress bar, seek thumb, and time display carrying over
@@ -4795,17 +4841,17 @@ export function InPlayerSourcePicker({
                 key={s.name}
                 className="text-[7px] font-bold px-1 py-0.5 rounded border border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5 uppercase"
               >
-              {/* Badge label transformation:
+                {/* Badge label transformation:
                   "Vidnest (1080p)"           → "1080P"
                   "Vidnest - AllMovies (Auto)" → "ALLMOVIES (AUTO)"
                   "Vidnest - KlikXXI (auto)"  → "KLIKXXI (AUTO)" */}
-              {s.name
-                .replace(/^Vidnest\s*-\s*/i, "") // "Vidnest - AllMovies (Auto)" → "AllMovies (Auto)"
-                .replace(/^Vidnest\s*\(([^)]+)\)$/i, "$1") // "Vidnest (1080p)" → "1080p"
-                .replace(/^Vidnest\s*/i, "")      // any leftover "Vidnest" prefix
-                .replace(/^\(([^)]+)\)$/, "$1")   // "(1080p)" → "1080p" (safety strip)
-                .trim()
-                .toUpperCase()}
+                {s.name
+                  .replace(/^Vidnest\s*-\s*/i, "") // "Vidnest - AllMovies (Auto)" → "AllMovies (Auto)"
+                  .replace(/^Vidnest\s*\(([^)]+)\)$/i, "$1") // "Vidnest (1080p)" → "1080p"
+                  .replace(/^Vidnest\s*/i, "") // any leftover "Vidnest" prefix
+                  .replace(/^\(([^)]+)\)$/, "$1") // "(1080p)" → "1080p" (safety strip)
+                  .trim()
+                  .toUpperCase()}
               </span>
             ))
           ) : (

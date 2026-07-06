@@ -912,7 +912,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   <div className="flex flex-wrap gap-1.5">
                     {vidnestSources.map((src) => {
                       const cleanMirrorName = src.name
-                        .replace(/^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i, "$1 ($2)")
+                        .replace(
+                          /^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i,
+                          "$1 ($2)",
+                        )
                         .replace(/^Vidnest\s*\((.*?)\)$/i, "$1")
                         .replace(/^Vidnest\s*-\s*/i, "")
                         .replace(/^Vidnest/i, "")
