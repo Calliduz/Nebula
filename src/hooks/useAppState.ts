@@ -11,6 +11,7 @@ import { useLocalStorage } from "./useLocalStorage";
 import {
   getTrending,
   searchMedia,
+  searchPeople,
   getPopularMovies,
   getPopularTV,
   getTopRatedMovies,
@@ -700,6 +701,7 @@ export function useAppState() {
     { title: string; items: NebulaMovie[]; config?: RowConfig }[]
   >([]);
   const [searchResults, setSearchResults] = useState<NebulaMovie[]>([]);
+  const [searchPeopleResults, setSearchPeopleResults] = useState<any[]>([]);
 
   const [allMovies, setAllMovies] = useState<NebulaMovie[]>([]);
 
@@ -2033,10 +2035,14 @@ export function useAppState() {
 
         setIsLoading(true);
         try {
-          const results = await searchMedia(searchQuery);
+          const [results, peopleResults] = await Promise.all([
+            searchMedia(searchQuery, controller.signal),
+            searchPeople(searchQuery, controller.signal),
+          ]);
           if (controller.signal.aborted) return;
           // Show results immediately, enrich in background
           setSearchResults(results);
+          setSearchPeopleResults(peopleResults);
           updateGlobalPool(results);
           setIsLoading(false);
 
@@ -2054,12 +2060,14 @@ export function useAppState() {
         } catch (e) {
           if (!controller.signal.aborted) {
             setSearchResults([]);
+            setSearchPeopleResults([]);
             setIsLoading(false);
           }
         }
       } else {
         searchAbortRef.current?.abort();
         setSearchResults([]);
+        setSearchPeopleResults([]);
         setIsLoading(false);
       }
     }, 250); // Reduced from 400ms for snappier feel
@@ -2709,6 +2717,7 @@ export function useAppState() {
       visibleCount,
       filteredMovies,
       searchResults,
+      searchPeopleResults,
       recommendations,
       allMovies,
       topTenMovies,

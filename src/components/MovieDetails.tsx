@@ -1061,6 +1061,7 @@ interface MovieDetailsProps {
     loadedMovie?: any,
   ) => void;
   onSelectMovie?: (m: any) => void;
+  onSelectActor?: (actorId: string | number) => void;
   isInList: boolean;
   onToggleList: () => void;
 }
@@ -1070,6 +1071,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   onClose,
   onPlay,
   onSelectMovie,
+  onSelectActor,
   isInList,
   onToggleList,
 }) => {
@@ -3268,6 +3270,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         deepDetails.cast.map((person: any, i: number) => (
                           <div
                             key={`${person.name}-${person.role}-${i}`}
+                            onClick={() => onSelectActor?.(person.id)}
                             className="flex flex-col items-center gap-4 group cursor-pointer shrink-0"
                           >
                             <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-2 border-white/10 p-1.5 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden relative">

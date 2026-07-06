@@ -1068,3 +1068,112 @@ export const invalidateRecommendationCache = (
     console.error("Error clearing recommendation cache", e);
   }
 };
+
+export interface NebulaPersonDetails {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+  combined_credits: NebulaMovie[];
+}
+
+export const getPersonDetails = async (
+  personId: string | number,
+): Promise<NebulaPersonDetails | null> => {
+  try {
+    const data = await fetchFromTMDB(
+      `/person/${personId}`,
+      { append_to_response: "combined_credits" },
+      TTL.DETAILS,
+    );
+
+    if (!data || !data.id) return null;
+
+    // Merge cast + crew credits and deduplicate by id (keeps higher-popularity entry)
+    const castCredits = data.combined_credits?.cast || [];
+    const crewCredits = data.combined_credits?.crew || [];
+    const allCredits = [...castCredits, ...crewCredits];
+    const deduped = new Map<number, any>();
+    for (const c of allCredits) {
+      if (!c || !c.id) continue;
+      const existing = deduped.get(c.id);
+      if (!existing || (c.popularity || 0) > (existing.popularity || 0)) {
+        deduped.set(c.id, c);
+      }
+    }
+
+    // Genre IDs for talk shows and news — these are guest appearances, not real roles
+    const GUEST_GENRE_IDS = new Set([10767, 10763, 10764]); // Talk, News, Reality
+
+    const isActingDept = (data.known_for_department || "Acting") === "Acting";
+
+    const normalizedCredits = Array.from(deduped.values())
+      .filter((m: any) => {
+        if (!m.poster_path || (m.vote_count ?? 0) <= 10) return false;
+        // Filter out talk shows, news, and reality TV
+        const genres: number[] = m.genre_ids || [];
+        if (genres.some((g: number) => GUEST_GENRE_IDS.has(g))) return false;
+        // For TV entries: filter out guest appearances (≤2 episodes)
+        if (m.media_type === "tv" && (m.episode_count ?? 0) > 0 && m.episode_count <= 2) return false;
+        return true;
+      })
+      .sort((a: any, b: any) => {
+        // For actors, boost movie credits so their actual filmography ranks first
+        const popA = (a.popularity || 0) * (isActingDept && a.media_type === "movie" ? 2 : 1);
+        const popB = (b.popularity || 0) * (isActingDept && b.media_type === "movie" ? 2 : 1);
+        return popB - popA;
+      })
+      .slice(0, 40)
+      .map((m: any) => normalizeMovie(m, m.media_type || "movie"));
+
+    return {
+      id: data.id,
+      name: data.name,
+      biography: data.biography || "",
+      birthday: data.birthday || null,
+      place_of_birth: data.place_of_birth || null,
+      profile_path: data.profile_path
+        ? proxyImage(`${IMAGE_BASE_URL}${data.profile_path}`)
+        : null,
+      known_for_department: data.known_for_department || "Acting",
+      combined_credits: normalizedCredits,
+    };
+  } catch (err) {
+    console.error(`[TMDB] Failed to fetch person details for ${personId}:`, err);
+    return null;
+  }
+};
+
+export const searchPeople = async (
+  query: string,
+  signal?: AbortSignal,
+): Promise<any[]> => {
+  try {
+    const trimmedQuery = query ? query.trim() : "";
+    if (!trimmedQuery) return [];
+
+    const data = await fetchFromTMDB(
+      "/search/person",
+      { query: trimmedQuery },
+      TTL.SEARCH,
+      signal,
+    );
+
+    return (data.results || [])
+      .filter((p: any) => p.profile_path)
+      .slice(0, 8)
+      .map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        avatar: proxyImage(`${IMAGE_BASE_URL}${p.profile_path}`),
+        role: p.known_for_department || "Acting",
+      }));
+  } catch (err) {
+    console.error(`[TMDB] Failed to search people for "${query}":`, err);
+    return [];
+  }
+};
+

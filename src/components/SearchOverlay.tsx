@@ -10,7 +10,9 @@ interface SearchOverlayProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   searchResults: any[];
+  searchPeopleResults: any[];
   onSelectMovie: (movie: any) => void;
+  onSelectActor: (actorId: string | number) => void;
   searchInputRef: React.RefObject<HTMLInputElement>;
   isLoading?: boolean;
 }
@@ -21,7 +23,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   searchQuery,
   setSearchQuery,
   searchResults,
+  searchPeopleResults,
   onSelectMovie,
+  onSelectActor,
   searchInputRef,
   isLoading,
 }) => {
@@ -135,47 +139,101 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                    {searchQuery && searchResults.length > 0 ? (
-                      searchResults.map((movie, i) => (
-                        <motion.div
-                          key={`search-res-${movie.id}-${i}`}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: i * 0.05 }}
-                          onClick={() => {
-                            onSelectMovie(movie);
-                            onClose();
-                          }}
-                          className="group cursor-pointer"
-                        >
-                          <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-500 group-hover:scale-105 group-hover:border-nebula-cyan/50">
-                            <img
-                              src={movie.image}
-                              alt={movie.title}
-                              className="w-full h-full object-cover transition-all duration-700 group-hover:blur-[2px] group-hover:scale-110"
-                              referrerPolicy="no-referrer"
-                              onError={handleImageError}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity" />
-
-                            {/* Hover Info Overlay */}
-                            <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
-                              <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-tighter line-clamp-2 mb-2 italic">
-                                {movie.title}
-                              </h4>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-bold text-nebula-cyan border border-nebula-cyan/30 px-1.5 py-0.5 rounded uppercase">
-                                  {movie.type}
-                                </span>
-                                <span className="text-[9px] font-bold text-white/60">
-                                  {movie.year}
-                                </span>
-                              </div>
+                  {searchQuery && searchPeopleResults && searchPeopleResults.length > 0 && (
+                    <div className="mb-12">
+                      <h4 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                        <span className="w-4 h-px bg-white/15" />
+                        Actors & Creators
+                      </h4>
+                      <div className="flex gap-6 sm:gap-10 overflow-x-auto pb-4 no-scrollbar touch-pan-x">
+                        {searchPeopleResults.map((actor: any, idx: number) => (
+                          <div
+                            key={`search-actor-${actor.id}-${idx}`}
+                            onClick={() => {
+                              onSelectActor(actor.id);
+                              onClose();
+                            }}
+                            className="flex flex-col items-center gap-3 group cursor-pointer shrink-0"
+                          >
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/10 p-1 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden relative">
+                              <img
+                                src={actor.avatar}
+                                className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                                alt={actor.name}
+                                onError={handleImageError}
+                              />
+                              <div className="absolute inset-0 bg-nebula-cyan/0 group-hover:bg-nebula-cyan/5 transition-colors" />
+                            </div>
+                            <div className="text-center w-20 sm:w-24">
+                              <p className="text-[11px] sm:text-xs font-bold text-white group-hover:text-nebula-cyan transition-colors line-clamp-1">
+                                {actor.name}
+                              </p>
+                              <p className="text-[9px] font-medium text-dim uppercase tracking-wider mt-0.5 line-clamp-1">
+                                {actor.role}
+                              </p>
                             </div>
                           </div>
-                        </motion.div>
-                      ))
+                        ))}
+                      </div>
+                      <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent my-8" />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                    {searchQuery && searchResults.length > 0 ? (
+                      <>
+                        <div className="col-span-full mb-2">
+                          <h4 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-3">
+                            <span className="w-4 h-px bg-white/15" />
+                            Movies & TV Shows
+                          </h4>
+                        </div>
+                        {searchResults.map((movie, i) => (
+                          <motion.div
+                            key={`search-res-${movie.id}-${i}`}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.05 }}
+                            onClick={() => {
+                              onSelectMovie(movie);
+                              onClose();
+                            }}
+                            className="group cursor-pointer"
+                          >
+                            <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-500 group-hover:scale-105 group-hover:border-nebula-cyan/50">
+                              <img
+                                src={movie.image}
+                                alt={movie.title}
+                                className="w-full h-full object-cover transition-all duration-700 group-hover:blur-[2px] group-hover:scale-110"
+                                referrerPolicy="no-referrer"
+                                onError={handleImageError}
+                              />
+                              {/* Always-visible type badge */}
+                              <div className="absolute top-1.5 left-1.5 z-10">
+                                <span className={`text-[9px] font-black uppercase tracking-wide px-2 py-[3px] rounded-md backdrop-blur-md shadow-sm ${movie.type === "tv" ? "bg-white/15 text-white border border-white/20" : "bg-nebula-cyan/90 text-obsidian"}`}>
+                                  {movie.type === "tv" ? "TV" : "Movie"}
+                                </span>
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity" />
+
+                              {/* Hover Info Overlay */}
+                              <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
+                                <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-tighter line-clamp-2 mb-2 italic">
+                                  {movie.title}
+                                </h4>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9px] font-bold text-nebula-cyan border border-nebula-cyan/30 px-1.5 py-0.5 rounded uppercase">
+                                    {movie.type}
+                                  </span>
+                                  <span className="text-[9px] font-bold text-white/60">
+                                    {movie.year}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </>
                     ) : searchQuery && !isLoading ? (
                       <div className="col-span-full py-20 flex flex-col items-center">
                         <div className="relative mb-8">
