@@ -510,6 +510,213 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
+          {/* ── Vidnest Card ── */}
+          <div
+            onClick={() => {
+              if (!vidnestLoading && vidnestSources.length > 0)
+                onSelect(vidnestUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              vidnestLoading
+                ? "border-emerald-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : vidnestSources.length > 0
+                  ? "border-emerald-500/35 bg-slate-950/45 hover:border-emerald-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  vidnestLoading || vidnestSources.length > 0
+                    ? "bg-emerald-500/15 text-emerald-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Zap
+                  size={18}
+                  className={vidnestLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Vidnest
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase tracking-wider">
+                    FAST STREAM
+                  </span>
+                  {vidnestLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vidnestSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  High-speed direct MP4 CDN delivery mapping high quality
+                  mirrors with multi-language subtitle integration.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {vidnestLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                  </span>
+                  Probing Mirrors...
+                </div>
+              ) : vidnestSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Quality Tiers:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vidnestSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(
+                          /^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i,
+                          "$1 ($2)",
+                        )
+                        .replace(/^Vidnest\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Vidnest\s*-\s*/i, "")
+                        .replace(/^Vidnest/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName =
+                        src.quality !== "Auto"
+                          ? src.quality.toUpperCase()
+                          : cleanMirrorName || "HD";
+                      return (
+                        <span
+                          key={src.name}
+                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 uppercase tracking-wider"
+                        >
+                          {displayName}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vidnestError ? "Providers offline" : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Vaplayer Card ── */}
+          <div
+            onClick={() => {
+              if (!vaplayerLoading && vaplayerSources.length > 0)
+                onSelect(vaplayerUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              vaplayerLoading
+                ? "border-cyan-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : vaplayerSources.length > 0
+                  ? "border-cyan-500/35 bg-slate-950/45 hover:border-cyan-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  vaplayerLoading || vaplayerSources.length > 0
+                    ? "bg-cyan-500/15 text-cyan-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Tv
+                  size={18}
+                  className={vaplayerLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Vaplayer
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 uppercase tracking-wider">
+                    FAST HLS
+                  </span>
+                  {vaplayerLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vaplayerSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/35 text-cyan-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  High-speed direct HLS stream delivery mapping high quality
+                  mirrors with multi-language subtitle integration.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {vaplayerLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-cyan-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
+                  </span>
+                  Probing Mirrors...
+                </div>
+              ) : vaplayerSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Available Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vaplayerSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Vaplayer\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Vaplayer/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName =
+                        src.quality !== "Auto"
+                          ? src.quality.toUpperCase()
+                          : cleanMirrorName || "HD";
+                      return (
+                        <span
+                          key={src.name}
+                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 uppercase tracking-wider"
+                        >
+                          {displayName}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vaplayerError ? "Providers offline" : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* ── Videasy Card ── */}
           <div
             onClick={() => {
@@ -834,213 +1041,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {filmuError ? "Providers offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Vidnest Card ── */}
-          <div
-            onClick={() => {
-              if (!vidnestLoading && vidnestSources.length > 0)
-                onSelect(vidnestUrl);
-            }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
-              vidnestLoading
-                ? "border-emerald-500/20 bg-slate-950/45 opacity-80 cursor-wait"
-                : vidnestSources.length > 0
-                  ? "border-emerald-500/35 bg-slate-950/45 hover:border-emerald-500/60 hover:bg-slate-950/65 cursor-pointer"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                  vidnestLoading || vidnestSources.length > 0
-                    ? "bg-emerald-500/15 text-emerald-400"
-                    : "bg-white/5 text-white/20"
-                }`}
-              >
-                <Zap
-                  size={18}
-                  className={vidnestLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Vidnest
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase tracking-wider">
-                    FAST STREAM
-                  </span>
-                  {vidnestLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : vidnestSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
-                  High-speed direct MP4 CDN delivery mapping high quality
-                  mirrors with multi-language subtitle integration.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
-              {vidnestLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                  </span>
-                  Probing Mirrors...
-                </div>
-              ) : vidnestSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
-                    Quality Tiers:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {vidnestSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(
-                          /^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i,
-                          "$1 ($2)",
-                        )
-                        .replace(/^Vidnest\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vidnest\s*-\s*/i, "")
-                        .replace(/^Vidnest/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName =
-                        src.quality !== "Auto"
-                          ? src.quality.toUpperCase()
-                          : cleanMirrorName || "HD";
-                      return (
-                        <span
-                          key={src.name}
-                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 uppercase tracking-wider"
-                        >
-                          {displayName}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vidnestError ? "Providers offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Vaplayer Card ── */}
-          <div
-            onClick={() => {
-              if (!vaplayerLoading && vaplayerSources.length > 0)
-                onSelect(vaplayerUrl);
-            }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
-              vaplayerLoading
-                ? "border-cyan-500/20 bg-slate-950/45 opacity-80 cursor-wait"
-                : vaplayerSources.length > 0
-                  ? "border-cyan-500/35 bg-slate-950/45 hover:border-cyan-500/60 hover:bg-slate-950/65 cursor-pointer"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                  vaplayerLoading || vaplayerSources.length > 0
-                    ? "bg-cyan-500/15 text-cyan-400"
-                    : "bg-white/5 text-white/20"
-                }`}
-              >
-                <Tv
-                  size={18}
-                  className={vaplayerLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Vaplayer
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 uppercase tracking-wider">
-                    FAST HLS
-                  </span>
-                  {vaplayerLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : vaplayerSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/35 text-cyan-300 uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
-                  High-speed direct HLS stream delivery mapping high quality
-                  mirrors with multi-language subtitle integration.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
-              {vaplayerLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-cyan-400/70 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
-                  </span>
-                  Probing Mirrors...
-                </div>
-              ) : vaplayerSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
-                    Available Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {vaplayerSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Vaplayer\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vaplayer/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName =
-                        src.quality !== "Auto"
-                          ? src.quality.toUpperCase()
-                          : cleanMirrorName || "HD";
-                      return (
-                        <span
-                          key={src.name}
-                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 uppercase tracking-wider"
-                        >
-                          {displayName}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vaplayerError ? "Providers offline" : "No mirrors available"}
                 </p>
               )}
             </div>

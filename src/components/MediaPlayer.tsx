@@ -4648,146 +4648,6 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Videasy */}
-      <button
-        onClick={() => videasySources.length > 0 && onSelect(videasyUrl)}
-        disabled={
-          videasyLoading ||
-          videasySources.length === 0 ||
-          activeSource === "Videasy"
-        }
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "Videasy"
-            ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default"
-            : videasyLoading
-              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-              : videasySources.length > 0
-                ? "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400">
-            {videasyLoading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Tv size={14} />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                Videasy
-              </p>
-              {activeSource === "Videasy" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-indigo-500 text-white uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-            </div>
-            <p className="text-[8px] text-white/40 uppercase">
-              {videasyLoading ? "Decrypting..." : "Decrypted"}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {videasyLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
-              Running decrypt scan...
-            </span>
-          ) : videasySources.length > 0 ? (
-            <>
-              {videasySources.slice(0, 3).map((s) => (
-                <span
-                  key={s.name}
-                  className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase"
-                >
-                  {s.name
-                    .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
-                    .replace(/^Videasy/i, "")
-                    .trim()
-                    .toUpperCase()}
-                </span>
-              ))}
-              {videasySources.length > 3 && (
-                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase">
-                  +{videasySources.length - 3}
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase">
-              {videasyError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* FilmU */}
-      <button
-        onClick={() => filmuSources.length > 0 && onSelect(filmuUrl)}
-        disabled={
-          filmuLoading || filmuSources.length === 0 || activeSource === "FilmU"
-        }
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "FilmU"
-            ? "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default"
-            : filmuLoading
-              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-              : filmuSources.length > 0
-                ? "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400">
-            {filmuLoading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Info size={14} />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                FilmU
-              </p>
-              {activeSource === "FilmU" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-obsidian uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-            </div>
-            <p className="text-[8px] text-white/40 uppercase">
-              {filmuLoading ? "Scanning..." : "Active"}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {filmuLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
-              Running uplink check...
-            </span>
-          ) : filmuSources.length > 0 ? (
-            filmuSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7px] font-bold px-1 py-0.5 rounded border border-amber-500/20 text-amber-400/80 bg-amber-500/5 uppercase"
-              >
-                {s.name
-                  .replace(/^FilmU[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase">
-              {filmuError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
       {/* Vidnest */}
       <button
         onClick={() => vidnestSources.length > 0 && onSelect(vidnestUrl)}
@@ -4929,6 +4789,81 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
+      {/* Videasy */}
+      <button
+        onClick={() => videasySources.length > 0 && onSelect(videasyUrl)}
+        disabled={
+          videasyLoading ||
+          videasySources.length === 0 ||
+          activeSource === "Videasy"
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          activeSource === "Videasy"
+            ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default"
+            : videasyLoading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : videasySources.length > 0
+                ? "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400">
+            {videasyLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Tv size={14} />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                Videasy
+              </p>
+              {activeSource === "Videasy" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-indigo-500 text-white uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
+            <p className="text-[8px] text-white/40 uppercase">
+              {videasyLoading ? "Decrypting..." : "Decrypted"}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {videasyLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Running decrypt scan...
+            </span>
+          ) : videasySources.length > 0 ? (
+            <>
+              {videasySources.slice(0, 3).map((s) => (
+                <span
+                  key={s.name}
+                  className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase"
+                >
+                  {s.name
+                    .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
+                    .replace(/^Videasy/i, "")
+                    .trim()
+                    .toUpperCase()}
+                </span>
+              ))}
+              {videasySources.length > 3 && (
+                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase">
+                  +{videasySources.length - 3}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">
+              {videasyError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
       {/* VidLink */}
       <button
         onClick={() => onSelect()}
@@ -4961,6 +4896,71 @@ export function InPlayerSourcePicker({
           <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">
             Auto-Failover
           </span>
+        </div>
+      </button>
+
+      {/* FilmU */}
+      <button
+        onClick={() => filmuSources.length > 0 && onSelect(filmuUrl)}
+        disabled={
+          filmuLoading || filmuSources.length === 0 || activeSource === "FilmU"
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          activeSource === "FilmU"
+            ? "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default"
+            : filmuLoading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : filmuSources.length > 0
+                ? "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400">
+            {filmuLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Info size={14} />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                FilmU
+              </p>
+              {activeSource === "FilmU" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
+            <p className="text-[8px] text-white/40 uppercase">
+              {filmuLoading ? "Scanning..." : "Active"}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {filmuLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Running uplink check...
+            </span>
+          ) : filmuSources.length > 0 ? (
+            filmuSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7px] font-bold px-1 py-0.5 rounded border border-amber-500/20 text-amber-400/80 bg-amber-500/5 uppercase"
+              >
+                {s.name
+                  .replace(/^FilmU[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">
+              {filmuError || "No mirrors"}
+            </span>
+          )}
         </div>
       </button>
     </div>
