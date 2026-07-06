@@ -1304,12 +1304,37 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     if (currentMirrorType === "mp4" || currentMirrorType === "mp4_grouped") {
       video.src = streamUrl;
+
+      // ── Short-clip guard (mp4) ───────────────────────────────────────────
+      // A restricted/fake video (e.g. Cloudflare ToS page) typically reports
+      // a duration of 2s or less.  Skip it automatically.
+      const onMp4Meta = () => {
+        if (
+          isFinite(video.duration) &&
+          video.duration > 0 &&
+          video.duration <= 3
+        ) {
+          console.warn(
+            `[PLAYER] mp4 mirror has duration ${video.duration.toFixed(1)}s (≤3s) — skipping.`,
+          );
+          const nextIdx = activeMirrorRef.current + 1;
+          if (nextIdx < mirrorsRef.current.length) {
+            setFailedMirrors((prev) => ({ ...prev, [activeMirrorRef.current]: "SHORT" }));
+            selectMirror(nextIdx, mirrorsRef.current);
+          } else {
+            setError("Short/restricted video on all mirrors.");
+          }
+        }
+      };
+      video.addEventListener("loadedmetadata", onMp4Meta, { once: true });
+
       video.play().catch((err) => {
         console.warn("[PLAYER] play() failed or was interrupted:", err);
         setIsPaused(true);
         showToast("Playback failed to start.", "error");
       });
       return () => {
+        video.removeEventListener("loadedmetadata", onMp4Meta);
         video.src = "";
       };
     }
@@ -1430,6 +1455,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             .reverse(),
         );
         video.volume = isMuted ? 0 : volume / 100;
+
+        // ── Short-clip guard (HLS) ─────────────────────────────────────────
+        // A restricted/fake HLS stream (e.g. Cloudflare ToS blob) has a
+        // reported duration of ≤3 seconds.  Detect and skip immediately.
+        const onHlsMeta = () => {
+          if (
+            isFinite(video.duration) &&
+            video.duration > 0 &&
+            video.duration <= 3
+          ) {
+            console.warn(
+              `[PLAYER] HLS mirror has duration ${video.duration.toFixed(1)}s (≤3s) — skipping.`,
+            );
+            const nextIdx = activeMirrorRef.current + 1;
+            if (nextIdx < mirrorsRef.current.length) {
+              setFailedMirrors((prev) => ({ ...prev, [activeMirrorRef.current]: "SHORT" }));
+              hls.destroy();
+              selectMirror(nextIdx, mirrorsRef.current);
+            } else {
+              setError("Short/restricted video on all mirrors.");
+            }
+          }
+        };
+        video.addEventListener("loadedmetadata", onHlsMeta, { once: true });
+
         video.play().catch((err) => {
           console.warn("[PLAYER] play() failed or was interrupted:", err);
           setIsPaused(true);
@@ -4745,10 +4795,17 @@ export function InPlayerSourcePicker({
                 key={s.name}
                 className="text-[7px] font-bold px-1 py-0.5 rounded border border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5 uppercase"
               >
-                {s.name
-                  .replace(/^Vidnest[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
+              {/* Badge label transformation:
+                  "Vidnest (1080p)"           → "1080P"
+                  "Vidnest - AllMovies (Auto)" → "ALLMOVIES (AUTO)"
+                  "Vidnest - KlikXXI (auto)"  → "KLIKXXI (AUTO)" */}
+              {s.name
+                .replace(/^Vidnest\s*-\s*/i, "") // "Vidnest - AllMovies (Auto)" → "AllMovies (Auto)"
+                .replace(/^Vidnest\s*\(([^)]+)\)$/i, "$1") // "Vidnest (1080p)" → "1080p"
+                .replace(/^Vidnest\s*/i, "")      // any leftover "Vidnest" prefix
+                .replace(/^\(([^)]+)\)$/, "$1")   // "(1080p)" → "1080p" (safety strip)
+                .trim()
+                .toUpperCase()}
               </span>
             ))
           ) : (
