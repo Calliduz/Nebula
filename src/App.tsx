@@ -231,11 +231,23 @@ export default function App() {
                 so that direct URL navigation (paste/refresh) works. */}
             <Route
               path="/movie/:id"
-              element={<MovieDetailPageStub actions={actions} state={state} onSelectActor={setSelectedActorId} />}
+              element={
+                <MovieDetailPageStub
+                  actions={actions}
+                  state={state}
+                  onSelectActor={setSelectedActorId}
+                />
+              }
             />
             <Route
               path="/tv/:id"
-              element={<MovieDetailPageStub actions={actions} state={state} onSelectActor={setSelectedActorId} />}
+              element={
+                <MovieDetailPageStub
+                  actions={actions}
+                  state={state}
+                  onSelectActor={setSelectedActorId}
+                />
+              }
             />
 
             {/* Standalone Player Route */}
@@ -718,7 +730,10 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                   const BIO_LIMIT = 280;
                   const bio = details.biography || "";
                   const isLong = bio.length > BIO_LIMIT;
-                  const displayBio = isLong && !bioExpanded ? bio.slice(0, BIO_LIMIT).trimEnd() + "…" : bio;
+                  const displayBio =
+                    isLong && !bioExpanded
+                      ? bio.slice(0, BIO_LIMIT).trimEnd() + "…"
+                      : bio;
                   return (
                     <div className="mt-4 sm:mt-6 text-xs sm:text-sm text-white/70 leading-relaxed font-sans pr-2 border-l border-white/10 pl-3 sm:pl-4 text-justify">
                       {bio ? (
@@ -759,7 +774,19 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                     className="absolute left-0 top-0 bottom-4 z-10 w-10 sm:w-12 flex items-center justify-center bg-gradient-to-r from-obsidian via-obsidian/80 to-transparent opacity-0 group-hover/filmrow:opacity-100 transition-opacity duration-300 cursor-pointer"
                   >
                     <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/20 hover:border-nebula-cyan/40 transition-all">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="15 18 9 12 15 6" /></svg>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-white"
+                      >
+                        <polyline points="15 18 9 12 15 6" />
+                      </svg>
                     </div>
                   </button>
                 )}
@@ -771,7 +798,19 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                     className="absolute right-0 top-0 bottom-4 z-10 w-10 sm:w-12 flex items-center justify-center bg-gradient-to-l from-obsidian via-obsidian/80 to-transparent opacity-0 group-hover/filmrow:opacity-100 transition-opacity duration-300 cursor-pointer"
                   >
                     <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/20 hover:border-nebula-cyan/40 transition-all">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="9 18 15 12 9 6" /></svg>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-white"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     </div>
                   </button>
                 )}
@@ -780,7 +819,8 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                   ref={filmRowRef}
                   className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 custom-scrollbar touch-pan-x snap-x snap-mandatory scroll-smooth"
                 >
-                  {details.combined_credits && details.combined_credits.length > 0 ? (
+                  {details.combined_credits &&
+                  details.combined_credits.length > 0 ? (
                     details.combined_credits.map((m: any, i: number) => (
                       <div
                         key={`actor-film-${m.id}-${i}`}
@@ -798,7 +838,9 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                         />
                         {/* Always-visible type badge — hidden on mobile */}
                         <div className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5 hidden sm:block">
-                          <span className={`text-[7px] sm:text-[9px] font-black uppercase tracking-wide px-1.5 sm:px-2 py-[2px] sm:py-[3px] rounded-md backdrop-blur-md shadow-sm ${m.type === "tv" ? "bg-white/15 text-white border border-white/20" : "bg-nebula-cyan/90 text-obsidian"}`}>
+                          <span
+                            className={`text-[7px] sm:text-[9px] font-black uppercase tracking-wide px-1.5 sm:px-2 py-[2px] sm:py-[3px] rounded-md backdrop-blur-md shadow-sm ${m.type === "tv" ? "bg-white/15 text-white border border-white/20" : "bg-nebula-cyan/90 text-obsidian"}`}
+                          >
                             {m.type === "tv" ? "TV" : "Movie"}
                           </span>
                         </div>
@@ -832,4 +874,3 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
     </motion.div>
   );
 };
-

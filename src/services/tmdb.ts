@@ -1117,13 +1117,22 @@ export const getPersonDetails = async (
         const genres: number[] = m.genre_ids || [];
         if (genres.some((g: number) => GUEST_GENRE_IDS.has(g))) return false;
         // For TV entries: filter out guest appearances (≤2 episodes)
-        if (m.media_type === "tv" && (m.episode_count ?? 0) > 0 && m.episode_count <= 2) return false;
+        if (
+          m.media_type === "tv" &&
+          (m.episode_count ?? 0) > 0 &&
+          m.episode_count <= 2
+        )
+          return false;
         return true;
       })
       .sort((a: any, b: any) => {
         // For actors, boost movie credits so their actual filmography ranks first
-        const popA = (a.popularity || 0) * (isActingDept && a.media_type === "movie" ? 2 : 1);
-        const popB = (b.popularity || 0) * (isActingDept && b.media_type === "movie" ? 2 : 1);
+        const popA =
+          (a.popularity || 0) *
+          (isActingDept && a.media_type === "movie" ? 2 : 1);
+        const popB =
+          (b.popularity || 0) *
+          (isActingDept && b.media_type === "movie" ? 2 : 1);
         return popB - popA;
       })
       .slice(0, 40)
@@ -1142,7 +1151,10 @@ export const getPersonDetails = async (
       combined_credits: normalizedCredits,
     };
   } catch (err) {
-    console.error(`[TMDB] Failed to fetch person details for ${personId}:`, err);
+    console.error(
+      `[TMDB] Failed to fetch person details for ${personId}:`,
+      err,
+    );
     return null;
   }
 };
@@ -1176,4 +1188,3 @@ export const searchPeople = async (
     return [];
   }
 };
-

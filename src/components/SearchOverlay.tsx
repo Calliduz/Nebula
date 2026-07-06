@@ -139,45 +139,49 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                     </h3>
                   </div>
 
-                  {searchQuery && searchPeopleResults && searchPeopleResults.length > 0 && (
-                    <div className="mb-12">
-                      <h4 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
-                        <span className="w-4 h-px bg-white/15" />
-                        Actors & Creators
-                      </h4>
-                      <div className="flex gap-6 sm:gap-10 overflow-x-auto pb-4 no-scrollbar touch-pan-x">
-                        {searchPeopleResults.map((actor: any, idx: number) => (
-                          <div
-                            key={`search-actor-${actor.id}-${idx}`}
-                            onClick={() => {
-                              onSelectActor(actor.id);
-                              onClose();
-                            }}
-                            className="flex flex-col items-center gap-3 group cursor-pointer shrink-0"
-                          >
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/10 p-1 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden relative">
-                              <img
-                                src={actor.avatar}
-                                className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                                alt={actor.name}
-                                onError={handleImageError}
-                              />
-                              <div className="absolute inset-0 bg-nebula-cyan/0 group-hover:bg-nebula-cyan/5 transition-colors" />
-                            </div>
-                            <div className="text-center w-20 sm:w-24">
-                              <p className="text-[11px] sm:text-xs font-bold text-white group-hover:text-nebula-cyan transition-colors line-clamp-1">
-                                {actor.name}
-                              </p>
-                              <p className="text-[9px] font-medium text-dim uppercase tracking-wider mt-0.5 line-clamp-1">
-                                {actor.role}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                  {searchQuery &&
+                    searchPeopleResults &&
+                    searchPeopleResults.length > 0 && (
+                      <div className="mb-12">
+                        <h4 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                          <span className="w-4 h-px bg-white/15" />
+                          Actors & Creators
+                        </h4>
+                        <div className="flex gap-6 sm:gap-10 overflow-x-auto pb-4 no-scrollbar touch-pan-x">
+                          {searchPeopleResults.map(
+                            (actor: any, idx: number) => (
+                              <div
+                                key={`search-actor-${actor.id}-${idx}`}
+                                onClick={() => {
+                                  onSelectActor(actor.id);
+                                  onClose();
+                                }}
+                                className="flex flex-col items-center gap-3 group cursor-pointer shrink-0"
+                              >
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/10 p-1 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden relative">
+                                  <img
+                                    src={actor.avatar}
+                                    className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                                    alt={actor.name}
+                                    onError={handleImageError}
+                                  />
+                                  <div className="absolute inset-0 bg-nebula-cyan/0 group-hover:bg-nebula-cyan/5 transition-colors" />
+                                </div>
+                                <div className="text-center w-20 sm:w-24">
+                                  <p className="text-[11px] sm:text-xs font-bold text-white group-hover:text-nebula-cyan transition-colors line-clamp-1">
+                                    {actor.name}
+                                  </p>
+                                  <p className="text-[9px] font-medium text-dim uppercase tracking-wider mt-0.5 line-clamp-1">
+                                    {actor.role}
+                                  </p>
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                        <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent my-8" />
                       </div>
-                      <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent my-8" />
-                    </div>
-                  )}
+                    )}
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
                     {searchQuery && searchResults.length > 0 ? (
@@ -210,7 +214,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                               />
                               {/* Always-visible type badge */}
                               <div className="absolute top-1.5 left-1.5 z-10">
-                                <span className={`text-[9px] font-black uppercase tracking-wide px-2 py-[3px] rounded-md backdrop-blur-md shadow-sm ${movie.type === "tv" ? "bg-white/15 text-white border border-white/20" : "bg-nebula-cyan/90 text-obsidian"}`}>
+                                <span
+                                  className={`text-[9px] font-black uppercase tracking-wide px-2 py-[3px] rounded-md backdrop-blur-md shadow-sm ${movie.type === "tv" ? "bg-white/15 text-white border border-white/20" : "bg-nebula-cyan/90 text-obsidian"}`}
+                                >
                                   {movie.type === "tv" ? "TV" : "Movie"}
                                 </span>
                               </div>
