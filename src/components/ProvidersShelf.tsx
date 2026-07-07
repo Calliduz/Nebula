@@ -117,6 +117,8 @@ export const ProvidersShelf: React.FC<ProvidersShelfProps> = memo(
                   <img
                     src={`${API_BASE_URL}/api/image?url=${encodeURIComponent(`https://image.tmdb.org/t/p/w154${provider.logoPath}`)}`}
                     alt={provider.name}
+                    width="88"
+                    height="88"
                     className="w-full h-full object-cover transition-all duration-500 opacity-75 group-hover/card:opacity-100 group-hover/card:scale-105"
                     loading="lazy"
                   />

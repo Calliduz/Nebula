@@ -1544,6 +1544,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       <img
         src={movie.clearLogo}
         alt={movie.title}
+        height="160"
         className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
         referrerPolicy="no-referrer"
         onError={handleImageError}

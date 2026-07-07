@@ -20,6 +20,41 @@ export default defineConfig(({ mode }) => {
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== "true",
     },
+    build: {
+      sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (
+                id.includes("react-router-dom") ||
+                id.includes("react-router") ||
+                id.includes("@remix-run")
+              ) {
+                return "react-router";
+              }
+              if (id.includes("artplayer") || id.includes("hls.js")) {
+                return "player-libs";
+              }
+              if (id.includes("@google/genai")) {
+                return "google-genai";
+              }
+              if (id.includes("motion") || id.includes("@motion")) {
+                return "motion";
+              }
+              if (
+                id.includes("react") ||
+                id.includes("react-dom") ||
+                id.includes("scheduler")
+              ) {
+                return "react-core";
+              }
+              return "vendor";
+            }
+          },
+        },
+      },
+    },
     test: {
       // jsdom gives us localStorage, DOM APIs needed by both test files
       environment: "jsdom",

@@ -142,6 +142,7 @@ export const Hero: React.FC<HeroProps> = ({
               <img
                 src={activeHero.clearLogo}
                 alt={activeHero.title}
+                height="176"
                 className="hidden md:block w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] h-32 md:h-44 object-contain object-left mb-8 md:mb-10 drop-shadow-2xl"
               />
             ) : (

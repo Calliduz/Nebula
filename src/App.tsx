@@ -9,13 +9,11 @@ import { triggerPopunder } from "./utils/helpers";
 // Components
 import { TopNav } from "./components/TopNav";
 import { Hero } from "./components/Hero";
-import { SearchOverlay } from "./components/SearchOverlay";
-import { CategoryView } from "./components/CategoryView";
 import { HomeFeed } from "./components/HomeFeed";
-import { NotFound } from "./components/NotFound";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { Footer } from "./components/Footer";
 import { MovieDetailsSkeleton } from "./components/MovieDetailsSkeleton";
+import { MovieSkeleton } from "./components/MovieSkeleton";
 
 const MediaPlayer = React.lazy(() =>
   import("./components/MediaPlayer").then((module) => ({
@@ -30,6 +28,21 @@ const MovieDetails = React.lazy(() =>
 const SourceSelectionModal = React.lazy(() =>
   import("./components/MovieDetails").then((module) => ({
     default: module.SourceSelectionModal,
+  })),
+);
+const SearchOverlay = React.lazy(() =>
+  import("./components/SearchOverlay").then((module) => ({
+    default: module.SearchOverlay,
+  })),
+);
+const CategoryView = React.lazy(() =>
+  import("./components/CategoryView").then((module) => ({
+    default: module.CategoryView,
+  })),
+);
+const NotFound = React.lazy(() =>
+  import("./components/NotFound").then((module) => ({
+    default: module.NotFound,
   })),
 );
 
@@ -203,28 +216,41 @@ export default function App() {
                     />
                   </>
                 ) : (
-                  <CategoryView
-                    viewingCategory={state.viewingCategory}
-                    setViewingCategory={actions.setViewingCategory}
-                    setActiveTab={actions.setActiveTab}
-                    onSelectMovie={actions.setSelectedMovie}
-                    myList={state.myList}
-                    toggleMyList={actions.toggleMyList}
-                    history={state.history}
-                    startPlayback={actions.startPlayback}
-                    getCategoryMovies={actions.getCategoryMovies}
-                    visibleCount={state.visibleCount}
-                    loadMore={actions.loadMore}
-                    allMovies={state.allMovies}
-                    data={state.filteredMovies}
-                    selectedRegion={state.selectedRegion}
-                    setSelectedRegion={actions.setSelectedRegion}
-                    removeFromHistory={actions.removeFromHistory}
-                    removeFromProgress={actions.removeFromProgress}
-                    clearHistory={actions.clearHistory}
-                    clearMyList={actions.clearMyList}
-                    isLoading={state.isLoading}
-                  />
+                  <React.Suspense
+                    fallback={
+                      <div className="min-h-screen bg-obsidian pt-12 px-4 sm:px-6 md:px-12 pb-32">
+                        <div className="h-10 w-48 bg-white/5 rounded-lg mb-12 shimmer-bg" />
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
+                          {[...Array(12)].map((_, i) => (
+                            <MovieSkeleton key={`cat-fallback-sk-${i}`} />
+                          ))}
+                        </div>
+                      </div>
+                    }
+                  >
+                    <CategoryView
+                      viewingCategory={state.viewingCategory}
+                      setViewingCategory={actions.setViewingCategory}
+                      setActiveTab={actions.setActiveTab}
+                      onSelectMovie={actions.setSelectedMovie}
+                      myList={state.myList}
+                      toggleMyList={actions.toggleMyList}
+                      history={state.history}
+                      startPlayback={actions.startPlayback}
+                      getCategoryMovies={actions.getCategoryMovies}
+                      visibleCount={state.visibleCount}
+                      loadMore={actions.loadMore}
+                      allMovies={state.allMovies}
+                      data={state.filteredMovies}
+                      selectedRegion={state.selectedRegion}
+                      setSelectedRegion={actions.setSelectedRegion}
+                      removeFromHistory={actions.removeFromHistory}
+                      removeFromProgress={actions.removeFromProgress}
+                      clearHistory={actions.clearHistory}
+                      clearMyList={actions.clearMyList}
+                      isLoading={state.isLoading}
+                    />
+                  </React.Suspense>
                 )
               }
             />
@@ -259,7 +285,14 @@ export default function App() {
             />
 
             {/* Catch-all 404 */}
-            <Route path="*" element={<NotFound />} />
+            <Route
+              path="*"
+              element={
+                <React.Suspense fallback={null}>
+                  <NotFound />
+                </React.Suspense>
+              }
+            />
           </Routes>
         </div>
 
@@ -270,18 +303,20 @@ export default function App() {
       {/* Scroll-to-top button for homepage and category view */}
       {!state.isSearchOpen && <ScrollToTop />}
 
-      <SearchOverlay
-        isOpen={state.isSearchOpen}
-        onClose={() => actions.setIsSearchOpen(false)}
-        searchQuery={state.searchQuery}
-        setSearchQuery={actions.setSearchQuery}
-        searchResults={state.searchResults}
-        searchPeopleResults={state.searchPeopleResults}
-        onSelectMovie={actions.setSelectedMovie}
-        onSelectActor={setSelectedActorId}
-        searchInputRef={refs.searchInputRef}
-        isLoading={state.isLoading}
-      />
+      <React.Suspense fallback={null}>
+        <SearchOverlay
+          isOpen={state.isSearchOpen}
+          onClose={() => actions.setIsSearchOpen(false)}
+          searchQuery={state.searchQuery}
+          setSearchQuery={actions.setSearchQuery}
+          searchResults={state.searchResults}
+          searchPeopleResults={state.searchPeopleResults}
+          onSelectMovie={actions.setSelectedMovie}
+          onSelectActor={setSelectedActorId}
+          searchInputRef={refs.searchInputRef}
+          isLoading={state.isLoading}
+        />
+      </React.Suspense>
 
       {/* The Player and Details now render via Routes, the following are kept for backward-compat and manual transitions if needed */}
 
@@ -358,8 +393,18 @@ export default function App() {
         {selectedMovieForSource && (
           <React.Suspense
             fallback={
-              <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center">
-                <Loader2 className="animate-spin text-nebula-cyan" size={32} />
+              <div className="fixed inset-0 z-[1500] bg-obsidian/80 backdrop-blur-md flex items-center justify-center p-4">
+                <div className="w-full max-w-xl bg-obsidian border border-white/10 rounded-2xl p-5 sm:p-10 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <div className="h-6 w-1/3 bg-white/10 rounded-lg shimmer-bg" />
+                    <div className="h-8 w-8 bg-white/10 rounded-full shimmer-bg" />
+                  </div>
+                  <div className="space-y-3">
+                    <div className="h-12 w-full bg-white/5 rounded-xl shimmer-bg border border-white/5" />
+                    <div className="h-12 w-full bg-white/5 rounded-xl shimmer-bg border border-white/5" />
+                    <div className="h-12 w-full bg-white/5 rounded-xl shimmer-bg border border-white/5" />
+                  </div>
+                </div>
               </div>
             }
           >
@@ -540,8 +585,23 @@ function MediaPlayerStub({ actions, state }: any) {
     <div className="fixed inset-0 z-[1000] bg-black">
       <React.Suspense
         fallback={
-          <div className="h-screen bg-black flex items-center justify-center">
-            <Loader2 className="animate-spin text-nebula-cyan" size={48} />
+          <div className="h-screen bg-black flex flex-col justify-between p-8 relative overflow-hidden">
+            <div className="flex items-center justify-between z-10">
+              <div className="h-10 w-10 bg-white/10 rounded-xl shimmer-bg" />
+              <div className="h-6 w-1/3 bg-white/10 rounded-lg shimmer-bg" />
+              <div className="h-10 w-10 bg-white/10 rounded-xl shimmer-bg" />
+            </div>
+            <div className="absolute inset-0 bg-nebula-cyan/[0.02] blur-3xl rounded-full scale-150 animate-pulse" />
+            <div className="w-full space-y-4 z-10">
+              <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden shimmer-bg" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-8 w-8 bg-white/10 rounded-full shimmer-bg" />
+                  <div className="h-8 w-8 bg-white/10 rounded-full shimmer-bg" />
+                </div>
+                <div className="h-8 w-24 bg-white/10 rounded-lg shimmer-bg" />
+              </div>
+            </div>
           </div>
         }
       >

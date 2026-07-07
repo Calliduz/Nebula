@@ -168,6 +168,7 @@ export const MovieCard = memo<MovieCardProps>(
                 <img
                   src={movie.clearLogo}
                   alt={movie.title}
+                  height="40"
                   className="h-10 w-auto object-contain object-left drop-shadow-2xl transition-transform duration-300 group-hover/card:scale-110 origin-left"
                   referrerPolicy="no-referrer"
                 />

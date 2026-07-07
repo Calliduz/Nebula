@@ -138,7 +138,17 @@ const getApiBase = (): string => API_BASE_URL;
 
 const proxyImage = (url: string): string => {
   if (!url) return "";
-  return `${getApiBase()}/api/image?url=${encodeURIComponent(url)}`;
+  let optimizedUrl = url;
+  if (url.includes("image.tmdb.org/t/p/original/")) {
+    if (url.toLowerCase().includes(".png")) {
+      // Logos: downscale to w500
+      optimizedUrl = url.replace("/original/", "/w500/");
+    } else {
+      // Backdrops: optimize to w1280 for high resolution without original file sizes
+      optimizedUrl = url.replace("/original/", "/w1280/");
+    }
+  }
+  return `${getApiBase()}/api/image?url=${encodeURIComponent(optimizedUrl)}`;
 };
 
 export const GENRE_MAP: Record<number, string> = {

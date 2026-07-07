@@ -161,8 +161,8 @@ input[type="range"].appearance-none::-webkit-slider-thumb {
 }
 
 input[type="range"].appearance-slider-vertical {
-  writing-mode: bt-lr; /* IE */
-  -webkit-appearance: slider-vertical; /* WebKit */
+  writing-mode: vertical-lr;
+  direction: rtl;
   width: 8px;
   height: 100%;
   padding: 0 5px;

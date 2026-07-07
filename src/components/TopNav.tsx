@@ -14,7 +14,7 @@ export const TopNav = ({
   return (
     <>
       <header
-        className={`fixed top-0 inset-x-0 z-[100] transition-all duration-500 flex items-center justify-between px-4 sm:px-6 md:px-12 py-3 md:py-4 ${scrolled ? "bg-obsidian shadow-2xl" : "glass-header"}`}
+        className={`fixed top-0 inset-x-0 z-[100] transition-[background-color,backdrop-filter,box-shadow] duration-500 flex items-center justify-between px-4 sm:px-6 md:px-12 py-3 md:py-4 ${scrolled ? "bg-obsidian shadow-2xl" : "glass-header"}`}
       >
         <div className="flex items-center gap-4 sm:gap-12">
           <div

@@ -2715,6 +2715,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               <img
                 src={movie.clearLogo}
                 alt={movie.title}
+                height="112"
                 className="h-20 md:h-28 w-auto object-contain drop-shadow-2xl animate-pulse"
                 referrerPolicy="no-referrer"
               />
@@ -2909,6 +2910,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               <img
                 src={movie.clearLogo}
                 alt="Loading..."
+                height="96"
                 className="h-16 md:h-24 w-auto object-contain drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
                 referrerPolicy="no-referrer"
               />
