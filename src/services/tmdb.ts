@@ -138,6 +138,9 @@ const getApiBase = (): string => API_BASE_URL;
 
 const proxyImage = (url: string): string => {
   if (!url) return "";
+  if (url.startsWith("/") || url.startsWith("data:") || url.includes("/api/image?url=")) {
+    return url;
+  }
   let optimizedUrl = url;
   if (url.includes("image.tmdb.org/t/p/original/")) {
     if (url.toLowerCase().includes(".png")) {
@@ -894,8 +897,8 @@ export const enrichMovies = async (
       try {
         const { logoUrl, backgroundUrl, ts } = JSON.parse(cached);
         if (logoUrl && Date.now() - ts < TTL.META) {
-          m.clearLogo = logoUrl;
-          m.fanartBackground = backgroundUrl;
+          m.clearLogo = proxyImage(logoUrl);
+          m.fanartBackground = proxyImage(backgroundUrl);
         }
       } catch {
         /* stale */
@@ -952,8 +955,8 @@ export const enrichMovies = async (
           (m) => m.id.toString() === meta.id.toString(),
         );
         if (index !== -1) {
-          normalized[index].clearLogo = meta.logoUrl;
-          normalized[index].fanartBackground = meta.backgroundUrl;
+          normalized[index].clearLogo = proxyImage(meta.logoUrl);
+          normalized[index].fanartBackground = proxyImage(meta.backgroundUrl);
           if (meta.logoUrl) {
             try {
               localStorage.setItem(
