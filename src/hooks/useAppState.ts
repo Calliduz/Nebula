@@ -716,6 +716,11 @@ export function useAppState() {
   const pendingRowFetchQueueRef = useRef<string[]>([]);
   const globalShownRef = useRef<Set<string>>(new Set());
 
+  const feedSeedRef = useRef(feedSeed);
+  useEffect(() => {
+    feedSeedRef.current = feedSeed;
+  }, [feedSeed]);
+
   // Helper to merge new movies into the global pool uniquely
   const updateGlobalPool = (newMovies: NebulaMovie[]) => {
     setAllMovies((prev) => {
@@ -1712,6 +1717,8 @@ export function useAppState() {
     // Check if it's already queued
     if (pendingRowFetchQueueRef.current.includes(rowTitle)) return;
 
+    const currentSeed = feedSeedRef.current;
+
     // If we have reached the concurrency limit, queue it
     if (activeRowFetchesRef.current >= 2) {
       pendingRowFetchQueueRef.current.push(rowTitle);
@@ -1744,7 +1751,7 @@ export function useAppState() {
               "1"
             );
             // Rotate items based on active feedSeed to match original behavior
-            fetchedItems = rotateItems(fetchedItems, feedSeed);
+            fetchedItems = rotateItems(fetchedItems, currentSeed);
           } else if (config.mediaType === "all") {
             fetchedItems = await getTrending("all", "1");
           } else {
@@ -1788,6 +1795,11 @@ export function useAppState() {
           }
         }
 
+        // If the seed has changed, discard the results (stale refresh)
+        if (currentSeed !== feedSeedRef.current) {
+          return;
+        }
+
         const deduped = fetchedItems.filter(
           (m) => m && m.id && !globalShownRef.current.has(m.id.toString())
         ).slice(0, 20);
@@ -1817,6 +1829,7 @@ export function useAppState() {
 
         // Enrich items in background (non-blocking)
         enrichMoviesWithMetadata(finalItems.slice(0, 10)).then((enriched) => {
+          if (currentSeed !== feedSeedRef.current) return;
           setRows((prev) =>
             prev.map((r) =>
               r.title === title
@@ -1844,6 +1857,7 @@ export function useAppState() {
         );
       } catch (err) {
         console.error(`Failed to load row ${title}:`, err);
+        if (currentSeed !== feedSeedRef.current) return;
         setRows((prev) =>
           prev.map((r) =>
             r.title === title
@@ -1855,8 +1869,8 @@ export function useAppState() {
         // Complete the fetch and process queue
         activeRowFetchesRef.current -= 1;
         
-        // Dequeue next request if any
-        if (pendingRowFetchQueueRef.current.length > 0) {
+        // Dequeue next request if any (only if seed hasn't changed)
+        if (currentSeed === feedSeedRef.current && pendingRowFetchQueueRef.current.length > 0) {
           const nextRowTitle = pendingRowFetchQueueRef.current.shift();
           if (nextRowTitle) {
             // Run next request
@@ -1868,7 +1882,7 @@ export function useAppState() {
     };
 
     executeFetch(rowTitle);
-  }, [rows, discoverMedia, getRecommendations, getTrending, updateGlobalPool, feedSeed]);
+  }, [rows, discoverMedia, getRecommendations, getTrending, updateGlobalPool]);
 
   useEffect(() => {
     setVisibleCount(12);
@@ -2694,6 +2708,10 @@ export function useAppState() {
 
   const refreshFeed = async () => {
     const newSeed = Math.floor(Math.random() * 1000000);
+    // Reset client queue and active counter to reject background fetches from old feed layout
+    pendingRowFetchQueueRef.current = [];
+    activeRowFetchesRef.current = 0;
+
     setFeedSeed(newSeed);
     localStorage.removeItem("nebula-feed-cache");
     setIsLoading(true);
