@@ -213,6 +213,7 @@ export default function App() {
                       topTenMovies={state.topTenMovies}
                       removeFromHistory={actions.removeFromHistory}
                       removeFromProgress={actions.removeFromProgress}
+                      fetchRowData={actions.fetchRowData}
                     />
                   </>
                 ) : (

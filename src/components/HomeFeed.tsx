@@ -6,6 +6,7 @@ import { MovieCard } from "./MovieCard";
 import { MovieSkeleton } from "./MovieSkeleton";
 import { ProvidersShelf } from "./ProvidersShelf";
 import { CategoriesBar } from "./CategoriesBar";
+import { LazyViewport } from "./LazyViewport";
 
 const SectionDivider = ({ label }: { label?: string }) => (
   <div className="flex items-center gap-6 my-4 md:my-8 px-4 sm:px-0">
@@ -40,6 +41,7 @@ interface HomeFeedProps {
   topTenMovies: any[];
   removeFromHistory: (id: string | number, type?: string) => void;
   removeFromProgress: (id: string) => void;
+  fetchRowData: (rowTitle: string) => void;
 }
 
 export const HomeFeed: React.FC<HomeFeedProps> = ({
@@ -63,6 +65,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   topTenMovies,
   removeFromHistory,
   removeFromProgress,
+  fetchRowData,
 }) => {
   const priorityTitles = [
     "Continue Watching",
@@ -91,18 +94,16 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   const personalizedRows = rows.filter((r) => isPersonalized(r.title));
 
-  const renderRow = (row: any, rowIndex: number) => (
-    <React.Fragment key={`row-group-${row.title}-${rowIndex}`}>
-      {row.items.length > 0 && (
-        <MovieRow
-          title={row.title}
-          onTitleClick={() => setViewingCategory(row.title)}
-        >
-          {isLoading
-            ? [...Array(6)].map((_, i) => (
-                <MovieSkeleton key={`sk-${row.title}-${rowIndex}-${i}`} />
-              ))
-            : row.items.map((m: any, i: number) => (
+  const renderRow = (row: any, rowIndex: number) => {
+    if (row.hasLoaded) {
+      return (
+        <React.Fragment key={`row-group-${row.title}-${rowIndex}`}>
+          {row.items.length > 0 && (
+            <MovieRow
+              title={row.title}
+              onTitleClick={() => setViewingCategory(row.title)}
+            >
+              {row.items.map((m: any, i: number) => (
                 <MovieCard
                   key={`card-${row.title}-${rowIndex}-${m.id}-${i}`}
                   movie={m}
@@ -120,10 +121,54 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   }
                 />
               ))}
-        </MovieRow>
-      )}
-    </React.Fragment>
-  );
+            </MovieRow>
+          )}
+        </React.Fragment>
+      );
+    }
+
+    const skeletonPlaceholder = (
+      <MovieRow
+        title={row.title}
+        onTitleClick={() => setViewingCategory(row.title)}
+      >
+        {[...Array(6)].map((_, i) => (
+          <MovieSkeleton key={`sk-${row.title}-${rowIndex}-${i}`} />
+        ))}
+      </MovieRow>
+    );
+
+    return (
+      <React.Fragment key={`row-group-${row.title}-${rowIndex}`}>
+        <LazyViewport
+          placeholder={skeletonPlaceholder}
+          onVisible={() => fetchRowData(row.title)}
+          minHeight="350px"
+        >
+          {row.items.length > 0 ? (
+            <MovieRow
+              title={row.title}
+              onTitleClick={() => setViewingCategory(row.title)}
+            >
+              {row.items.map((m: any, i: number) => (
+                <MovieCard
+                  key={`card-${row.title}-${rowIndex}-${m.id}-${i}`}
+                  movie={m}
+                  snap
+                  aspect="portrait"
+                  onSelect={setSelectedMovie}
+                  isInList={myList.includes(m.id)}
+                  onToggleList={() => toggleMyList(m.id)}
+                />
+              ))}
+            </MovieRow>
+          ) : (
+            skeletonPlaceholder
+          )}
+        </LazyViewport>
+      </React.Fragment>
+    );
+  };
 
   return (
     <div className="px-4 sm:px-6 md:px-12 mt-6 md:mt-0 pb-20 relative z-30 flex flex-col gap-8">

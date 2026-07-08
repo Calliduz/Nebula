@@ -711,6 +711,11 @@ export function useAppState() {
   const syncInProgressRef = useRef(false);
   const fetchedMissingIdsRef = useRef<Set<string>>(new Set());
 
+  // Concurrency queue and global shown tracking refs
+  const activeRowFetchesRef = useRef(0);
+  const pendingRowFetchQueueRef = useRef<string[]>([]);
+  const globalShownRef = useRef<Set<string>>(new Set());
+
   // Helper to merge new movies into the global pool uniquely
   const updateGlobalPool = (newMovies: NebulaMovie[]) => {
     setAllMovies((prev) => {
@@ -1121,12 +1126,22 @@ export function useAppState() {
           if (cTopTen) {
             setTopTenMovies(cTopTen);
           } else if (cAll && cAll.length > 0) {
-            // Fallback: use first 10 items of pool if topTen is missing from cache
             setTopTenMovies(cAll.slice(0, 10));
           }
           setAllMovies(cAll);
           setIsLoading(false);
           markInitialPagesAsFetched(cRows);
+          
+          // Hydrate globalShownRef from cached rows
+          globalShownRef.current.clear();
+          cFeatured?.forEach((m: any) => m && m.id && globalShownRef.current.add(m.id.toString()));
+          cTopTen?.forEach((m: any) => m && m.id && globalShownRef.current.add(m.id.toString()));
+          cRows?.forEach((r: any) => {
+            if (r.hasLoaded) {
+              r.items?.forEach((m: any) => m && m.id && globalShownRef.current.add(m.id.toString()));
+            }
+          });
+
           // Return early if cache is very fresh (< 3 hours) AND topTen is hydrated
           if (cacheAge < 1000 * 60 * 60 * 3 && cTopTen) {
             return;
@@ -1140,51 +1155,13 @@ export function useAppState() {
       }
     }
 
-    // Clear fetched category cache since we are doing a full/stale refresh
     clearCategoryPageCache();
 
     if (isLoading) setIsLoading(true);
     try {
-      // 1. Fetch all raw data in parallel
-      const apiBase = API_BASE_URL;
-      const [
-        rawTrending,
-        rawPop,
-        rawTop,
-        rawTV,
-        dramaRes,
-        pinoyRes,
-        sciFiRaw,
-        acclaimedRaw,
-        actionRaw,
-        comedyRaw,
-        horrorRaw,
-        mysteryRaw,
-        docRaw,
-        animationRaw,
-        awardRaw,
-        newRaw,
-        gemsRaw,
-        fantasyRaw,
-        romanceRaw,
-        crimeRaw,
-        historyRaw,
-        familyRaw,
-        warRaw,
-        thrillerRaw,
-        musicRaw,
-        westernRaw,
-        tvDramasRaw,
-        animeRaw,
-        hits2010sRaw,
-        classics90sRaw,
-        leoRaw,
-      ] = await Promise.all([
+      // 1. Fetch critical raw data in parallel
+      const [rawTrending, pinoyRes] = await Promise.all([
         getTrending("all").catch(() => []),
-        getPopularMovies().catch(() => []),
-        getTopRatedMovies().catch(() => []),
-        getPopularTV().catch(() => []),
-        Promise.resolve({ results: [] }),
         (async () => {
           try {
             const [mRes, tvRes] = await Promise.all([
@@ -1204,341 +1181,68 @@ export function useAppState() {
             return [];
           }
         })(),
-        discoverMedia("movie", {
-          with_genres: "878",
-          sort_by: "vote_count.desc",
-        }).catch(() => []),
-        discoverMedia("movie", {
-          "vote_average.gte": "8.0",
-          "vote_count.gte": "1000",
-        }).catch(() => []),
-        discoverMedia("movie", { with_genres: "28" }).catch(() => []),
-        discoverMedia("movie", { with_genres: "35" }).catch(() => []),
-        discoverMedia("movie", { with_genres: "27" }).catch(() => []),
-        discoverMedia("movie", { with_genres: "9648" }).catch(() => []),
-        discoverMedia("movie", { with_genres: "99" }).catch(() => []),
-        discoverMedia("movie", { with_genres: "16" }).catch(() => []),
-        discoverMedia("movie", {
-          "vote_average.gte": "8.5",
-          "vote_count.gte": "500",
-        }).catch(() => []),
-        discoverMedia("movie", {
-          primary_release_year: new Date().getFullYear().toString(),
-        }).catch(() => []),
-        discoverMedia("movie", {
-          "vote_average.gte": "7.5",
-          "vote_count.lte": "1000",
-          "vote_count.gte": "100",
-        }).catch(() => []),
-        discoverMedia("movie", { with_genres: "14" }).catch(() => []),
-        discoverMedia("movie", { with_genres: "10749" }).catch(() => []),
-        discoverMedia("movie", { with_genres: "80" }).catch(() => []),
-        discoverMedia("movie", {
-          with_genres: "36",
-          sort_by: "vote_count.desc",
-        }).catch(() => []),
-        discoverMedia("movie", { with_genres: "10751" }).catch(() => []),
-        discoverMedia("movie", {
-          with_genres: "10752",
-          "primary_release_date.gte": "1990-01-01",
-          sort_by: "vote_count.desc",
-        }).catch(() => []),
-        discoverMedia("movie", {
-          with_genres: "53",
-          "primary_release_date.gte": "2000-01-01",
-          sort_by: "popularity.desc",
-        }).catch(() => []),
-        discoverMedia("movie", {
-          with_genres: "10402",
-          sort_by: "popularity.desc",
-        }).catch(() => []),
-        discoverMedia("movie", {
-          with_genres: "37",
-          sort_by: "vote_count.desc",
-        }).catch(() => []),
-        discoverMedia("tv", {
-          with_genres: "18",
-          sort_by: "popularity.desc",
-        }).catch(() => []),
-        discoverMedia("tv", {
-          with_genres: "16",
-          sort_by: "popularity.desc",
-        }).catch(() => []),
-        discoverMedia("movie", {
-          "primary_release_date.gte": "2010-01-01",
-          "primary_release_date.lte": "2019-12-31",
-          "vote_count.gte": "500",
-          sort_by: "popularity.desc",
-        }).catch(() => []),
-        discoverMedia("movie", {
-          "primary_release_date.gte": "1990-01-01",
-          "primary_release_date.lte": "1999-12-31",
-          "vote_count.gte": "300",
-          sort_by: "vote_count.desc",
-        }).catch(() => []),
-        (async () => {
-          let actorToUse =
-            SPOTLIGHT_POOL[
-              Math.floor(Date.now() / (1000 * 60 * 60 * 24)) %
-                SPOTLIGHT_POOL.length
-            ];
-
-          // Try to find a personal connection: Get an actor from history
-          if (history.length > 0) {
-            try {
-              // Take a recent item and get its cast
-              const recentItem = history[history.length - 1];
-              const recentId = historyRawId(recentItem);
-              const recentType = historyType(recentItem);
-              const movie =
-                currentPool.find((m) => m.id.toString() === recentId) ||
-                ((await getMediaBasicInfo(
-                  recentId,
-                  recentType as "movie" | "tv",
-                )) as any);
-              if (movie) {
-                const { cast } = await getMediaDetails(
-                  movie.id,
-                  movie.type || "movie",
-                  movie.year,
-                );
-                if (cast && cast.length > 0) {
-                  // Pick a top-billed actor that isn't already the default for the day
-                  const candidate = cast[0];
-                  if (candidate && candidate.id) {
-                    actorToUse = {
-                      name: candidate.name,
-                      id: candidate.id.toString(),
-                    };
-                  }
-                }
-              }
-            } catch (e) {
-              /* Fallback to day-based default */
-            }
-          }
-
-          return discoverMedia("movie", { with_cast: actorToUse.id }).then(
-            (res) => ({
-              actor: actorToUse.name,
-              actorId: actorToUse.id,
-              results: res,
-            }),
-          );
-        })().catch(() => ({
-          actor: "Leonardo DiCaprio",
-          actorId: "6193",
-          results: [],
-        })),
       ]);
 
       const trending = hardDedupe(rawTrending);
-      const popMovies = hardDedupe(rawPop);
-      const topRated = hardDedupe(rawTop);
-      const tvShows = hardDedupe(rawTV);
-      const sciFiMovies = hardDedupe(sciFiRaw);
-      const acclaimedMovies = hardDedupe(acclaimedRaw);
-      const actionMovies = hardDedupe(actionRaw);
-      const comedyMovies = hardDedupe(comedyRaw);
-      const horrorMovies = hardDedupe(horrorRaw);
-      const mysteryMovies = hardDedupe(mysteryRaw);
-      const documentaryMovies = hardDedupe(docRaw);
-      const animationMovies = hardDedupe(animationRaw);
-      const awardMovies = hardDedupe(awardRaw);
-      const newMovies = hardDedupe(newRaw);
-      const gemMovies = hardDedupe(gemsRaw);
-      const fantasyMovies = hardDedupe(fantasyRaw);
-      const romanceMovies = hardDedupe(romanceRaw);
-      const crimeMovies = hardDedupe(crimeRaw);
-      const historyMovies = hardDedupe(historyRaw);
-      const familyMovies = hardDedupe(familyRaw);
-      const spotlightData = leoRaw as any;
-      const spotlightMovies = hardDedupe(spotlightData.results || []);
-      const spotlightActor = spotlightData.actor || "Leonardo DiCaprio";
-      const spotlightActorId = spotlightData.actorId || "6193";
-      const topDramas = tvShows;
       const pinoyDramas = hardDedupe(pinoyRes || []).slice(0, 20);
 
-      const warMovies = hardDedupe(warRaw);
-      const thrillerMovies = hardDedupe(thrillerRaw);
-      const musicMovies = hardDedupe(musicRaw);
-      const westernMovies = hardDedupe(westernRaw);
-      const tvDramaMovies = hardDedupe(tvDramasRaw);
-      const animeMovies = hardDedupe(animeRaw);
-      const hits2010sMovies = hardDedupe(hits2010sRaw);
-      const classics90sMovies = hardDedupe(classics90sRaw);
+      // Fetch basic info for user history & watchlist items in parallel
+      const historyItems = [...history].reverse().slice(0, 10);
+      const myListParsed = myList.slice(0, 20).map((item) => {
+        const str = String(item);
+        if (str.includes("_")) {
+          const parts = str.split("_");
+          return { id: parts[1], type: parts[0] };
+        }
+        return { id: str, type: "movie" };
+      });
 
-      // Create local movie pool from all fetched rows for lookup during row generation
-      const localPool = hardDedupe([
-        ...currentPool,
-        ...trending,
-        ...popMovies,
-        ...tvShows,
-        ...topRated,
-        ...topDramas,
-        ...pinoyDramas,
-        ...sciFiMovies,
-        ...acclaimedMovies,
-        ...spotlightMovies,
-        ...actionMovies,
-        ...comedyMovies,
-        ...horrorMovies,
-        ...mysteryMovies,
-        ...documentaryMovies,
-        ...animationMovies,
-        ...awardMovies,
-        ...newMovies,
-        ...gemMovies,
-        ...fantasyMovies,
-        ...romanceMovies,
-        ...crimeMovies,
-        ...historyMovies,
-        ...familyMovies,
-        ...warMovies,
-        ...thrillerMovies,
-        ...musicMovies,
-        ...westernMovies,
-        ...tvDramaMovies,
-        ...animeMovies,
-        ...hits2010sMovies,
-        ...classics90sMovies,
+      const [historyBasicInfos, myListBasicInfos] = await Promise.all([
+        Promise.all(
+          historyItems.map(async (hist) => {
+            const hid = historyRawId(hist);
+            const htype = historyType(hist);
+            try {
+              return await getMediaBasicInfo(hid, htype as "movie" | "tv");
+            } catch {
+              return null;
+            }
+          })
+        ),
+        Promise.all(
+          myListParsed.map(async (item) => {
+            try {
+              return await getMediaBasicInfo(item.id, item.type as "movie" | "tv");
+            } catch {
+              return null;
+            }
+          })
+        ),
       ]);
 
-      // 2. Global Deduplication logic (Exclusive rows)
-      const globalShown = new Set<string>();
-      const topTenItems = trending.slice(0, 10);
-      topTenItems.forEach((m) =>
-        globalShown.add((m.tmdbId || m.id).toString()),
-      );
+      const resolvedHistoryBasicInfos = historyBasicInfos.filter(Boolean) as any[];
+      const resolvedMyListBasicInfos = myListBasicInfos.filter(Boolean) as any[];
 
-      const filteredTrending = trending
-        .filter((m) => !globalShown.has((m.tmdbId || m.id).toString()))
-        .slice(0, 20);
-      filteredTrending.forEach((m) =>
-        globalShown.add((m.tmdbId || m.id).toString()),
-      );
-
-      // 3. Personalized recommendation rows from watch history
-      const recommendationRows: any[] = [];
-      const historyItems = [...history].reverse().slice(0, 5);
-      for (const hist of historyItems) {
-        const histRawId = historyRawId(hist);
-        const histItemType = historyType(hist);
-
-        let movie = localPool.find(
-          (m) => m.id.toString() === histRawId && m.type === histItemType,
-        );
-        if (!movie)
-          movie = (await getMediaBasicInfo(
-            histRawId,
-            histItemType as "tv" | "movie",
-          )) as any;
-        if (movie) {
-          const recs = await getRecommendations(
-            histRawId,
-            movie.type || "movie",
-          ).catch(() => []);
-          const rotatedRecs = rotateItems(recs, activeSeed);
-          const filtered = rotatedRecs
-            .filter((m) => !globalShown.has(m.id.toString()))
-            .slice(0, 20);
-          if (filtered.length > 5) {
-            filtered.forEach((m) => globalShown.add(m.id.toString()));
-            const histIdx = historyItems.indexOf(hist);
-            const label =
-              histIdx === 0
-                ? `Because you watched ${movie.title}`
-                : `More Like ${movie.title}`;
-            recommendationRows.push({
-              title: label,
-              items: filtered,
-              config: {
-                mediaType: movie.type || "movie",
-                type: "recommendations",
-                targetId: histRawId,
-                discoverParams: {},
-                filterFn: (m: any) => m.type === (movie?.type || "movie"),
-              },
-            });
-          }
-        }
-      }
-
-      const filterRow = (items: any[]) => {
-        const uniqueItems = [];
-        for (const m of items) {
-          if (!globalShown.has(m.id.toString())) {
-            uniqueItems.push(m);
-            globalShown.add(m.id.toString());
-          }
-          if (uniqueItems.length >= 20) break;
-        }
-        // If the row is too sparse because of deduplication, fill it back up
-        if (uniqueItems.length < 10) {
-          const extras = items
-            .filter((m) => !uniqueItems.some((u) => u.id === m.id))
-            .slice(0, 20 - uniqueItems.length);
-          extras.forEach((m) => globalShown.add(m.id.toString()));
-          uniqueItems.push(...extras);
-        }
-        return uniqueItems;
-      };
-
-      const sciFiFiltered = filterRow(sciFiMovies);
-      const acclaimedFiltered = filterRow(acclaimedMovies);
-      const actionFiltered = filterRow(actionMovies);
-      const comedyFiltered = filterRow(comedyMovies);
-      const horrorFiltered = filterRow(horrorMovies);
-      const mysteryFiltered = filterRow(mysteryMovies);
-      const docFiltered = filterRow(documentaryMovies);
-      const animationFiltered = filterRow(animationMovies);
-      const awardFiltered = filterRow(awardMovies);
-      const newFiltered = filterRow(newMovies);
-      const gemFiltered = filterRow(gemMovies);
-      const fantasyFiltered = filterRow(fantasyMovies);
-      const romanceFiltered = filterRow(romanceMovies);
-      const crimeFiltered = filterRow(crimeMovies);
-      const historyFiltered = filterRow(historyMovies);
-      const familyFiltered = filterRow(familyMovies);
-      const spotlightFiltered = filterRow(spotlightMovies);
-
-      const warFiltered = filterRow(warMovies);
-      const thrillerFiltered = filterRow(thrillerMovies);
-      const musicFiltered = filterRow(musicMovies);
-      const westernFiltered = filterRow(westernMovies);
-      const tvDramaFiltered = filterRow(tvDramaMovies);
-      const animeFiltered = filterRow(animeMovies);
-      const hits2010sFiltered = filterRow(hits2010sMovies);
-      const classics90sFiltered = filterRow(classics90sMovies);
-
-      const filteredPop = filterRow(popMovies);
-      const filteredTV = filterRow(tvShows);
-      const filteredTop = filterRow(topRated);
-
-      // 3b. Continue Watching Row — collapse episodes to 1 card per title
+      // Build continue watching and watch it again items
       const progressData = JSON.parse(
         localStorage.getItem("nebula-progress") || "{}",
       );
-      // Group all progress keys by base ID (strip -S1E1 suffixes)
+      
+      const continueWatchingItems: any[] = [];
+      const watchItAgainItems: any[] = [];
+
+      // ── Continue Watching (collapse episodes to 1 card per title)
       const progressByTitle: Record<string, { key: string; val: any }> = {};
       for (const [key, val] of Object.entries(progressData)) {
         const baseId = key.toString().split("-")[0];
-        // Keep the entry with the highest timestamp (most recently watched episode)
         const existing = progressByTitle[baseId];
-        const ts =
-          typeof val === "object" && val !== null
-            ? ((val as any).timestamp ?? 0)
-            : 0;
-        const existingTs = existing
-          ? typeof existing.val === "object" && existing.val !== null
-            ? ((existing.val as any).timestamp ?? 0)
-            : 0
-          : -1;
+        const ts = typeof val === "object" && val !== null ? ((val as any).timestamp ?? 0) : 0;
+        const existingTs = existing ? (typeof existing.val === "object" && existing.val !== null ? ((existing.val as any).timestamp ?? 0) : 0) : -1;
         if (!existing || ts > existingTs) {
           progressByTitle[baseId] = { key, val };
         }
       }
-      const continueWatchingItems: any[] = [];
+
       const sortedProgressEntries = Object.entries(progressByTitle).sort(
         (a, b) => {
           const tsA = a[1].val?.timestamp ?? 0;
@@ -1546,17 +1250,16 @@ export function useAppState() {
           return tsB - tsA;
         },
       );
+
       for (const [baseId, { key, val }] of sortedProgressEntries) {
         const type = key.includes("-") ? "tv" : "movie";
-        let movie = localPool.find(
-          (m) => m.id.toString() === baseId && (m.type || "movie") === type,
-        );
-        if (!movie) movie = (await getMediaBasicInfo(baseId, type)) as any;
+        const movie = resolvedHistoryBasicInfos.find(m => m.id.toString() === baseId && (m.type || "movie") === type) ||
+                      resolvedMyListBasicInfos.find(m => m.id.toString() === baseId && (m.type || "movie") === type) ||
+                      currentPool.find(m => m.id.toString() === baseId && (m.type || "movie") === type);
         if (movie) {
           const isMovie = type === "movie";
           if (isMovie) {
-            const isWatched =
-              typeof val === "object" && val !== null && val.watched;
+            const isWatched = typeof val === "object" && val !== null && val.watched;
             if (isWatched) continue;
           } else {
             const details = tvDetailsCache[baseId];
@@ -1582,21 +1285,130 @@ export function useAppState() {
         }
       }
 
-      // 3c. My List Row
-      const myListItems = localPool
-        .filter((m) => myList.includes(m.id.toString()))
-        .slice(0, 20);
-
-      // 3d. User Genre Preference Profile
-      const genreCounts: Record<string, number> = {};
-      [...history, ...myList].forEach((item) => {
-        const id = typeof item === "object" ? item.id : item;
-        const type = typeof item === "object" ? item.type : "movie";
-        const m = localPool.find(
-          (item) => item.id.toString() === id.toString() && item.type === type,
+      // ── Watch It Again (History)
+      historyItems.forEach((item) => {
+        const rid = historyRawId(item);
+        const rtype = historyType(item);
+        const movie = resolvedHistoryBasicInfos.find(
+          (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
         );
+        if (movie && isWatchItAgainItem(movie, progressData, tvDetailsCache)) {
+          watchItAgainItems.push(movie);
+        }
+      });
+
+      // ── My List
+      const myListItems = resolvedMyListBasicInfos.slice(0, 20);
+
+      // Initialize globalShownRef
+      globalShownRef.current.clear();
+      const topTenItems = trending.slice(0, 10);
+      topTenItems.forEach((m) =>
+        globalShownRef.current.add((m.tmdbId || m.id).toString()),
+      );
+
+      const filteredTrending = trending
+        .filter((m) => !globalShownRef.current.has((m.tmdbId || m.id).toString()))
+        .slice(0, 20);
+      filteredTrending.forEach((m) =>
+        globalShownRef.current.add((m.tmdbId || m.id).toString()),
+      );
+
+      // Add other critical rows items to globalShownRef
+      continueWatchingItems.forEach((m) => globalShownRef.current.add(m.id.toString()));
+      myListItems.forEach((m) => globalShownRef.current.add(m.id.toString()));
+      watchItAgainItems.forEach((m) => globalShownRef.current.add(m.id.toString()));
+
+      // Construct initialRows with pre-populated critical rows and placeholder non-critical rows
+      const initialRows: any[] = [];
+
+      // 1. Continue Watching Row
+      if (continueWatchingItems.length > 0) {
+        initialRows.push({
+          title: "Continue Watching",
+          items: continueWatchingItems,
+          hasLoaded: true,
+          isLoading: false,
+        });
+      }
+
+      // 2. Top in Philippines Row
+      if (pinoyDramas.length > 0) {
+        initialRows.push({
+          title: "Top in Philippines",
+          items: pinoyDramas,
+          hasLoaded: true,
+          isLoading: false,
+        });
+        pinoyDramas.forEach((m) => globalShownRef.current.add(m.id.toString()));
+      }
+
+      // 3. Trending Now Row
+      initialRows.push({
+        title: "Trending Now",
+        items: filteredTrending,
+        hasLoaded: true,
+        isLoading: false,
+      });
+
+      // 4. My List Row
+      if (myListItems.length > 0) {
+        initialRows.push({
+          title: "My List",
+          items: myListItems,
+          hasLoaded: true,
+          isLoading: false,
+        });
+      }
+
+      // 5. Personalized Recommendation Rows from watch history
+      const recommendationRows: any[] = [];
+      resolvedHistoryBasicInfos.slice(0, 5).forEach((movie, histIdx) => {
+        const label = histIdx === 0 ? `Because you watched ${movie.title}` : `More Like ${movie.title}`;
+        recommendationRows.push({
+          title: label,
+          items: [],
+          hasLoaded: false,
+          isLoading: false,
+          config: {
+            mediaType: movie.type || "movie",
+            type: "recommendations",
+            targetId: movie.id.toString(),
+            discoverParams: {},
+            filterFn: (m: any) => m.type === (movie?.type || "movie"),
+          },
+        });
+      });
+      initialRows.push(...recommendationRows);
+
+      // 6. Watch It Again Row
+      if (watchItAgainItems.length > 0) {
+        initialRows.push({
+          title: "Watch It Again",
+          items: watchItAgainItems.slice(0, 10),
+          hasLoaded: true,
+          isLoading: false,
+        });
+      }
+
+      // 7. Trending TV Shows Row
+      initialRows.push({
+        title: "Trending TV Shows",
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: {
+          mediaType: "tv",
+          discoverParams: { sort_by: "popularity.desc" },
+          filterFn: (m) => m.type === "tv",
+        },
+      });
+
+      // 8. User Genre Preference Profile (top 2 genres)
+      const genreCounts: Record<string, number> = {};
+      [...resolvedHistoryBasicInfos, ...myListItems].forEach((m) => {
         if (m?.genre) {
-          m.genre.split(", ").forEach((g) => {
+          m.genre.split(", ").forEach((g: string) => {
             genreCounts[g] = (genreCounts[g] || 0) + 1;
           });
         }
@@ -1606,200 +1418,221 @@ export function useAppState() {
         .map((e) => e[0])
         .slice(0, 2);
 
-      const getGenreNameFromTitle = (title: string): string => {
-        if (title.includes("Action")) return "Action";
-        if (title.includes("Comedy")) return "Comedy";
-        if (title.includes("Sci-Fi")) return "Sci-Fi";
-        if (title.includes("Horror")) return "Horror";
-        if (title.includes("Thriller")) return "Thriller";
-        if (title.includes("Romance")) return "Romance";
-        if (title.includes("Mystery")) return "Mystery";
-        if (title.includes("Crime")) return "Crime";
-        if (title.includes("Historical")) return "History";
-        if (title.includes("Family")) return "Family";
-        if (title.includes("War")) return "War";
-        if (title.includes("Music")) return "Music";
-        if (title.includes("Western")) return "Western";
-        if (title.includes("Fantasy")) return "Fantasy";
-        if (title.includes("Documentary")) return "Documentary";
-        if (title.includes("Animation")) return "Animation";
-        return "";
-      };
-
-      const allGenreRows = [
-        { title: "Critically Acclaimed: Missions", items: acclaimedFiltered },
-        { title: "Cinematic Masterpieces", items: filteredTop.slice(0, 15) },
-        { title: "Award-Winning Hits", items: awardFiltered },
-        { title: "Action Packed Missions", items: actionFiltered },
-        { title: "Hidden Gems", items: gemFiltered },
-        { title: "Comedy Gold", items: comedyFiltered },
-        { title: "Scary Nights (Horror)", items: horrorFiltered },
-        { title: "Mystery & Suspense", items: mysteryFiltered },
-        { title: "Animation Favorites", items: animationFiltered },
-        { title: "Sci-Fi Spectacles", items: sciFiFiltered },
-        { title: "Documentary Collection", items: docFiltered },
-        { title: "Epic Fantasy Worlds", items: fantasyFiltered },
-        { title: "Feel-Good Romance", items: romanceFiltered },
-        { title: "Crime & Investigation", items: crimeFiltered },
-        { title: "Historical Epics", items: historyFiltered },
-        { title: "Family Movie Night", items: familyFiltered },
-        { title: "Top Rated Movies", items: filteredTop.slice(15) },
-        { title: "War & Military", items: warFiltered },
-        { title: "Heart-Pounding Thrillers", items: thrillerFiltered },
-        { title: "Musical & Music", items: musicFiltered },
-        { title: "Western Frontier", items: westernFiltered },
-        { title: "TV Dramas", items: tvDramaFiltered },
-        { title: "Anime Series", items: animeFiltered },
-        { title: "2010s Hits", items: hits2010sFiltered },
-        { title: "90s Classics", items: classics90sFiltered },
-      ].filter((r) => r.items.length > 0);
-
-      const favoriteRows = allGenreRows.filter((r) => {
-        const genre = getGenreNameFromTitle(r.title);
-        return genre && topGenres.includes(genre);
+      topGenres.forEach((g) => {
+        const gId = Object.entries(GENRE_MAP).find(([_, name]) => name === g)?.[0];
+        initialRows.push({
+          title: `Because you like ${g}`,
+          items: [],
+          hasLoaded: false,
+          isLoading: false,
+          config: gId
+            ? {
+                mediaType: "movie",
+                discoverParams: {
+                  with_genres: gId,
+                  sort_by: "popularity.desc",
+                },
+                filterFn: (m: any) => m.genre.includes(g),
+              }
+            : undefined,
+        });
       });
-      const nonFavoriteRows = allGenreRows.filter(
-        (r) => !favoriteRows.includes(r),
-      );
 
-      const dynamicGenreRows = [
-        ...favoriteRows,
-        ...seededShuffle(nonFavoriteRows, activeSeed).slice(
-          0,
-          Math.max(4, 6 - favoriteRows.length),
-        ),
-      ];
+      // 9. Daily Declassified Discoveries Row
+      initialRows.push({
+        title: "Daily Declassified Discoveries",
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: {
+          mediaType: "movie",
+          discoverParams: {
+            "vote_average.gte": "7.0",
+            sort_by: "popularity.desc",
+          },
+          filterFn: (m) => (m.imdb ?? 0) >= 7.0,
+        },
+      });
 
-      // 3e. Curation Rows
+      // 10. Context Row (Weekend Curation / Weekday Deep-Dive)
       const dayOfWeek = new Date().getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-      const contextRow = isWeekend
+      const contextTitle = isWeekend ? "Weekend Blockbuster Curation" : "Weekday Deep-Dive Series";
+      const contextConfig = isWeekend
         ? {
-            title: "Weekend Blockbuster Curation",
-            items: seededShuffle(
-              localPool.filter(
-                (m) =>
-                  m.genre.includes("Action") ||
-                  m.genre.includes("Sci-Fi") ||
-                  m.genre.includes("Thriller"),
-              ),
-              activeSeed,
-            ).slice(0, 15),
-          }
-        : {
-            title: "Weekday Deep-Dive Series",
-            items: seededShuffle(
-              localPool.filter(
-                (m) =>
-                  m.genre.includes("Documentary") ||
-                  m.type === "tv" ||
-                  m.genre.includes("Drama"),
-              ),
-              activeSeed,
-            ).slice(0, 15),
-          };
-
-      const dailyDiscoveries = seededShuffle(
-        localPool.filter((m) => (m.imdb ?? 0) >= 7.0),
-        activeSeed,
-      ).slice(0, 15);
-
-      const underTheRadar = seededShuffle(
-        localPool.filter((m) => (m.imdb ?? 0) >= 7.5 && m.quality === "HD"),
-        activeSeed,
-      ).slice(0, 15);
-
-      const initialRows = [
-        ...(continueWatchingItems.length > 0
-          ? [{ title: "Continue Watching", items: continueWatchingItems }]
-          : []),
-        ...(pinoyDramas.length > 0
-          ? [{ title: "Top in Philippines", items: pinoyDramas }]
-          : []),
-        { title: "Trending Now", items: filteredTrending },
-        ...(myListItems.length > 0
-          ? [{ title: "My List", items: myListItems }]
-          : []),
-        ...recommendationRows,
-        {
-          title: "Watch It Again",
-          items: history
-            .map((item) => {
-              const rid = historyRawId(item);
-              const rtype = historyType(item);
-              const movie = localPool.find(
-                (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
-              );
-              if (!movie) return null;
-              return isWatchItAgainItem(movie, progressData, tvDetailsCache)
-                ? movie
-                : null;
-            })
-            .filter(Boolean)
-            .slice(0, 10),
-        },
-        { title: "Trending TV Shows", items: topDramas },
-        ...topGenres.map((g) => {
-          const gId = Object.entries(GENRE_MAP).find(
-            ([_, name]) => name === g,
-          )?.[0];
-          const genreItems = filterRow(
-            localPool.filter((m) => m.genre.includes(g)),
-          );
-          return {
-            title: `Because you like ${g}`,
-            items: genreItems,
-            config: gId
-              ? {
-                  mediaType: "movie",
-                  discoverParams: {
-                    with_genres: gId,
-                    sort_by: "popularity.desc",
-                  },
-                  filterFn: (m: any) => m.genre.includes(g),
-                }
-              : undefined,
-          };
-        }),
-        ...(dailyDiscoveries.length > 0
-          ? [
-              {
-                title: "Daily Declassified Discoveries",
-                items: dailyDiscoveries,
-              },
-            ]
-          : []),
-        ...(contextRow.items.length > 0 ? [contextRow] : []),
-        ...(underTheRadar.length > 0
-          ? [{ title: "Under the Radar Missions", items: underTheRadar }]
-          : []),
-        (() => {
-          const popNearYou = popMovies
-            .filter((m) => !globalShown.has(m.id.toString()))
-            .slice(0, 15);
-          popNearYou.forEach((m) => globalShown.add(m.id.toString()));
-          return {
-            title: "Popular Near You",
-            items: popNearYou,
-          };
-        })(),
-        { title: "New Releases", items: newFiltered },
-        {
-          title: `Spotlight: ${spotlightActor}`,
-          items: spotlightFiltered,
-          config: {
-            mediaType: "movie",
+            mediaType: "movie" as const,
             discoverParams: {
-              with_cast: spotlightActorId,
+              with_genres: "28,878,53", // Action, Sci-Fi, Thriller
               sort_by: "popularity.desc",
             },
-            filterFn: () => true,
+            filterFn: (m: any) => m.genre.includes("Action") || m.genre.includes("Sci-Fi") || m.genre.includes("Thriller")
+          }
+        : {
+            mediaType: "movie" as const,
+            discoverParams: {
+              with_genres: "99,18", // Documentary, Drama
+              sort_by: "popularity.desc",
+            },
+            filterFn: (m: any) => m.genre.includes("Documentary") || m.genre.includes("Drama") || m.type === "tv"
+          };
+      initialRows.push({
+        title: contextTitle,
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: contextConfig,
+      });
+
+      // 11. Under the Radar Row
+      initialRows.push({
+        title: "Under the Radar Missions",
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: {
+          mediaType: "movie",
+          discoverParams: {
+            "vote_average.gte": "7.5",
+            "vote_count.lte": "1000",
+            sort_by: "popularity.desc",
           },
+          filterFn: (m) => (m.imdb ?? 0) >= 7.5,
         },
-        { title: "Bingeworthy TV Shows", items: filteredTV },
-        { title: "Popular Movies", items: filteredPop },
-        ...dynamicGenreRows,
-      ].filter((r) => r.items?.length > 0);
+      });
+
+      // 12. Popular Near You Row
+      initialRows.push({
+        title: "Popular Near You",
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: {
+          mediaType: "movie",
+          discoverParams: {
+            sort_by: "popularity.desc",
+          },
+          filterFn: (m) => m.type === "movie",
+        },
+      });
+
+      // 13. New Releases Row
+      initialRows.push({
+        title: "New Releases",
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: {
+          mediaType: "movie",
+          discoverParams: {
+            primary_release_year: new Date().getFullYear().toString(),
+            sort_by: "popularity.desc",
+          },
+          filterFn: (m) => (m.release_date ?? "").startsWith(new Date().getFullYear().toString()),
+        },
+      });
+
+      // 14. Spotlight Actor Row
+      let actorToUse = SPOTLIGHT_POOL[Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % SPOTLIGHT_POOL.length];
+      if (resolvedHistoryBasicInfos.length > 0) {
+        try {
+          const movie = resolvedHistoryBasicInfos[0];
+          const { cast } = await getMediaDetails(movie.id, movie.type || "movie", movie.year);
+          if (cast && cast.length > 0) {
+            const candidate = cast[0];
+            if (candidate && candidate.id) {
+              actorToUse = { name: candidate.name, id: candidate.id.toString() };
+            }
+          }
+        } catch {}
+      }
+      initialRows.push({
+        title: `Spotlight: ${actorToUse.name}`,
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: {
+          mediaType: "movie",
+          discoverParams: {
+            with_cast: actorToUse.id,
+            sort_by: "popularity.desc",
+          },
+          filterFn: () => true,
+        },
+      });
+
+      // 15. Bingeworthy TV Shows Row
+      initialRows.push({
+        title: "Bingeworthy TV Shows",
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: {
+          mediaType: "tv",
+          discoverParams: { sort_by: "popularity.desc" },
+          filterFn: (m) => m.type === "tv",
+        },
+      });
+
+      // 16. Popular Movies Row
+      initialRows.push({
+        title: "Popular Movies",
+        items: [],
+        hasLoaded: false,
+        isLoading: false,
+        config: {
+          mediaType: "movie",
+          discoverParams: { sort_by: "popularity.desc" },
+          filterFn: (m) => m.type === "movie",
+        },
+      });
+
+      // 17. Dynamic Genre Rows
+      const allGenreRows = [
+        { title: "Critically Acclaimed: Missions", genreName: "Critically Acclaimed" },
+        { title: "Cinematic Masterpieces", genreName: "Cinematic Masterpieces" },
+        { title: "Award-Winning Hits", genreName: "Award-Winning Hits" },
+        { title: "Action Packed Missions", genreName: "Action" },
+        { title: "Hidden Gems", genreName: "Hidden Gems" },
+        { title: "Comedy Gold", genreName: "Comedy" },
+        { title: "Scary Nights (Horror)", genreName: "Horror" },
+        { title: "Mystery & Suspense", genreName: "Mystery" },
+        { title: "Animation Favorites", genreName: "Animation" },
+        { title: "Sci-Fi Spectacles", genreName: "Sci-Fi" },
+        { title: "Documentary Collection", genreName: "Documentary" },
+        { title: "Epic Fantasy Worlds", genreName: "Fantasy" },
+        { title: "Feel-Good Romance", genreName: "Romance" },
+        { title: "Crime & Investigation", genreName: "Crime" },
+        { title: "Historical Epics", genreName: "History" },
+        { title: "Family Movie Night", genreName: "Family" },
+        { title: "War & Military", genreName: "War" },
+        { title: "Heart-Pounding Thrillers", genreName: "Thriller" },
+        { title: "Musical & Music", genreName: "Music" },
+        { title: "Western Frontier", genreName: "Western" },
+        { title: "TV Dramas", genreName: "TV Dramas" },
+        { title: "Anime Series", genreName: "Anime Series" },
+        { title: "2010s Hits", genreName: "2010s Hits" },
+        { title: "90s Classics", genreName: "90s Classics" },
+      ];
+
+      const favoriteRows = allGenreRows.filter((r) => topGenres.includes(r.genreName));
+      const nonFavoriteRows = allGenreRows.filter((r) => !topGenres.includes(r.genreName));
+      
+      const selectedNonFavorites = seededShuffle(nonFavoriteRows, activeSeed).slice(
+        0,
+        Math.max(4, 6 - favoriteRows.length)
+      );
+      
+      const selectedGenreRows = [...favoriteRows, ...selectedNonFavorites];
+      selectedGenreRows.forEach((genreRow) => {
+        const config = ROW_FETCH_CONFIG[genreRow.title] || ROW_FETCH_CONFIG[genreRow.genreName];
+        initialRows.push({
+          title: genreRow.title,
+          items: [],
+          hasLoaded: false,
+          isLoading: false,
+          config,
+        });
+      });
 
       // 4. Set Initial State
       let initialFeatured = trending.slice(0, 5);
@@ -1812,9 +1645,13 @@ export function useAppState() {
       } else {
         initialFeatured = rotateItems(initialFeatured, activeSeed);
       }
+
       setFeaturedMovies(initialFeatured);
       setTopTenMovies(topTenItems);
       setRows(initialRows);
+      
+      // Flip the loading spinner off! The user can now see the layout instantly
+      setIsLoading(false);
 
       // 5. Enrich Spotlight & Top 10 immediately for logos
       const [enrichedTop, enrichedFeatured] = await Promise.all([
@@ -1828,56 +1665,13 @@ export function useAppState() {
         ...enrichedTop,
         ...enrichedFeatured,
         ...trending,
-        ...popMovies,
-        ...tvShows,
-        ...topRated,
-        ...topDramas,
         ...pinoyDramas,
-        ...sciFiMovies,
-        ...acclaimedMovies,
-        ...spotlightMovies,
-        ...actionMovies,
-        ...comedyMovies,
-        ...horrorMovies,
-        ...mysteryMovies,
-        ...documentaryMovies,
-        ...animationMovies,
-        ...awardMovies,
-        ...newMovies,
-        ...gemMovies,
-        ...fantasyMovies,
-        ...romanceMovies,
-        ...crimeMovies,
-        ...historyMovies,
-        ...familyMovies,
-        ...warMovies,
-        ...thrillerMovies,
-        ...musicMovies,
-        ...westernMovies,
-        ...tvDramaMovies,
-        ...animeMovies,
-        ...hits2010sMovies,
-        ...classics90sMovies,
+        ...continueWatchingItems,
+        ...myListItems,
+        ...watchItAgainItems,
       ]);
       setAllMovies(finalPool);
       markInitialPagesAsFetched(initialRows);
-
-      // 6. Background enrichment for all rows (Skip Dramas as requested)
-      initialRows.forEach(async (row) => {
-        if (row.items.length === 0 || row.isDramaRow) return;
-        const enriched = await enrichMoviesWithMetadata(row.items.slice(0, 10));
-        setRows((prev) => {
-          const updated = [...prev];
-          const targetIndex = updated.findIndex((r) => r.title === row.title);
-          if (targetIndex !== -1) {
-            updated[targetIndex] = {
-              ...updated[targetIndex],
-              items: [...enriched, ...row.items.slice(10)],
-            };
-          }
-          return updated;
-        });
-      });
 
       // 7. Save to Cache for next session
       try {
@@ -1885,14 +1679,13 @@ export function useAppState() {
           "nebula-feed-cache",
           JSON.stringify({
             rows: initialRows,
-            featured: initialFeatured,
+            featured: enrichedFeatured,
             topTen: enrichedTop,
             all: finalPool,
             timestamp: Date.now(),
           }),
         );
       } catch (e) {
-        // If quota exceeded, clear and skip
         localStorage.removeItem("nebula-feed-cache");
       }
     } catch (err) {
@@ -1901,6 +1694,172 @@ export function useAppState() {
       setIsLoading(false);
     }
   };
+
+  const fetchRowData = useCallback(async (rowTitle: string) => {
+    // Check if the row exists, is already loaded, or is currently loading/queued
+    const row = rows.find((r) => r.title === rowTitle);
+    if (!row || row.hasLoaded || row.isLoading) return;
+
+    // Check if it's already queued
+    if (pendingRowFetchQueueRef.current.includes(rowTitle)) return;
+
+    // If we have reached the concurrency limit, queue it
+    if (activeRowFetchesRef.current >= 2) {
+      pendingRowFetchQueueRef.current.push(rowTitle);
+      return;
+    }
+
+    // Otherwise, execute immediately
+    activeRowFetchesRef.current += 1;
+
+    // Helper to start the fetch
+    const executeFetch = async (title: string) => {
+      // Mark the row as loading in state
+      setRows((prev) =>
+        prev.map((r) => (r.title === title ? { ...r, isLoading: true } : r))
+      );
+
+      try {
+        const targetRow = rows.find((r) => r.title === title);
+        let config = targetRow?.config;
+        if (!config) {
+          config = ROW_FETCH_CONFIG[title];
+        }
+
+        let fetchedItems: NebulaMovie[] = [];
+        if (config) {
+          if (config.type === "recommendations" && config.targetId) {
+            fetchedItems = await getRecommendations(
+              config.targetId,
+              config.mediaType as any,
+              "1"
+            );
+            // Rotate items based on active feedSeed to match original behavior
+            fetchedItems = rotateItems(fetchedItems, feedSeed);
+          } else if (config.mediaType === "all") {
+            fetchedItems = await getTrending("all", "1");
+          } else {
+            fetchedItems = await discoverMedia(config.mediaType, {
+              ...config.discoverParams,
+              page: "1",
+            });
+          }
+        } else {
+          // Special fallback row builders if config is missing (e.g. custom queries)
+          if (title === "Daily Declassified Discoveries") {
+            fetchedItems = await discoverMedia("movie", {
+              "vote_average.gte": "7.0",
+              sort_by: "popularity.desc",
+              page: "1",
+            });
+          } else if (title === "Weekend Blockbuster Curation") {
+            fetchedItems = await discoverMedia("movie", {
+              with_genres: "28,878,53",
+              sort_by: "popularity.desc",
+              page: "1",
+            });
+          } else if (title === "Weekday Deep-Dive Series") {
+            fetchedItems = await discoverMedia("movie", {
+              with_genres: "99,18",
+              sort_by: "popularity.desc",
+              page: "1",
+            });
+          } else if (title === "Under the Radar Missions") {
+            fetchedItems = await discoverMedia("movie", {
+              "vote_average.gte": "7.5",
+              "vote_count.lte": "1000",
+              sort_by: "popularity.desc",
+              page: "1",
+            });
+          } else if (title === "Popular Near You") {
+            fetchedItems = await discoverMedia("movie", {
+              sort_by: "popularity.desc",
+              page: "1",
+            });
+          }
+        }
+
+        const deduped = fetchedItems.filter(
+          (m) => m && m.id && !globalShownRef.current.has(m.id.toString())
+        ).slice(0, 20);
+
+        let finalItems = [...deduped];
+
+        if (config && config.type === "recommendations") {
+          // If recommendation items are <= 5, do not show the row (items = [])
+          if (deduped.length <= 5) {
+            finalItems = [];
+          }
+        } else {
+          // If other rows are too sparse, fill them back up (same logic as before)
+          if (finalItems.length < 10 && fetchedItems.length > 0) {
+            const extras = fetchedItems
+              .filter((m) => m && m.id && !finalItems.some((f) => f.id === m.id))
+              .slice(0, 20 - finalItems.length);
+            finalItems.push(...extras);
+          }
+        }
+
+        // Add to globalShownRef
+        finalItems.forEach((m) => globalShownRef.current.add(m.id.toString()));
+
+        // Add to global pool
+        updateGlobalPool(finalItems);
+
+        // Enrich items in background (non-blocking)
+        enrichMoviesWithMetadata(finalItems.slice(0, 10)).then((enriched) => {
+          setRows((prev) =>
+            prev.map((r) =>
+              r.title === title
+                ? {
+                    ...r,
+                    items: [...enriched, ...finalItems.slice(10)],
+                  }
+                : r
+            )
+          );
+        });
+
+        // Set row state with fetched items
+        setRows((prev) =>
+          prev.map((r) =>
+            r.title === title
+              ? {
+                  ...r,
+                  items: finalItems,
+                  isLoading: false,
+                  hasLoaded: true,
+                }
+              : r
+          )
+        );
+      } catch (err) {
+        console.error(`Failed to load row ${title}:`, err);
+        setRows((prev) =>
+          prev.map((r) =>
+            r.title === title
+              ? { ...r, isLoading: false, hasLoaded: true }
+              : r
+          )
+        );
+      } finally {
+        // Complete the fetch and process queue
+        activeRowFetchesRef.current -= 1;
+        
+        // Dequeue next request if any
+        if (pendingRowFetchQueueRef.current.length > 0) {
+          const nextRowTitle = pendingRowFetchQueueRef.current.shift();
+          if (nextRowTitle) {
+            // Run next request
+            activeRowFetchesRef.current += 1;
+            executeFetch(nextRowTitle);
+          }
+        }
+      }
+    };
+
+    executeFetch(rowTitle);
+  }, [rows, discoverMedia, getRecommendations, getTrending, updateGlobalPool, feedSeed]);
 
   useEffect(() => {
     setVisibleCount(12);
@@ -2753,6 +2712,7 @@ export function useAppState() {
       setIsTransitioning,
       handleBack,
       refreshFeed,
+      fetchRowData,
     },
     refs: {
       searchInputRef,
