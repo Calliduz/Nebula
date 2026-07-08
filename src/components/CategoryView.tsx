@@ -78,8 +78,12 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         aspect="portrait"
         isGrid={true}
         onSelect={onSelectMovie}
-        isInList={myList.some((id) => id.toString() === item.id.toString())}
-        onToggleList={() => toggleMyList(item.id)}
+        isInList={myList.some((i: any) => {
+          const id = typeof i === "object" && i !== null ? i.id : i;
+          const type = typeof i === "object" && i !== null ? i.type : "movie";
+          return id.toString() === item.id.toString() && type === (item.type || "movie");
+        })}
+        onToggleList={() => toggleMyList(item)}
       />
     ));
   };
@@ -175,7 +179,11 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
                 {(allMovies || [])
                   .filter((m) =>
-                    myList.some((id) => id.toString() === m.id.toString()),
+                    myList.some((item: any) => {
+                      const id = typeof item === "object" && item !== null ? item.id : item;
+                      const type = typeof item === "object" && item !== null ? item.type : "movie";
+                      return id.toString() === m.id.toString() && type === (m.type || "movie");
+                    }),
                   )
                   .map((movie, i) => (
                     <MovieCard
@@ -184,8 +192,8 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                       isGrid={true}
                       onSelect={onSelectMovie}
                       isInList={true}
-                      onToggleList={() => toggleMyList(movie.id)}
-                      onRemove={() => toggleMyList(movie.id)}
+                      onToggleList={() => toggleMyList(movie)}
+                      onRemove={() => toggleMyList(movie)}
                     />
                   ))}
               </div>
@@ -266,10 +274,12 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                         movie={movie}
                         isGrid={true}
                         onSelect={onSelectMovie}
-                        isInList={myList.some(
-                          (id) => id.toString() === movie.id.toString(),
-                        )}
-                        onToggleList={() => toggleMyList(movie.id)}
+                        isInList={myList.some((item: any) => {
+                          const id = typeof item === "object" && item !== null ? item.id : item;
+                          const type = typeof item === "object" && item !== null ? item.type : "movie";
+                          return id.toString() === movie.id.toString() && type === (movie.type || "movie");
+                        })}
+                        onToggleList={() => toggleMyList(movie)}
                         onRemove={() => removeFromHistory(movie.id, movie.type)}
                       />
                       <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

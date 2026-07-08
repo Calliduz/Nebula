@@ -344,8 +344,12 @@ export default function App() {
             }
             onSelectMovie={actions.setSelectedMovie}
             onSelectActor={setSelectedActorId}
-            isInList={state.myList.includes(state.selectedMovie.id.toString())}
-            onToggleList={() => actions.toggleMyList(state.selectedMovie.id)}
+            isInList={state.myList.some((item: any) => {
+              const id = typeof item === "object" && item !== null ? item.id : item;
+              const type = typeof item === "object" && item !== null ? item.type : "movie";
+              return id.toString() === state.selectedMovie.id.toString() && type === (state.selectedMovie.type || "movie");
+            })}
+            onToggleList={() => actions.toggleMyList(state.selectedMovie)}
           />
         </React.Suspense>
       )}
@@ -472,11 +476,15 @@ function MovieDetailPageStub({ actions, state, onSelectActor }: any) {
           onSelectActor={onSelectActor}
           isInList={
             catalogMovie
-              ? state.myList.includes(catalogMovie.id.toString())
+              ? state.myList.some((item: any) => {
+                  const id = typeof item === "object" && item !== null ? item.id : item;
+                  const type = typeof item === "object" && item !== null ? item.type : "movie";
+                  return id.toString() === catalogMovie.id.toString() && type === (catalogMovie.type || "movie");
+                })
               : false
           }
           onToggleList={() => {
-            if (catalogMovie) actions.toggleMyList(catalogMovie.id);
+            if (catalogMovie) actions.toggleMyList(catalogMovie);
           }}
         />
       </React.Suspense>

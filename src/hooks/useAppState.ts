@@ -805,7 +805,13 @@ export function useAppState() {
 
     // 2. My List
     const myListItems = allMovies
-      .filter((m) => myList.includes(m.id.toString()))
+      .filter((m) =>
+        myList.some((item) => {
+          const id = typeof item === "object" && item !== null ? item.id : item;
+          const type = typeof item === "object" && item !== null ? item.type : "movie";
+          return id.toString() === m.id.toString() && type === (m.type || "movie");
+        })
+      )
       .slice(0, 20);
 
     // 3. Watch It Again (History)
@@ -1189,6 +1195,9 @@ export function useAppState() {
       // Fetch basic info for user history & watchlist items in parallel
       const historyItems = [...history].reverse().slice(0, 10);
       const myListParsed = myList.slice(0, 20).map((item) => {
+        if (typeof item === "object" && item !== null) {
+          return { id: item.id.toString(), type: item.type || "movie" };
+        }
         const str = String(item);
         if (str.includes("_")) {
           const parts = str.split("_");
@@ -1881,17 +1890,31 @@ export function useAppState() {
         // Now handled by ROW_FETCH_CONFIG below for pagination support
         break;
       case "Library": {
-        const myListIdSet = new Set(myList.map((id) => id.toString()));
+        const myListCompositeSet = new Set(
+          myList.map((item) => {
+            const id = typeof item === "object" && item !== null ? item.id : item;
+            const type = typeof item === "object" && item !== null ? item.type : "movie";
+            return `${type || "movie"}_${id}`;
+          })
+        );
         const histCompositeSet = new Set(history.map(historyId));
         return allMovies.filter(
           (m) =>
-            myListIdSet.has(m.id.toString()) ||
+            myListCompositeSet.has(`${m.type || "movie"}_${m.id}`) ||
             histCompositeSet.has(`${m.type || "movie"}_${m.id}`),
         );
       }
       case "My Secure Records": {
-        const myListIds = new Set(myList.map((id) => id.toString()));
-        return allMovies.filter((m) => myListIds.has(m.id.toString()));
+        const myListCompositeSet = new Set(
+          myList.map((item) => {
+            const id = typeof item === "object" && item !== null ? item.id : item;
+            const type = typeof item === "object" && item !== null ? item.type : "movie";
+            return `${type || "movie"}_${id}`;
+          })
+        );
+        return allMovies.filter((m) =>
+          myListCompositeSet.has(`${m.type || "movie"}_${m.id}`)
+        );
       }
       case "Watch It Again": {
         const progressData = JSON.parse(
@@ -2033,14 +2056,33 @@ export function useAppState() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  const toggleMyList = (movieId: any) => {
-    const mid = movieId.toString();
+  const toggleMyList = (movieOrId: any, type?: "movie" | "tv") => {
+    let id: string;
+    let mediaType: "movie" | "tv" = "movie";
+
+    if (typeof movieOrId === "object" && movieOrId !== null) {
+      id = movieOrId.id.toString();
+      mediaType = movieOrId.type || "movie";
+    } else {
+      id = movieOrId.toString();
+      mediaType = type || "movie";
+    }
+
     setMyList((prev) => {
-      const isAlreadyIn = prev.some((id) => id.toString() === mid);
+      const isAlreadyIn = prev.some((item) => {
+        const itemId = typeof item === "object" && item !== null ? item.id : item;
+        const itemType = typeof item === "object" && item !== null ? item.type : "movie";
+        return itemId.toString() === id && itemType === mediaType;
+      });
+
       if (isAlreadyIn) {
-        return prev.filter((id) => id.toString() !== mid);
+        return prev.filter((item) => {
+          const itemId = typeof item === "object" && item !== null ? item.id : item;
+          const itemType = typeof item === "object" && item !== null ? item.type : "movie";
+          return !(itemId.toString() === id && itemType === mediaType);
+        });
       } else {
-        return [...prev, mid];
+        return [...prev, { id, type: mediaType }];
       }
     });
   };
@@ -2127,17 +2169,21 @@ export function useAppState() {
           );
         });
 
-      const parseMyListId = (item: string) => {
-        if (item.includes("_")) {
-          const parts = item.split("_");
+      const parseMyListId = (item: any) => {
+        if (typeof item === "object" && item !== null) {
+          return { id: item.id.toString(), type: item.type || "movie" };
+        }
+        const str = item.toString();
+        if (str.includes("_")) {
+          const parts = str.split("_");
           return { id: parts[1], type: parts[0] };
         }
-        return { id: item, type: "movie" };
+        return { id: str, type: "movie" };
       };
 
       const missingMyList = myList
         .map((item) => {
-          const parsed = parseMyListId(item.toString());
+          const parsed = parseMyListId(item);
           return { id: parsed.id, type: parsed.type };
         })
         .filter((item) => {

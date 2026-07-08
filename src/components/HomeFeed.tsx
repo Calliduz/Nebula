@@ -110,13 +110,17 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   snap
                   aspect="portrait"
                   onSelect={setSelectedMovie}
-                  isInList={myList.includes(m.id)}
-                  onToggleList={() => toggleMyList(m.id)}
+                  isInList={myList.some((item: any) => {
+                    const id = typeof item === "object" && item !== null ? item.id : item;
+                    const type = typeof item === "object" && item !== null ? item.type : "movie";
+                    return id.toString() === m.id.toString() && type === (m.type || "movie");
+                  })}
+                  onToggleList={() => toggleMyList(m)}
                   onRemove={
                     row.title === "Continue Watching"
                       ? () => removeFromProgress(m.id.toString())
                       : row.title === "My List"
-                        ? () => toggleMyList(m.id)
+                        ? () => toggleMyList(m)
                         : undefined
                   }
                 />
@@ -157,8 +161,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   snap
                   aspect="portrait"
                   onSelect={setSelectedMovie}
-                  isInList={myList.includes(m.id)}
-                  onToggleList={() => toggleMyList(m.id)}
+                  isInList={myList.some((item: any) => {
+                    const id = typeof item === "object" && item !== null ? item.id : item;
+                    const type = typeof item === "object" && item !== null ? item.type : "movie";
+                    return id.toString() === m.id.toString() && type === (m.type || "movie");
+                  })}
+                  onToggleList={() => toggleMyList(m)}
                 />
               ))}
             </MovieRow>
@@ -221,8 +229,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   movie={m}
                   snap
                   onSelect={setSelectedMovie}
-                  isInList={myList.includes(m.id)}
-                  onToggleList={() => toggleMyList(m.id)}
+                  isInList={myList.some((item: any) => {
+                    const id = typeof item === "object" && item !== null ? item.id : item;
+                    const type = typeof item === "object" && item !== null ? item.type : "movie";
+                    return id.toString() === m.id.toString() && type === (m.type || "movie");
+                  })}
+                  onToggleList={() => toggleMyList(m)}
                 />
               ))}
         </MovieRow>
