@@ -169,8 +169,8 @@ export default function App() {
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/50">
               <span className="text-nebula-cyan/80">Announcement:</span> Cast
               Explorer is now available, tap an actor picture in the overview
-              tab to test it out! --- Videasy source is down use
-              Vidnest-(Videasy) as an alternative
+              tab to test it out! -- Fixed 4s load issue; Fixed recommendations
+              and Mylist
             </p>
           </div>
         )}
@@ -345,9 +345,14 @@ export default function App() {
             onSelectMovie={actions.setSelectedMovie}
             onSelectActor={setSelectedActorId}
             isInList={state.myList.some((item: any) => {
-              const id = typeof item === "object" && item !== null ? item.id : item;
-              const type = typeof item === "object" && item !== null ? item.type : "movie";
-              return id.toString() === state.selectedMovie.id.toString() && type === (state.selectedMovie.type || "movie");
+              const id =
+                typeof item === "object" && item !== null ? item.id : item;
+              const type =
+                typeof item === "object" && item !== null ? item.type : "movie";
+              return (
+                id.toString() === state.selectedMovie.id.toString() &&
+                type === (state.selectedMovie.type || "movie")
+              );
             })}
             onToggleList={() => actions.toggleMyList(state.selectedMovie)}
           />
@@ -477,9 +482,16 @@ function MovieDetailPageStub({ actions, state, onSelectActor }: any) {
           isInList={
             catalogMovie
               ? state.myList.some((item: any) => {
-                  const id = typeof item === "object" && item !== null ? item.id : item;
-                  const type = typeof item === "object" && item !== null ? item.type : "movie";
-                  return id.toString() === catalogMovie.id.toString() && type === (catalogMovie.type || "movie");
+                  const id =
+                    typeof item === "object" && item !== null ? item.id : item;
+                  const type =
+                    typeof item === "object" && item !== null
+                      ? item.type
+                      : "movie";
+                  return (
+                    id.toString() === catalogMovie.id.toString() &&
+                    type === (catalogMovie.type || "movie")
+                  );
                 })
               : false
           }
