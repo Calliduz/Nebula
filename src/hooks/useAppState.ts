@@ -1742,57 +1742,63 @@ export function useAppState() {
           config = ROW_FETCH_CONFIG[title];
         }
 
-        let fetchedItems: NebulaMovie[] = [];
-        if (config) {
-          if (config.type === "recommendations" && config.targetId) {
-            fetchedItems = await getRecommendations(
-              config.targetId,
-              config.mediaType as any,
-              "1"
-            );
-            // Rotate items based on active feedSeed to match original behavior
-            fetchedItems = rotateItems(fetchedItems, currentSeed);
-          } else if (config.mediaType === "all") {
-            fetchedItems = await getTrending("all", "1");
+        const performFetch = async (page: number) => {
+          const pageStr = page.toString();
+          if (config) {
+            if (config.type === "recommendations" && config.targetId) {
+              return await getRecommendations(
+                config.targetId,
+                config.mediaType as any,
+                pageStr
+              ).catch(() => []);
+            } else if (config.mediaType === "all") {
+              return await getTrending("all", pageStr).catch(() => []);
+            } else {
+              return await discoverMedia(config.mediaType, {
+                ...config.discoverParams,
+                page: pageStr,
+              }).catch(() => []);
+            }
           } else {
-            fetchedItems = await discoverMedia(config.mediaType, {
-              ...config.discoverParams,
-              page: "1",
-            });
+            // Special fallback row builders if config is missing (e.g. custom queries)
+            if (title === "Daily Declassified Discoveries") {
+              return await discoverMedia("movie", {
+                "vote_average.gte": "7.0",
+                sort_by: "popularity.desc",
+                page: pageStr,
+              }).catch(() => []);
+            } else if (title === "Weekend Blockbuster Curation") {
+              return await discoverMedia("movie", {
+                with_genres: "28,878,53",
+                sort_by: "popularity.desc",
+                page: pageStr,
+              }).catch(() => []);
+            } else if (title === "Weekday Deep-Dive Series") {
+              return await discoverMedia("movie", {
+                with_genres: "99,18",
+                sort_by: "popularity.desc",
+                page: pageStr,
+              }).catch(() => []);
+            } else if (title === "Under the Radar Missions") {
+              return await discoverMedia("movie", {
+                "vote_average.gte": "7.5",
+                "vote_count.lte": "1000",
+                sort_by: "popularity.desc",
+                page: pageStr,
+              }).catch(() => []);
+            } else if (title === "Popular Near You") {
+              return await discoverMedia("movie", {
+                sort_by: "popularity.desc",
+                page: pageStr,
+              }).catch(() => []);
+            }
           }
-        } else {
-          // Special fallback row builders if config is missing (e.g. custom queries)
-          if (title === "Daily Declassified Discoveries") {
-            fetchedItems = await discoverMedia("movie", {
-              "vote_average.gte": "7.0",
-              sort_by: "popularity.desc",
-              page: "1",
-            });
-          } else if (title === "Weekend Blockbuster Curation") {
-            fetchedItems = await discoverMedia("movie", {
-              with_genres: "28,878,53",
-              sort_by: "popularity.desc",
-              page: "1",
-            });
-          } else if (title === "Weekday Deep-Dive Series") {
-            fetchedItems = await discoverMedia("movie", {
-              with_genres: "99,18",
-              sort_by: "popularity.desc",
-              page: "1",
-            });
-          } else if (title === "Under the Radar Missions") {
-            fetchedItems = await discoverMedia("movie", {
-              "vote_average.gte": "7.5",
-              "vote_count.lte": "1000",
-              sort_by: "popularity.desc",
-              page: "1",
-            });
-          } else if (title === "Popular Near You") {
-            fetchedItems = await discoverMedia("movie", {
-              sort_by: "popularity.desc",
-              page: "1",
-            });
-          }
+          return [];
+        };
+
+        let fetchedItems = await performFetch(1);
+        if (config && config.type === "recommendations") {
+          fetchedItems = rotateItems(fetchedItems, currentSeed);
         }
 
         // If the seed has changed, discard the results (stale refresh)
@@ -1800,19 +1806,39 @@ export function useAppState() {
           return;
         }
 
-        const deduped = fetchedItems.filter(
+        let deduped = fetchedItems.filter(
           (m) => m && m.id && !globalShownRef.current.has(m.id.toString())
-        ).slice(0, 20);
+        );
 
-        let finalItems = [...deduped];
+        // Self-healing pagination: If we have less than 12 unique items after deduplication (due to overlaps),
+        // fetch Page 2 to fill the row with fresh, unique titles instead of repeating duplicates.
+        if (
+          deduped.length < 12 &&
+          fetchedItems.length > 0 &&
+          (!config || config.type !== "recommendations")
+        ) {
+          const page2Items = await performFetch(2);
+          if (currentSeed === feedSeedRef.current) {
+            const uniquePage2 = page2Items.filter(
+              (m) =>
+                m &&
+                m.id &&
+                !globalShownRef.current.has(m.id.toString()) &&
+                !deduped.some((d) => d.id === m.id)
+            );
+            deduped = [...deduped, ...uniquePage2];
+          }
+        }
+
+        let finalItems = deduped.slice(0, 20);
 
         if (config && config.type === "recommendations") {
           // If recommendation items are <= 5, do not show the row (items = [])
-          if (deduped.length <= 5) {
+          if (finalItems.length <= 5) {
             finalItems = [];
           }
         } else {
-          // If other rows are too sparse, fill them back up (same logic as before)
+          // If other rows are STILL too sparse, fill them back up as a last resort
           if (finalItems.length < 10 && fetchedItems.length > 0) {
             const extras = fetchedItems
               .filter((m) => m && m.id && !finalItems.some((f) => f.id === m.id))
