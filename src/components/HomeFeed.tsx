@@ -9,7 +9,7 @@ import { CategoriesBar } from "./CategoriesBar";
 import { LazyViewport } from "./LazyViewport";
 
 const SectionDivider = ({ label }: { label?: string }) => (
-  <div className="flex items-center gap-6 my-4 md:my-8 px-4 sm:px-0">
+  <div className="flex items-center gap-6 my-2 md:my-6 px-4 sm:px-0">
     <div className="h-px flex-1 bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent" />
     {label && (
       <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/20 shrink-0">
@@ -145,7 +145,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         title={row.title}
         onTitleClick={() => setViewingCategory(row.title)}
       >
-        {[...Array(6)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <MovieSkeleton key={`sk-${row.title}-${rowIndex}-${i}`} />
         ))}
       </MovieRow>
@@ -204,7 +204,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   };
 
   return (
-    <div className="px-4 sm:px-6 md:px-12 mt-6 md:mt-0 pb-20 relative z-30 flex flex-col gap-8">
+    <div className="pl-2 pr-4 sm:px-6 md:px-12 mt-6 md:mt-0 pb-20 relative z-30 flex flex-col gap-4 sm:gap-6 md:gap-8">
       {/* Cinematic transition zone — hero fades into feed */}
       <div className="h-8 md:h-16 -mt-8 md:-mt-16 bg-gradient-to-b from-transparent to-obsidian pointer-events-none" />
 
@@ -247,7 +247,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       {!rows.some((r) => r.title === "Based on Watch History") && (
         <MovieRow title="Based on Watch History">
           {isLoading
-            ? [...Array(6)].map((_, i) => <MovieSkeleton key={`sk-rec-${i}`} />)
+            ? [...Array(8)].map((_, i) => <MovieSkeleton key={`sk-rec-${i}`} />)
             : recommendations.map((m, i) => (
                 <MovieCard
                   key={`m-rec-${m.id}-${i}`}

@@ -690,7 +690,7 @@ export function useAppState() {
   const [scrolled, setScrolled] = useState(false);
   const [myList, setMyList] = useLocalStorage<any[]>("nebula-my-list", []);
   const [history, setHistory] = useLocalStorage<any[]>("nebula-history", []);
-  const [visibleCount, setVisibleCount] = useState(12);
+  const [visibleCount, setVisibleCount] = useState(18);
   const [dramaPage, setDramaPage] = useState(1);
   const [tvDetailsCache, setTvDetailsCache] = useState<Record<string, any>>({});
 
@@ -1365,7 +1365,7 @@ export function useAppState() {
       });
 
       // ── My List
-      const myListItems = resolvedMyListBasicInfos.slice(0, 20);
+      const myListItems = resolvedMyListBasicInfos.slice(0, 36);
 
       // Initialize globalShownRef
       globalShownRef.current.clear();
@@ -1378,7 +1378,7 @@ export function useAppState() {
         .filter(
           (m) => !globalShownRef.current.has((m.tmdbId || m.id).toString()),
         )
-        .slice(0, 20);
+        .slice(0, 36);
       filteredTrending.forEach((m) =>
         globalShownRef.current.add((m.tmdbId || m.id).toString()),
       );
@@ -1461,7 +1461,7 @@ export function useAppState() {
       if (watchItAgainItems.length > 0) {
         initialRows.push({
           title: "Watch It Again",
-          items: watchItAgainItems.slice(0, 10),
+          items: watchItAgainItems.slice(0, 20),
           hasLoaded: true,
           isLoading: false,
         });
@@ -1908,10 +1908,10 @@ export function useAppState() {
             (m) => m && m.id && !globalShownRef.current.has(m.id.toString()),
           );
 
-          // Self-healing pagination: If we have less than 12 unique items after deduplication (due to overlaps),
+          // Self-healing pagination: If we have less than 30 unique items after deduplication (due to overlaps),
           // fetch Page 2 to fill the row with fresh, unique titles instead of repeating duplicates.
           if (
-            deduped.length < 12 &&
+            deduped.length < 30 &&
             fetchedItems.length > 0 &&
             (!config || config.type !== "recommendations")
           ) {
@@ -1928,7 +1928,7 @@ export function useAppState() {
             }
           }
 
-          let finalItems = deduped.slice(0, 20);
+          let finalItems = deduped.slice(0, 36);
 
           if (config && config.type === "recommendations") {
             // If recommendation items are <= 5, do not show the row (items = [])
@@ -1937,12 +1937,12 @@ export function useAppState() {
             }
           } else {
             // If other rows are STILL too sparse, fill them back up as a last resort
-            if (finalItems.length < 10 && fetchedItems.length > 0) {
+            if (finalItems.length < 24 && fetchedItems.length > 0) {
               const extras = fetchedItems
                 .filter(
                   (m) => m && m.id && !finalItems.some((f) => f.id === m.id),
                 )
-                .slice(0, 20 - finalItems.length);
+                .slice(0, 36 - finalItems.length);
               finalItems.push(...extras);
             }
           }
@@ -2018,7 +2018,7 @@ export function useAppState() {
   );
 
   useEffect(() => {
-    setVisibleCount(12);
+    setVisibleCount(18);
     setDramaPage(1); // Reset pagination on category/tab change
     if (viewingCategory !== "Dramas" && selectedRegion !== "All") {
       setSelectedRegion("All");
@@ -2027,7 +2027,7 @@ export function useAppState() {
 
   const loadMore = () => {
     setDramaPage((prev) => prev + 1);
-    setVisibleCount((prev) => prev + 12);
+    setVisibleCount((prev) => prev + 18);
   };
 
   const getCategoryMovies = useCallback(() => {

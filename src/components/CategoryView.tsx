@@ -96,7 +96,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="min-h-screen pt-12 px-4 sm:px-6 md:px-12 pb-32"
+      className="min-h-screen pt-12 pl-2 pr-4 sm:px-6 md:px-12 pb-32"
     >
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
@@ -333,7 +333,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         <>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
             {isLoading && data.length === 0
-              ? [...Array(12)].map((_, i) => (
+              ? [...Array(18)].map((_, i) => (
                   <MovieSkeleton key={`sk-cat-${i}`} isGrid={true} />
                 ))
               : renderGridWithAds()}
