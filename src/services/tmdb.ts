@@ -138,7 +138,11 @@ const getApiBase = (): string => API_BASE_URL;
 
 const proxyImage = (url: string): string => {
   if (!url) return "";
-  if (url.startsWith("/") || url.startsWith("data:") || url.includes("/api/image?url=")) {
+  if (
+    url.startsWith("/") ||
+    url.startsWith("data:") ||
+    url.includes("/api/image?url=")
+  ) {
     return url;
   }
   let optimizedUrl = url;

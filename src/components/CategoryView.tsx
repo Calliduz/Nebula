@@ -81,7 +81,10 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         isInList={myList.some((i: any) => {
           const id = typeof i === "object" && i !== null ? i.id : i;
           const type = typeof i === "object" && i !== null ? i.type : "movie";
-          return id.toString() === item.id.toString() && type === (item.type || "movie");
+          return (
+            id.toString() === item.id.toString() &&
+            type === (item.type || "movie")
+          );
         })}
         onToggleList={() => toggleMyList(item)}
       />
@@ -180,9 +183,18 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                 {(allMovies || [])
                   .filter((m) =>
                     myList.some((item: any) => {
-                      const id = typeof item === "object" && item !== null ? item.id : item;
-                      const type = typeof item === "object" && item !== null ? item.type : "movie";
-                      return id.toString() === m.id.toString() && type === (m.type || "movie");
+                      const id =
+                        typeof item === "object" && item !== null
+                          ? item.id
+                          : item;
+                      const type =
+                        typeof item === "object" && item !== null
+                          ? item.type
+                          : "movie";
+                      return (
+                        id.toString() === m.id.toString() &&
+                        type === (m.type || "movie")
+                      );
                     }),
                   )
                   .map((movie, i) => (
@@ -275,9 +287,18 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                         isGrid={true}
                         onSelect={onSelectMovie}
                         isInList={myList.some((item: any) => {
-                          const id = typeof item === "object" && item !== null ? item.id : item;
-                          const type = typeof item === "object" && item !== null ? item.type : "movie";
-                          return id.toString() === movie.id.toString() && type === (movie.type || "movie");
+                          const id =
+                            typeof item === "object" && item !== null
+                              ? item.id
+                              : item;
+                          const type =
+                            typeof item === "object" && item !== null
+                              ? item.type
+                              : "movie";
+                          return (
+                            id.toString() === movie.id.toString() &&
+                            type === (movie.type || "movie")
+                          );
                         })}
                         onToggleList={() => toggleMyList(movie)}
                         onRemove={() => removeFromHistory(movie.id, movie.type)}

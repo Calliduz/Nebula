@@ -30,7 +30,7 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
           }
         }
       },
-      { rootMargin }
+      { rootMargin },
     );
 
     const currentEl = containerRef.current;
@@ -46,7 +46,10 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
   }, [isVisible, onVisible, rootMargin]);
 
   return (
-    <div ref={containerRef} style={{ minHeight: isVisible ? undefined : minHeight }}>
+    <div
+      ref={containerRef}
+      style={{ minHeight: isVisible ? undefined : minHeight }}
+    >
       {isVisible ? children : placeholder}
     </div>
   );
