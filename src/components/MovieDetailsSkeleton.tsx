@@ -82,7 +82,7 @@ export const MovieDetailsSkeleton: React.FC<MovieDetailsSkeletonProps> = ({
           <div className="h-8 w-48 bg-white/5 rounded-lg shimmer-bg" />
           <div className="flex gap-4 overflow-x-hidden pb-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <MovieSkeleton key={i} />
+              <div key={i} className="w-24 sm:w-32 md:w-36 aspect-[2/3] rounded-xl shimmer-bg border border-white/5 shrink-0" />
             ))}
           </div>
         </div>

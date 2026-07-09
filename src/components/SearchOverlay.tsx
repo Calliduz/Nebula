@@ -183,7 +183,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                       </div>
                     )}
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2.5 sm:gap-6">
                     {searchQuery && searchResults.length > 0 ? (
                       <>
                         <div className="col-span-full mb-2">
@@ -213,7 +213,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                                 onError={handleImageError}
                               />
                               {/* Always-visible type badge */}
-                              <div className="absolute top-1.5 left-1.5 z-10">
+                              <div className="absolute top-1.5 left-1.5 z-10 hidden md:block">
                                 <span
                                   className={`text-[9px] font-black uppercase tracking-wide px-2 py-[3px] rounded-md backdrop-blur-md shadow-sm ${movie.type === "tv" ? "bg-white/15 text-white border border-white/20" : "bg-nebula-cyan/90 text-obsidian"}`}
                                 >

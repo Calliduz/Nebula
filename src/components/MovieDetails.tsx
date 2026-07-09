@@ -1618,21 +1618,20 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
             >
               {logoTitle}
 
-              <div className="flex flex-wrap items-center gap-3 sm:gap-6 mb-8 text-xs sm:text-sm font-bold tracking-widest text-dim uppercase">
-                <span className="flex items-center gap-2">
+              <div className="flex flex-nowrap items-center gap-2 sm:gap-6 mb-8 text-[10px] sm:text-sm font-bold tracking-widest text-dim uppercase overflow-x-auto no-scrollbar select-none">
+                <span className="flex items-center gap-1 sm:gap-2 shrink-0">
                   <Star
-                    size={16}
-                    className="text-nebula-cyan fill-nebula-cyan"
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-nebula-cyan fill-nebula-cyan"
                   />{" "}
                   {movie.imdb || movie.rating}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                <span className="flex items-center gap-2">
-                  <Clock size={16} /> {movie.duration || "124m"}
+                <span className="flex items-center gap-1 sm:gap-2 shrink-0">
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {movie.duration || "124m"}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                <span className="flex items-center gap-2">
-                  <Calendar size={16} /> {movie.year}
+                <span className="flex items-center gap-1 sm:gap-2 shrink-0">
+                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {movie.year}
                 </span>
 
                 {/* Quality Badge */}
@@ -1640,7 +1639,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   <>
                     <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
                     <div
-                      className={`px-2 py-0.5 rounded border backdrop-blur-md ${
+                      className={`px-2 py-0.5 rounded border backdrop-blur-md shrink-0 ${
                         movie.quality === "CAM"
                           ? "border-amber-500/30 bg-slate-950/80 text-amber-400"
                           : movie.quality === "TBA"
@@ -1657,10 +1656,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                 {movie.isVerified ? (
                   <>
                     <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                    <div className="px-2 py-0.5 rounded border border-emerald-500/30 bg-slate-950/80 text-emerald-400 flex items-center gap-1.5 backdrop-blur-md">
-                      <span className="relative flex h-1.5 w-1.5">
+                    <div className="px-2 py-0.5 rounded border border-emerald-500/30 bg-slate-950/80 text-emerald-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                      <span className="relative flex h-1 w-1 sm:h-1.5 sm:w-1.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                        <span className="relative inline-flex rounded-full h-1 w-1 sm:h-1.5 sm:w-1.5 bg-emerald-500" />
                       </span>
                       <span>LIVE</span>
                     </div>
@@ -1668,8 +1667,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                 ) : movie.isDead ? (
                   <>
                     <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                    <div className="px-2 py-0.5 rounded border border-rose-500/30 bg-slate-950/80 text-rose-400 flex items-center gap-1.5 backdrop-blur-md">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <div className="px-2 py-0.5 rounded border border-rose-500/30 bg-slate-950/80 text-rose-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                      <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-rose-500" />
                       <span>DEAD</span>
                     </div>
                   </>
@@ -1678,10 +1677,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   movie.quality !== "TBA" && (
                     <>
                       <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                      <div className="px-2 py-0.5 rounded border border-white/20 bg-slate-950/80 text-white/50 flex items-center gap-1.5 backdrop-blur-md">
-                        <span className="relative flex h-1.5 w-1.5">
+                      <div className="px-2 py-0.5 rounded border border-white/20 bg-slate-950/80 text-white/50 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                        <span className="relative flex h-1 w-1 sm:h-1.5 sm:w-1.5">
                           <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
+                          <span className="relative inline-flex rounded-full h-1 w-1 sm:h-1.5 sm:w-1.5 bg-white/40" />
                         </span>
                         <span>SCAN</span>
                       </div>
@@ -1941,7 +1940,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                             navigate(`/${m.type}/${m.id}`);
                             onSelectMovie?.(m); // sync App state so the component re-evaluates
                           }}
-                          className="w-32 sm:w-40 aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10 group cursor-pointer relative shrink-0 snap-start"
+                          className="w-24 sm:w-32 md:w-36 aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10 group cursor-pointer relative shrink-0 snap-start"
                         >
                           <img
                             src={m.image}

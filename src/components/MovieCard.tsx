@@ -51,7 +51,7 @@ export const MovieCard = memo<MovieCardProps>(
 
     return (
       <div
-        className={`group/card relative ${isGrid ? "w-full" : isLandscape ? "w-[220px] md:w-[280px]" : "w-[160px] md:w-[280px]"} shrink-0 ${isLandscape ? "aspect-video" : "aspect-[2/3]"} transition-all duration-300 ${snap ? "snap-start" : ""}`}
+        className={`group/card relative ${isGrid ? "w-full" : isLandscape ? "w-[170px] sm:w-[220px] md:w-[240px] lg:w-[260px]" : "w-[115px] sm:w-[155px] md:w-[200px] lg:w-[220px]"} shrink-0 ${isLandscape ? "aspect-video" : "aspect-[2/3]"} transition-all duration-300 ${snap ? "snap-start" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => onSelect?.(movie)}
         style={{ willChange: "transform" }}
@@ -78,7 +78,7 @@ export const MovieCard = memo<MovieCardProps>(
 
           {/* Info Overlay (Persistent) */}
           <div className="absolute top-3 left-3 right-3 z-30 flex justify-between items-start">
-            <div className="flex flex-col gap-1.5">
+            <div className="hidden md:flex flex-col gap-1.5">
               {isLandscape && (
                 <div className="px-2 py-0.5 rounded-md bg-nebula-cyan/20 border border-nebula-cyan/30 backdrop-blur-md w-fit">
                   <p className="text-[8px] font-black text-nebula-cyan uppercase tracking-widest italic">

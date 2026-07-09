@@ -179,7 +179,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               )}
             </div>
             {(allMovies || []).length > 0 && myList.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
                 {(allMovies || [])
                   .filter((m) =>
                     myList.some((item: any) => {
@@ -240,7 +240,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               )}
             </div>
             {(allMovies || []).length > 0 && history.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-12">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
                 {history
                   .slice()
                   .map((item) => {
@@ -331,10 +331,10 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
             {isLoading && data.length === 0
               ? [...Array(12)].map((_, i) => (
-                  <MovieSkeleton key={`sk-cat-${i}`} />
+                  <MovieSkeleton key={`sk-cat-${i}`} isGrid={true} />
                 ))
               : renderGridWithAds()}
           </div>

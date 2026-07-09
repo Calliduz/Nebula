@@ -82,10 +82,10 @@ export const TopTenShelf = memo(
               ? [...Array(10)].map((_, i) => (
                   <div
                     key={`top-shelf-skeleton-${i}`}
-                    className="flex-shrink-0 relative snap-start flex items-end pl-[24px] sm:pl-[40px] animate-pulse"
+                    className="flex-shrink-0 relative snap-start flex items-end pl-[20px] sm:pl-[30px] md:pl-[40px] animate-pulse"
                   >
                     <span
-                      className="absolute left-0 bottom-[-10px] sm:bottom-[-20px] text-[100px] sm:text-[160px] leading-[0.8] font-display font-black z-20 tracking-tighter opacity-10"
+                      className="absolute left-0 bottom-[-5px] sm:bottom-[-10px] md:bottom-[-15px] lg:bottom-[-20px] text-[75px] sm:text-[120px] md:text-[140px] lg:text-[150px] leading-[0.8] font-display font-black z-20 tracking-tighter opacity-10"
                       style={{
                         color: "#0b0f19",
                         WebkitTextStroke: "2px rgba(255,255,255,0.3)",
@@ -93,17 +93,17 @@ export const TopTenShelf = memo(
                     >
                       {i + 1}
                     </span>
-                    <div className="w-[120px] sm:w-[180px] aspect-[2/3] rounded-2xl bg-white/5 border border-white/10 shimmer-bg z-10 origin-bottom relative" />
+                    <div className="w-[90px] sm:w-[130px] md:w-[150px] lg:w-[160px] aspect-[2/3] rounded-xl md:rounded-2xl bg-white/5 border border-white/10 shimmer-bg z-10 origin-bottom relative" />
                   </div>
                 ))
               : topMovies.map((movie, i) => (
                   <div
                     key={`top-shelf-${movie.id}-${i}`}
-                    className="flex-shrink-0 relative group/card cursor-pointer snap-start flex items-end pl-[24px] sm:pl-[40px]"
+                    className="flex-shrink-0 relative group/card cursor-pointer snap-start flex items-end pl-[20px] sm:pl-[30px] md:pl-[40px]"
                     onClick={() => onSelect(movie)}
                   >
                     <span
-                      className="absolute left-0 bottom-[-10px] sm:bottom-[-20px] text-[100px] sm:text-[160px] leading-[0.8] font-display font-black transition-all duration-500 group-hover/card:-translate-x-2 z-20 tracking-tighter"
+                      className="absolute left-0 bottom-[-5px] sm:bottom-[-10px] md:bottom-[-15px] lg:bottom-[-20px] text-[75px] sm:text-[120px] md:text-[140px] lg:text-[150px] leading-[0.8] font-display font-black transition-all duration-500 group-hover/card:-translate-x-2 z-20 tracking-tighter"
                       style={{
                         color: "#0b0f19",
                         WebkitTextStroke: "2px rgba(255,255,255,0.7)",
@@ -112,7 +112,7 @@ export const TopTenShelf = memo(
                     >
                       {i + 1}
                     </span>
-                    <div className="w-[120px] sm:w-[180px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/50 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.2)] group-hover/card:z-30 z-10 origin-bottom relative">
+                    <div className="w-[90px] sm:w-[130px] md:w-[150px] lg:w-[160px] aspect-[2/3] rounded-xl md:rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/50 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.2)] group-hover/card:z-30 z-10 origin-bottom relative">
                       <img
                         src={movie.image}
                         className="w-full h-full object-cover opacity-80 group-hover/card:opacity-100 transition-opacity"
@@ -124,7 +124,7 @@ export const TopTenShelf = memo(
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
 
                       {/* Status Badges Overlay */}
-                      <div className="absolute top-2 left-2 flex flex-wrap gap-1 z-40 pointer-events-none">
+                      <div className="absolute top-2 left-2 hidden md:flex flex-wrap gap-1 z-40 pointer-events-none">
                         {/* Quality Badge */}
                         {movie.quality && (
                           <div
