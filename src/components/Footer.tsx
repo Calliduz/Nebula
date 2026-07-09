@@ -5,6 +5,7 @@ const KOFI_URL = "https://ko-fi.com/calliduz";
 const DMCA_EMAIL = "mailto:nebula.database@gmail.com";
 const SUPPORT_EMAIL =
   "mailto:nebula.database@gmail.com?subject=Nebula - Bug/Issue Report";
+const DISCORD_URL = "https://discord.gg/EYVm7HkMTM";
 const CURRENT_YEAR = new Date().getFullYear();
 
 export const Footer: React.FC = () => (
@@ -53,35 +54,63 @@ export const Footer: React.FC = () => (
           </div>
         </div>
 
-        {/* RIGHT — Ko-fi CTA */}
-        <div className="flex flex-col gap-3 lg:items-end">
+        {/* RIGHT — Support & Community CTA */}
+        <div className="flex flex-col gap-4 lg:items-end">
           <p className="text-xs uppercase tracking-[0.18em] text-white/35 font-semibold lg:text-right">
-            Keep us running
+            Support & Community
           </p>
 
-          <a
-            href={KOFI_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-2.5 px-5 py-3 rounded-xl
-                       bg-[#FF5E5B]/10 border border-[#FF5E5B]/20
-                       hover:bg-[#FF5E5B]/18 hover:border-[#FF5E5B]/45
-                       hover:shadow-[0_0_24px_rgba(255,94,91,0.15)]
-                       transition-all duration-250 text-[#FF5E5B] text-sm font-semibold whitespace-nowrap"
-          >
-            <Coffee
-              size={16}
-              className="group-hover:scale-110 transition-transform duration-200"
-            />
-            Support on Ko‑fi
-            <ExternalLink
-              size={11}
-              className="opacity-40 group-hover:opacity-70 transition-opacity"
-            />
-          </a>
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end w-full sm:w-auto">
+            {/* Discord CTA */}
+            <a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl
+                         bg-[#5865F2]/10 border border-[#5865F2]/20
+                         hover:bg-[#5865F2]/18 hover:border-[#5865F2]/45
+                         hover:shadow-[0_0_24px_rgba(88,101,242,0.15)]
+                         transition-all duration-250 text-[#5865F2] text-sm font-semibold whitespace-nowrap cursor-pointer"
+            >
+              <svg
+                className="w-4 h-4 fill-current group-hover:scale-110 transition-transform duration-200"
+                viewBox="0 0 127.14 96.36"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.5-5c.88-.65,1.72-1.34,2.51-2a75.58,75.58,0,0,0,73,0c.79.71,1.63,1.4,2.51,2a68.32,68.32,0,0,1-10.5,5,77.91,77.91,0,0,0,6.63,10.85,105.73,105.73,0,0,0,32.58-18.83C129.07,48.45,123.07,25.68,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z" />
+              </svg>
+              Join our Discord
+              <ExternalLink
+                size={11}
+                className="opacity-40 group-hover:opacity-70 transition-opacity"
+              />
+            </a>
 
-          <p className="text-white/30 text-xs lg:text-right leading-relaxed max-w-[210px]">
-            Servers cost money. Your support keeps Nebula alive.
+            {/* Ko-fi support button */}
+            <a
+              href={KOFI_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl
+                         bg-[#FF5E5B]/10 border border-[#FF5E5B]/20
+                         hover:bg-[#FF5E5B]/18 hover:border-[#FF5E5B]/45
+                         hover:shadow-[0_0_24px_rgba(255,94,91,0.15)]
+                         transition-all duration-250 text-[#FF5E5B] text-sm font-semibold whitespace-nowrap cursor-pointer"
+            >
+              <Coffee
+                size={16}
+                className="group-hover:scale-110 transition-transform duration-200"
+              />
+              Support on Ko‑fi
+              <ExternalLink
+                size={11}
+                className="opacity-40 group-hover:opacity-70 transition-opacity"
+              />
+            </a>
+          </div>
+
+          <p className="text-white/30 text-xs lg:text-right leading-relaxed max-w-[240px]">
+            Your support and presence keep the Nebula project running.
           </p>
         </div>
       </div>

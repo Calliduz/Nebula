@@ -14,6 +14,7 @@ import { ScrollToTop } from "./components/ScrollToTop";
 import { Footer } from "./components/Footer";
 import { MovieDetailsSkeleton } from "./components/MovieDetailsSkeleton";
 import { MovieSkeleton } from "./components/MovieSkeleton";
+import { DiscordInvite } from "./components/DiscordInvite";
 
 const MediaPlayer = React.lazy(() =>
   import("./components/MediaPlayer").then((module) => ({
@@ -303,6 +304,9 @@ export default function App() {
 
       {/* Scroll-to-top button for homepage and category view */}
       {!state.isSearchOpen && <ScrollToTop />}
+
+      {/* Discord Server Invite floating card */}
+      {!isWatching && <DiscordInvite />}
 
       <React.Suspense fallback={null}>
         <SearchOverlay
