@@ -813,9 +813,12 @@ export function useAppState() {
       .filter((m) =>
         myList.some((item) => {
           const id = typeof item === "object" && item !== null ? item.id : item;
-          const type = typeof item === "object" && item !== null ? item.type : "movie";
-          return id.toString() === m.id.toString() && type === (m.type || "movie");
-        })
+          const type =
+            typeof item === "object" && item !== null ? item.type : "movie";
+          return (
+            id.toString() === m.id.toString() && type === (m.type || "movie")
+          );
+        }),
       )
       .slice(0, 20);
 
@@ -939,6 +942,8 @@ export function useAppState() {
         recommendationRows.push({
           title: label,
           items: filtered,
+          hasLoaded: true,
+          isLoading: false,
           config: {
             mediaType: movie.type || "movie",
             type: "recommendations",
@@ -992,9 +997,17 @@ export function useAppState() {
           });
           genreItems.push(...extras);
         }
+        const existingGenreRow = rows.find(
+          (r) => r.title === `Because you like ${g}`,
+        );
+        const hasLoaded = existingGenreRow ? existingGenreRow.hasLoaded : false;
+        const isLoading = existingGenreRow ? existingGenreRow.isLoading : false;
+
         return {
           title: `Because you like ${g}`,
           items: genreItems,
+          hasLoaded,
+          isLoading,
           config: gId
             ? {
                 mediaType: "movie" as const,
@@ -1044,6 +1057,8 @@ export function useAppState() {
         rebuiltRows.push({
           title: "Continue Watching",
           items: continueWatchingItems,
+          hasLoaded: true,
+          isLoading: false,
         });
       }
 
@@ -1053,7 +1068,12 @@ export function useAppState() {
 
       // 3. My List
       if (myListItems.length > 0) {
-        rebuiltRows.push({ title: "My List", items: myListItems });
+        rebuiltRows.push({
+          title: "My List",
+          items: myListItems,
+          hasLoaded: true,
+          isLoading: false,
+        });
       }
 
       // 4. Recommendation Rows
@@ -1064,6 +1084,8 @@ export function useAppState() {
         rebuiltRows.push({
           title: "Watch It Again",
           items: watchItAgainItems.slice(0, 10),
+          hasLoaded: true,
+          isLoading: false,
         });
       }
 
@@ -1142,14 +1164,23 @@ export function useAppState() {
           setAllMovies(cAll);
           setIsLoading(false);
           markInitialPagesAsFetched(cRows);
-          
+
           // Hydrate globalShownRef from cached rows
           globalShownRef.current.clear();
-          cFeatured?.forEach((m: any) => m && m.id && globalShownRef.current.add(m.id.toString()));
-          cTopTen?.forEach((m: any) => m && m.id && globalShownRef.current.add(m.id.toString()));
+          cFeatured?.forEach(
+            (m: any) =>
+              m && m.id && globalShownRef.current.add(m.id.toString()),
+          );
+          cTopTen?.forEach(
+            (m: any) =>
+              m && m.id && globalShownRef.current.add(m.id.toString()),
+          );
           cRows?.forEach((r: any) => {
             if (r.hasLoaded) {
-              r.items?.forEach((m: any) => m && m.id && globalShownRef.current.add(m.id.toString()));
+              r.items?.forEach(
+                (m: any) =>
+                  m && m.id && globalShownRef.current.add(m.id.toString()),
+              );
             }
           });
 
@@ -1221,27 +1252,34 @@ export function useAppState() {
             } catch {
               return null;
             }
-          })
+          }),
         ),
         Promise.all(
           myListParsed.map(async (item) => {
             try {
-              return await getMediaBasicInfo(item.id, item.type as "movie" | "tv");
+              return await getMediaBasicInfo(
+                item.id,
+                item.type as "movie" | "tv",
+              );
             } catch {
               return null;
             }
-          })
+          }),
         ),
       ]);
 
-      const resolvedHistoryBasicInfos = historyBasicInfos.filter(Boolean) as any[];
-      const resolvedMyListBasicInfos = myListBasicInfos.filter(Boolean) as any[];
+      const resolvedHistoryBasicInfos = historyBasicInfos.filter(
+        Boolean,
+      ) as any[];
+      const resolvedMyListBasicInfos = myListBasicInfos.filter(
+        Boolean,
+      ) as any[];
 
       // Build continue watching and watch it again items
       const progressData = JSON.parse(
         localStorage.getItem("nebula-progress") || "{}",
       );
-      
+
       const continueWatchingItems: any[] = [];
       const watchItAgainItems: any[] = [];
 
@@ -1250,8 +1288,15 @@ export function useAppState() {
       for (const [key, val] of Object.entries(progressData)) {
         const baseId = key.toString().split("-")[0];
         const existing = progressByTitle[baseId];
-        const ts = typeof val === "object" && val !== null ? ((val as any).timestamp ?? 0) : 0;
-        const existingTs = existing ? (typeof existing.val === "object" && existing.val !== null ? ((existing.val as any).timestamp ?? 0) : 0) : -1;
+        const ts =
+          typeof val === "object" && val !== null
+            ? ((val as any).timestamp ?? 0)
+            : 0;
+        const existingTs = existing
+          ? typeof existing.val === "object" && existing.val !== null
+            ? ((existing.val as any).timestamp ?? 0)
+            : 0
+          : -1;
         if (!existing || ts > existingTs) {
           progressByTitle[baseId] = { key, val };
         }
@@ -1267,13 +1312,21 @@ export function useAppState() {
 
       for (const [baseId, { key, val }] of sortedProgressEntries) {
         const type = key.includes("-") ? "tv" : "movie";
-        const movie = resolvedHistoryBasicInfos.find(m => m.id.toString() === baseId && (m.type || "movie") === type) ||
-                      resolvedMyListBasicInfos.find(m => m.id.toString() === baseId && (m.type || "movie") === type) ||
-                      currentPool.find(m => m.id.toString() === baseId && (m.type || "movie") === type);
+        const movie =
+          resolvedHistoryBasicInfos.find(
+            (m) => m.id.toString() === baseId && (m.type || "movie") === type,
+          ) ||
+          resolvedMyListBasicInfos.find(
+            (m) => m.id.toString() === baseId && (m.type || "movie") === type,
+          ) ||
+          currentPool.find(
+            (m) => m.id.toString() === baseId && (m.type || "movie") === type,
+          );
         if (movie) {
           const isMovie = type === "movie";
           if (isMovie) {
-            const isWatched = typeof val === "object" && val !== null && val.watched;
+            const isWatched =
+              typeof val === "object" && val !== null && val.watched;
             if (isWatched) continue;
           } else {
             const details = tvDetailsCache[baseId];
@@ -1322,16 +1375,22 @@ export function useAppState() {
       );
 
       const filteredTrending = trending
-        .filter((m) => !globalShownRef.current.has((m.tmdbId || m.id).toString()))
+        .filter(
+          (m) => !globalShownRef.current.has((m.tmdbId || m.id).toString()),
+        )
         .slice(0, 20);
       filteredTrending.forEach((m) =>
         globalShownRef.current.add((m.tmdbId || m.id).toString()),
       );
 
       // Add other critical rows items to globalShownRef
-      continueWatchingItems.forEach((m) => globalShownRef.current.add(m.id.toString()));
+      continueWatchingItems.forEach((m) =>
+        globalShownRef.current.add(m.id.toString()),
+      );
       myListItems.forEach((m) => globalShownRef.current.add(m.id.toString()));
-      watchItAgainItems.forEach((m) => globalShownRef.current.add(m.id.toString()));
+      watchItAgainItems.forEach((m) =>
+        globalShownRef.current.add(m.id.toString()),
+      );
 
       // Construct initialRows with pre-populated critical rows and placeholder non-critical rows
       const initialRows: any[] = [];
@@ -1378,7 +1437,10 @@ export function useAppState() {
       // 5. Personalized Recommendation Rows from watch history
       const recommendationRows: any[] = [];
       resolvedHistoryBasicInfos.slice(0, 5).forEach((movie, histIdx) => {
-        const label = histIdx === 0 ? `Because you watched ${movie.title}` : `More Like ${movie.title}`;
+        const label =
+          histIdx === 0
+            ? `Because you watched ${movie.title}`
+            : `More Like ${movie.title}`;
         recommendationRows.push({
           title: label,
           items: [],
@@ -1433,7 +1495,9 @@ export function useAppState() {
         .slice(0, 2);
 
       topGenres.forEach((g) => {
-        const gId = Object.entries(GENRE_MAP).find(([_, name]) => name === g)?.[0];
+        const gId = Object.entries(GENRE_MAP).find(
+          ([_, name]) => name === g,
+        )?.[0];
         initialRows.push({
           title: `Because you like ${g}`,
           items: [],
@@ -1471,7 +1535,9 @@ export function useAppState() {
       // 10. Context Row (Weekend Curation / Weekday Deep-Dive)
       const dayOfWeek = new Date().getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-      const contextTitle = isWeekend ? "Weekend Blockbuster Curation" : "Weekday Deep-Dive Series";
+      const contextTitle = isWeekend
+        ? "Weekend Blockbuster Curation"
+        : "Weekday Deep-Dive Series";
       const contextConfig = isWeekend
         ? {
             mediaType: "movie" as const,
@@ -1479,7 +1545,10 @@ export function useAppState() {
               with_genres: "28,878,53", // Action, Sci-Fi, Thriller
               sort_by: "popularity.desc",
             },
-            filterFn: (m: any) => m.genre.includes("Action") || m.genre.includes("Sci-Fi") || m.genre.includes("Thriller")
+            filterFn: (m: any) =>
+              m.genre.includes("Action") ||
+              m.genre.includes("Sci-Fi") ||
+              m.genre.includes("Thriller"),
           }
         : {
             mediaType: "movie" as const,
@@ -1487,7 +1556,10 @@ export function useAppState() {
               with_genres: "99,18", // Documentary, Drama
               sort_by: "popularity.desc",
             },
-            filterFn: (m: any) => m.genre.includes("Documentary") || m.genre.includes("Drama") || m.type === "tv"
+            filterFn: (m: any) =>
+              m.genre.includes("Documentary") ||
+              m.genre.includes("Drama") ||
+              m.type === "tv",
           };
       initialRows.push({
         title: contextTitle,
@@ -1541,20 +1613,33 @@ export function useAppState() {
             primary_release_year: new Date().getFullYear().toString(),
             sort_by: "popularity.desc",
           },
-          filterFn: (m) => (m.release_date ?? "").startsWith(new Date().getFullYear().toString()),
+          filterFn: (m) =>
+            (m.release_date ?? "").startsWith(
+              new Date().getFullYear().toString(),
+            ),
         },
       });
 
       // 14. Spotlight Actor Row
-      let actorToUse = SPOTLIGHT_POOL[Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % SPOTLIGHT_POOL.length];
+      let actorToUse =
+        SPOTLIGHT_POOL[
+          Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % SPOTLIGHT_POOL.length
+        ];
       if (resolvedHistoryBasicInfos.length > 0) {
         try {
           const movie = resolvedHistoryBasicInfos[0];
-          const { cast } = await getMediaDetails(movie.id, movie.type || "movie", movie.year);
+          const { cast } = await getMediaDetails(
+            movie.id,
+            movie.type || "movie",
+            movie.year,
+          );
           if (cast && cast.length > 0) {
             const candidate = cast[0];
             if (candidate && candidate.id) {
-              actorToUse = { name: candidate.name, id: candidate.id.toString() };
+              actorToUse = {
+                name: candidate.name,
+                id: candidate.id.toString(),
+              };
             }
           }
         } catch {}
@@ -1602,8 +1687,14 @@ export function useAppState() {
 
       // 17. Dynamic Genre Rows
       const allGenreRows = [
-        { title: "Critically Acclaimed: Missions", genreName: "Critically Acclaimed" },
-        { title: "Cinematic Masterpieces", genreName: "Cinematic Masterpieces" },
+        {
+          title: "Critically Acclaimed: Missions",
+          genreName: "Critically Acclaimed",
+        },
+        {
+          title: "Cinematic Masterpieces",
+          genreName: "Cinematic Masterpieces",
+        },
         { title: "Award-Winning Hits", genreName: "Award-Winning Hits" },
         { title: "Action Packed Missions", genreName: "Action" },
         { title: "Hidden Gems", genreName: "Hidden Gems" },
@@ -1628,17 +1719,23 @@ export function useAppState() {
         { title: "90s Classics", genreName: "90s Classics" },
       ];
 
-      const favoriteRows = allGenreRows.filter((r) => topGenres.includes(r.genreName));
-      const nonFavoriteRows = allGenreRows.filter((r) => !topGenres.includes(r.genreName));
-      
-      const selectedNonFavorites = seededShuffle(nonFavoriteRows, activeSeed).slice(
-        0,
-        Math.max(4, 6 - favoriteRows.length)
+      const favoriteRows = allGenreRows.filter((r) =>
+        topGenres.includes(r.genreName),
       );
-      
+      const nonFavoriteRows = allGenreRows.filter(
+        (r) => !topGenres.includes(r.genreName),
+      );
+
+      const selectedNonFavorites = seededShuffle(
+        nonFavoriteRows,
+        activeSeed,
+      ).slice(0, Math.max(4, 6 - favoriteRows.length));
+
       const selectedGenreRows = [...favoriteRows, ...selectedNonFavorites];
       selectedGenreRows.forEach((genreRow) => {
-        const config = ROW_FETCH_CONFIG[genreRow.title] || ROW_FETCH_CONFIG[genreRow.genreName];
+        const config =
+          ROW_FETCH_CONFIG[genreRow.title] ||
+          ROW_FETCH_CONFIG[genreRow.genreName];
         initialRows.push({
           title: genreRow.title,
           items: [],
@@ -1663,7 +1760,7 @@ export function useAppState() {
       setFeaturedMovies(initialFeatured);
       setTopTenMovies(topTenItems);
       setRows(initialRows);
-      
+
       // Flip the loading spinner off! The user can now see the layout instantly
       setIsLoading(false);
 
@@ -1709,206 +1806,216 @@ export function useAppState() {
     }
   };
 
-  const fetchRowData = useCallback(async (rowTitle: string) => {
-    // Check if the row exists, is already loaded, or is currently loading/queued
-    const row = rows.find((r) => r.title === rowTitle);
-    if (!row || row.hasLoaded || row.isLoading) return;
+  const fetchRowData = useCallback(
+    async (rowTitle: string) => {
+      // Check if the row exists, is already loaded, or is currently loading/queued
+      const row = rows.find((r) => r.title === rowTitle);
+      if (!row || row.hasLoaded || row.isLoading) return;
 
-    // Check if it's already queued
-    if (pendingRowFetchQueueRef.current.includes(rowTitle)) return;
+      // Check if it's already queued
+      if (pendingRowFetchQueueRef.current.includes(rowTitle)) return;
 
-    const currentSeed = feedSeedRef.current;
+      const currentSeed = feedSeedRef.current;
 
-    // If we have reached the concurrency limit, queue it
-    if (activeRowFetchesRef.current >= 2) {
-      pendingRowFetchQueueRef.current.push(rowTitle);
-      return;
-    }
+      // If we have reached the concurrency limit, queue it
+      if (activeRowFetchesRef.current >= 2) {
+        pendingRowFetchQueueRef.current.push(rowTitle);
+        return;
+      }
 
-    // Otherwise, execute immediately
-    activeRowFetchesRef.current += 1;
+      // Otherwise, execute immediately
+      activeRowFetchesRef.current += 1;
 
-    // Helper to start the fetch
-    const executeFetch = async (title: string) => {
-      // Mark the row as loading in state
-      setRows((prev) =>
-        prev.map((r) => (r.title === title ? { ...r, isLoading: true } : r))
-      );
-
-      try {
-        const targetRow = rows.find((r) => r.title === title);
-        let config = targetRow?.config;
-        if (!config) {
-          config = ROW_FETCH_CONFIG[title];
-        }
-
-        const performFetch = async (page: number) => {
-          const pageStr = page.toString();
-          if (config) {
-            if (config.type === "recommendations" && config.targetId) {
-              return await getRecommendations(
-                config.targetId,
-                config.mediaType as any,
-                pageStr
-              ).catch(() => []);
-            } else if (config.mediaType === "all") {
-              return await getTrending("all", pageStr).catch(() => []);
-            } else {
-              return await discoverMedia(config.mediaType, {
-                ...config.discoverParams,
-                page: pageStr,
-              }).catch(() => []);
-            }
-          } else {
-            // Special fallback row builders if config is missing (e.g. custom queries)
-            if (title === "Daily Declassified Discoveries") {
-              return await discoverMedia("movie", {
-                "vote_average.gte": "7.0",
-                sort_by: "popularity.desc",
-                page: pageStr,
-              }).catch(() => []);
-            } else if (title === "Weekend Blockbuster Curation") {
-              return await discoverMedia("movie", {
-                with_genres: "28,878,53",
-                sort_by: "popularity.desc",
-                page: pageStr,
-              }).catch(() => []);
-            } else if (title === "Weekday Deep-Dive Series") {
-              return await discoverMedia("movie", {
-                with_genres: "99,18",
-                sort_by: "popularity.desc",
-                page: pageStr,
-              }).catch(() => []);
-            } else if (title === "Under the Radar Missions") {
-              return await discoverMedia("movie", {
-                "vote_average.gte": "7.5",
-                "vote_count.lte": "1000",
-                sort_by: "popularity.desc",
-                page: pageStr,
-              }).catch(() => []);
-            } else if (title === "Popular Near You") {
-              return await discoverMedia("movie", {
-                sort_by: "popularity.desc",
-                page: pageStr,
-              }).catch(() => []);
-            }
-          }
-          return [];
-        };
-
-        let fetchedItems = await performFetch(1);
-        if (config && config.type === "recommendations") {
-          fetchedItems = rotateItems(fetchedItems, currentSeed);
-        }
-
-        // If the seed has changed, discard the results (stale refresh)
-        if (currentSeed !== feedSeedRef.current) {
-          return;
-        }
-
-        let deduped = fetchedItems.filter(
-          (m) => m && m.id && !globalShownRef.current.has(m.id.toString())
+      // Helper to start the fetch
+      const executeFetch = async (title: string) => {
+        // Mark the row as loading in state
+        setRows((prev) =>
+          prev.map((r) => (r.title === title ? { ...r, isLoading: true } : r)),
         );
 
-        // Self-healing pagination: If we have less than 12 unique items after deduplication (due to overlaps),
-        // fetch Page 2 to fill the row with fresh, unique titles instead of repeating duplicates.
-        if (
-          deduped.length < 12 &&
-          fetchedItems.length > 0 &&
-          (!config || config.type !== "recommendations")
-        ) {
-          const page2Items = await performFetch(2);
-          if (currentSeed === feedSeedRef.current) {
-            const uniquePage2 = page2Items.filter(
-              (m) =>
-                m &&
-                m.id &&
-                !globalShownRef.current.has(m.id.toString()) &&
-                !deduped.some((d) => d.id === m.id)
+        try {
+          const targetRow = rows.find((r) => r.title === title);
+          let config = targetRow?.config;
+          if (!config) {
+            config = ROW_FETCH_CONFIG[title];
+          }
+
+          const performFetch = async (page: number) => {
+            const pageStr = page.toString();
+            if (config) {
+              if (config.type === "recommendations" && config.targetId) {
+                return await getRecommendations(
+                  config.targetId,
+                  config.mediaType as any,
+                  pageStr,
+                ).catch(() => []);
+              } else if (config.mediaType === "all") {
+                return await getTrending("all", pageStr).catch(() => []);
+              } else {
+                return await discoverMedia(config.mediaType, {
+                  ...config.discoverParams,
+                  page: pageStr,
+                }).catch(() => []);
+              }
+            } else {
+              // Special fallback row builders if config is missing (e.g. custom queries)
+              if (title === "Daily Declassified Discoveries") {
+                return await discoverMedia("movie", {
+                  "vote_average.gte": "7.0",
+                  sort_by: "popularity.desc",
+                  page: pageStr,
+                }).catch(() => []);
+              } else if (title === "Weekend Blockbuster Curation") {
+                return await discoverMedia("movie", {
+                  with_genres: "28,878,53",
+                  sort_by: "popularity.desc",
+                  page: pageStr,
+                }).catch(() => []);
+              } else if (title === "Weekday Deep-Dive Series") {
+                return await discoverMedia("movie", {
+                  with_genres: "99,18",
+                  sort_by: "popularity.desc",
+                  page: pageStr,
+                }).catch(() => []);
+              } else if (title === "Under the Radar Missions") {
+                return await discoverMedia("movie", {
+                  "vote_average.gte": "7.5",
+                  "vote_count.lte": "1000",
+                  sort_by: "popularity.desc",
+                  page: pageStr,
+                }).catch(() => []);
+              } else if (title === "Popular Near You") {
+                return await discoverMedia("movie", {
+                  sort_by: "popularity.desc",
+                  page: pageStr,
+                }).catch(() => []);
+              }
+            }
+            return [];
+          };
+
+          let fetchedItems = await performFetch(1);
+          if (config && config.type === "recommendations") {
+            fetchedItems = rotateItems(fetchedItems, currentSeed);
+          }
+
+          // If the seed has changed, discard the results (stale refresh)
+          if (currentSeed !== feedSeedRef.current) {
+            return;
+          }
+
+          let deduped = fetchedItems.filter(
+            (m) => m && m.id && !globalShownRef.current.has(m.id.toString()),
+          );
+
+          // Self-healing pagination: If we have less than 12 unique items after deduplication (due to overlaps),
+          // fetch Page 2 to fill the row with fresh, unique titles instead of repeating duplicates.
+          if (
+            deduped.length < 12 &&
+            fetchedItems.length > 0 &&
+            (!config || config.type !== "recommendations")
+          ) {
+            const page2Items = await performFetch(2);
+            if (currentSeed === feedSeedRef.current) {
+              const uniquePage2 = page2Items.filter(
+                (m) =>
+                  m &&
+                  m.id &&
+                  !globalShownRef.current.has(m.id.toString()) &&
+                  !deduped.some((d) => d.id === m.id),
+              );
+              deduped = [...deduped, ...uniquePage2];
+            }
+          }
+
+          let finalItems = deduped.slice(0, 20);
+
+          if (config && config.type === "recommendations") {
+            // If recommendation items are <= 5, do not show the row (items = [])
+            if (finalItems.length <= 5) {
+              finalItems = [];
+            }
+          } else {
+            // If other rows are STILL too sparse, fill them back up as a last resort
+            if (finalItems.length < 10 && fetchedItems.length > 0) {
+              const extras = fetchedItems
+                .filter(
+                  (m) => m && m.id && !finalItems.some((f) => f.id === m.id),
+                )
+                .slice(0, 20 - finalItems.length);
+              finalItems.push(...extras);
+            }
+          }
+
+          // Add to globalShownRef
+          finalItems.forEach((m) =>
+            globalShownRef.current.add(m.id.toString()),
+          );
+
+          // Add to global pool
+          updateGlobalPool(finalItems);
+
+          // Enrich items in background (non-blocking)
+          enrichMoviesWithMetadata(finalItems.slice(0, 10)).then((enriched) => {
+            if (currentSeed !== feedSeedRef.current) return;
+            setRows((prev) =>
+              prev.map((r) =>
+                r.title === title
+                  ? {
+                      ...r,
+                      items: [...enriched, ...finalItems.slice(10)],
+                    }
+                  : r,
+              ),
             );
-            deduped = [...deduped, ...uniquePage2];
-          }
-        }
+          });
 
-        let finalItems = deduped.slice(0, 20);
-
-        if (config && config.type === "recommendations") {
-          // If recommendation items are <= 5, do not show the row (items = [])
-          if (finalItems.length <= 5) {
-            finalItems = [];
-          }
-        } else {
-          // If other rows are STILL too sparse, fill them back up as a last resort
-          if (finalItems.length < 10 && fetchedItems.length > 0) {
-            const extras = fetchedItems
-              .filter((m) => m && m.id && !finalItems.some((f) => f.id === m.id))
-              .slice(0, 20 - finalItems.length);
-            finalItems.push(...extras);
-          }
-        }
-
-        // Add to globalShownRef
-        finalItems.forEach((m) => globalShownRef.current.add(m.id.toString()));
-
-        // Add to global pool
-        updateGlobalPool(finalItems);
-
-        // Enrich items in background (non-blocking)
-        enrichMoviesWithMetadata(finalItems.slice(0, 10)).then((enriched) => {
-          if (currentSeed !== feedSeedRef.current) return;
+          // Set row state with fetched items
           setRows((prev) =>
             prev.map((r) =>
               r.title === title
                 ? {
                     ...r,
-                    items: [...enriched, ...finalItems.slice(10)],
+                    items: finalItems,
+                    isLoading: false,
+                    hasLoaded: true,
                   }
-                : r
-            )
+                : r,
+            ),
           );
-        });
+        } catch (err) {
+          console.error(`Failed to load row ${title}:`, err);
+          if (currentSeed !== feedSeedRef.current) return;
+          setRows((prev) =>
+            prev.map((r) =>
+              r.title === title
+                ? { ...r, isLoading: false, hasLoaded: true }
+                : r,
+            ),
+          );
+        } finally {
+          // Complete the fetch and process queue
+          activeRowFetchesRef.current -= 1;
 
-        // Set row state with fetched items
-        setRows((prev) =>
-          prev.map((r) =>
-            r.title === title
-              ? {
-                  ...r,
-                  items: finalItems,
-                  isLoading: false,
-                  hasLoaded: true,
-                }
-              : r
-          )
-        );
-      } catch (err) {
-        console.error(`Failed to load row ${title}:`, err);
-        if (currentSeed !== feedSeedRef.current) return;
-        setRows((prev) =>
-          prev.map((r) =>
-            r.title === title
-              ? { ...r, isLoading: false, hasLoaded: true }
-              : r
-          )
-        );
-      } finally {
-        // Complete the fetch and process queue
-        activeRowFetchesRef.current -= 1;
-        
-        // Dequeue next request if any (only if seed hasn't changed)
-        if (currentSeed === feedSeedRef.current && pendingRowFetchQueueRef.current.length > 0) {
-          const nextRowTitle = pendingRowFetchQueueRef.current.shift();
-          if (nextRowTitle) {
-            // Run next request
-            activeRowFetchesRef.current += 1;
-            executeFetch(nextRowTitle);
+          // Dequeue next request if any (only if seed hasn't changed)
+          if (
+            currentSeed === feedSeedRef.current &&
+            pendingRowFetchQueueRef.current.length > 0
+          ) {
+            const nextRowTitle = pendingRowFetchQueueRef.current.shift();
+            if (nextRowTitle) {
+              // Run next request
+              activeRowFetchesRef.current += 1;
+              executeFetch(nextRowTitle);
+            }
           }
         }
-      }
-    };
+      };
 
-    executeFetch(rowTitle);
-  }, [rows, discoverMedia, getRecommendations, getTrending, updateGlobalPool]);
+      executeFetch(rowTitle);
+    },
+    [rows, discoverMedia, getRecommendations, getTrending, updateGlobalPool],
+  );
 
   useEffect(() => {
     setVisibleCount(12);
@@ -1932,10 +2039,12 @@ export function useAppState() {
       case "Library": {
         const myListCompositeSet = new Set(
           myList.map((item) => {
-            const id = typeof item === "object" && item !== null ? item.id : item;
-            const type = typeof item === "object" && item !== null ? item.type : "movie";
+            const id =
+              typeof item === "object" && item !== null ? item.id : item;
+            const type =
+              typeof item === "object" && item !== null ? item.type : "movie";
             return `${type || "movie"}_${id}`;
-          })
+          }),
         );
         const histCompositeSet = new Set(history.map(historyId));
         return allMovies.filter(
@@ -1947,13 +2056,15 @@ export function useAppState() {
       case "My Secure Records": {
         const myListCompositeSet = new Set(
           myList.map((item) => {
-            const id = typeof item === "object" && item !== null ? item.id : item;
-            const type = typeof item === "object" && item !== null ? item.type : "movie";
+            const id =
+              typeof item === "object" && item !== null ? item.id : item;
+            const type =
+              typeof item === "object" && item !== null ? item.type : "movie";
             return `${type || "movie"}_${id}`;
-          })
+          }),
         );
         return allMovies.filter((m) =>
-          myListCompositeSet.has(`${m.type || "movie"}_${m.id}`)
+          myListCompositeSet.has(`${m.type || "movie"}_${m.id}`),
         );
       }
       case "Watch It Again": {
@@ -2110,15 +2221,19 @@ export function useAppState() {
 
     setMyList((prev) => {
       const isAlreadyIn = prev.some((item) => {
-        const itemId = typeof item === "object" && item !== null ? item.id : item;
-        const itemType = typeof item === "object" && item !== null ? item.type : "movie";
+        const itemId =
+          typeof item === "object" && item !== null ? item.id : item;
+        const itemType =
+          typeof item === "object" && item !== null ? item.type : "movie";
         return itemId.toString() === id && itemType === mediaType;
       });
 
       if (isAlreadyIn) {
         return prev.filter((item) => {
-          const itemId = typeof item === "object" && item !== null ? item.id : item;
-          const itemType = typeof item === "object" && item !== null ? item.type : "movie";
+          const itemId =
+            typeof item === "object" && item !== null ? item.id : item;
+          const itemType =
+            typeof item === "object" && item !== null ? item.type : "movie";
           return !(itemId.toString() === id && itemType === mediaType);
         });
       } else {
