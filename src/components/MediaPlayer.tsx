@@ -3427,18 +3427,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     episode: episode ?? 1,
                   })
                 }
-                className={`w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1.5 transition-all text-xs font-bold border border-white/10 ${sourceSelect ? "bg-white text-black" : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10"}`}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${sourceSelect ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
+                title="Sources"
               >
-                <Tv size={14} />
-                <span className="hidden sm:inline">SOURCES</span>
+                <Tv size={16} />
               </button>
               {movie.type === "tv" && (
                 <button
                   onClick={() => setShowEpisodeDrawer(true)}
-                  className={`w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1.5 transition-all text-xs font-bold border border-white/10 ${showEpisodeDrawer ? "bg-white text-black" : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10"}`}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showEpisodeDrawer ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
+                  title="Episodes"
                 >
-                  <List size={14} />
-                  <span className="hidden sm:inline">EPISODES</span>
+                  <List size={16} />
                 </button>
               )}
               {!isEmbed && (
