@@ -29,6 +29,7 @@ import { useSubtitleManager } from "../hooks/useSubtitleManager";
 import { SubtitleOverlay } from "./SubtitleOverlay";
 
 import { API_BASE_URL } from "../config";
+import { handleClearLogoError } from "../utils/helpers";
 const API = API_BASE_URL;
 
 interface MediaPlayerProps {
@@ -231,6 +232,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         : undefined;
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [movie?.id, season, episode]);
   const {
     prefs,
     updatePreference,
@@ -2711,13 +2717,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             }}
           />
           <div className="relative flex flex-col items-center gap-8">
-            {movie.clearLogo ? (
+            {movie.clearLogo && !logoFailed ? (
               <img
                 src={movie.clearLogo}
                 alt={movie.title}
                 height="112"
                 className="h-20 md:h-28 w-auto object-contain drop-shadow-2xl animate-pulse"
                 referrerPolicy="no-referrer"
+                onError={() => setLogoFailed(true)}
               />
             ) : (
               <h1 className="text-3xl md:text-5xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl">
@@ -2906,13 +2913,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       {isBuffering && !loading && !error && (
         <div className="absolute inset-0 flex items-center justify-center z-[18] pointer-events-none bg-black/20 backdrop-blur-sm transition-all duration-300">
           <div className="flex flex-col items-center gap-4 pointer-events-none">
-            {movie.clearLogo ? (
+            {movie.clearLogo && !logoFailed ? (
               <img
                 src={movie.clearLogo}
                 alt="Loading..."
                 height="96"
                 className="h-16 md:h-24 w-auto object-contain drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
                 referrerPolicy="no-referrer"
+                onError={() => setLogoFailed(true)}
               />
             ) : (
               <h1 className="text-xl md:text-3xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl select-none">

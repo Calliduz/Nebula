@@ -1,7 +1,11 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Play, Plus, Info, Sparkles } from "lucide-react";
-import { handleImageError } from "../utils/helpers";
+import {
+  handleImageError,
+  handleBackdropError,
+  handleClearLogoError,
+} from "../utils/helpers";
 
 interface HeroProps {
   currentHeroIndex: number;
@@ -26,6 +30,11 @@ export const Hero: React.FC<HeroProps> = ({
 }) => {
   const [isFocusing, setIsFocusing] = React.useState<number | null>(null);
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
+  const [logoFailed, setLogoFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setLogoFailed(false);
+  }, [currentHeroIndex]);
 
   if (!featuredMovies || featuredMovies.length === 0) return <HeroSkeleton />;
 
@@ -83,7 +92,7 @@ export const Hero: React.FC<HeroProps> = ({
             alt={activeHero.title}
             className="hidden md:block w-full h-full object-cover"
             referrerPolicy="no-referrer"
-            onError={handleImageError}
+            onError={handleBackdropError}
           />
           {/* Mobile Blurred Background */}
           <img
@@ -95,7 +104,7 @@ export const Hero: React.FC<HeroProps> = ({
             alt={activeHero.title}
             className="block md:hidden absolute inset-0 w-full h-full object-cover opacity-20 blur-2xl scale-110"
             referrerPolicy="no-referrer"
-            onError={handleImageError}
+            onError={handleBackdropError}
           />
           {/* Mobile Portrait Poster Image */}
           <div className="absolute inset-0 md:hidden flex items-start justify-center pt-20 px-12 pb-[14rem] z-0">
@@ -109,6 +118,7 @@ export const Hero: React.FC<HeroProps> = ({
               className="w-full h-full object-cover rounded-xl shadow-2xl border border-white/10"
               referrerPolicy="no-referrer"
               onError={handleImageError}
+              // poster-style: shows no-image.svg placeholder
             />
             {/* Mobile Branding Text */}
             <div className="absolute top-6 left-0 right-0 z-40 flex justify-center md:hidden pointer-events-none">
@@ -138,12 +148,13 @@ export const Hero: React.FC<HeroProps> = ({
             transition={{ delay: 0.2, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="flex flex-col items-center md:items-start text-center md:text-left"
           >
-            {activeHero.clearLogo ? (
+            {activeHero.clearLogo && !logoFailed ? (
               <img
                 src={activeHero.clearLogo}
                 alt={activeHero.title}
                 height="176"
                 className="hidden md:block w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] h-32 md:h-44 object-contain object-left mb-8 md:mb-10 drop-shadow-2xl"
+                onError={() => setLogoFailed(true)}
               />
             ) : (
               <h1

@@ -1,10 +1,35 @@
 import React from "react";
 
+/**
+ * For poster/card/thumbnail images — shows a branded "No Image Available" placeholder.
+ */
 export const handleImageError = (
   e: React.SyntheticEvent<HTMLImageElement, Event>,
 ) => {
-  e.currentTarget.src =
-    "https://images.unsplash.com/photo-1618365908648-e71bd5716cba?auto=format&fit=crop&w=400&q=80"; // Generic space/fallback image
+  const target = "/no-image.svg";
+  // Guard against infinite error loop if the fallback itself fails
+  if (e.currentTarget.src.endsWith(target)) return;
+  e.currentTarget.src = target;
+};
+
+/**
+ * For clearlogo transparent PNGs — hides the element so the text-title fallback
+ * (already conditionally rendered alongside clearLogo in Hero, MovieDetails, etc.) shows instead.
+ */
+export const handleClearLogoError = (
+  e: React.SyntheticEvent<HTMLImageElement, Event>,
+) => {
+  e.currentTarget.style.display = "none";
+};
+
+/**
+ * For full-bleed backdrop/background images — hides them silently.
+ * A "no image" block tiling across a hero background would look broken.
+ */
+export const handleBackdropError = (
+  e: React.SyntheticEvent<HTMLImageElement, Event>,
+) => {
+  e.currentTarget.style.display = "none";
 };
 
 export const triggerPopunder = () => {

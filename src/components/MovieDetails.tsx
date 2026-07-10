@@ -33,7 +33,11 @@ import {
   Film,
 } from "lucide-react";
 import { API_BASE_URL } from "../config";
-import { handleImageError, triggerPopunder } from "../utils/helpers";
+import {
+  handleImageError,
+  handleClearLogoError,
+  triggerPopunder,
+} from "../utils/helpers";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   getMediaDetails,
@@ -1079,6 +1083,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [movie, setMovie] = useState<any>(initialMovie);
+  const [logoFailed, setLogoFailed] = useState(false);
   const [activeTab, setActiveTab] = useState(
     initialMovie?.type === "tv" ? "Episodes" : "Overview",
   );
@@ -1227,6 +1232,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     setBackupTorrentsLoading({});
     setBackupDirectDownloads({});
     setBackupDirectLoading({});
+    setLogoFailed(false);
   }, [movie?.id]);
 
   useEffect(() => {
@@ -1542,7 +1548,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       ? ["Episodes", "Downloads", "Overview", "Trailers & Extras"]
       : ["Overview", "Downloads", "Trailers & Extras"];
 
-  const logoTitle = movie.clearLogo ? (
+  const logoTitle = (movie.clearLogo && !logoFailed) ? (
     <div className="mb-8 lg:mb-12">
       <img
         src={movie.clearLogo}
@@ -1550,7 +1556,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         height="160"
         className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
         referrerPolicy="no-referrer"
-        onError={handleImageError}
+        onError={() => setLogoFailed(true)}
       />
     </div>
   ) : (
@@ -1623,18 +1629,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
               <div className="flex flex-nowrap items-center gap-2 sm:gap-6 mb-8 text-[10px] sm:text-sm font-bold tracking-widest text-dim uppercase overflow-x-auto no-scrollbar select-none">
                 <span className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <Star
-                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-nebula-cyan fill-nebula-cyan"
-                  />{" "}
+                  <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-nebula-cyan fill-nebula-cyan" />{" "}
                   {movie.imdb || movie.rating}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
                 <span className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {movie.duration || "124m"}
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
+                  {movie.duration || "124m"}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
                 <span className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {movie.year}
+                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
+                  {movie.year}
                 </span>
 
                 {/* Quality Badge */}
@@ -2002,7 +2008,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
               </div>
             </motion.div>
 
-            <div id="nebula-tabs" className="border-b border-white/10 mb-10 flex gap-6 sm:gap-12 overflow-x-auto custom-scrollbar">
+            <div
+              id="nebula-tabs"
+              className="border-b border-white/10 mb-10 flex gap-6 sm:gap-12 overflow-x-auto custom-scrollbar"
+            >
               {TABS.map((tab) => (
                 <button
                   key={tab}
