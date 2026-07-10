@@ -1133,6 +1133,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const [showRelatedRightArrow, setShowRelatedRightArrow] = useState(true);
   const [isRelatedHovered, setIsRelatedHovered] = useState(false);
 
+  // Trailer quick-play modal
+  const [trailerModalKey, setTrailerModalKey] = useState<string | null>(null);
+
   const updateRelatedArrows = () => {
     if (relatedRowRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = relatedRowRef.current;
@@ -1898,6 +1901,21 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   {isInList ? <X size={20} /> : <Plus size={20} />}{" "}
                   <span>{isInList ? "Remove" : "Add to List"}</span>
                 </motion.button>
+
+                {/* Watch Trailer quick-action – only shown when trailers are loaded */}
+                {deepDetails.trailers.length > 0 && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() =>
+                      setTrailerModalKey(deepDetails.trailers[0].key)
+                    }
+                    className="px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border border-white/20 bg-white/5 text-white hover:border-nebula-cyan/60 hover:text-nebula-cyan hover:bg-nebula-cyan/10 flex-1 sm:flex-none"
+                  >
+                    <Film size={18} />
+                    <span className="hidden xs:inline">Trailer</span>
+                  </motion.button>
+                )}
               </div>
 
               {/* Related Titles inline row */}
@@ -1984,7 +2002,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
               </div>
             </motion.div>
 
-            <div className="border-b border-white/10 mb-10 flex gap-6 sm:gap-12 overflow-x-auto custom-scrollbar">
+            <div id="nebula-tabs" className="border-b border-white/10 mb-10 flex gap-6 sm:gap-12 overflow-x-auto custom-scrollbar">
               {TABS.map((tab) => (
                 <button
                   key={tab}
@@ -3371,6 +3389,89 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
             onClose={() => setShowSourceModal(false)}
             onSelect={handleSelectSource}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── Trailer Quick-Play Modal ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {trailerModalKey && (
+          <motion.div
+            key="trailer-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4 sm:p-8"
+            onClick={() => setTrailerModalKey(null)}
+          >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-md" />
+
+            {/* Panel */}
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 24 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 24 }}
+              transition={{ type: "spring", stiffness: 320, damping: 30 }}
+              className="relative w-full max-w-4xl rounded-2xl overflow-hidden border border-white/10 shadow-[0_40px_120px_rgba(0,0,0,0.9)] bg-obsidian"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header bar */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-white/5">
+                <div className="flex items-center gap-2.5">
+                  <Film size={15} className="text-nebula-cyan" />
+                  <span className="text-xs font-bold text-white/80 uppercase tracking-widest">
+                    Official Trailer
+                  </span>
+                  <span className="text-white/20 text-xs">·</span>
+                  <span className="text-xs text-white/40 truncate max-w-[180px] sm:max-w-xs">
+                    {movie.title}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setTrailerModalKey(null)}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* YouTube embed – autoplay, muted initially then unmuted */}
+              <div className="relative aspect-video bg-black">
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${trailerModalKey}?autoplay=1&rel=0&modestbranding=1&color=white`}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                  title={`${movie.title} – Trailer`}
+                />
+              </div>
+
+              {/* Footer: link to all trailers tab */}
+              {deepDetails.trailers.length > 1 && (
+                <div className="px-5 py-3 bg-white/5 border-t border-white/10 flex items-center justify-between">
+                  <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">
+                    {deepDetails.trailers.length} trailers available
+                  </span>
+                  <button
+                    onClick={() => {
+                      setTrailerModalKey(null);
+                      setActiveTab("Trailers & Extras");
+                      setTimeout(() => {
+                        document
+                          .getElementById("nebula-tabs")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }, 100);
+                    }}
+                    className="text-[10px] font-bold text-nebula-cyan hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1.5"
+                  >
+                    View All Trailers
+                    <ChevronRight size={12} />
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
