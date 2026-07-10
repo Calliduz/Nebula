@@ -224,7 +224,10 @@ export default function App() {
                         <div className="h-10 w-48 bg-white/5 rounded-lg mb-12 shimmer-bg" />
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
                           {[...Array(18)].map((_, i) => (
-                            <MovieSkeleton key={`cat-fallback-sk-${i}`} isGrid={true} />
+                            <MovieSkeleton
+                              key={`cat-fallback-sk-${i}`}
+                              isGrid={true}
+                            />
                           ))}
                         </div>
                       </div>

@@ -4,7 +4,10 @@ import { X } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 
 export const DiscordInvite = () => {
-  const [dismissed, setDismissed] = useLocalStorage("nebula-discord-invite-dismissed", false);
+  const [dismissed, setDismissed] = useLocalStorage(
+    "nebula-discord-invite-dismissed",
+    false,
+  );
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -71,7 +74,8 @@ export const DiscordInvite = () => {
 
           <div className="relative z-10 flex flex-col gap-4">
             <p className="text-white/60 text-xs font-sans leading-relaxed">
-              Connect with fellow members, get the latest streaming updates, request features, and get support!
+              Connect with fellow members, get the latest streaming updates,
+              request features, and get support!
             </p>
 
             <a
