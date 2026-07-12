@@ -102,10 +102,21 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = memo(
       prefs.bgOpacity === 0
         ? "transparent"
         : hexToRgba(prefs.bgColor, prefs.bgOpacity);
-    const textShadowStyle =
-      prefs.outlineWidth === "0px"
-        ? "1px 1px 3px rgba(0, 0, 0, 0.8)" // Netflix style soft shadow fallback
-        : `0 2px 4px rgba(0, 0, 0, 0.8)`; // Clean, soft drop shadow instead of heavy offset shadow to avoid WebKit double-rendering bugs
+
+    // Build text shadow based on outline width for different visual styles
+    const outlineWidthPx = parseInt(prefs.outlineWidth) || 0;
+    let textShadowStyle: string;
+    if (outlineWidthPx === 0) {
+      // No outline: soft drop shadow for readability
+      textShadowStyle = "1px 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)";
+    } else if (outlineWidthPx >= 3) {
+      // Heavy outline (anime style): multi-directional crisp shadow for bold outlined look
+      const c = prefs.outlineColor;
+      textShadowStyle = `0 0 3px ${c}, 0 0 5px rgba(0,0,0,0.9), 1px 1px 2px ${c}, -1px -1px 2px ${c}, 1px -1px 2px ${c}, -1px 1px 2px ${c}`;
+    } else {
+      // Medium outline (netflix style): clean drop shadow
+      textShadowStyle = `0 2px 4px rgba(0, 0, 0, 0.8)`;
+    }
 
     const textStrokeStyle =
       prefs.outlineWidth !== "0px"
@@ -123,7 +134,9 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = memo(
               key={cue.id}
               className="inline-block px-4 py-1.5 rounded-lg whitespace-pre-line text-center"
               style={{
-                fontFamily: "Arial, Helvetica, sans-serif",
+                fontFamily: prefs.fontFamily || "Arial, Helvetica, sans-serif",
+                fontWeight: (prefs.fontWeight || "normal") as any,
+                fontStyle: (prefs.fontStyle || "normal") as any,
                 letterSpacing: "0.5px",
                 color: prefs.color,
                 fontSize: `clamp(calc(12px * ${prefs.size}), calc(2.8cqi * ${prefs.size}), calc(30px * ${prefs.size}))`,

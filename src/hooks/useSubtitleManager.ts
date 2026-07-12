@@ -8,6 +8,9 @@ export interface SubtitlePreferences {
   bgOpacity: number;
   outlineWidth: string;
   outlineColor: string;
+  fontWeight: string;
+  fontStyle: string;
+  fontFamily: string;
   useNativeSubtitles: boolean;
 }
 
@@ -24,6 +27,9 @@ export const DEFAULT_PREFERENCES: SubtitlePreferences = {
   bgOpacity: 0.0,
   outlineWidth: "2px",
   outlineColor: "#000000",
+  fontWeight: "bold",
+  fontStyle: "normal",
+  fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
   useNativeSubtitles: false,
 };
 
@@ -36,8 +42,11 @@ const PRESETS: Record<
     color: "#ffffff",
     bgColor: "#000000",
     bgOpacity: 0.0,
-    outlineWidth: "0px",
+    outlineWidth: "1px",
     outlineColor: "#000000",
+    fontWeight: "normal",
+    fontStyle: "normal",
+    fontFamily: "Arial, Helvetica, sans-serif",
   },
   netflix: {
     size: 0.75,
@@ -46,14 +55,20 @@ const PRESETS: Record<
     bgOpacity: 0.0,
     outlineWidth: "2px",
     outlineColor: "#000000",
+    fontWeight: "bold",
+    fontStyle: "normal",
+    fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
   },
   anime: {
     size: 0.94,
     color: "#ffffff",
     bgColor: "#000000",
     bgOpacity: 0.0,
-    outlineWidth: "2px",
+    outlineWidth: "3px",
     outlineColor: "#000000",
+    fontWeight: "800",
+    fontStyle: "normal",
+    fontFamily: "'Trebuchet MS', 'Segoe UI', Verdana, sans-serif",
   },
   minimal: {
     size: 0.75,
@@ -62,6 +77,9 @@ const PRESETS: Record<
     bgOpacity: 0.0,
     outlineWidth: "0px",
     outlineColor: "#000000",
+    fontWeight: "300",
+    fontStyle: "normal",
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
   },
 };
 
@@ -92,9 +110,18 @@ export function useSubtitleManager(streamUrl: string | null) {
           typeof parsed.bgOpacity === "number" &&
           typeof parsed.outlineWidth === "string" &&
           typeof parsed.outlineColor === "string" &&
-          typeof parsed.useNativeSubtitles === "boolean"
+          typeof parsed.useNativeSubtitles === "boolean" &&
+          (typeof parsed.fontWeight === "undefined" || typeof parsed.fontWeight === "string") &&
+          (typeof parsed.fontStyle === "undefined" || typeof parsed.fontStyle === "string") &&
+          (typeof parsed.fontFamily === "undefined" || typeof parsed.fontFamily === "string")
         ) {
-          return parsed;
+          return {
+            ...DEFAULT_PREFERENCES,
+            ...parsed,
+            fontWeight: parsed.fontWeight ?? DEFAULT_PREFERENCES.fontWeight,
+            fontStyle: parsed.fontStyle ?? DEFAULT_PREFERENCES.fontStyle,
+            fontFamily: parsed.fontFamily ?? DEFAULT_PREFERENCES.fontFamily,
+          };
         }
       }
     } catch (e) {

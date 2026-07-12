@@ -3986,6 +3986,88 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           </div>
                         </div>
 
+                        {/* Font Weight */}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                            Font Weight
+                          </span>
+                          <div className="grid grid-cols-4 gap-1 px-1">
+                            {[
+                              { label: "Light", value: "300" },
+                              { label: "Normal", value: "normal" },
+                              { label: "Bold", value: "bold" },
+                              { label: "X-Bold", value: "800" },
+                            ].map((fw) => (
+                              <button
+                                key={fw.value}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePreference("fontWeight", fw.value);
+                                }}
+                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                  prefs.fontWeight === fw.value
+                                    ? "text-black bg-white"
+                                    : "text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {fw.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Font Style */}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                            Font Style
+                          </span>
+                          <div className="grid grid-cols-2 gap-1 px-1">
+                            {[
+                              { label: "Normal", value: "normal" },
+                              { label: "Italic", value: "italic" },
+                            ].map((fs) => (
+                              <button
+                                key={fs.value}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePreference("fontStyle", fs.value);
+                                }}
+                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                  prefs.fontStyle === fs.value
+                                    ? "text-black bg-white"
+                                    : "text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {fs.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Font Family */}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                            Font Family
+                          </span>
+                          <div className="px-1">
+                            <select
+                              value={prefs.fontFamily}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                updatePreference("fontFamily", e.target.value);
+                              }}
+                              className="w-full bg-[#222]/80 border border-white/10 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-white/30 cursor-pointer"
+                            >
+                              <option value="Arial, Helvetica, sans-serif">Arial</option>
+                              <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+                              <option value="'Trebuchet MS', 'Segoe UI', Verdana, sans-serif">Trebuchet MS</option>
+                              <option value="'Inter', 'Segoe UI', system-ui, sans-serif">Inter</option>
+                              <option value="Georgia, 'Times New Roman', serif">Georgia (Serif)</option>
+                              <option value="'Courier New', Courier, monospace">Courier (Monospace)</option>
+                            </select>
+                          </div>
+                        </div>
+
                         {/* Accessibility Toggle */}
                         <div className="flex items-center justify-between border-t border-white/5 pt-2 px-1">
                           <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">
@@ -4799,6 +4881,106 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
+      {/* FilmU */}
+      <button
+        onClick={() => filmuSources.length > 0 && onSelect(filmuUrl)}
+        disabled={
+          filmuLoading || filmuSources.length === 0 || activeSource === "FilmU"
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          activeSource === "FilmU"
+            ? "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default"
+            : filmuLoading
+              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+              : filmuSources.length > 0
+                ? "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer"
+                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400">
+            {filmuLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Info size={14} />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                FilmU
+              </p>
+              {activeSource === "FilmU" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
+            <p className="text-[8px] text-white/40 uppercase">
+              {filmuLoading ? "Scanning..." : "Active"}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {filmuLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+              Running uplink check...
+            </span>
+          ) : filmuSources.length > 0 ? (
+            filmuSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7px] font-bold px-1 py-0.5 rounded border border-amber-500/20 text-amber-400/80 bg-amber-500/5 uppercase"
+              >
+                {s.name
+                  .replace(/^FilmU[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase">
+              {filmuError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* VidLink */}
+      <button
+        onClick={() => onSelect()}
+        disabled={activeSource === "VidLink"}
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
+          activeSource === "VidLink"
+            ? "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default"
+            : "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white/60">
+            <Search size={14} />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-black text-white uppercase tracking-tight">
+                VidLink
+              </p>
+              {activeSource === "VidLink" && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white text-obsidian uppercase tracking-wider font-sans">
+                  ACTIVE
+                </span>
+              )}
+            </div>
+            <p className="text-[8px] text-white/40 uppercase">Standard</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">
+            Auto-Failover
+          </span>
+        </div>
+      </button>
+
       {/* Videasy */}
       <button
         onClick={() => videasySources.length > 0 && onSelect(videasyUrl)}
@@ -4869,106 +5051,6 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase">
               {videasyError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* VidLink */}
-      <button
-        onClick={() => onSelect()}
-        disabled={activeSource === "VidLink"}
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "VidLink"
-            ? "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default"
-            : "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white/60">
-            <Search size={14} />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                VidLink
-              </p>
-              {activeSource === "VidLink" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white text-obsidian uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-            </div>
-            <p className="text-[8px] text-white/40 uppercase">Standard</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">
-            Auto-Failover
-          </span>
-        </div>
-      </button>
-
-      {/* FilmU */}
-      <button
-        onClick={() => filmuSources.length > 0 && onSelect(filmuUrl)}
-        disabled={
-          filmuLoading || filmuSources.length === 0 || activeSource === "FilmU"
-        }
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "FilmU"
-            ? "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default"
-            : filmuLoading
-              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-              : filmuSources.length > 0
-                ? "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400">
-            {filmuLoading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Info size={14} />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                FilmU
-              </p>
-              {activeSource === "FilmU" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-obsidian uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-            </div>
-            <p className="text-[8px] text-white/40 uppercase">
-              {filmuLoading ? "Scanning..." : "Active"}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {filmuLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
-              Running uplink check...
-            </span>
-          ) : filmuSources.length > 0 ? (
-            filmuSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7px] font-bold px-1 py-0.5 rounded border border-amber-500/20 text-amber-400/80 bg-amber-500/5 uppercase"
-              >
-                {s.name
-                  .replace(/^FilmU[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase">
-              {filmuError || "No mirrors"}
             </span>
           )}
         </div>
