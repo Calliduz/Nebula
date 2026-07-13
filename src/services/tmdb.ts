@@ -1,3 +1,5 @@
+import { fetchKinoCheckTrailers } from "./kinocheck";
+
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY || "PLACEHOLDER";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
@@ -852,16 +854,91 @@ export const getMediaDetails = async (
   try {
     const ttl =
       releaseYear && CURRENT_YEAR - releaseYear >= 2 ? TTL.LEGACY : TTL.DETAILS;
-    const data = await fetchFromTMDB(
-      `/${type}/${id}`,
-      { append_to_response: "videos,recommendations,credits" },
-      ttl,
-    );
+    const [data, kinoTrailers] = await Promise.all([
+      fetchFromTMDB(
+        `/${type}/${id}`,
+        { append_to_response: "videos,recommendations,credits" },
+        ttl,
+      ),
+      fetchKinoCheckTrailers(id, type),
+    ]);
+
+    // TMDB trailers normalised into a compatible shape: { key, name, type, source }
+    const tmdbRaw: any[] =
+      data.videos?.results.filter(
+        (v: any) => v.type === "Trailer" || v.type === "Teaser",
+      ) || [];
+
+    // Build the merged list: KinoCheck first (higher quality), then append any
+    // TMDB entries whose YouTube ID wasn't already covered by KinoCheck.
+    const kinoIds = new Set(kinoTrailers.map((t) => t.youtubeId));
+    const tmdbExtra = tmdbRaw
+      .filter((v: any) => !kinoIds.has(v.key))
+      .map((v: any) => ({
+        youtubeId: v.key as string,
+        title: v.name as string,
+        thumbnail: `https://img.youtube.com/vi/${v.key}/maxresdefault.jpg`,
+        category: v.type as string,
+        views: 0,
+        published: "",
+      }));
+
+    const mergedTrailers =
+      kinoTrailers.length > 0
+        ? [...kinoTrailers, ...tmdbExtra]
+        : // KinoCheck had nothing → use TMDB shape so the UI always receives the
+          // same interface
+          tmdbRaw.map((v: any) => ({
+            youtubeId: v.key as string,
+            title: v.name as string,
+            thumbnail: `https://img.youtube.com/vi/${v.key}/maxresdefault.jpg`,
+            category: v.type as string,
+            views: 0,
+            published: "",
+          }));
+
+    // Sort trailers to bubble the primary "Official Trailer" to index 0
+    const scoreTrailer = (t: any): number => {
+      const title = (t.title || "").toLowerCase();
+      const category = (t.category || "").toLowerCase();
+
+      let score = 0;
+
+      // Prioritize actual Trailers over Teasers, Promos, and Clips
+      if (category === "trailer") {
+        score += 100;
+      } else if (category === "teaser") {
+        score += 50;
+      }
+
+      // Strong priority for "Official Trailer" title keywords
+      if (title.includes("official trailer")) {
+        score += 1000;
+      } else if (title.includes("official teaser")) {
+        score += 400;
+      } else if (title.includes("trailer")) {
+        score += 200;
+      } else if (title.includes("teaser")) {
+        score += 100;
+      }
+
+      // Penalize promo clips, previews, and featurettes
+      if (
+        title.includes("promo") ||
+        title.includes("preview") ||
+        title.includes("clip") ||
+        title.includes("featurette")
+      ) {
+        score -= 300;
+      }
+
+      return score;
+    };
+
+    mergedTrailers.sort((a, b) => scoreTrailer(b) - scoreTrailer(a));
+
     return {
-      trailers:
-        data.videos?.results.filter(
-          (v: any) => v.type === "Trailer" || v.type === "Teaser",
-        ) || [],
+      trailers: mergedTrailers,
       similar: (data.recommendations?.results || [])
         .filter((m: any) => m.id.toString() !== id.toString())
         .map((m: any) => normalizeMovie(m, type)),
@@ -878,6 +955,7 @@ export const getMediaDetails = async (
     return { trailers: [], similar: [], cast: [] };
   }
 };
+
 
 export const enrichMovies = async (
   normalized: NebulaMovie[],
