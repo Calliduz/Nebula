@@ -115,7 +115,7 @@ export const Hero: React.FC<HeroProps> = ({
                 activeHero.backdrop
               }
               alt={activeHero.title}
-              className="w-full h-full object-cover rounded-xl shadow-2xl border border-white/10"
+              className="h-full w-auto max-w-full aspect-[2/3] object-cover rounded-xl shadow-2xl border border-white/10"
               referrerPolicy="no-referrer"
               onError={handleImageError}
               // poster-style: shows no-image.svg placeholder
