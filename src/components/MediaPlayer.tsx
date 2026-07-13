@@ -992,7 +992,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
   }, [movie.id, season, episode, source, streamReloadKey]);
 
-  // ── TheIntroDB skip-segment fetch ─────────────────────────────────────────
+  // ── TheIntroDB skip-segment fetch with server-side caching ───────────────
   useEffect(() => {
     // Reset segments whenever the media changes
     setSkipSegments([]);
@@ -1002,30 +1002,84 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     dismissedSkipsRef.current = new Set();
 
     let cancelled = false;
-    let url = `https://api.theintrodb.org/v3/media?tmdb_id=${movie.id}`;
+
+    // 1. Build cache request URL
+    let cacheUrl = `${API}/api/introdb?tmdbId=${movie.id}&type=${movie.type}`;
     if (movie.type === "tv" && season !== undefined && episode !== undefined) {
-      url += `&season=${season}&episode=${episode}`;
+      cacheUrl += `&season=${season}&episode=${episode}`;
     }
 
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) return; // 404 = no data, silently ignore
-        return r.json();
+    // 2. Try fetching from the server cache first
+    fetch(cacheUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Cache miss or server error");
+        return res.json();
       })
       .then((data) => {
         if (cancelled || !data) return;
         const parsed = parseIntroDBResponse(data);
         setSkipSegments(parsed);
         skipSegmentsRef.current = parsed;
-        if (parsed.length > 0) {
-          console.log(
-            `[PLAYER] IntroDB: loaded ${parsed.length} skip segment(s)`,
-          );
-        }
+        console.log(
+          `[PLAYER] Server Cache: loaded ${parsed.length} skip segment(s)`,
+        );
       })
-      .catch((err) => {
-        // Silently swallow network errors — skip segments are non-critical
-        console.debug("[PLAYER] IntroDB fetch failed (non-critical):", err);
+      .catch(() => {
+        if (cancelled) return;
+
+        // 3. Fallback: Fetch directly from TheIntroDB API (client-side only to stay compliant)
+        let externalUrl = `https://api.theintrodb.org/v3/media?tmdb_id=${movie.id}`;
+        if (
+          movie.type === "tv" &&
+          season !== undefined &&
+          episode !== undefined
+        ) {
+          externalUrl += `&season=${season}&episode=${episode}`;
+        }
+
+        fetch(externalUrl)
+          .then((r) => {
+            if (!r.ok) return; // 404 = no data, silently ignore
+            return r.json();
+          })
+          .then((data) => {
+            if (cancelled || !data) return;
+            const parsed = parseIntroDBResponse(data);
+            setSkipSegments(parsed);
+            skipSegmentsRef.current = parsed;
+            if (parsed.length > 0) {
+              console.log(
+                `[PLAYER] IntroDB: loaded ${parsed.length} skip segment(s)`,
+              );
+
+              // 4. Save to our database in the background to build the cache
+              fetch(`${API}/api/introdb`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  tmdbId: movie.id.toString(),
+                  type: movie.type,
+                  season: season,
+                  episode: episode,
+                  intro: data.intro || [],
+                  recap: data.recap || [],
+                  credits: data.credits || [],
+                  preview: data.preview || [],
+                }),
+              }).catch((err) => {
+                console.warn(
+                  "[PLAYER] Failed to write to server skip segment cache:",
+                  err,
+                );
+              });
+            }
+          })
+          .catch((err) => {
+            console.debug(
+              "[PLAYER] IntroDB fetch failed (non-critical):",
+              err,
+            );
+          });
       });
 
     return () => {
