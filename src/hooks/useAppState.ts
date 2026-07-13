@@ -692,6 +692,7 @@ export function useAppState() {
   const [history, setHistory] = useLocalStorage<any[]>("nebula-history", []);
   const [visibleCount, setVisibleCount] = useState(18);
   const [dramaPage, setDramaPage] = useState(1);
+  const recentRandomizedIdsRef = useRef<string[]>([]);
   const [tvDetailsCache, setTvDetailsCache] = useState<Record<string, any>>({});
 
   // Data States
@@ -1202,8 +1203,9 @@ export function useAppState() {
     if (isLoading) setIsLoading(true);
     try {
       // 1. Fetch critical raw data in parallel
-      const [rawTrending, pinoyRes] = await Promise.all([
-        getTrending("all").catch(() => []),
+      const [rawTrendingPage1, rawTrendingPage2, pinoyRes] = await Promise.all([
+        getTrending("all", "1").catch(() => []),
+        getTrending("all", "2").catch(() => []),
         (async () => {
           try {
             const [mRes, tvRes] = await Promise.all([
@@ -1225,8 +1227,8 @@ export function useAppState() {
         })(),
       ]);
 
-      const trending = hardDedupe(rawTrending);
-      const pinoyDramas = hardDedupe(pinoyRes || []).slice(0, 20);
+      const trending = hardDedupe([...rawTrendingPage1, ...rawTrendingPage2]);
+      const pinoyDramas = hardDedupe(pinoyRes || []).slice(0, 24);
 
       // Fetch basic info for user history & watchlist items in parallel
       const historyItems = [...history].reverse().slice(0, 10);
@@ -2505,14 +2507,108 @@ export function useAppState() {
 
   const handleRandomize = () => {
     const pool = viewingCategory ? filteredMovies : allMovies;
-    const activeId = selectedMovie?.id?.toString() || params.id;
-    const candidates = activeId
-      ? pool.filter((m) => m.id.toString() !== activeId)
-      : pool;
-    const finalPool = candidates.length > 0 ? candidates : pool;
-    if (finalPool.length > 0) {
-      const random = finalPool[Math.floor(Math.random() * finalPool.length)];
+    const activeId = (selectedMovie?.id || params.id)?.toString();
+    
+    // Filter candidates (exclude active movie)
+    let candidates = pool;
+    if (activeId) {
+      candidates = pool.filter((m) => m.id.toString() !== activeId);
+    }
+    if (candidates.length === 0) {
+      candidates = pool;
+    }
+    if (candidates.length === 0) return;
+
+    // Calculate weights for candidates
+    const activeMovie = selectedMovie || (activeId ? allMovies.find(m => m.id.toString() === activeId) : null);
+    const activeGenres = activeMovie?.genre ? activeMovie.genre.split(",").map(g => g.trim().toLowerCase()) : [];
+
+    const historyIds = new Set(history.map(h => {
+      if (h && typeof h === "object") return h.id?.toString();
+      if (typeof h === "string" && h.includes("_")) return h.split("_")[1];
+      return h?.toString();
+    }).filter(Boolean));
+
+    const myListIds = new Set(myList.map(item => {
+      if (item && typeof item === "object") return item.id?.toString();
+      if (typeof item === "string" && item.includes("_")) return item.split("_")[1];
+      return item?.toString();
+    }).filter(Boolean));
+
+    const recentIds = new Set(recentRandomizedIdsRef.current);
+
+    const weightedCandidates = candidates.map((m) => {
+      let weight = 1.0;
+
+      // 1. Avoid recently randomized items
+      if (recentIds.has(m.id.toString())) {
+        weight *= 0.05; // heavily de-prioritize
+      }
+
+      // 2. Genre overlap with active movie
+      if (activeGenres.length > 0 && m.genre) {
+        const itemGenres = m.genre.split(",").map(g => g.trim().toLowerCase());
+        const overlap = itemGenres.filter(g => activeGenres.includes(g)).length;
+        if (overlap > 0) {
+          weight *= (1.0 + overlap * 0.4); // boost for matching genres
+        }
+      }
+
+      // 3. IMDb rating weight
+      const rating = m.imdb || 0;
+      if (rating >= 8.0) weight *= 1.6;
+      else if (rating >= 7.0) weight *= 1.3;
+      else if (rating > 0 && rating < 6.0) weight *= 0.6; // de-prioritize lower rated items
+
+      // 4. Watch history weight (user already watched it)
+      if (historyIds.has(m.id.toString())) {
+        weight *= 0.25; // lower chance to repeat
+      }
+
+      // 5. Watchlist weight (expressed interest)
+      if (myListIds.has(m.id.toString())) {
+        weight *= 1.4; // boost
+      }
+
+      // 6. Popularity boost (if exists)
+      const popularity = (m as any).popularity || 0;
+      if (popularity > 100) weight *= 1.2;
+
+      return { movie: m, weight };
+    });
+
+    // Weighted random selection
+    const totalWeight = weightedCandidates.reduce((sum, item) => sum + item.weight, 0);
+    if (totalWeight <= 0) {
+      // Fallback to simple random
+      const random = candidates[Math.floor(Math.random() * candidates.length)];
       wrappedSetSelectedMovie(random);
+      
+      // Update recent history
+      recentRandomizedIdsRef.current.push(random.id.toString());
+      if (recentRandomizedIdsRef.current.length > 15) {
+        recentRandomizedIdsRef.current.shift();
+      }
+      return;
+    }
+
+    let randomValue = Math.random() * totalWeight;
+    let selectedItem = weightedCandidates[0].movie;
+
+    for (const item of weightedCandidates) {
+      randomValue -= item.weight;
+      if (randomValue <= 0) {
+        selectedItem = item.movie;
+        break;
+      }
+    }
+
+    wrappedSetSelectedMovie(selectedItem);
+
+    // Update recent history
+    recentRandomizedIdsRef.current.push(selectedItem.id.toString());
+    if (recentRandomizedIdsRef.current.length > 15) {
+      recentRandomizedIdsRef.current.shift();
     }
   };
 

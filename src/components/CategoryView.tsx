@@ -61,6 +61,25 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   clearMyList,
   isLoading,
 }) => {
+  const [windowWidth, setWindowWidth] = React.useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
+
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const columns = React.useMemo(() => {
+    if (windowWidth >= 1536) return 9; // 2xl
+    if (windowWidth >= 1280) return 8; // xl
+    if (windowWidth >= 1024) return 6; // lg
+    if (windowWidth >= 768) return 5;  // md
+    if (windowWidth >= 640) return 4;  // sm
+    return 3;                          // mobile
+  }, [windowWidth]);
+
   React.useEffect(() => {
     if ((window as any).__isRestoringScroll) return;
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -70,7 +89,19 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
 
   // Helper to render grid with ads every 20 items
   const renderGridWithAds = () => {
-    const items = data.slice(0, visibleCount);
+    const rawItems = data.slice(0, visibleCount);
+    
+    // We only slice to a multiple of columns if we have more items to load in total.
+    // That means if we are not at the end of the collection (we can either load more or fetch more).
+    const hasMoreData = data.length > visibleCount || 
+      ["Dramas", "Trending Operations", "Movies", "TV Shows", "Trending Now"].includes(viewingCategory || "") ||
+      (viewingCategory ? !!ROW_FETCH_CONFIG[viewingCategory] : false);
+
+    const displayCount = (hasMoreData && rawItems.length >= columns)
+      ? Math.floor(rawItems.length / columns) * columns
+      : rawItems.length;
+
+    const items = rawItems.slice(0, displayCount);
     return items.map((item, i) => (
       <MovieCard
         key={`cat-grid-${viewingCategory}-${item.id}-${i}`}
@@ -333,7 +364,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         <>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
             {isLoading && data.length === 0
-              ? [...Array(18)].map((_, i) => (
+              ? [...Array(columns * 3)].map((_, i) => (
                   <MovieSkeleton key={`sk-cat-${i}`} isGrid={true} />
                 ))
               : renderGridWithAds()}
