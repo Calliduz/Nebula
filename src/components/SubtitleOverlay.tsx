@@ -108,7 +108,8 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = memo(
     let textShadowStyle: string;
     if (outlineWidthPx === 0) {
       // No outline: soft drop shadow for readability
-      textShadowStyle = "1px 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)";
+      textShadowStyle =
+        "1px 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)";
     } else if (outlineWidthPx >= 3) {
       // Heavy outline (anime style): multi-directional crisp shadow for bold outlined look
       const c = prefs.outlineColor;

@@ -4058,12 +4058,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                               }}
                               className="w-full bg-[#222]/80 border border-white/10 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-white/30 cursor-pointer"
                             >
-                              <option value="Arial, Helvetica, sans-serif">Arial</option>
-                              <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
-                              <option value="'Trebuchet MS', 'Segoe UI', Verdana, sans-serif">Trebuchet MS</option>
-                              <option value="'Inter', 'Segoe UI', system-ui, sans-serif">Inter</option>
-                              <option value="Georgia, 'Times New Roman', serif">Georgia (Serif)</option>
-                              <option value="'Courier New', Courier, monospace">Courier (Monospace)</option>
+                              <option value="Arial, Helvetica, sans-serif">
+                                Arial
+                              </option>
+                              <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">
+                                Helvetica Neue
+                              </option>
+                              <option value="'Trebuchet MS', 'Segoe UI', Verdana, sans-serif">
+                                Trebuchet MS
+                              </option>
+                              <option value="'Inter', 'Segoe UI', system-ui, sans-serif">
+                                Inter
+                              </option>
+                              <option value="Georgia, 'Times New Roman', serif">
+                                Georgia (Serif)
+                              </option>
+                              <option value="'Courier New', Courier, monospace">
+                                Courier (Monospace)
+                              </option>
                             </select>
                           </div>
                         </div>

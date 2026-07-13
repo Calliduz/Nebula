@@ -956,7 +956,6 @@ export const getMediaDetails = async (
   }
 };
 
-
 export const enrichMovies = async (
   normalized: NebulaMovie[],
   signal?: AbortSignal,

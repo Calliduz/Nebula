@@ -111,9 +111,12 @@ export function useSubtitleManager(streamUrl: string | null) {
           typeof parsed.outlineWidth === "string" &&
           typeof parsed.outlineColor === "string" &&
           typeof parsed.useNativeSubtitles === "boolean" &&
-          (typeof parsed.fontWeight === "undefined" || typeof parsed.fontWeight === "string") &&
-          (typeof parsed.fontStyle === "undefined" || typeof parsed.fontStyle === "string") &&
-          (typeof parsed.fontFamily === "undefined" || typeof parsed.fontFamily === "string")
+          (typeof parsed.fontWeight === "undefined" ||
+            typeof parsed.fontWeight === "string") &&
+          (typeof parsed.fontStyle === "undefined" ||
+            typeof parsed.fontStyle === "string") &&
+          (typeof parsed.fontFamily === "undefined" ||
+            typeof parsed.fontFamily === "string")
         ) {
           return {
             ...DEFAULT_PREFERENCES,

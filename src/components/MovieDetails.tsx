@@ -406,7 +406,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           <p className="text-[10px] sm:text-xs text-white/40 max-w-md mx-auto mt-3 text-center flex items-center justify-center gap-1.5 border border-white/5 bg-white/2 py-2 px-4 rounded-2xl select-none">
             <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shrink-0" />
             <span>
-              Click a provider to play with <b>auto-failover</b>, or click any <b>mirror/quality badge</b> directly to play it.
+              Click a provider to play with <b>auto-failover</b>, or click any{" "}
+              <b>mirror/quality badge</b> directly to play it.
             </span>
           </p>
         </div>
@@ -523,7 +524,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           }}
                           className={`text-[9.5px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${color}`}
                         >
-                          <Play size={8} fill="currentColor" className="shrink-0" />
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
                           {cleanMirrorName}
                         </button>
                       );
@@ -615,22 +620,29 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       // "Vidnest (1080p)" -> provider: "MovieBox", quality: "1080p"
                       let provider = "MovieBox";
                       let quality = src.quality || "Auto";
-                      
-                      const matchWithDash = src.name.match(/^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i);
+
+                      const matchWithDash = src.name.match(
+                        /^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i,
+                      );
                       if (matchWithDash) {
                         provider = matchWithDash[1].trim();
                         quality = matchWithDash[2].trim();
                       } else {
-                        const matchParen = src.name.match(/^Vidnest\s*\((.*?)\)$/i);
+                        const matchParen = src.name.match(
+                          /^Vidnest\s*\((.*?)\)$/i,
+                        );
                         if (matchParen) {
                           provider = "MovieBox";
                           quality = matchParen[1].trim();
                         }
                       }
-                      
+
                       const displayQuality = quality.toUpperCase();
-                      const displayName = displayQuality === "AUTO" ? provider.toUpperCase() : `${provider.toUpperCase()} (${displayQuality})`;
-                      
+                      const displayName =
+                        displayQuality === "AUTO"
+                          ? provider.toUpperCase()
+                          : `${provider.toUpperCase()} (${displayQuality})`;
+
                       return (
                         <button
                           key={src.name}
@@ -640,7 +652,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                             // Move clicked mirror to the front of the failover pipeline
                             const reordered = [
                               src,
-                              ...vidnestSources.filter((s) => s.name !== src.name),
+                              ...vidnestSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
                             ];
                             const selectedUrl = reordered
                               .map((s) =>
@@ -653,7 +667,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           }}
                           className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/65 hover:bg-emerald-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
-                          <Play size={8} fill="currentColor" className="shrink-0" />
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
                           {displayName}
                         </button>
                       );
@@ -759,7 +777,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                             // Move clicked mirror to the front of the failover pipeline
                             const reordered = [
                               src,
-                              ...vaplayerSources.filter((s) => s.name !== src.name),
+                              ...vaplayerSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
                             ];
                             const selectedUrl = reordered
                               .map((s) =>
@@ -772,7 +792,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           }}
                           className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 hover:border-cyan-500/65 hover:bg-cyan-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
-                          <Play size={8} fill="currentColor" className="shrink-0" />
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
                           {displayName}
                         </button>
                       );
@@ -920,7 +944,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               }}
                               className={`text-[9.5px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${chipClass}`}
                             >
-                              <Play size={8} fill="currentColor" className="shrink-0" />
+                              <Play
+                                size={8}
+                                fill="currentColor"
+                                className="shrink-0"
+                              />
                               {providerName}
                             </button>
                           );
@@ -1028,7 +1056,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                             // Move clicked mirror to the front of the failover pipeline
                             const reordered = [
                               src,
-                              ...vidlinkSources.filter((s) => s.name !== src.name),
+                              ...vidlinkSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
                             ];
                             const selectedUrl = reordered
                               .map((s) =>
@@ -1041,7 +1071,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           }}
                           className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 hover:border-white/30 hover:bg-white/10 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
-                          <Play size={8} fill="currentColor" className="shrink-0" />
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
                           {displayName}
                         </button>
                       );
@@ -1145,7 +1179,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                             // Move clicked mirror to the front of the failover pipeline
                             const reordered = [
                               src,
-                              ...videasySources.filter((s) => s.name !== src.name),
+                              ...videasySources.filter(
+                                (s) => s.name !== src.name,
+                              ),
                             ];
                             const selectedUrl = reordered
                               .map((s) =>
@@ -1165,7 +1201,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               className="w-3 h-2 object-cover rounded-sm shrink-0"
                             />
                           )}
-                          <Play size={8} fill="currentColor" className="shrink-0" />
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
                           {mirrorName}
                         </button>
                       );
@@ -1274,7 +1314,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   // Trailer quick-play modal
   const [trailerModalKey, setTrailerModalKey] = useState<string | null>(null);
   // Inline trailer playback in the Trailers & Extras tab
-  const [activeTrailerIndex, setActiveTrailerIndex] = useState<number | null>(null);
+  const [activeTrailerIndex, setActiveTrailerIndex] = useState<number | null>(
+    null,
+  );
 
   const updateRelatedArrows = () => {
     if (relatedRowRef.current) {
@@ -1683,22 +1725,23 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       ? ["Episodes", "Downloads", "Overview", "Trailers & Extras"]
       : ["Overview", "Downloads", "Trailers & Extras"];
 
-  const logoTitle = (movie.clearLogo && !logoFailed) ? (
-    <div className="mb-8 lg:mb-12 flex justify-center lg:justify-start">
-      <img
-        src={movie.clearLogo}
-        alt={movie.title}
-        height="160"
-        className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] mx-auto lg:mx-0"
-        referrerPolicy="no-referrer"
-        onError={() => setLogoFailed(true)}
-      />
-    </div>
-  ) : (
-    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight mb-8 uppercase leading-[0.9] break-words max-w-2xl drop-shadow-2xl text-center lg:text-left mx-auto lg:mx-0">
-      {movie.title}
-    </h1>
-  );
+  const logoTitle =
+    movie.clearLogo && !logoFailed ? (
+      <div className="mb-8 lg:mb-12 flex justify-center lg:justify-start">
+        <img
+          src={movie.clearLogo}
+          alt={movie.title}
+          height="160"
+          className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] mx-auto lg:mx-0"
+          referrerPolicy="no-referrer"
+          onError={() => setLogoFailed(true)}
+        />
+      </div>
+    ) : (
+      <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight mb-8 uppercase leading-[0.9] break-words max-w-2xl drop-shadow-2xl text-center lg:text-left mx-auto lg:mx-0">
+        {movie.title}
+      </h1>
+    );
 
   return (
     <motion.div
@@ -1832,7 +1875,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                 <div className="flex flex-row gap-3 w-full sm:w-auto flex-1">
                   {(() => {
                     const p = JSON.parse(
-                      localStorage.getItem("nebula-progress") || "{}"
+                      localStorage.getItem("nebula-progress") || "{}",
                     );
                     const key = movie.id.toString();
 
@@ -1861,7 +1904,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       if (tvEntries.length > 0) {
                         // Pick the most recently watched
                         tvEntries.sort(
-                          (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)
+                          (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0),
                         );
                         const latest = tvEntries[0];
                         const pct =
@@ -1876,14 +1919,15 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                               .filter((s: any) => s.season_number > 0)
                               .sort(
                                 (a: any, b: any) =>
-                                  a.season_number - b.season_number
+                                  a.season_number - b.season_number,
                               );
 
                             const currentSeasonInfo = sortedSeasons.find(
-                              (s: any) => s.season_number === latest.season
+                              (s: any) => s.season_number === latest.season,
                             );
                             if (currentSeasonInfo) {
-                              const maxEpisodes = currentSeasonInfo.episode_count;
+                              const maxEpisodes =
+                                currentSeasonInfo.episode_count;
                               if (latest.episode < maxEpisodes) {
                                 resumeData = {
                                   season: latest.season,
@@ -1892,9 +1936,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 };
                               } else {
                                 // Transition to next season
-                                const currentSeasonIdx = sortedSeasons.findIndex(
-                                  (s: any) => s.season_number === latest.season
-                                );
+                                const currentSeasonIdx =
+                                  sortedSeasons.findIndex(
+                                    (s: any) =>
+                                      s.season_number === latest.season,
+                                  );
                                 if (
                                   currentSeasonIdx !== -1 &&
                                   currentSeasonIdx < sortedSeasons.length - 1
@@ -1938,7 +1984,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     } else {
                       // Movie: single progress entry
                       const entry = Object.entries(p).find(
-                        ([k]) => k === key || k.startsWith(`${key}-S`)
+                        ([k]) => k === key || k.startsWith(`${key}-S`),
                       );
                       if (entry) {
                         const [k, val]: [string, any] = entry;
@@ -1999,7 +2045,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 ? resumeData.episode
                                 : movie.type === "tv"
                                   ? 1
-                                  : undefined
+                                  : undefined,
                             )
                           }
                           className={`w-full sm:w-auto px-6 sm:px-12 py-3.5 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all ${
@@ -2032,7 +2078,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     }`}
                   >
                     {isInList ? <X size={20} /> : <Plus size={20} />}{" "}
-                    <span className="truncate">{isInList ? "Remove" : "Add to List"}</span>
+                    <span className="truncate">
+                      {isInList ? "Remove" : "Add to List"}
+                    </span>
                   </motion.button>
                 </div>
 
@@ -3470,13 +3518,16 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         onClick={() => setTrailerModalKey(video.youtubeId)}
                       >
                         <img
-                          src={video.thumbnail || `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`}
+                          src={
+                            video.thumbnail ||
+                            `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`
+                          }
                           className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
                           alt={video.title}
                           referrerPolicy="no-referrer"
                           onError={handleImageError}
                         />
-                        
+
                         {/* Premium Netflix-style Dark Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent z-10 pointer-events-none" />
 
@@ -3498,7 +3549,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         {/* Centered Play Button overlay on hover */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                           <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-nebula-cyan group-hover:text-obsidian transition-all group-hover:scale-110 shadow-xl opacity-0 group-hover:opacity-100 duration-300">
-                            <Play size={20} fill="currentColor" className="ml-1" />
+                            <Play
+                              size={20}
+                              fill="currentColor"
+                              className="ml-1"
+                            />
                           </div>
                         </div>
                       </div>
