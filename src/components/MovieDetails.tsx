@@ -3334,54 +3334,40 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       <div
                         key={`trailer-${video.youtubeId}-${i}`}
                         className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-black group cursor-pointer shadow-lg hover:shadow-2xl hover:border-nebula-cyan/30 transition-all duration-300"
-                        onClick={() =>
-                          setActiveTrailerIndex(activeTrailerIndex === i ? null : i)
-                        }
+                        onClick={() => setTrailerModalKey(video.youtubeId)}
                       >
-                        {activeTrailerIndex === i ? (
-                          <iframe
-                            src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}?autoplay=1&rel=0&modestbranding=1&color=white&playsinline=1&iv_load_policy=3&vq=hd1080`}
-                            allow="autoplay; fullscreen; picture-in-picture"
-                            allowFullScreen
-                            className="absolute inset-0 w-full h-full"
-                            title={video.title}
-                          />
-                        ) : (
-                          <>
-                            <img
-                              src={video.thumbnail || `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`}
-                              className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
-                              alt={video.title}
-                              referrerPolicy="no-referrer"
-                              onError={handleImageError}
-                            />
-                            
-                            {/* Premium Netflix-style Dark Gradient Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent z-10 pointer-events-none" />
+                        <img
+                          src={video.thumbnail || `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`}
+                          className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
+                          alt={video.title}
+                          referrerPolicy="no-referrer"
+                          onError={handleImageError}
+                        />
+                        
+                        {/* Premium Netflix-style Dark Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent z-10 pointer-events-none" />
 
-                            {/* Floating Info Overlay inside card */}
-                            <div className="absolute bottom-0 left-0 right-0 p-4 z-20 flex flex-col justify-end pointer-events-none">
-                              <span className="text-[9px] bg-nebula-cyan/20 border border-nebula-cyan/30 text-nebula-cyan font-bold px-2 py-0.5 rounded w-max mb-1.5 uppercase tracking-wider">
-                                {video.category}
-                              </span>
-                              <h4 className="text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate">
-                                {video.title}
-                              </h4>
-                              {video.views > 0 && (
-                                <p className="text-[9px] text-white/40 font-semibold mt-0.5">
-                                  {(video.views / 1_000_000).toFixed(1)}M views
-                                </p>
-                              )}
-                            </div>
+                        {/* Floating Info Overlay inside card */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4 z-20 flex flex-col justify-end pointer-events-none">
+                          <span className="text-[9px] bg-nebula-cyan/20 border border-nebula-cyan/30 text-nebula-cyan font-bold px-2 py-0.5 rounded w-max mb-1.5 uppercase tracking-wider">
+                            {video.category}
+                          </span>
+                          <h4 className="text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate">
+                            {video.title}
+                          </h4>
+                          {video.views > 0 && (
+                            <p className="text-[9px] text-white/40 font-semibold mt-0.5">
+                              {(video.views / 1_000_000).toFixed(1)}M views
+                            </p>
+                          )}
+                        </div>
 
-                            {/* Centered Play Button overlay on hover */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                              <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-nebula-cyan group-hover:text-obsidian transition-all group-hover:scale-110 shadow-xl opacity-0 group-hover:opacity-100 duration-300">
-                                <Play size={20} fill="currentColor" className="ml-1" />
-                              </div>
-                            </div>
-                          </>
-                        )}
+                        {/* Centered Play Button overlay on hover */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                          <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-nebula-cyan group-hover:text-obsidian transition-all group-hover:scale-110 shadow-xl opacity-0 group-hover:opacity-100 duration-300">
+                            <Play size={20} fill="currentColor" className="ml-1" />
+                          </div>
+                        </div>
                       </div>
                     ))
                   ) : (
