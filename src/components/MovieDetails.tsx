@@ -573,7 +573,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     Vidnest
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase tracking-wider">
-                    FAST STREAM
+                    PREMIUM CDN
                   </span>
                   {vidnestLoading ? (
                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
@@ -588,8 +588,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  High-speed direct MP4 CDN delivery mapping high quality
-                  mirrors with multi-language subtitle integration.
+                  High-speed HLS & MP4 stream delivery aggregating premium
+                  servers like MovieBox, AllMovies, and HollyMovieHD.
                 </p>
               </div>
             </div>
@@ -607,28 +607,34 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : vidnestSources.length > 0 ? (
                 <div className="space-y-1.5">
                   <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
-                    Quality Tiers:
+                    Active Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {vidnestSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(
-                          /^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i,
-                          "$1 ($2)",
-                        )
-                        .replace(/^Vidnest\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vidnest\s*-\s*/i, "")
-                        .replace(/^Vidnest/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName =
-                        src.quality !== "Auto"
-                          ? src.quality.toUpperCase()
-                          : cleanMirrorName || "HD";
+                      // Parse name: "Vidnest - HollyMovieHD (Auto)" -> provider: "HollyMovieHD", quality: "Auto"
+                      // "Vidnest (1080p)" -> provider: "MovieBox", quality: "1080p"
+                      let provider = "MovieBox";
+                      let quality = src.quality || "Auto";
+                      
+                      const matchWithDash = src.name.match(/^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i);
+                      if (matchWithDash) {
+                        provider = matchWithDash[1].trim();
+                        quality = matchWithDash[2].trim();
+                      } else {
+                        const matchParen = src.name.match(/^Vidnest\s*\((.*?)\)$/i);
+                        if (matchParen) {
+                          provider = "MovieBox";
+                          quality = matchParen[1].trim();
+                        }
+                      }
+                      
+                      const displayQuality = quality.toUpperCase();
+                      const displayName = displayQuality === "AUTO" ? provider.toUpperCase() : `${provider.toUpperCase()} (${displayQuality})`;
+                      
                       return (
                         <button
                           key={src.name}
-                          title={`Play Vidnest (${displayName}) quality directly`}
+                          title={`Play Vidnest (${displayName}) directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
@@ -697,7 +703,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     Vaplayer
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 uppercase tracking-wider">
-                    FAST HLS
+                    GLOBAL MIRRORS
                   </span>
                   {vaplayerLoading ? (
                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
@@ -712,8 +718,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  High-speed direct HLS stream delivery mapping high quality
-                  mirrors with multi-language subtitle integration.
+                  Aggregates direct HLS stream mirrors from global caching
+                  servers with integrated multi-language subtitle tracks.
                 </p>
               </div>
             </div>
@@ -815,7 +821,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     FilmU
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 uppercase tracking-wider">
-                    MULTI-CDN
+                    HYBRID CLOUD
                   </span>
                   {filmuLoading ? (
                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/5 text-amber-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
@@ -966,7 +972,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     VidLink
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/50 uppercase tracking-wider">
-                    STANDARD
+                    LEGACY INDEX
                   </span>
                   {vidlinkLoading ? (
                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider animate-pulse flex items-center gap-1">
@@ -981,8 +987,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Aggregates comprehensive standard indexes across global hosts
-                  to ensure robust content availability.
+                  Aggregates comprehensive index mappings across global servers
+                  as a fallback to ensure maximum content availability.
                 </p>
               </div>
             </div>
@@ -1087,7 +1093,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     Videasy
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-violet-400 uppercase tracking-wider">
-                    NEW
+                    WASM DECRYPT
                   </span>
                   {videasyLoading ? (
                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
