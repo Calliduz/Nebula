@@ -3408,6 +3408,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           // Stop taps on the top bar from bubbling to the tap layer
           onClick={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <button
             onClick={safeClose}
@@ -3465,6 +3466,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           // Stop taps on the bottom bar from bubbling to the tap layer
           onClick={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           {!isEmbed && (
             <>
