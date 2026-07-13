@@ -264,6 +264,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   useEffect(() => {
     errorRef.current = error;
   }, [error]);
+  const handleNextEpisodeRef = useRef<any>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(80);
@@ -1975,10 +1976,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     hasPrefetchedNextEpisode.current = false;
   }, [season, episode]);
 
+
+
   // ── Video event listeners ─────────────────────────────────────────────────
   useEffect(() => {
     const video = videoRef.current;
     if (!video || isEmbed) return;
+
+    const onEnded = () => {
+      console.log("[PLAYER] Video ended. Requesting next episode modal...");
+      if (movie.type === "tv") {
+        handleNextEpisodeRef.current();
+      }
+    };
 
     const onLoadedMetadata = () => {
       const savedProgress = JSON.parse(
@@ -2413,6 +2423,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     video.addEventListener("error", onVideoError);
     video.addEventListener("seeking", onSeeking);
     video.addEventListener("seeked", onSeeked);
+    video.addEventListener("ended", onEnded);
 
     // ── Visibility Change: Handle mobile resume from background ──
     const handleVisibilityChange = () => {
@@ -2449,6 +2460,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       video.removeEventListener("error", onVideoError);
       video.removeEventListener("seeking", onSeeking);
       video.removeEventListener("seeked", onSeeked);
+      video.removeEventListener("ended", onEnded);
     };
   }, [streamUrl, movie.id, getProgressKey, selectMirror]);
 
@@ -2842,6 +2854,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setSourceSelect(nextEp);
     }
   };
+
+  useEffect(() => {
+    handleNextEpisodeRef.current = handleNextEpisode;
+  }, [handleNextEpisode]);
 
   const safeClose = () => {
     onClose();
