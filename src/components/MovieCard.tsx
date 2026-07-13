@@ -26,6 +26,15 @@ export const MovieCard = memo<MovieCardProps>(
     const [imgError, setImgError] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
 
+    // Calculate progress percentage and active progress state
+    const pct =
+      movie.progress &&
+      typeof movie.progress === "object" &&
+      movie.progress.duration > 0
+        ? Math.min(100, (movie.progress.time / movie.progress.duration) * 100)
+        : 0;
+    const hasProgress = pct >= 1;
+
     useEffect(() => {
       setImgLoaded(false);
       setImgError(false);
@@ -51,7 +60,7 @@ export const MovieCard = memo<MovieCardProps>(
 
     return (
       <div
-        className={`group/card relative ${isGrid ? "w-full" : isLandscape ? "w-[170px] sm:w-[220px] md:w-[240px] lg:w-[260px]" : "w-[115px] sm:w-[155px] md:w-[200px] lg:w-[220px]"} shrink-0 ${isLandscape ? "aspect-video" : "aspect-[2/3]"} transition-all duration-300 ${snap ? "snap-start" : ""}`}
+        className={`group/card relative ${isGrid ? "w-full" : isLandscape ? "w-[170px] sm:w-[220px] md:w-[240px] lg:w-[260px]" : "w-[115px] sm:w-[155px] md:w-[200px] lg:w-[220px]"} shrink-0 ${isLandscape ? "aspect-video" : "aspect-[2/3]"} h-fit self-start transition-all duration-300 ${snap ? "snap-start" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => onSelect?.(movie)}
         style={{ willChange: "transform" }}
@@ -74,7 +83,13 @@ export const MovieCard = memo<MovieCardProps>(
           />
 
           <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-0 sm:opacity-90" />
+          <div
+            className={`absolute inset-0 bg-gradient-to-t ${
+              hasProgress
+                ? "from-obsidian via-obsidian/50 to-transparent opacity-95"
+                : "from-obsidian via-transparent to-transparent opacity-0 sm:opacity-90"
+            } pointer-events-none z-10`}
+          />
 
           {/* Info Overlay (Persistent) */}
           <div className="absolute top-3 left-3 right-3 z-30 flex justify-between items-start">
@@ -187,58 +202,45 @@ export const MovieCard = memo<MovieCardProps>(
                 Open Dossier
               </span>
             </div>
-
-            {/* Progress Bar for Continue Watching — Netflix-style */}
-            {(() => {
-              if (!movie.progress) return null;
-              const pct =
-                typeof movie.progress === "object" &&
-                movie.progress.duration > 0
-                  ? Math.min(
-                      100,
-                      (movie.progress.time / movie.progress.duration) * 100,
-                    )
-                  : 0;
-              if (pct < 1) return null;
-              const isWatched = pct >= 95;
-              return (
-                <div className="mt-2.5">
-                  {/* Watched badge */}
-                  {isWatched && (
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="w-3.5 h-3.5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                        <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
-                          <path
-                            d="M1 3L2.5 4.5L6 1"
-                            stroke="white"
-                            strokeWidth="1.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </div>
-                      <span className="text-[8px] font-black uppercase tracking-widest text-white/50">
-                        Watched
-                      </span>
-                    </div>
-                  )}
-                  {/* Track */}
-                  <div className="h-[5px] w-full bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      data-testid="progress-fill"
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${pct}%`,
-                        background: "#e50914",
-                        boxShadow: "0 0 6px rgba(229,9,20,0.6)",
-                        transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })()}
           </div>
+
+          {/* Progress Bar for Continue Watching — Netflix-style */}
+          {hasProgress && (
+            <div className="absolute bottom-0 inset-x-0 z-30 w-full flex flex-col pointer-events-none">
+              {/* Watched badge */}
+              {pct >= 95 && (
+                <div className="flex items-center gap-1 mb-2 px-3">
+                  <div className="w-3.5 h-3.5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+                    <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
+                      <path
+                        d="M1 3L2.5 4.5L6 1"
+                        stroke="white"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/50">
+                    Watched
+                  </span>
+                </div>
+              )}
+              {/* Track */}
+              <div className="h-[4px] w-full bg-white/25 overflow-hidden">
+                <div
+                  data-testid="progress-fill"
+                  className="h-full"
+                  style={{
+                    width: `${pct}%`,
+                    background: "#e50914",
+                    boxShadow: "0 0 4px rgba(229,9,20,0.8)",
+                    transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Subtle Glow Sign */}
           <div className="absolute inset-0 opacity-0 group-hover/card:opacity-10 transition-opacity duration-500 bg-nebula-cyan pointer-events-none" />
