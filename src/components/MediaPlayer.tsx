@@ -2472,10 +2472,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setShowUi(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      if (!isPaused && !showSettings && !showSubtitles && !showEpisodeDrawer)
+      if (!isPaused && !showSettings && !showSubtitles && !showEpisodeDrawer && !isDragging)
         setShowUi(false);
     }, 3000);
-  }, [isPaused, showSettings, showSubtitles, showEpisodeDrawer]);
+  }, [isPaused, showSettings, showSubtitles, showEpisodeDrawer, isDragging]);
 
   // Tap on the video/empty area:
   //  - If a menu is open → close it
@@ -2679,7 +2679,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         isLocalSeekingRef.current = false;
       }, 800);
     }
-  }, [isDragging]);
+    resetHideTimer();
+  }, [isDragging, resetHideTimer]);
 
   useEffect(() => {
     if (isDragging) {
@@ -2709,6 +2710,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const v = videoRef.current;
     if (!v || !isFinite(v.duration)) return;
     setIsDragging(true);
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
     const r = e.currentTarget.getBoundingClientRect();
     const clientX =
       "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
