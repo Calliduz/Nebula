@@ -1,7 +1,7 @@
 import React from "react";
 
 export const HeroSkeleton = () => (
-  <section className="relative h-[85vh] md:h-[95vh] overflow-hidden bg-obsidian">
+  <section className="relative h-[65vh] sm:h-[70vh] md:h-[95vh] overflow-hidden bg-obsidian">
     <div className="absolute inset-0 shimmer-bg opacity-20" />
     <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/60 to-transparent z-10" />
     <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-transparent to-transparent z-10" />

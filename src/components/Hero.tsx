@@ -69,7 +69,7 @@ export const Hero: React.FC<HeroProps> = ({
 
   return (
     <section
-      className="relative h-[85vh] md:h-[95vh] overflow-hidden"
+      className="relative h-[65vh] sm:h-[70vh] md:h-[95vh] overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -107,7 +107,7 @@ export const Hero: React.FC<HeroProps> = ({
             onError={handleBackdropError}
           />
           {/* Mobile Portrait Poster Image */}
-          <div className="absolute inset-0 md:hidden flex items-start justify-center pt-20 px-12 pb-[14rem] z-0">
+          <div className="absolute inset-0 md:hidden flex items-start justify-center pt-14 px-8 pb-28 z-0">
             <img
               src={
                 activeHero.image ||
@@ -139,7 +139,7 @@ export const Hero: React.FC<HeroProps> = ({
         </motion.div>
       </AnimatePresence>
 
-      <div className="absolute inset-0 z-20 flex items-end md:items-center px-4 sm:px-6 md:px-12 pb-24 md:pb-0 md:pt-10 pointer-events-none">
+      <div className="absolute inset-0 z-20 flex items-end md:items-center px-4 sm:px-6 md:px-12 pb-6 md:pb-0 md:pt-10 pointer-events-none">
         <div className="max-w-3xl pointer-events-auto md:mt-20 w-full">
           <motion.div
             key={`hero-content-${activeHero.id || currentHeroIndex}`}
