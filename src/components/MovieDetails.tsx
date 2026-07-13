@@ -402,6 +402,13 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             {movie.title}{" "}
             {season !== undefined && `• Season ${season} Episode ${episode}`}
           </p>
+
+          <p className="text-[10px] sm:text-xs text-white/40 max-w-md mx-auto mt-3 text-center flex items-center justify-center gap-1.5 border border-white/5 bg-white/2 py-2 px-4 rounded-2xl select-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shrink-0" />
+            <span>
+              Click a provider to play with <b>auto-failover</b>, or click any <b>mirror/quality badge</b> directly to play it.
+            </span>
+          </p>
         </div>
 
         {/* Cards container:
@@ -487,20 +494,38 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                         .trim()
                         .toUpperCase();
                       let color =
-                        "border-nebula-cyan/30 text-nebula-cyan bg-nebula-cyan/10";
+                        "border-nebula-cyan/30 text-nebula-cyan bg-nebula-cyan/10 hover:border-nebula-cyan/65 hover:bg-nebula-cyan/20";
                       if (cleanMirrorName === "ATLAS")
                         color =
-                          "border-amber-500/30 text-amber-400 bg-amber-500/10";
+                          "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:border-amber-500/65 hover:bg-amber-500/20";
                       if (cleanMirrorName === "ORION")
                         color =
-                          "border-emerald-500/30 text-emerald-400 bg-emerald-500/10";
+                          "border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/65 hover:bg-emerald-500/20";
                       return (
-                        <span
+                        <button
                           key={src.name}
-                          className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${color}`}
+                          title={`Play VidRock (${cleanMirrorName}) mirror directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...sources.filter((s) => s.name !== src.name),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className={`text-[9.5px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${color}`}
                         >
+                          <Play size={8} fill="currentColor" className="shrink-0" />
                           {cleanMirrorName}
-                        </span>
+                        </button>
                       );
                     })}
                   </div>
@@ -601,12 +626,30 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           ? src.quality.toUpperCase()
                           : cleanMirrorName || "HD";
                       return (
-                        <span
+                        <button
                           key={src.name}
-                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 uppercase tracking-wider"
+                          title={`Play Vidnest (${displayName}) quality directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...vidnestSources.filter((s) => s.name !== src.name),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/65 hover:bg-emerald-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
+                          <Play size={8} fill="currentColor" className="shrink-0" />
                           {displayName}
-                        </span>
+                        </button>
                       );
                     })}
                   </div>
@@ -702,12 +745,30 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           ? src.quality.toUpperCase()
                           : cleanMirrorName || "HD";
                       return (
-                        <span
+                        <button
                           key={src.name}
-                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 uppercase tracking-wider"
+                          title={`Play Vaplayer (${displayName}) mirror directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...vaplayerSources.filter((s) => s.name !== src.name),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 hover:border-cyan-500/65 hover:bg-cyan-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
+                          <Play size={8} fill="currentColor" className="shrink-0" />
                           {displayName}
-                        </span>
+                        </button>
                       );
                     })}
                   </div>
@@ -808,24 +869,54 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                         (providerName) => {
                           const colorMap: Record<string, string> = {
                             VORTEX:
-                              "border-amber-500/30 text-amber-400 bg-amber-500/10",
+                              "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:border-amber-500/65 hover:bg-amber-500/20",
                             ZENITH:
-                              "border-orange-500/30 text-orange-400 bg-orange-500/10",
-                            AURA: "border-yellow-500/30 text-yellow-400 bg-yellow-500/10",
-                            KURO: "border-red-500/30 text-red-400 bg-red-500/10",
+                              "border-orange-500/30 text-orange-400 bg-orange-500/10 hover:border-orange-500/65 hover:bg-orange-500/20",
+                            AURA: "border-yellow-500/30 text-yellow-400 bg-yellow-500/10 hover:border-yellow-500/65 hover:bg-yellow-500/20",
+                            KURO: "border-red-500/30 text-red-400 bg-red-500/10 hover:border-red-500/65 hover:bg-red-500/20",
                           };
                           const chipClass =
                             Object.entries(colorMap).find(([k]) =>
                               providerName.includes(k),
                             )?.[1] ??
-                            "border-amber-500/30 text-amber-400 bg-amber-500/10";
+                            "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:border-amber-500/65 hover:bg-amber-500/20";
                           return (
-                            <span
+                            <button
                               key={providerName}
-                              className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${chipClass}`}
+                              title={`Play FilmU (${providerName}) provider directly`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const matched = filmuSources.filter((s) => {
+                                  const pName = s.name
+                                    .replace(/^FilmU[\s-]*/i, "")
+                                    .replace(/\s*#\d+$/, "")
+                                    .trim()
+                                    .toUpperCase();
+                                  return pName === providerName;
+                                });
+                                const others = filmuSources.filter((s) => {
+                                  const pName = s.name
+                                    .replace(/^FilmU[\s-]*/i, "")
+                                    .replace(/\s*#\d+$/, "")
+                                    .trim()
+                                    .toUpperCase();
+                                  return pName !== providerName;
+                                });
+                                const reordered = [...matched, ...others];
+                                const selectedUrl = reordered
+                                  .map((s) =>
+                                    s.url.includes("#")
+                                      ? s.url
+                                      : `${s.url}#${s.name}#${s.type}`,
+                                  )
+                                  .join("|");
+                                onSelect(selectedUrl);
+                              }}
+                              className={`text-[9.5px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${chipClass}`}
                             >
+                              <Play size={8} fill="currentColor" className="shrink-0" />
                               {providerName}
-                            </span>
+                            </button>
                           );
                         },
                       );
@@ -923,12 +1014,30 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           ? src.quality.toUpperCase()
                           : cleanMirrorName || "HD";
                       return (
-                        <span
+                        <button
                           key={src.name}
-                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 uppercase tracking-wider"
+                          title={`Play VidLink (${displayName}) quality directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...vidlinkSources.filter((s) => s.name !== src.name),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 hover:border-white/30 hover:bg-white/10 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
+                          <Play size={8} fill="currentColor" className="shrink-0" />
                           {displayName}
-                        </span>
+                        </button>
                       );
                     })}
                   </div>
@@ -1022,9 +1131,26 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                         .trim()
                         .toUpperCase();
                       return (
-                        <span
+                        <button
                           key={src.name}
-                          className="inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/30 text-violet-400 bg-violet-500/10 uppercase tracking-wider"
+                          title={`Play Videasy (${mirrorName}) mirror directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...videasySources.filter((s) => s.name !== src.name),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}#${s.audio || ""}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded border border-violet-500/30 text-violet-400 bg-violet-500/10 hover:border-violet-500/65 hover:bg-violet-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider cursor-pointer"
                         >
                           {src.flag && (
                             <img
@@ -1033,8 +1159,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               className="w-3 h-2 object-cover rounded-sm shrink-0"
                             />
                           )}
+                          <Play size={8} fill="currentColor" className="shrink-0" />
                           {mirrorName}
-                        </span>
+                        </button>
                       );
                     })}
                   </div>
