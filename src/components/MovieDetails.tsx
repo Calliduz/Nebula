@@ -1551,18 +1551,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       : ["Overview", "Downloads", "Trailers & Extras"];
 
   const logoTitle = (movie.clearLogo && !logoFailed) ? (
-    <div className="mb-8 lg:mb-12">
+    <div className="mb-8 lg:mb-12 flex justify-center lg:justify-start">
       <img
         src={movie.clearLogo}
         alt={movie.title}
         height="160"
-        className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
+        className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] mx-auto lg:mx-0"
         referrerPolicy="no-referrer"
         onError={() => setLogoFailed(true)}
       />
     </div>
   ) : (
-    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight mb-8 uppercase leading-[0.9] break-words max-w-2xl drop-shadow-2xl">
+    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight mb-8 uppercase leading-[0.9] break-words max-w-2xl drop-shadow-2xl text-center lg:text-left mx-auto lg:mx-0">
       {movie.title}
     </h1>
   );
@@ -1629,73 +1629,64 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
             >
               {logoTitle}
 
-              <div className="flex flex-nowrap items-center gap-2 sm:gap-6 mb-8 text-[10px] sm:text-sm font-bold tracking-widest text-dim uppercase overflow-x-auto no-scrollbar select-none">
-                <span className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-nebula-cyan fill-nebula-cyan" />{" "}
-                  {movie.imdb || movie.rating}
-                </span>
-                <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                <span className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
-                  {movie.duration || "124m"}
-                </span>
-                <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                <span className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
-                  {movie.year}
-                </span>
+              <div className="flex flex-nowrap items-center justify-center lg:justify-start gap-2 mb-8 text-[10px] sm:text-[11px] font-bold tracking-wider select-none overflow-x-auto no-scrollbar w-full">
+                {/* Rating Badge */}
+                <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                  <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 fill-amber-400" />
+                  <span>{movie.imdb || movie.rating}</span>
+                </div>
+
+                {/* Duration Badge */}
+                <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded bg-white/5 border border-white/10 text-white/80 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/60" />
+                  <span>{movie.duration || "124m"}</span>
+                </div>
+
+                {/* Release Year Badge */}
+                <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded bg-white/5 border border-white/10 text-white/80 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                  <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/60" />
+                  <span>{movie.year}</span>
+                </div>
 
                 {/* Quality Badge */}
                 {movie.quality && (
-                  <>
-                    <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                    <div
-                      className={`px-2 py-0.5 rounded border backdrop-blur-md shrink-0 ${
-                        movie.quality === "CAM"
-                          ? "border-amber-500/30 bg-slate-950/80 text-amber-400"
-                          : movie.quality === "TBA"
-                            ? "border-red-500/30 bg-slate-950/80 text-red-400"
-                            : "border-nebula-cyan/30 bg-slate-950/80 text-nebula-cyan"
-                      }`}
-                    >
-                      {movie.quality}
-                    </div>
-                  </>
+                  <div
+                    className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border backdrop-blur-md shrink-0 flex items-center gap-1 ${
+                      movie.quality === "CAM"
+                        ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                        : movie.quality === "TBA"
+                          ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
+                          : "border-nebula-cyan/20 bg-nebula-cyan/10 text-nebula-cyan"
+                    }`}
+                  >
+                    <span>{movie.quality}</span>
+                  </div>
                 )}
 
                 {/* Availability Badge */}
                 {movie.isVerified ? (
-                  <>
-                    <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                    <div className="px-2 py-0.5 rounded border border-emerald-500/30 bg-slate-950/80 text-emerald-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
-                      <span className="relative flex h-1 w-1 sm:h-1.5 sm:w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1 w-1 sm:h-1.5 sm:w-1.5 bg-emerald-500" />
-                      </span>
-                      <span>LIVE</span>
-                    </div>
-                  </>
+                  <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-emerald-500/25 bg-emerald-500/10 text-emerald-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                    <span className="relative flex h-1 w-1 sm:h-1.5 sm:w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-1 w-1 sm:h-1.5 sm:w-1.5 bg-emerald-500" />
+                    </span>
+                    <span>LIVE</span>
+                  </div>
                 ) : movie.isDead ? (
-                  <>
-                    <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                    <div className="px-2 py-0.5 rounded border border-rose-500/30 bg-slate-950/80 text-rose-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
-                      <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-rose-500" />
-                      <span>DEAD</span>
-                    </div>
-                  </>
+                  <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-rose-500/25 bg-rose-500/10 text-rose-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span>DEAD</span>
+                  </div>
                 ) : (
                   movie.quality !== "CAM" &&
                   movie.quality !== "TBA" && (
-                    <>
-                      <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                      <div className="px-2 py-0.5 rounded border border-white/20 bg-slate-950/80 text-white/50 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
-                        <span className="relative flex h-1 w-1 sm:h-1.5 sm:w-1.5">
-                          <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-1 w-1 sm:h-1.5 sm:w-1.5 bg-white/40" />
-                        </span>
-                        <span>SCAN</span>
-                      </div>
-                    </>
+                    <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-blue-500/25 bg-blue-500/10 text-blue-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
+                      <span className="relative flex h-1 w-1 sm:h-1.5 sm:w-1.5">
+                        <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1 w-1 sm:h-1.5 sm:w-1.5 bg-blue-500" />
+                      </span>
+                      <span>SCAN</span>
+                    </div>
                   )
                 )}
               </div>
@@ -1704,94 +1695,103 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                 {movie.description}
               </p>
 
-              <div className="flex flex-wrap gap-4 sm:gap-6 mb-16">
-                {(() => {
-                  const p = JSON.parse(
-                    localStorage.getItem("nebula-progress") || "{}",
-                  );
-                  const key = movie.id.toString();
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-16 w-full max-w-2xl">
+                <div className="flex flex-row gap-3 w-full sm:w-auto flex-1">
+                  {(() => {
+                    const p = JSON.parse(
+                      localStorage.getItem("nebula-progress") || "{}"
+                    );
+                    const key = movie.id.toString();
 
-                  // ── Resume Logic: find the LATEST watched episode by timestamp
-                  // For TV: collect all episodes for this show, sort by timestamp DESC
-                  // If that episode is >= 85% done (likely credits), advance to next.
-                  let resumeData: any = null;
+                    // ── Resume Logic: find the LATEST watched episode by timestamp
+                    // For TV: collect all episodes for this show, sort by timestamp DESC
+                    // If that episode is >= 85% done (likely credits), advance to next.
+                    let resumeData: any = null;
 
-                  if (movie.type === "tv") {
-                    // Gather all progress entries belonging to this show
-                    const tvEntries = Object.entries(p)
-                      .filter(([k]) => k === key || k.startsWith(`${key}-S`))
-                      .map(([k, val]: [string, any]) => {
-                        const tvMatch = k.match(/-S(\d+)E(\d+)/);
-                        return tvMatch
-                          ? {
-                              season: parseInt(tvMatch[1]),
-                              episode: parseInt(tvMatch[2]),
-                              ...val,
-                              _key: k,
-                            }
-                          : null;
-                      })
-                      .filter(Boolean) as any[];
+                    if (movie.type === "tv") {
+                      // Gather all progress entries belonging to this show
+                      const tvEntries = Object.entries(p)
+                        .filter(([k]) => k === key || k.startsWith(`${key}-S`))
+                        .map(([k, val]: [string, any]) => {
+                          const tvMatch = k.match(/-S(\d+)E(\d+)/);
+                          return tvMatch
+                            ? {
+                                season: parseInt(tvMatch[1]),
+                                episode: parseInt(tvMatch[2]),
+                                ...val,
+                                _key: k,
+                              }
+                            : null;
+                        })
+                        .filter(Boolean) as any[];
 
-                    if (tvEntries.length > 0) {
-                      // Pick the most recently watched
-                      tvEntries.sort(
-                        (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0),
-                      );
-                      const latest = tvEntries[0];
-                      const pct =
-                        latest.duration > 0
-                          ? (latest.time / latest.duration) * 100
-                          : 0;
+                      if (tvEntries.length > 0) {
+                        // Pick the most recently watched
+                        tvEntries.sort(
+                          (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)
+                        );
+                        const latest = tvEntries[0];
+                        const pct =
+                          latest.duration > 0
+                            ? (latest.time / latest.duration) * 100
+                            : 0;
 
-                      if (pct >= 90 || latest.watched) {
-                        // Episode nearly done — jump to NEXT episode
-                        if (tvDetails && tvDetails.seasons) {
-                          const sortedSeasons = tvDetails.seasons
-                            .filter((s: any) => s.season_number > 0)
-                            .sort(
-                              (a: any, b: any) =>
-                                a.season_number - b.season_number,
+                        if (pct >= 90 || latest.watched) {
+                          // Episode nearly done — jump to NEXT episode
+                          if (tvDetails && tvDetails.seasons) {
+                            const sortedSeasons = tvDetails.seasons
+                              .filter((s: any) => s.season_number > 0)
+                              .sort(
+                                (a: any, b: any) =>
+                                  a.season_number - b.season_number
+                              );
+
+                            const currentSeasonInfo = sortedSeasons.find(
+                              (s: any) => s.season_number === latest.season
                             );
-
-                          const currentSeasonInfo = sortedSeasons.find(
-                            (s: any) => s.season_number === latest.season,
-                          );
-                          if (currentSeasonInfo) {
-                            const maxEpisodes = currentSeasonInfo.episode_count;
-                            if (latest.episode < maxEpisodes) {
+                            if (currentSeasonInfo) {
+                              const maxEpisodes = currentSeasonInfo.episode_count;
+                              if (latest.episode < maxEpisodes) {
+                                resumeData = {
+                                  season: latest.season,
+                                  episode: latest.episode + 1,
+                                  _isNext: true,
+                                };
+                              } else {
+                                // Transition to next season
+                                const currentSeasonIdx = sortedSeasons.findIndex(
+                                  (s: any) => s.season_number === latest.season
+                                );
+                                if (
+                                  currentSeasonIdx !== -1 &&
+                                  currentSeasonIdx < sortedSeasons.length - 1
+                                ) {
+                                  const nextSeason =
+                                    sortedSeasons[currentSeasonIdx + 1];
+                                  resumeData = {
+                                    season: nextSeason.season_number,
+                                    episode: 1,
+                                    _isNext: true,
+                                  };
+                                } else {
+                                  // No more seasons or episodes!
+                                  resumeData = {
+                                    season: latest.season,
+                                    episode: latest.episode,
+                                    _completed: true,
+                                  };
+                                }
+                              }
+                            } else {
+                              // Fallback if current season info not found
                               resumeData = {
                                 season: latest.season,
                                 episode: latest.episode + 1,
                                 _isNext: true,
                               };
-                            } else {
-                              // Transition to next season
-                              const currentSeasonIdx = sortedSeasons.findIndex(
-                                (s: any) => s.season_number === latest.season,
-                              );
-                              if (
-                                currentSeasonIdx !== -1 &&
-                                currentSeasonIdx < sortedSeasons.length - 1
-                              ) {
-                                const nextSeason =
-                                  sortedSeasons[currentSeasonIdx + 1];
-                                resumeData = {
-                                  season: nextSeason.season_number,
-                                  episode: 1,
-                                  _isNext: true,
-                                };
-                              } else {
-                                // No more seasons or episodes!
-                                resumeData = {
-                                  season: latest.season,
-                                  episode: latest.episode,
-                                  _completed: true,
-                                };
-                              }
                             }
                           } else {
-                            // Fallback if current season info not found
+                            // tvDetails not loaded yet, fallback to next episode
                             resumeData = {
                               season: latest.season,
                               episode: latest.episode + 1,
@@ -1799,129 +1799,122 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                             };
                           }
                         } else {
-                          // tvDetails not loaded yet, fallback to next episode
-                          resumeData = {
-                            season: latest.season,
-                            episode: latest.episode + 1,
-                            _isNext: true,
-                          };
+                          resumeData = latest;
                         }
-                      } else {
-                        resumeData = latest;
+                      }
+                    } else {
+                      // Movie: single progress entry
+                      const entry = Object.entries(p).find(
+                        ([k]) => k === key || k.startsWith(`${key}-S`)
+                      );
+                      if (entry) {
+                        const [k, val]: [string, any] = entry;
+                        const tvMatch = k.match(/-S(\d+)E(\d+)/);
+                        resumeData = tvMatch
+                          ? {
+                              season: parseInt(tvMatch[1]),
+                              episode: parseInt(tvMatch[2]),
+                              ...val,
+                            }
+                          : val;
                       }
                     }
-                  } else {
-                    // Movie: single progress entry
-                    const entry = Object.entries(p).find(
-                      ([k]) => k === key || k.startsWith(`${key}-S`),
-                    );
-                    if (entry) {
-                      const [k, val]: [string, any] = entry;
-                      const tvMatch = k.match(/-S(\d+)E(\d+)/);
-                      resumeData = tvMatch
-                        ? {
-                            season: parseInt(tvMatch[1]),
-                            episode: parseInt(tvMatch[2]),
-                            ...val,
-                          }
-                        : val;
+
+                    const isTBA = movie.quality === "TBA";
+
+                    // Label logic:
+                    // • No progress at all → "Watch Now" / "Try Playback"
+                    // • Movie with progress → "Resume Watching"
+                    // • TV: next episode (done) → "Play S1E2"
+                    // • TV: mid-episode at S1E1 → "Resume Watching" (don't clutter with S1E1)
+                    // • TV: mid-episode at S2E3 etc → "Resume S2E3"
+                    let label: string;
+                    if (isTBA) {
+                      label = resumeData ? "Resume (TBA)" : "Try Playback";
+                    } else if (resumeData && resumeData._completed) {
+                      label = "Series Completed";
+                    } else if (!resumeData) {
+                      label = "Watch Now";
+                    } else if (resumeData._isNext) {
+                      label = `Play S${resumeData.season}E${resumeData.episode}`;
+                    } else if (
+                      movie.type === "tv" &&
+                      (resumeData.season > 1 || resumeData.episode > 1)
+                    ) {
+                      label = `Resume S${resumeData.season}E${resumeData.episode}`;
+                    } else {
+                      label = "Resume Watching";
                     }
-                  }
 
-                  const isTBA = movie.quality === "TBA";
+                    const isDisabled = resumeData && resumeData._completed;
 
-                  // Label logic:
-                  // • No progress at all → "Watch Now" / "Try Playback"
-                  // • Movie with progress → "Resume Watching"
-                  // • TV: next episode (done) → "Play S1E2"
-                  // • TV: mid-episode at S1E1 → "Resume Watching" (don't clutter with S1E1)
-                  // • TV: mid-episode at S2E3 etc → "Resume S2E3"
-                  let label: string;
-                  if (isTBA) {
-                    label = resumeData ? "Resume (TBA)" : "Try Playback";
-                  } else if (resumeData && resumeData._completed) {
-                    label = "Series Completed";
-                  } else if (!resumeData) {
-                    label = "Watch Now";
-                  } else if (resumeData._isNext) {
-                    label = `Play S${resumeData.season}E${resumeData.episode}`;
-                  } else if (
-                    movie.type === "tv" &&
-                    (resumeData.season > 1 || resumeData.episode > 1)
-                  ) {
-                    label = `Resume S${resumeData.season}E${resumeData.episode}`;
-                  } else {
-                    label = "Resume Watching";
-                  }
+                    return (
+                      <div className="flex-1 sm:flex-none">
+                        <motion.button
+                          whileHover={!isDisabled ? { scale: 1.05 } : {}}
+                          whileTap={!isDisabled ? { scale: 0.95 } : {}}
+                          disabled={isDisabled}
+                          onClick={() =>
+                            !isDisabled &&
+                            handlePlayClick(
+                              resumeData?.season !== undefined
+                                ? resumeData.season
+                                : movie.type === "tv"
+                                  ? 1
+                                  : undefined,
+                              resumeData?.episode !== undefined
+                                ? resumeData.episode
+                                : movie.type === "tv"
+                                  ? 1
+                                  : undefined
+                            )
+                          }
+                          className={`w-full sm:w-auto px-6 sm:px-12 py-3.5 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all ${
+                            isDisabled
+                              ? "bg-white/5 text-white/30 border border-transparent cursor-not-allowed"
+                              : "bg-white text-obsidian glow-white hover:bg-nebula-cyan"
+                          }`}
+                        >
+                          {isTBA ? (
+                            <Clock size={20} className="text-obsidian/40" />
+                          ) : (
+                            <Play
+                              size={20}
+                              fill="currentColor"
+                              className={isDisabled ? "opacity-30" : ""}
+                            />
+                          )}
+                          <span className="truncate">{label}</span>
+                        </motion.button>
+                      </div>
+                    );
+                  })()}
+                  <motion.button
+                    whileHover={{ backgroundColor: "rgba(255,255,255,0.1)" }}
+                    onClick={onToggleList}
+                    className={`flex-1 sm:flex-none w-full sm:w-auto px-6 sm:px-12 py-3.5 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all border ${
+                      isInList
+                        ? "bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan"
+                        : "bg-white/5 border-white/10 text-white"
+                    }`}
+                  >
+                    {isInList ? <X size={20} /> : <Plus size={20} />}{" "}
+                    <span className="truncate">{isInList ? "Remove" : "Add to List"}</span>
+                  </motion.button>
+                </div>
 
-                  const isDisabled = resumeData && resumeData._completed;
-
-                  return (
-                    <div className="flex flex-col gap-2 flex-1 sm:flex-none">
-                      <motion.button
-                        whileHover={!isDisabled ? { scale: 1.05 } : {}}
-                        whileTap={!isDisabled ? { scale: 0.95 } : {}}
-                        disabled={isDisabled}
-                        onClick={() =>
-                          !isDisabled &&
-                          handlePlayClick(
-                            resumeData?.season !== undefined
-                              ? resumeData.season
-                              : movie.type === "tv"
-                                ? 1
-                                : undefined,
-                            resumeData?.episode !== undefined
-                              ? resumeData.episode
-                              : movie.type === "tv"
-                                ? 1
-                                : undefined,
-                          )
-                        }
-                        className={`px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all flex-1 sm:flex-none ${
-                          isDisabled
-                            ? "bg-white/5 text-white/30 border border-transparent cursor-not-allowed"
-                            : "bg-white text-obsidian glow-white hover:bg-nebula-cyan"
-                        }`}
-                      >
-                        {isTBA ? (
-                          <Clock size={20} className="text-obsidian/40" />
-                        ) : (
-                          <Play
-                            size={20}
-                            fill="currentColor"
-                            className={isDisabled ? "opacity-30" : ""}
-                          />
-                        )}
-                        <span>{label}</span>
-                      </motion.button>
-                    </div>
-                  );
-                })()}
-                <motion.button
-                  whileHover={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-                  onClick={onToggleList}
-                  className={`px-8 sm:px-12 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all border flex-1 sm:flex-none ${
-                    isInList
-                      ? "bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan"
-                      : "bg-white/5 border-white/10 text-white"
-                  }`}
-                >
-                  {isInList ? <X size={20} /> : <Plus size={20} />}{" "}
-                  <span>{isInList ? "Remove" : "Add to List"}</span>
-                </motion.button>
-
-                {/* Watch Trailer quick-action – only shown when trailers are loaded */}
+                {/* Watch Trailer quick-action – placed under main buttons on mobile, inline on PC */}
                 {deepDetails.trailers.length > 0 && (
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() =>
                       setTrailerModalKey(deepDetails.trailers[0].youtubeId)
                     }
-                    className="px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border border-white/20 bg-white/5 text-white hover:border-nebula-cyan/60 hover:text-nebula-cyan hover:bg-nebula-cyan/10 flex-1 sm:flex-none"
+                    className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border border-white/20 bg-white/5 text-white hover:border-nebula-cyan/60 hover:text-nebula-cyan hover:bg-nebula-cyan/10 shrink-0"
                   >
                     <Film size={18} />
-                    <span className="hidden xs:inline">Trailer</span>
+                    <span>Watch Trailer</span>
                   </motion.button>
                 )}
               </div>
