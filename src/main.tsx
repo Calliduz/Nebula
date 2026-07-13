@@ -6,15 +6,17 @@ import App from "./App.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import "./index.css";
 
-// Prevent DevTools inspection
-DisableDevtool({
-  url: "about:blank",
-  disableMenu: true,
-  clearLog: true,
-  disableSelect: false,
-  disableCopy: false,
-  interval: 200,
-});
+// Prevent DevTools inspection in production only
+if (!import.meta.env.DEV) {
+  DisableDevtool({
+    url: "about:blank",
+    disableMenu: true,
+    clearLog: true,
+    disableSelect: false,
+    disableCopy: false,
+    interval: 200,
+  });
+}
 
 
 createRoot(document.getElementById("root")!).render(
