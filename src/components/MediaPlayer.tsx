@@ -22,6 +22,7 @@ import {
   Tv,
   Upload,
   Zap,
+  SkipForward,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +31,13 @@ import { SubtitleOverlay } from "./SubtitleOverlay";
 
 import { API_BASE_URL } from "../config";
 import { handleClearLogoError } from "../utils/helpers";
+import {
+  type SkipSegment,
+  parseIntroDBResponse,
+  getActiveSkipSegment,
+  getSkipLabel,
+  getSkipDismissKey,
+} from "../lib/skipSegments";
 const API = API_BASE_URL;
 
 interface MediaPlayerProps {
@@ -295,6 +303,58 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [failedMirrors, setFailedMirrors] = useState<Record<number, string>>(
     {},
   );
+
+  // ── TheIntroDB skip segments ─────────────────────────────────────────────
+  const [skipSegments, setSkipSegments] = useState<SkipSegment[]>([]);
+  const [activeSkip, setActiveSkip] = useState<SkipSegment | null>(null);
+  const [dismissedSkips, setDismissedSkips] = useState<Set<string>>(new Set());
+  const skipSegmentsRef = useRef<SkipSegment[]>([]);
+  const dismissedSkipsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    skipSegmentsRef.current = skipSegments;
+  }, [skipSegments]);
+  useEffect(() => {
+    dismissedSkipsRef.current = dismissedSkips;
+  }, [dismissedSkips]);
+
+  // ── Skip countdown timer (Netflix style) ──────────────────────────────────
+  const [skipTimer, setSkipTimer] = useState(5);
+  const [isSkipHovered, setIsSkipHovered] = useState(false);
+
+  useEffect(() => {
+    if (!activeSkip) {
+      setIsSkipHovered(false);
+      return;
+    }
+
+    if (isSkipHovered) {
+      return; // Pause the countdown when hovered
+    }
+
+    const timer = setInterval(() => {
+      setSkipTimer((t) => {
+        if (t <= 0.1) {
+          // Timer finished -> auto-dismiss the skip button
+          setDismissedSkips((prev) => {
+            const next = new Set(prev);
+            next.add(getSkipDismissKey(activeSkip));
+            return next;
+          });
+          setActiveSkip(null);
+          return 5;
+        }
+        return t - 0.1;
+      });
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, [activeSkip, isSkipHovered]);
+
+  useEffect(() => {
+    if (activeSkip) {
+      setSkipTimer(5);
+    }
+  }, [activeSkip?.type, activeSkip?.startSec]);
 
   const [doubleTapFeedback, setDoubleTapFeedback] = useState<{
     visible: boolean;
@@ -931,6 +991,47 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       }).catch(() => {});
     };
   }, [movie.id, season, episode, source, streamReloadKey]);
+
+  // ── TheIntroDB skip-segment fetch ─────────────────────────────────────────
+  useEffect(() => {
+    // Reset segments whenever the media changes
+    setSkipSegments([]);
+    setActiveSkip(null);
+    setDismissedSkips(new Set());
+    skipSegmentsRef.current = [];
+    dismissedSkipsRef.current = new Set();
+
+    let cancelled = false;
+    let url = `https://api.theintrodb.org/v3/media?tmdb_id=${movie.id}`;
+    if (movie.type === "tv" && season !== undefined && episode !== undefined) {
+      url += `&season=${season}&episode=${episode}`;
+    }
+
+    fetch(url)
+      .then((r) => {
+        if (!r.ok) return; // 404 = no data, silently ignore
+        return r.json();
+      })
+      .then((data) => {
+        if (cancelled || !data) return;
+        const parsed = parseIntroDBResponse(data);
+        setSkipSegments(parsed);
+        skipSegmentsRef.current = parsed;
+        if (parsed.length > 0) {
+          console.log(
+            `[PLAYER] IntroDB: loaded ${parsed.length} skip segment(s)`,
+          );
+        }
+      })
+      .catch((err) => {
+        // Silently swallow network errors — skip segments are non-critical
+        console.debug("[PLAYER] IntroDB fetch failed (non-critical):", err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movie.id, movie.type, season, episode]);
 
   // ── Subtitle fetch (auto + manual refetch) ───────────────────────────────
   const refetchSubtitles = useCallback(
@@ -2037,6 +2138,34 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             100,
         );
       }
+
+      // ── Reset dismissed segments if user seeks out of their range ─────
+      const curTime = video.currentTime;
+      setDismissedSkips((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        for (const seg of skipSegmentsRef.current) {
+          const key = getSkipDismissKey(seg);
+          if (next.has(key)) {
+            const isOutside =
+              curTime < seg.startSec - 1 ||
+              (seg.endSec !== null && curTime > seg.endSec + 1);
+            if (isOutside) {
+              next.delete(key);
+              changed = true;
+            }
+          }
+        }
+        return changed ? next : prev;
+      });
+
+      // ── Skip segment detection ──────────────────────────────────────────
+      const activeSeg = getActiveSkipSegment(
+        skipSegmentsRef.current,
+        video.currentTime,
+        dismissedSkipsRef.current,
+      );
+      setActiveSkip(activeSeg);
     };
     const onDuration = () => setDuration(formatTime(video.duration));
     const onPlay = () => setIsPaused(false);
@@ -3268,61 +3397,90 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           onTouchEnd={(e) => e.stopPropagation()}
         >
           {!isEmbed && (
-            <div
-              id="progress-slider"
-              className="relative w-full rounded-full mb-3 sm:mb-4 cursor-pointer group flex items-center h-5"
-              onMouseDown={handleSliderDown}
-              onTouchStart={handleSliderDown}
-              onMouseMove={handleSliderHover}
-              onMouseLeave={() => setHoverTime(null)}
-            >
-              {/* Hover Tooltip */}
-              {hoverTime !== null && !isDragging && (
-                <div
-                  className="absolute bottom-full mb-3 -translate-x-1/2 px-2.5 py-1.5 bg-black/90 backdrop-blur-md border border-white/20 text-white rounded-lg text-[10px] font-bold pointer-events-none z-50 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
-                  style={{
-                    left: `${(hoverTime / (videoRef.current?.duration || 1)) * 100}%`,
-                  }}
-                >
-                  {formatTime(hoverTime)}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-black/90" />
-                </div>
-              )}
-
-              {/* Drag Tooltip */}
-              {isDragging && (
-                <div
-                  className="absolute bottom-full mb-2 -translate-x-1/2 px-2 py-1 bg-nebula-cyan text-black rounded text-xs font-bold pointer-events-none z-50"
-                  style={{ left: `${dragProgress}%` }}
-                >
-                  {formatTime(
-                    (dragProgress / 100) * (videoRef.current?.duration || 0),
-                  )}
-                </div>
-              )}
-
+            <>
+              {/* ── Progress Slider ──────────────────────────────────────── */}
               <div
-                className="absolute inset-x-0 rounded-full bg-white/20"
-                style={{ height: "3px" }}
+                id="progress-slider"
+                className="relative w-full rounded-full mb-3 sm:mb-4 cursor-pointer group flex items-center h-5"
+                onMouseDown={handleSliderDown}
+                onTouchStart={handleSliderDown}
+                onMouseMove={handleSliderHover}
+                onMouseLeave={() => setHoverTime(null)}
               >
+                {/* Hover Tooltip */}
+                {hoverTime !== null && !isDragging && (
+                  <div
+                    className="absolute bottom-full mb-3 -translate-x-1/2 px-2.5 py-1.5 bg-black/90 backdrop-blur-md border border-white/20 text-white rounded-lg text-[10px] font-bold pointer-events-none z-50 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+                    style={{
+                      left: `${(hoverTime / (videoRef.current?.duration || 1)) * 100}%`,
+                    }}
+                  >
+                    {formatTime(hoverTime)}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-black/90" />
+                  </div>
+                )}
+
+                {/* Drag Tooltip */}
+                {isDragging && (
+                  <div
+                    className="absolute bottom-full mb-2 -translate-x-1/2 px-2 py-1 bg-nebula-cyan text-black rounded text-xs font-bold pointer-events-none z-50"
+                    style={{ left: `${dragProgress}%` }}
+                  >
+                    {formatTime(
+                      (dragProgress / 100) * (videoRef.current?.duration || 0),
+                    )}
+                  </div>
+                )}
+
                 <div
-                  className="absolute inset-y-0 left-0 bg-white/30 rounded-full"
-                  style={{ width: `${buffered}%` }}
-                />
-                <div
-                  className="absolute inset-y-0 left-0 bg-white rounded-full transition-all duration-75"
-                  style={{
-                    width: `${isDragging ? dragProgress : progress}%`,
-                  }}
-                />
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg group-hover:scale-125 transition-transform"
-                  style={{
-                    left: `${isDragging ? dragProgress : progress}%`,
-                  }}
-                />
+                  className="absolute inset-x-0 rounded-full bg-white/20"
+                  style={{ height: "3px" }}
+                >
+                  <div
+                    className="absolute inset-y-0 left-0 bg-white/30 rounded-full"
+                    style={{ width: `${buffered}%` }}
+                  />
+                  <div
+                    className="absolute inset-y-0 left-0 bg-white rounded-full transition-all duration-75"
+                    style={{
+                      width: `${isDragging ? dragProgress : progress}%`,
+                    }}
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg group-hover:scale-125 transition-transform"
+                    style={{
+                      left: `${isDragging ? dragProgress : progress}%`,
+                    }}
+                  />
+
+                  {/* ── Segment markers ───────────────────────────────── */}
+                  {skipSegments.map((seg, i) => {
+                    const dur = videoRef.current?.duration;
+                    if (!dur || dur <= 0) return null;
+                    const leftPct = (seg.startSec / dur) * 100;
+                    const endSec = seg.endSec !== null ? seg.endSec : dur;
+                    const widthPct = Math.max(
+                      0.3,
+                      ((endSec - seg.startSec) / dur) * 100,
+                    );
+                    const isWarm = seg.type === "intro" || seg.type === "recap";
+                    return (
+                      <div
+                        key={`marker-${seg.type}-${i}`}
+                        className="absolute inset-y-0 rounded-full pointer-events-none"
+                        style={{
+                          left: `${leftPct}%`,
+                          width: `${widthPct}%`,
+                          background: isWarm
+                            ? "rgba(251,191,36,0.45)"
+                            : "rgba(255,255,255,0.3)",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           <div className="flex items-center justify-between gap-2">
@@ -4173,6 +4331,48 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ── Floating Skip Button Overlay (Always Visible & Interactive) ── */}
+      <AnimatePresence>
+        {activeSkip && (
+          <motion.div
+            key={`skip-${activeSkip.type}-${activeSkip.startSec}`}
+            initial={{ opacity: 0, x: 50, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 30, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            onMouseEnter={() => setIsSkipHovered(true)}
+            onMouseLeave={() => setIsSkipHovered(false)}
+            className={`fixed right-4 sm:right-8 z-[250] pointer-events-auto transition-all duration-300 select-none ${
+              showUi ? "bottom-24 sm:bottom-28" : "bottom-6 sm:bottom-8"
+            }`}
+          >
+            <button
+              onClick={() => {
+                const v = videoRef.current;
+                if (!v) return;
+                v.currentTime =
+                  activeSkip.endSec !== null ? activeSkip.endSec : v.duration;
+                setDismissedSkips((prev) => {
+                  const next = new Set(prev);
+                  next.add(getSkipDismissKey(activeSkip));
+                  return next;
+                });
+                setActiveSkip(null);
+              }}
+              className="relative flex items-center gap-2.5 px-6 py-3.5 bg-black/85 hover:bg-white text-white hover:text-black border border-white/20 hover:border-white rounded-md text-[10px] font-sans font-black uppercase tracking-widest transition-all cursor-pointer overflow-hidden shadow-[0_4px_30px_rgba(0,0,0,0.85)] active:scale-95"
+            >
+              <SkipForward size={12} fill="currentColor" />
+              <span>{getSkipLabel(activeSkip.type)}</span>
+              {/* Countdown Progress Bar (Filling up) */}
+              <div
+                className="absolute bottom-0 left-0 h-[2.5px] bg-nebula-cyan transition-all duration-100 ease-linear"
+                style={{ width: `${((5 - skipTimer) / 5) * 100}%` }}
+              />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Episode Side Drawer ── */}
       <AnimatePresence>
