@@ -2490,16 +2490,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (isDragging) {
       window.addEventListener("mousemove", handleSliderMove);
       window.addEventListener("mouseup", handleSliderUp);
-      window.addEventListener("touchmove", handleSliderMove, { capture: true, passive: false });
+      window.addEventListener("touchmove", handleSliderMove, {
+        capture: true,
+        passive: false,
+      });
       window.addEventListener("touchend", handleSliderUp, { capture: true });
       window.addEventListener("touchcancel", handleSliderUp, { capture: true });
     }
     return () => {
       window.removeEventListener("mousemove", handleSliderMove);
       window.removeEventListener("mouseup", handleSliderUp);
-      window.removeEventListener("touchmove", handleSliderMove, { capture: true });
+      window.removeEventListener("touchmove", handleSliderMove, {
+        capture: true,
+      });
       window.removeEventListener("touchend", handleSliderUp, { capture: true });
-      window.removeEventListener("touchcancel", handleSliderUp, { capture: true });
+      window.removeEventListener("touchcancel", handleSliderUp, {
+        capture: true,
+      });
     };
   }, [isDragging, handleSliderMove, handleSliderUp]);
 

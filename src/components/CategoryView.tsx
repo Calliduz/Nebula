@@ -62,7 +62,7 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   isLoading,
 }) => {
   const [windowWidth, setWindowWidth] = React.useState(
-    typeof window !== "undefined" ? window.innerWidth : 1200
+    typeof window !== "undefined" ? window.innerWidth : 1200,
   );
 
   React.useEffect(() => {
@@ -75,9 +75,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
     if (windowWidth >= 1536) return 9; // 2xl
     if (windowWidth >= 1280) return 8; // xl
     if (windowWidth >= 1024) return 6; // lg
-    if (windowWidth >= 768) return 5;  // md
-    if (windowWidth >= 640) return 4;  // sm
-    return 3;                          // mobile
+    if (windowWidth >= 768) return 5; // md
+    if (windowWidth >= 640) return 4; // sm
+    return 3; // mobile
   }, [windowWidth]);
 
   React.useEffect(() => {
@@ -90,16 +90,24 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   // Helper to render grid with ads every 20 items
   const renderGridWithAds = () => {
     const rawItems = data.slice(0, visibleCount);
-    
+
     // We only slice to a multiple of columns if we have more items to load in total.
     // That means if we are not at the end of the collection (we can either load more or fetch more).
-    const hasMoreData = data.length > visibleCount || 
-      ["Dramas", "Trending Operations", "Movies", "TV Shows", "Trending Now"].includes(viewingCategory || "") ||
+    const hasMoreData =
+      data.length > visibleCount ||
+      [
+        "Dramas",
+        "Trending Operations",
+        "Movies",
+        "TV Shows",
+        "Trending Now",
+      ].includes(viewingCategory || "") ||
       (viewingCategory ? !!ROW_FETCH_CONFIG[viewingCategory] : false);
 
-    const displayCount = (hasMoreData && rawItems.length >= columns)
-      ? Math.floor(rawItems.length / columns) * columns
-      : rawItems.length;
+    const displayCount =
+      hasMoreData && rawItems.length >= columns
+        ? Math.floor(rawItems.length / columns) * columns
+        : rawItems.length;
 
     const items = rawItems.slice(0, displayCount);
     return items.map((item, i) => (

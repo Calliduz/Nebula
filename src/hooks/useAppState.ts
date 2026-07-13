@@ -2508,7 +2508,7 @@ export function useAppState() {
   const handleRandomize = () => {
     const pool = viewingCategory ? filteredMovies : allMovies;
     const activeId = (selectedMovie?.id || params.id)?.toString();
-    
+
     // Filter candidates (exclude active movie)
     let candidates = pool;
     if (activeId) {
@@ -2520,20 +2520,33 @@ export function useAppState() {
     if (candidates.length === 0) return;
 
     // Calculate weights for candidates
-    const activeMovie = selectedMovie || (activeId ? allMovies.find(m => m.id.toString() === activeId) : null);
-    const activeGenres = activeMovie?.genre ? activeMovie.genre.split(",").map(g => g.trim().toLowerCase()) : [];
+    const activeMovie =
+      selectedMovie ||
+      (activeId ? allMovies.find((m) => m.id.toString() === activeId) : null);
+    const activeGenres = activeMovie?.genre
+      ? activeMovie.genre.split(",").map((g) => g.trim().toLowerCase())
+      : [];
 
-    const historyIds = new Set(history.map(h => {
-      if (h && typeof h === "object") return h.id?.toString();
-      if (typeof h === "string" && h.includes("_")) return h.split("_")[1];
-      return h?.toString();
-    }).filter(Boolean));
+    const historyIds = new Set(
+      history
+        .map((h) => {
+          if (h && typeof h === "object") return h.id?.toString();
+          if (typeof h === "string" && h.includes("_")) return h.split("_")[1];
+          return h?.toString();
+        })
+        .filter(Boolean),
+    );
 
-    const myListIds = new Set(myList.map(item => {
-      if (item && typeof item === "object") return item.id?.toString();
-      if (typeof item === "string" && item.includes("_")) return item.split("_")[1];
-      return item?.toString();
-    }).filter(Boolean));
+    const myListIds = new Set(
+      myList
+        .map((item) => {
+          if (item && typeof item === "object") return item.id?.toString();
+          if (typeof item === "string" && item.includes("_"))
+            return item.split("_")[1];
+          return item?.toString();
+        })
+        .filter(Boolean),
+    );
 
     const recentIds = new Set(recentRandomizedIdsRef.current);
 
@@ -2547,10 +2560,14 @@ export function useAppState() {
 
       // 2. Genre overlap with active movie
       if (activeGenres.length > 0 && m.genre) {
-        const itemGenres = m.genre.split(",").map(g => g.trim().toLowerCase());
-        const overlap = itemGenres.filter(g => activeGenres.includes(g)).length;
+        const itemGenres = m.genre
+          .split(",")
+          .map((g) => g.trim().toLowerCase());
+        const overlap = itemGenres.filter((g) =>
+          activeGenres.includes(g),
+        ).length;
         if (overlap > 0) {
-          weight *= (1.0 + overlap * 0.4); // boost for matching genres
+          weight *= 1.0 + overlap * 0.4; // boost for matching genres
         }
       }
 
@@ -2578,12 +2595,15 @@ export function useAppState() {
     });
 
     // Weighted random selection
-    const totalWeight = weightedCandidates.reduce((sum, item) => sum + item.weight, 0);
+    const totalWeight = weightedCandidates.reduce(
+      (sum, item) => sum + item.weight,
+      0,
+    );
     if (totalWeight <= 0) {
       // Fallback to simple random
       const random = candidates[Math.floor(Math.random() * candidates.length)];
       wrappedSetSelectedMovie(random);
-      
+
       // Update recent history
       recentRandomizedIdsRef.current.push(random.id.toString());
       if (recentRandomizedIdsRef.current.length > 15) {
