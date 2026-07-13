@@ -2448,6 +2448,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const handleSliderMove = useCallback(
     (e: MouseEvent | TouchEvent) => {
       if (!isDragging) return;
+      if ("touches" in e && e.cancelable) {
+        e.preventDefault();
+      }
       const slider = document.getElementById("progress-slider");
       if (!slider) return;
       const r = slider.getBoundingClientRect();
@@ -2487,14 +2490,16 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (isDragging) {
       window.addEventListener("mousemove", handleSliderMove);
       window.addEventListener("mouseup", handleSliderUp);
-      window.addEventListener("touchmove", handleSliderMove);
-      window.addEventListener("touchend", handleSliderUp);
+      window.addEventListener("touchmove", handleSliderMove, { capture: true, passive: false });
+      window.addEventListener("touchend", handleSliderUp, { capture: true });
+      window.addEventListener("touchcancel", handleSliderUp, { capture: true });
     }
     return () => {
       window.removeEventListener("mousemove", handleSliderMove);
       window.removeEventListener("mouseup", handleSliderUp);
-      window.removeEventListener("touchmove", handleSliderMove);
-      window.removeEventListener("touchend", handleSliderUp);
+      window.removeEventListener("touchmove", handleSliderMove, { capture: true });
+      window.removeEventListener("touchend", handleSliderUp, { capture: true });
+      window.removeEventListener("touchcancel", handleSliderUp, { capture: true });
     };
   }, [isDragging, handleSliderMove, handleSliderUp]);
 
