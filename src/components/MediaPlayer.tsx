@@ -39,6 +39,7 @@ import {
   getSkipDismissKey,
 } from "../lib/skipSegments";
 const API = API_BASE_URL;
+const SKIP_BUTTON_DURATION = 8;
 
 interface MediaPlayerProps {
   movie: any;
@@ -241,9 +242,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setLogoFailed(false);
+    hasAutoRetriedRef.current = false;
   }, [movie?.id, season, episode]);
   const {
     prefs,
@@ -319,7 +322,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   }, [dismissedSkips]);
 
   // ── Skip countdown timer (Netflix style) ──────────────────────────────────
-  const [skipTimer, setSkipTimer] = useState(5);
+  const [skipTimer, setSkipTimer] = useState(SKIP_BUTTON_DURATION);
   const [isSkipHovered, setIsSkipHovered] = useState(false);
 
   useEffect(() => {
@@ -342,7 +345,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             return next;
           });
           setActiveSkip(null);
-          return 5;
+          return SKIP_BUTTON_DURATION;
         }
         return t - 0.1;
       });
@@ -353,7 +356,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   useEffect(() => {
     if (activeSkip) {
-      setSkipTimer(5);
+      setSkipTimer(SKIP_BUTTON_DURATION);
     }
   }, [activeSkip?.type, activeSkip?.startSec]);
 
@@ -491,6 +494,209 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const serverTipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeFragLoads = useRef(0);
   const lastFragLoadedTime = useRef(0);
+  const hasAutoRetriedRef = useRef(false);
+
+  const reScrapeStream = useCallback(
+    async (isAuto = false) => {
+      if (isRefreshing) return;
+      console.log(`[PLAYER] Re-scraping stream mirrors (auto=${isAuto})...`);
+      setIsRefreshing(true);
+      setError("");
+
+      // Identify which scraper endpoint to query
+      const isVideasy = mirrorsRef.current.some((m) =>
+        m.source.toLowerCase().includes("videasy"),
+      );
+      const isVidrock = mirrorsRef.current.some((m) =>
+        m.source.toLowerCase().includes("vidrock"),
+      );
+      const isFilmu = mirrorsRef.current.some((m) =>
+        m.source.toLowerCase().includes("filmu"),
+      );
+      const isVidnest = mirrorsRef.current.some((m) =>
+        m.source.toLowerCase().includes("vidnest"),
+      );
+      const isVaplayer = mirrorsRef.current.some((m) =>
+        m.source.toLowerCase().includes("vaplayer"),
+      );
+
+      let fetchUrl = "";
+      if (isVideasy) {
+        fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${
+          movie.type
+        }&title=${encodeURIComponent(movie.title || "")}&releaseYear=${
+          movie.year || ""
+        }&force=1`;
+        if (season !== undefined) fetchUrl += `&season=${season}`;
+        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+      } else if (isVidrock) {
+        fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&force=1`;
+        if (season !== undefined) fetchUrl += `&season=${season}`;
+        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+      } else if (isFilmu) {
+        fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${
+          movie.type
+        }&title=${encodeURIComponent(movie.title || "")}&releaseYear=${
+          movie.year || ""
+        }&force=1`;
+        if (season !== undefined) fetchUrl += `&season=${season}`;
+        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+      } else if (isVidnest) {
+        fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}&force=1`;
+        if (season !== undefined) fetchUrl += `&season=${season}`;
+        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+      } else if (isVaplayer) {
+        fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}&force=1`;
+        if (season !== undefined) fetchUrl += `&season=${season}`;
+        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+      } else {
+        // Default to VidLink
+        fetchUrl = `${API}/api/stream?tmdbId=${movie.id}&type=${
+          movie.type
+        }&title=${encodeURIComponent(movie.title || "")}&releaseYear=${
+          movie.year || ""
+        }&releaseDate=${movie.release_date || ""}&force=1`;
+        if (season !== undefined) fetchUrl += `&season=${season}`;
+        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+      }
+
+      try {
+        setLoading(true);
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error("Scraper endpoint failed");
+        const data = await res.json();
+
+        let updatedMirrors: any[] = [];
+        if (isVideasy) {
+          updatedMirrors = Object.entries(data)
+            .filter(([_, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              source: name.toLowerCase().startsWith("videasy")
+                ? name
+                : `Videasy (${name})`,
+              url: v.url,
+              type: v.type || "hls",
+              audio: v.audio || "",
+              flag: v.flag || "us",
+            }));
+        } else if (isVidrock) {
+          updatedMirrors = Object.entries(data)
+            .filter(([_, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              source: name.toLowerCase().startsWith("vidrock")
+                ? name
+                : `VidRock (${name})`,
+              url: v.url,
+              type: v.type || "hls",
+              audio: v.audio || "",
+              flag: v.flag || "us",
+            }));
+        } else if (isFilmu) {
+          updatedMirrors = Object.entries(data)
+            .filter(([_, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              source: name.toLowerCase().startsWith("filmu")
+                ? name
+                : `FilmU-${name}`,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+        } else if (isVidnest) {
+          updatedMirrors = Object.entries(data)
+            .filter(([_, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              source: name.toLowerCase().startsWith("vidnest")
+                ? name
+                : `Vidnest (${name})`,
+              url: v.url,
+              type: v.type || "mp4",
+              quality: (v as any).quality || "Auto",
+            }));
+        } else if (isVaplayer) {
+          updatedMirrors = Object.entries(data)
+            .filter(([_, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              source: name.toLowerCase().startsWith("vaplayer")
+                ? name
+                : `Vaplayer (${name})`,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+        } else {
+          // VidLink
+          const results = Array.isArray(data) ? data : data.results || [];
+          updatedMirrors = results.map((m: any) => ({
+            source: m.source || "VidLink",
+            url: m.url,
+            type: m.type || "hls",
+            quality: m.quality || "Auto",
+          }));
+        }
+
+        if (updatedMirrors.length > 0) {
+          const processed = updatedMirrors.map((m: any) => {
+            if (m.type === "embed") return m;
+            const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
+            const proxyEndpoint = isMp4
+              ? "/api/proxy/segment"
+              : "/api/proxy/stream";
+            const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(
+              m.url,
+            )}`;
+            return { ...m, url: proxiedUrl };
+          });
+
+          const newGrouped = groupMirrors(processed);
+          setMirrors(newGrouped);
+          mirrorsRef.current = newGrouped;
+          setFailedMirrors({});
+          setStreamUrl(null);
+          setError("");
+          setTimeout(() => {
+            selectMirror(0, newGrouped);
+            setLoading(false);
+          }, 100);
+        } else {
+          throw new Error("No mirrors returned from fresh scrape");
+        }
+      } catch (err: any) {
+        console.error("[PLAYER] Re-scrape failed:", err);
+        setError(
+          isAuto
+            ? "All mirrors failed. Trying to force-refresh stream..."
+            : "Failed to force refresh stream sources.",
+        );
+        setLoading(false);
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [
+      movie.id,
+      movie.type,
+      movie.title,
+      movie.year,
+      movie.release_date,
+      season,
+      episode,
+      isRefreshing,
+      selectMirror,
+    ],
+  );
+
+  const handleMirrorExhaustion = useCallback(
+    (errorMessage: string) => {
+      if (!hasAutoRetriedRef.current) {
+        hasAutoRetriedRef.current = true;
+        reScrapeStream(true);
+      } else {
+        setError(errorMessage);
+      }
+    },
+    [reScrapeStream],
+  );
 
   const showBufferingWithDelay = useCallback((delay = 600) => {
     if (bufferingTimeoutRef.current) return;
@@ -1717,7 +1923,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         if (
           d.type === Hls.ErrorTypes.NETWORK_ERROR &&
           statusCode &&
-          statusCode >= 400
+          (statusCode >= 400 || [401, 403, 404, 410, 429].includes(statusCode))
         ) {
           console.warn(
             `[HLS] Hard network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
@@ -1738,7 +1944,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
-            setError(`Stream failed (${statusCode}). All mirrors exhausted.`);
+            handleMirrorExhaustion(`Stream failed (${statusCode}). All mirrors exhausted.`);
           }
           return;
         }
@@ -1765,7 +1971,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             }));
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
-            setError("Stream loading failed. All mirrors exhausted.");
+            handleMirrorExhaustion("Stream loading failed. All mirrors exhausted.");
           }
           return;
         }
@@ -1797,7 +2003,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 }));
                 selectMirror(nextIdx, mirrorsRef.current);
               } else {
-                setError(
+                handleMirrorExhaustion(
                   "Continuous segment loading failures. All mirrors exhausted.",
                 );
               }
@@ -1834,7 +2040,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               }));
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
-              setError("Initial playback failed. All mirrors exhausted.");
+              handleMirrorExhaustion("Initial playback failed. All mirrors exhausted.");
             }
           }
           return;
@@ -1884,7 +2090,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               );
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
-              setError("Stream connection lost. All mirrors exhausted.");
+              handleMirrorExhaustion("Stream connection lost. All mirrors exhausted.");
             }
           }
         } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -1911,11 +2117,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               );
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
-              setError(`Stream decode failed: ${d.details}`);
+              handleMirrorExhaustion(`Stream decode failed: ${d.details}`);
             }
           }
         } else {
-          setError(`Stream failed: ${d.details}`);
+          handleMirrorExhaustion(`Stream failed: ${d.details}`);
         }
       });
 
@@ -2310,7 +2516,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             }));
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
-            setError(`Playback failed: ${err.message || "Media source error"}`);
+            handleMirrorExhaustion(`Playback failed: ${err.message || "Media source error"}`);
           }
         }
       }
@@ -3059,57 +3265,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </button>
               <button
                 onClick={() => {
-                  setError("");
-                  setLoading(true);
-                  setFailedMirrors({});
-                  // Re-trigger the stream fetch by bumping streamUrl state
-                  setStreamUrl(null);
-                  let url = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
-                  if (movie.origin) url += `&origin=${movie.origin}`;
-                  if (season !== undefined) url += `&season=${season}`;
-                  if (episode !== undefined) url += `&episode=${episode}`;
-                  fetch(url)
-                    .then((r) => r.json())
-                    .then((data) => {
-                      if (data.mirrors && data.mirrors.length > 0) {
-                        const processedMirrors = data.mirrors.map((m: any) => {
-                          if (m.type === "embed") return m;
-                          const isMp4 =
-                            m.type === "mp4" || m.url.includes(".mp4");
-                          const proxyEndpoint = isMp4
-                            ? "/api/proxy/segment"
-                            : "/api/proxy/stream";
-                          const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
-                          return { ...m, url: proxiedUrl };
-                        });
-                        const grouped = groupMirrors(processedMirrors);
-                        setMirrors(grouped);
-                        mirrorsRef.current = grouped;
-                        selectMirror(0, grouped);
-                        if (data.qualityTag) setQualityTag(data.qualityTag);
-                        if (data.resolution) setResolution(data.resolution);
-                      } else if (data.streamUrl) {
-                        const isEmb = data.type === "embed";
-                        const isMp4 =
-                          data.type === "mp4" ||
-                          data.streamUrl.includes(".mp4");
-                        const proxyEndpoint = isMp4
-                          ? "/api/proxy/segment"
-                          : "/api/proxy/stream";
-                        setStreamUrl(
-                          isEmb
-                            ? data.streamUrl
-                            : `${API}${proxyEndpoint}?url=${encodeURIComponent(data.streamUrl)}`,
-                        );
-                        setIsEmbed(isEmb);
-                        if (data.qualityTag) setQualityTag(data.qualityTag);
-                        if (data.resolution) setResolution(data.resolution);
-                      } else {
-                        setError(data.error || "No stream found on retry.");
-                      }
-                    })
-                    .catch((e) => setError(e.message))
-                    .finally(() => setLoading(false));
+                  reScrapeStream(false);
                 }}
                 className="col-span-1 px-4 py-3 bg-nebula-cyan text-obsidian rounded-full text-[10px] uppercase font-black tracking-[0.2em] hover:bg-white transition-colors text-center flex items-center justify-center min-h-[44px] sm:min-h-0"
               >
@@ -4444,7 +4600,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               {/* Countdown Progress Bar (Filling up) */}
               <div
                 className="absolute bottom-0 left-0 h-[2.5px] bg-nebula-cyan transition-all duration-100 ease-linear"
-                style={{ width: `${((5 - skipTimer) / 5) * 100}%` }}
+                style={{ width: `${((SKIP_BUTTON_DURATION - skipTimer) / SKIP_BUTTON_DURATION) * 100}%` }}
               />
             </button>
           </motion.div>
