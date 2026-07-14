@@ -42,6 +42,8 @@ interface HomeFeedProps {
   removeFromHistory: (id: string | number, type?: string) => void;
   removeFromProgress: (id: string) => void;
   fetchRowData: (rowTitle: string) => void;
+  adultMode?: boolean;
+  setAdultMode?: (val: boolean) => void;
 }
 
 export const HomeFeed: React.FC<HomeFeedProps> = ({
@@ -66,7 +68,16 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   removeFromHistory,
   removeFromProgress,
   fetchRowData,
+  adultMode = false,
+  setAdultMode,
 }) => {
+  const ADULT_ROW_TITLES = [
+    "Rated R Hits",
+    "Steamy Romance",
+    "Erotic Thrillers",
+    "Adult Anime",
+  ];
+
   const priorityTitles = [
     "Continue Watching",
     "Top in Philippines",
@@ -88,11 +99,18 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     );
   };
 
+  const isAdultRow = (title: string) => ADULT_ROW_TITLES.includes(title);
+
   const catalogRows = rows.filter(
-    (r) => !priorityTitles.includes(r.title) && !isPersonalized(r.title),
+    (r) =>
+      !priorityTitles.includes(r.title) &&
+      !isPersonalized(r.title) &&
+      !isAdultRow(r.title),
   );
 
   const personalizedRows = rows.filter((r) => isPersonalized(r.title));
+
+  const adultRows = rows.filter((r) => isAdultRow(r.title));
 
   const renderRow = (row: any, rowIndex: number) => {
     if (row.hasLoaded) {
@@ -215,6 +233,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         setActiveMood={setActiveMood}
         onRandomize={onRandomize}
         onRefreshFeed={onRefreshFeed}
+        adultMode={adultMode}
+        setAdultMode={setAdultMode}
       />
 
       {/* 1. Priority Rows (Continue Watching, Top in PH, Trending) */}
@@ -231,7 +251,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       {/* 3. Providers Shelf & Categories Bar */}
       <ProvidersShelf setViewingCategory={setViewingCategory} />
-      <CategoriesBar setViewingCategory={setViewingCategory} />
+      <CategoriesBar setViewingCategory={setViewingCategory} adultMode={adultMode} />
 
       <SectionDivider label="Catalog" />
 
@@ -242,6 +262,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       {/* 5. Personalized Recommendation Rows */}
       {personalizedRows.map((row, idx) => renderRow(row, idx))}
+
+      {/* 6. Adult Content Rows (only shown when 18+ mode is enabled) */}
+      {adultMode && adultRows.length > 0 && (
+        <>
+          <SectionDivider label="🔞 Mature Content" />
+          {adultRows.map((row, idx) => renderRow(row, idx))}
+        </>
+      )}
 
       {/* Fallback Recommendation Row if not already in rows */}
       {!rows.some((r) => r.title === "Based on Watch History") && (

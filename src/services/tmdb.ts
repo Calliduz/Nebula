@@ -131,6 +131,7 @@ export interface NebulaMovie {
   quality?: string;
   isVerified?: boolean;
   isDead?: boolean;
+  adult?: boolean;
 }
 
 import { API_BASE_URL } from "../config";
@@ -272,6 +273,7 @@ const normalizeMovie = (
     if (diffDays < 45) return "HD (Early)"; // Likely early digital or high-quality CAM
     return "HD";
   })(),
+  adult: !!item.adult,
 });
 
 /**
@@ -538,6 +540,7 @@ const getMatchTier = (titleNorm: string, queryNorm: string): number => {
 
 export const searchMedia = async (
   query: string,
+  includeAdult = false,
   signal?: AbortSignal,
 ): Promise<NebulaMovie[]> => {
   try {
@@ -575,7 +578,7 @@ export const searchMedia = async (
     const queryPromises: Promise<any[]>[] = variations.map((q) =>
       fetchFromTMDB(
         "/search/multi",
-        { query: q, page: "1" },
+        { query: q, page: "1", include_adult: includeAdult.toString() },
         TTL.SEARCH,
         signal,
       )
@@ -587,7 +590,7 @@ export const searchMedia = async (
     queryPromises.push(
       fetchFromTMDB(
         "/search/multi",
-        { query: trimmedQuery, page: "2" },
+        { query: trimmedQuery, page: "2", include_adult: includeAdult.toString() },
         TTL.SEARCH,
         signal,
       )

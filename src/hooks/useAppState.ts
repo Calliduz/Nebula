@@ -398,6 +398,46 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     },
     filterFn: () => true,
   },
+  // ─── 18+ Adult Content Rows ──────────────────────────────────────────────────
+  "Rated R Hits": {
+    mediaType: "movie",
+    discoverParams: {
+      include_adult: "true",
+      certification_country: "US",
+      certification: "R",
+      sort_by: "popularity.desc",
+    },
+    filterFn: () => true,
+  },
+  "Steamy Romance": {
+    mediaType: "movie",
+    discoverParams: {
+      with_genres: "10749",
+      include_adult: "true",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => m.genre.includes("Romance"),
+  },
+  "Erotic Thrillers": {
+    mediaType: "movie",
+    discoverParams: {
+      with_genres: "53,10749",
+      include_adult: "true",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) =>
+      m.genre.includes("Thriller") || m.genre.includes("Romance"),
+  },
+  "Adult Anime": {
+    mediaType: "tv",
+    discoverParams: {
+      with_genres: "16",
+      include_adult: "true",
+      with_original_language: "ja",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => m.genre.includes("Animation") && m.type === "tv",
+  },
 };
 
 const hardDedupe = (arr: any[]) => {
@@ -690,6 +730,27 @@ export function useAppState() {
   const [scrolled, setScrolled] = useState(false);
   const [myList, setMyList] = useLocalStorage<any[]>("nebula-my-list", []);
   const [history, setHistory] = useLocalStorage<any[]>("nebula-history", []);
+  const [adultMode, setAdultMode] = useLocalStorage<boolean>("nebula-adult-mode", false);
+
+  const filterAdultMovies = useCallback(
+    (movies: NebulaMovie[]) => {
+      if (adultMode) return movies;
+      return movies.filter((m) => !m.adult);
+    },
+    [adultMode],
+  );
+
+  const discoverMediaWithAdult = useCallback(
+    (type: "movie" | "tv", params: Record<string, string>, ttl?: number) => {
+      return discoverMedia(
+        type,
+        { include_adult: adultMode.toString(), ...params },
+        ttl,
+      );
+    },
+    [adultMode],
+  );
+
   const [visibleCount, setVisibleCount] = useState(18);
   const [dramaPage, setDramaPage] = useState(1);
   const recentRandomizedIdsRef = useRef<string[]>([]);
@@ -724,9 +785,10 @@ export function useAppState() {
 
   // Helper to merge new movies into the global pool uniquely
   const updateGlobalPool = (newMovies: NebulaMovie[]) => {
+    const filtered = filterAdultMovies(newMovies);
     setAllMovies((prev) => {
       const existingIds = new Set(prev.map((m) => m.id.toString()));
-      const uniqueNew = newMovies.filter(
+      const uniqueNew = filtered.filter(
         (m) => !existingIds.has(m.id.toString()),
       );
       if (uniqueNew.length === 0) return prev; // Referential stability — no change
@@ -1209,12 +1271,12 @@ export function useAppState() {
         (async () => {
           try {
             const [mRes, tvRes] = await Promise.all([
-              discoverMedia("movie", {
+              discoverMediaWithAdult("movie", {
                 region: "PH",
                 watch_region: "PH",
                 sort_by: "popularity.desc",
               }).catch(() => []),
-              discoverMedia("tv", {
+              discoverMediaWithAdult("tv", {
                 region: "PH",
                 watch_region: "PH",
                 sort_by: "popularity.desc",
@@ -1747,6 +1809,28 @@ export function useAppState() {
         });
       });
 
+      // 18. Adult Content Rows (only added when adultMode is enabled)
+      if (adultMode) {
+        const adultRowDefs = [
+          "Rated R Hits",
+          "Steamy Romance",
+          "Erotic Thrillers",
+          "Adult Anime",
+        ];
+        adultRowDefs.forEach((title) => {
+          const config = ROW_FETCH_CONFIG[title];
+          if (config) {
+            initialRows.push({
+              title,
+              items: [],
+              hasLoaded: false,
+              isLoading: false,
+              config,
+            });
+          }
+        });
+      }
+
       // 4. Set Initial State
       let initialFeatured = trending.slice(0, 5);
       if (topGenres.length > 0) {
@@ -1854,7 +1938,7 @@ export function useAppState() {
               } else if (config.mediaType === "all") {
                 return await getTrending("all", pageStr).catch(() => []);
               } else {
-                return await discoverMedia(config.mediaType, {
+                return await discoverMediaWithAdult(config.mediaType, {
                   ...config.discoverParams,
                   page: pageStr,
                 }).catch(() => []);
@@ -1862,32 +1946,32 @@ export function useAppState() {
             } else {
               // Special fallback row builders if config is missing (e.g. custom queries)
               if (title === "Daily Declassified Discoveries") {
-                return await discoverMedia("movie", {
+                return await discoverMediaWithAdult("movie", {
                   "vote_average.gte": "7.0",
                   sort_by: "popularity.desc",
                   page: pageStr,
                 }).catch(() => []);
               } else if (title === "Weekend Blockbuster Curation") {
-                return await discoverMedia("movie", {
+                return await discoverMediaWithAdult("movie", {
                   with_genres: "28,878,53",
                   sort_by: "popularity.desc",
                   page: pageStr,
                 }).catch(() => []);
               } else if (title === "Weekday Deep-Dive Series") {
-                return await discoverMedia("movie", {
+                return await discoverMediaWithAdult("movie", {
                   with_genres: "99,18",
                   sort_by: "popularity.desc",
                   page: pageStr,
                 }).catch(() => []);
               } else if (title === "Under the Radar Missions") {
-                return await discoverMedia("movie", {
+                return await discoverMediaWithAdult("movie", {
                   "vote_average.gte": "7.5",
                   "vote_count.lte": "1000",
                   sort_by: "popularity.desc",
                   page: pageStr,
                 }).catch(() => []);
               } else if (title === "Popular Near You") {
-                return await discoverMedia("movie", {
+                return await discoverMediaWithAdult("movie", {
                   sort_by: "popularity.desc",
                   page: pageStr,
                 }).catch(() => []);
@@ -2016,7 +2100,7 @@ export function useAppState() {
 
       executeFetch(rowTitle);
     },
-    [rows, discoverMedia, getRecommendations, getTrending, updateGlobalPool],
+    [rows, discoverMediaWithAdult, getRecommendations, getTrending, updateGlobalPool],
   );
 
   useEffect(() => {
@@ -2142,8 +2226,9 @@ export function useAppState() {
   }, [viewingCategory, myList, history, allMovies, rows]);
 
   useEffect(() => {
+    localStorage.removeItem("nebula-feed-cache");
     fetchInitialData();
-  }, []);
+  }, [adultMode]);
 
   // Sync user-specific rows when history/myList change.
   // NOTE: allMovies.length is intentionally EXCLUDED from deps to prevent
@@ -2712,7 +2797,8 @@ export function useAppState() {
         "Watch It Again",
       ].includes(viewingCategory)
     ) {
-      if (isPageFetched(viewingCategory, selectedRegion, dramaPage)) return;
+      const existingData = getCategoryMovies();
+      if (isPageFetched(viewingCategory, selectedRegion, dramaPage) && existingData.length > 0) return;
       const fetchMoreForCategory = async () => {
         let config = ROW_FETCH_CONFIG[viewingCategory];
         if (!config) {
@@ -2747,11 +2833,11 @@ export function useAppState() {
             } else if (PROVIDERS.includes(viewingCategory || "")) {
               // Parallel movie and TV fetch for providers
               const [mRes, tvRes] = await Promise.all([
-                discoverMedia("movie", {
+                discoverMediaWithAdult("movie", {
                   ...config.discoverParams,
                   page: dramaPage.toString(),
                 }).catch(() => []),
-                discoverMedia("tv", {
+                discoverMediaWithAdult("tv", {
                   ...config.discoverParams,
                   page: dramaPage.toString(),
                 }).catch(() => []),
@@ -2760,7 +2846,7 @@ export function useAppState() {
             } else if (config.mediaType === "all") {
               more = await getTrending("all", dramaPage.toString());
             } else {
-              more = await discoverMedia(config.mediaType, {
+              more = await discoverMediaWithAdult(config.mediaType, {
                 ...config.discoverParams,
                 page: dramaPage.toString(),
               });
@@ -3005,6 +3091,7 @@ export function useAppState() {
       rows,
       isTransitioning,
       selectedRegion,
+      adultMode,
     },
     actions: {
       setActiveTab: changeActiveTab,
@@ -3034,6 +3121,7 @@ export function useAppState() {
       handleBack,
       refreshFeed,
       fetchRowData,
+      setAdultMode,
     },
     refs: {
       searchInputRef,

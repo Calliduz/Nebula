@@ -215,6 +215,8 @@ export default function App() {
                       removeFromHistory={actions.removeFromHistory}
                       removeFromProgress={actions.removeFromProgress}
                       fetchRowData={actions.fetchRowData}
+                      adultMode={state.adultMode}
+                      setAdultMode={actions.setAdultMode}
                     />
                   </>
                 ) : (
