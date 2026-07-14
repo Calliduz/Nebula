@@ -2256,7 +2256,7 @@ export function useAppState() {
         setIsLoading(true);
         try {
           const [results, peopleResults] = await Promise.all([
-            searchMedia(searchQuery, controller.signal),
+            searchMedia(searchQuery, false, controller.signal),
             searchPeople(searchQuery, controller.signal),
           ]);
           if (controller.signal.aborted) return;

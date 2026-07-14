@@ -307,6 +307,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [failedMirrors, setFailedMirrors] = useState<Record<number, string>>(
     {},
   );
+  const failedSourcesRef = useRef<Set<string>>(new Set());
+  const [failedSourcesList, setFailedSourcesList] = useState<string[]>([]);
 
   // ── TheIntroDB skip segments ─────────────────────────────────────────────
   const [skipSegments, setSkipSegments] = useState<SkipSegment[]>([]);
@@ -496,155 +498,204 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const lastFragLoadedTime = useRef(0);
   const hasAutoRetriedRef = useRef(false);
 
-  const reScrapeStream = useCallback(
-    async (isAuto = false) => {
-      if (isRefreshing) return;
-      console.log(`[PLAYER] Re-scraping stream mirrors (auto=${isAuto})...`);
-      setIsRefreshing(true);
-      setError("");
+  const getSourceCategory = useCallback((mirrorsList: any[]): string => {
+    if (!mirrorsList || mirrorsList.length === 0) return "VidLink";
+    const first = mirrorsList[0];
+    const name = (first.source || first.name || "").toLowerCase();
+    if (name.includes("vidrock")) return "VidRock";
+    if (name.includes("videasy")) return "Videasy";
+    if (name.includes("filmu")) return "FilmU";
+    if (name.includes("vidnest")) return "Vidnest";
+    if (name.includes("vaplayer")) return "Vaplayer";
+    return "VidLink";
+  }, []);
 
-      // Identify which scraper endpoint to query
-      const isVideasy = mirrorsRef.current.some((m) =>
-        m.source.toLowerCase().includes("videasy"),
-      );
-      const isVidrock = mirrorsRef.current.some((m) =>
-        m.source.toLowerCase().includes("vidrock"),
-      );
-      const isFilmu = mirrorsRef.current.some((m) =>
-        m.source.toLowerCase().includes("filmu"),
-      );
-      const isVidnest = mirrorsRef.current.some((m) =>
-        m.source.toLowerCase().includes("vidnest"),
-      );
-      const isVaplayer = mirrorsRef.current.some((m) =>
-        m.source.toLowerCase().includes("vaplayer"),
-      );
-
+  const fetchSourceMirrors = useCallback(
+    async (category: string, force: boolean) => {
+      console.log(`[PLAYER] Fetching mirrors for category: ${category} (force=${force})...`);
+      const forceParam = force ? "&force=1" : "";
       let fetchUrl = "";
-      if (isVideasy) {
-        fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${
-          movie.type
-        }&title=${encodeURIComponent(movie.title || "")}&releaseYear=${
-          movie.year || ""
-        }&force=1`;
+      
+      if (category === "Videasy") {
+        fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
         if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-      } else if (isVidrock) {
-        fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}&force=1`;
+      } else if (category === "VidRock") {
+        fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
         if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-      } else if (isFilmu) {
-        fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${
-          movie.type
-        }&title=${encodeURIComponent(movie.title || "")}&releaseYear=${
-          movie.year || ""
-        }&force=1`;
+      } else if (category === "FilmU") {
+        fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
         if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-      } else if (isVidnest) {
-        fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}&force=1`;
+      } else if (category === "Vidnest") {
+        fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
         if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-      } else if (isVaplayer) {
-        fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}&force=1`;
+      } else if (category === "Vaplayer") {
+        fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
         if (episode !== undefined) fetchUrl += `&episode=${episode}`;
       } else {
-        // Default to VidLink
-        fetchUrl = `${API}/api/stream?tmdbId=${movie.id}&type=${
-          movie.type
-        }&title=${encodeURIComponent(movie.title || "")}&releaseYear=${
-          movie.year || ""
-        }&releaseDate=${movie.release_date || ""}&force=1`;
+        // VidLink
+        fetchUrl = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}&releaseDate=${movie.release_date || ""}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
         if (episode !== undefined) fetchUrl += `&episode=${episode}`;
       }
 
+      const res = await fetch(fetchUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status} from backend`);
+      const data = await res.json();
+      
+      let updatedMirrors: any[] = [];
+      if (category === "Videasy") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("videasy") ? name : `Videasy (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            audio: v.audio || "",
+            flag: v.flag || "us",
+          }));
+      } else if (category === "VidRock") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("vidrock") ? name : `VidRock (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            audio: v.audio || "",
+            flag: v.flag || "us",
+          }));
+      } else if (category === "FilmU") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("filmu") ? name : `FilmU-${name}`,
+            url: v.url,
+            type: v.type || "hls",
+            quality: (v as any).quality || "Auto",
+          }));
+      } else if (category === "Vidnest") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("vidnest") ? name : `Vidnest (${name})`,
+            url: v.url,
+            type: v.type || "mp4",
+            quality: (v as any).quality || "Auto",
+          }));
+      } else if (category === "Vaplayer") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("vaplayer") ? name : `Vaplayer (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            quality: (v as any).quality || "Auto",
+          }));
+      } else {
+        // VidLink
+        const results = Array.isArray(data) ? data : data.results || [];
+        updatedMirrors = results.map((m: any) => ({
+          source: m.source || "VidLink",
+          url: m.url,
+          type: m.type || "hls",
+          quality: m.quality || "Auto",
+        }));
+      }
+      return updatedMirrors;
+    },
+    [movie.id, movie.type, movie.title, movie.year, movie.release_date, season, episode]
+  );
+
+  const SOURCE_PRIORITY = ["VidRock", "VidLink", "Videasy", "Vidnest", "Vaplayer", "FilmU"];
+
+  const switchToNextSource = useCallback(async () => {
+    const currentCategory = getSourceCategory(mirrorsRef.current);
+    console.warn(`[PLAYER] Source ${currentCategory} exhausted. Attempting automatic fallback...`);
+    
+    failedSourcesRef.current.add(currentCategory);
+    setFailedSourcesList(Array.from(failedSourcesRef.current));
+
+    const nextSource = SOURCE_PRIORITY.find(src => !failedSourcesRef.current.has(src));
+    if (nextSource) {
+      console.log(`[PLAYER] Automatically switching to next available source: ${nextSource}`);
+      showToast(`Current source failed. Switching to ${nextSource}...`, "info");
+      
       try {
         setLoading(true);
-        const res = await fetch(fetchUrl);
-        if (!res.ok) throw new Error("Scraper endpoint failed");
-        const data = await res.json();
+        setError("");
+        setFailedMirrors({});
+        setStreamUrl(null);
 
-        let updatedMirrors: any[] = [];
-        if (isVideasy) {
-          updatedMirrors = Object.entries(data)
-            .filter(([_, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              source: name.toLowerCase().startsWith("videasy")
-                ? name
-                : `Videasy (${name})`,
-              url: v.url,
-              type: v.type || "hls",
-              audio: v.audio || "",
-              flag: v.flag || "us",
-            }));
-        } else if (isVidrock) {
-          updatedMirrors = Object.entries(data)
-            .filter(([_, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              source: name.toLowerCase().startsWith("vidrock")
-                ? name
-                : `VidRock (${name})`,
-              url: v.url,
-              type: v.type || "hls",
-              audio: v.audio || "",
-              flag: v.flag || "us",
-            }));
-        } else if (isFilmu) {
-          updatedMirrors = Object.entries(data)
-            .filter(([_, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              source: name.toLowerCase().startsWith("filmu")
-                ? name
-                : `FilmU-${name}`,
-              url: v.url,
-              type: v.type || "hls",
-              quality: (v as any).quality || "Auto",
-            }));
-        } else if (isVidnest) {
-          updatedMirrors = Object.entries(data)
-            .filter(([_, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              source: name.toLowerCase().startsWith("vidnest")
-                ? name
-                : `Vidnest (${name})`,
-              url: v.url,
-              type: v.type || "mp4",
-              quality: (v as any).quality || "Auto",
-            }));
-        } else if (isVaplayer) {
-          updatedMirrors = Object.entries(data)
-            .filter(([_, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              source: name.toLowerCase().startsWith("vaplayer")
-                ? name
-                : `Vaplayer (${name})`,
-              url: v.url,
-              type: v.type || "hls",
-              quality: (v as any).quality || "Auto",
-            }));
+        // Fetch mirrors for the new source
+        const updatedMirrors = await fetchSourceMirrors(nextSource, false);
+        if (updatedMirrors && updatedMirrors.length > 0) {
+          const processed = updatedMirrors.map((m: any) => {
+            if (m.type === "embed") return m;
+            const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
+            const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+            const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
+            return { ...m, url: proxiedUrl };
+          });
+
+          const newGrouped = groupMirrors(processed);
+          setMirrors(newGrouped);
+          mirrorsRef.current = newGrouped;
+          
+          // Sync URL params
+          const queryParams = new URLSearchParams(window.location.search);
+          const activeSrcString = newGrouped.map((s: any) => {
+            const cleanUrl = s.url.replace(`${API}/api/proxy/stream?url=`, "").replace(`${API}/api/proxy/segment?url=`, "");
+            return `${cleanUrl}#${s.source}#${s.type}`;
+          }).join("|");
+          queryParams.set("source", activeSrcString);
+          navigate(`${window.location.pathname}?${queryParams.toString()}`, { replace: true });
+
+          setTimeout(() => {
+            selectMirror(0, newGrouped);
+            setLoading(false);
+          }, 100);
         } else {
-          // VidLink
-          const results = Array.isArray(data) ? data : data.results || [];
-          updatedMirrors = results.map((m: any) => ({
-            source: m.source || "VidLink",
-            url: m.url,
-            type: m.type || "hls",
-            quality: m.quality || "Auto",
-          }));
+          // If the new source also has no mirrors, recursively try the next one!
+          failedSourcesRef.current.add(nextSource);
+          setFailedSourcesList(Array.from(failedSourcesRef.current));
+          await switchToNextSource();
         }
+      } catch (err: any) {
+        console.error(`[PLAYER] Failed to switch to source ${nextSource}:`, err);
+        failedSourcesRef.current.add(nextSource);
+        setFailedSourcesList(Array.from(failedSourcesRef.current));
+        await switchToNextSource();
+      }
+    } else {
+      console.error("[PLAYER] All sources exhausted.");
+      setError("All available sources failed. Please try again later.");
+      setLoading(false);
+    }
+  }, [fetchSourceMirrors, getSourceCategory, selectMirror, navigate, showToast]);
+
+  const reScrapeStream = useCallback(
+    async (isAuto = false) => {
+      if (isRefreshing) return;
+      setIsRefreshing(true);
+      setError("");
+
+      const currentCategory = getSourceCategory(mirrorsRef.current);
+      console.log(`[PLAYER] Re-scraping stream mirrors for ${currentCategory} (auto=${isAuto})...`);
+
+      try {
+        setLoading(true);
+        const updatedMirrors = await fetchSourceMirrors(currentCategory, true);
 
         if (updatedMirrors.length > 0) {
           const processed = updatedMirrors.map((m: any) => {
             if (m.type === "embed") return m;
             const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
-            const proxyEndpoint = isMp4
-              ? "/api/proxy/segment"
-              : "/api/proxy/stream";
-            const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(
-              m.url,
-            )}`;
+            const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+            const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
             return { ...m, url: proxiedUrl };
           });
 
@@ -663,39 +714,29 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }
       } catch (err: any) {
         console.error("[PLAYER] Re-scrape failed:", err);
-        setError(
-          isAuto
-            ? "All mirrors failed. Trying to force-refresh stream..."
-            : "Failed to force refresh stream sources.",
-        );
-        setLoading(false);
+        if (isAuto) {
+          await switchToNextSource();
+        } else {
+          setError("Failed to force refresh stream sources.");
+          setLoading(false);
+        }
       } finally {
         setIsRefreshing(false);
       }
     },
-    [
-      movie.id,
-      movie.type,
-      movie.title,
-      movie.year,
-      movie.release_date,
-      season,
-      episode,
-      isRefreshing,
-      selectMirror,
-    ],
+    [isRefreshing, getSourceCategory, fetchSourceMirrors, selectMirror, switchToNextSource]
   );
 
   const handleMirrorExhaustion = useCallback(
-    (errorMessage: string) => {
+    async (errorMessage: string) => {
       if (!hasAutoRetriedRef.current) {
         hasAutoRetriedRef.current = true;
-        reScrapeStream(true);
+        await reScrapeStream(true);
       } else {
-        setError(errorMessage);
+        await switchToNextSource();
       }
     },
-    [reScrapeStream],
+    [reScrapeStream, switchToNextSource]
   );
 
   const showBufferingWithDelay = useCallback((delay = 600) => {
@@ -895,6 +936,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     mirrorsRef.current = [];
     activeMirrorRef.current = 0;
     setFailedMirrors({});
+    failedSourcesRef.current.clear();
+    setFailedSourcesList([]);
     setSubtitles([]);
     setActiveSubtitle(-1);
     hasAutoSelectedSub.current = false;
@@ -4829,6 +4872,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     ? parseMirrorDetails(mirrors[activeMirror].source).category
                     : ""
                 }
+                failedSources={failedSourcesList}
                 onSelect={(src) => {
                   setSourceSelect(null);
                   const queryParams = new URLSearchParams();
@@ -4861,6 +4905,7 @@ export function InPlayerSourcePicker({
   forceRefetchTrigger,
   onLoadingChange,
   activeSource,
+  failedSources = [],
   onSelect,
 }: {
   movie: any;
@@ -4869,6 +4914,7 @@ export function InPlayerSourcePicker({
   forceRefetchTrigger: number;
   onLoadingChange: (loading: boolean) => void;
   activeSource?: string;
+  failedSources?: string[];
   onSelect: (src?: string) => void;
 }) {
   const [sources, setSources] = useState<any[]>([]);
@@ -5131,20 +5177,52 @@ export function InPlayerSourcePicker({
     )
     .join("|");
 
+  const getButtonClass = (
+    srcName: string,
+    activeName: string,
+    loadingFlag: boolean,
+    hasDataFlag: boolean
+  ) => {
+    const isFailed = failedSources.includes(srcName);
+    const isActive = activeName === srcName;
+    
+    if (isActive) {
+      if (srcName === "VidRock") return "border-nebula-cyan bg-nebula-cyan/10 shadow-[0_0_15px_rgba(0,229,255,0.12)] ring-1 ring-nebula-cyan/35 scale-[1.01] cursor-default";
+      if (srcName === "Vidnest") return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
+      if (srcName === "Vaplayer") return "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default";
+      if (srcName === "FilmU") return "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default";
+      if (srcName === "VidLink") return "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default";
+      if (srcName === "Videasy") return "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default";
+    }
+
+    if (isFailed) {
+      return "border-red-500/40 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.08)] cursor-pointer active:scale-95";
+    }
+
+    if (loadingFlag) {
+      return "border-white/5 bg-white/2 opacity-60 cursor-wait";
+    }
+
+    if (hasDataFlag) {
+      if (srcName === "VidRock") return "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95 cursor-pointer";
+      if (srcName === "Vidnest") return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "Vaplayer") return "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "FilmU") return "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "VidLink") return "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer";
+      if (srcName === "Videasy") return "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer";
+    }
+
+    return "border-white/5 bg-white/2 opacity-40 cursor-not-allowed";
+  };
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 overflow-y-auto max-h-[70vh]">
       {/* VidRock */}
       <button
-        onClick={() => sources.length > 0 && onSelect(vidrockUrl)}
-        disabled={loading || sources.length === 0 || activeSource === "VidRock"}
+        onClick={() => (sources.length > 0 || failedSources.includes("VidRock")) && onSelect(vidrockUrl)}
+        disabled={activeSource === "VidRock" || (loading && !failedSources.includes("VidRock"))}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "VidRock"
-            ? "border-nebula-cyan bg-nebula-cyan/10 shadow-[0_0_15px_rgba(0,229,255,0.12)] ring-1 ring-nebula-cyan/35 scale-[1.01] cursor-default"
-            : loading
-              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-              : sources.length > 0
-                ? "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95 cursor-pointer"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          getButtonClass("VidRock", activeSource || "", loading, sources.length > 0)
         }`}
       >
         <div className="flex items-center gap-2">
@@ -5163,6 +5241,11 @@ export function InPlayerSourcePicker({
               {activeSource === "VidRock" && (
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan text-obsidian uppercase tracking-wider font-sans">
                   ACTIVE
+                </span>
+              )}
+              {failedSources.includes("VidRock") && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
+                  FAILED
                 </span>
               )}
             </div>
@@ -5199,20 +5282,10 @@ export function InPlayerSourcePicker({
 
       {/* Vidnest */}
       <button
-        onClick={() => vidnestSources.length > 0 && onSelect(vidnestUrl)}
-        disabled={
-          vidnestLoading ||
-          vidnestSources.length === 0 ||
-          activeSource === "Vidnest"
-        }
+        onClick={() => (vidnestSources.length > 0 || failedSources.includes("Vidnest")) && onSelect(vidnestUrl)}
+        disabled={activeSource === "Vidnest" || (vidnestLoading && !failedSources.includes("Vidnest"))}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "Vidnest"
-            ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default"
-            : vidnestLoading
-              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-              : vidnestSources.length > 0
-                ? "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          getButtonClass("Vidnest", activeSource || "", vidnestLoading, vidnestSources.length > 0)
         }`}
       >
         <div className="flex items-center gap-2">
@@ -5231,6 +5304,11 @@ export function InPlayerSourcePicker({
               {activeSource === "Vidnest" && (
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-obsidian uppercase tracking-wider font-sans">
                   ACTIVE
+                </span>
+              )}
+              {failedSources.includes("Vidnest") && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
+                  FAILED
                 </span>
               )}
             </div>
@@ -5273,20 +5351,10 @@ export function InPlayerSourcePicker({
 
       {/* Vaplayer */}
       <button
-        onClick={() => vaplayerSources.length > 0 && onSelect(vaplayerUrl)}
-        disabled={
-          vaplayerLoading ||
-          vaplayerSources.length === 0 ||
-          activeSource === "Vaplayer"
-        }
+        onClick={() => (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) && onSelect(vaplayerUrl)}
+        disabled={activeSource === "Vaplayer" || (vaplayerLoading && !failedSources.includes("Vaplayer"))}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "Vaplayer"
-            ? "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default"
-            : vaplayerLoading
-              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-              : vaplayerSources.length > 0
-                ? "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          getButtonClass("Vaplayer", activeSource || "", vaplayerLoading, vaplayerSources.length > 0)
         }`}
       >
         <div className="flex items-center gap-2">
@@ -5305,6 +5373,11 @@ export function InPlayerSourcePicker({
               {activeSource === "Vaplayer" && (
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-cyan-500 text-obsidian uppercase tracking-wider font-sans">
                   ACTIVE
+                </span>
+              )}
+              {failedSources.includes("Vaplayer") && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
+                  FAILED
                 </span>
               )}
             </div>
@@ -5340,18 +5413,10 @@ export function InPlayerSourcePicker({
 
       {/* FilmU */}
       <button
-        onClick={() => filmuSources.length > 0 && onSelect(filmuUrl)}
-        disabled={
-          filmuLoading || filmuSources.length === 0 || activeSource === "FilmU"
-        }
+        onClick={() => (filmuSources.length > 0 || failedSources.includes("FilmU")) && onSelect(filmuUrl)}
+        disabled={activeSource === "FilmU" || (filmuLoading && !failedSources.includes("FilmU"))}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "FilmU"
-            ? "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default"
-            : filmuLoading
-              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-              : filmuSources.length > 0
-                ? "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          getButtonClass("FilmU", activeSource || "", filmuLoading, filmuSources.length > 0)
         }`}
       >
         <div className="flex items-center gap-2">
@@ -5370,6 +5435,11 @@ export function InPlayerSourcePicker({
               {activeSource === "FilmU" && (
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-obsidian uppercase tracking-wider font-sans">
                   ACTIVE
+                </span>
+              )}
+              {failedSources.includes("FilmU") && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
+                  FAILED
                 </span>
               )}
             </div>
@@ -5408,9 +5478,7 @@ export function InPlayerSourcePicker({
         onClick={() => onSelect()}
         disabled={activeSource === "VidLink"}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "VidLink"
-            ? "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default"
-            : "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer"
+          getButtonClass("VidLink", activeSource || "", false, true)
         }`}
       >
         <div className="flex items-center gap-2">
@@ -5427,6 +5495,11 @@ export function InPlayerSourcePicker({
                   ACTIVE
                 </span>
               )}
+              {failedSources.includes("VidLink") && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
+                  FAILED
+                </span>
+              )}
             </div>
             <p className="text-[8px] text-white/40 uppercase">Standard</p>
           </div>
@@ -5440,20 +5513,10 @@ export function InPlayerSourcePicker({
 
       {/* Videasy */}
       <button
-        onClick={() => videasySources.length > 0 && onSelect(videasyUrl)}
-        disabled={
-          videasyLoading ||
-          videasySources.length === 0 ||
-          activeSource === "Videasy"
-        }
+        onClick={() => (videasySources.length > 0 || failedSources.includes("Videasy")) && onSelect(videasyUrl)}
+        disabled={activeSource === "Videasy" || (videasyLoading && !failedSources.includes("Videasy"))}
         className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          activeSource === "Videasy"
-            ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default"
-            : videasyLoading
-              ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
-              : videasySources.length > 0
-                ? "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer"
-                : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+          getButtonClass("Videasy", activeSource || "", videasyLoading, videasySources.length > 0)
         }`}
       >
         <div className="flex items-center gap-2">
@@ -5472,6 +5535,11 @@ export function InPlayerSourcePicker({
               {activeSource === "Videasy" && (
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-indigo-500 text-white uppercase tracking-wider font-sans">
                   ACTIVE
+                </span>
+              )}
+              {failedSources.includes("Videasy") && (
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
+                  FAILED
                 </span>
               )}
             </div>
