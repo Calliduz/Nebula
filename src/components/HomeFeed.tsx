@@ -251,7 +251,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       {/* 3. Providers Shelf & Categories Bar */}
       <ProvidersShelf setViewingCategory={setViewingCategory} />
-      <CategoriesBar setViewingCategory={setViewingCategory} adultMode={adultMode} />
+      <CategoriesBar
+        setViewingCategory={setViewingCategory}
+        adultMode={adultMode}
+      />
 
       <SectionDivider label="Catalog" />
 

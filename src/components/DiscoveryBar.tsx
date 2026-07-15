@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { History, ChevronDown, Dices, RefreshCw, ShieldAlert, X } from "lucide-react";
+import {
+  History,
+  ChevronDown,
+  Dices,
+  RefreshCw,
+  ShieldAlert,
+  X,
+} from "lucide-react";
 import { SORTS } from "../data/constants";
 
 // ─── Age Gate Confirmation Dialog ─────────────────────────────────────────────
@@ -33,7 +40,9 @@ const AgeGateDialog: React.FC<{
       </h3>
       <p className="text-center text-[11px] text-white/50 leading-relaxed mb-6 font-sans">
         By enabling this, you confirm that you are{" "}
-        <span className="text-white/80 font-bold">18 years of age or older</span>
+        <span className="text-white/80 font-bold">
+          18 years of age or older
+        </span>
         . Adult-rated content will be unlocked across all categories and rows.
         This preference is saved to this device only.
       </p>
@@ -97,7 +106,10 @@ export const DiscoveryBar = ({
   return (
     <>
       {showAgeGate && (
-        <AgeGateDialog onConfirm={handleAgeConfirm} onCancel={handleAgeCancel} />
+        <AgeGateDialog
+          onConfirm={handleAgeConfirm}
+          onCancel={handleAgeCancel}
+        />
       )}
 
       <section className="mb-4 sm:mb-8 flex items-center justify-between md:justify-end gap-3 sm:gap-4">
@@ -167,9 +179,7 @@ export const DiscoveryBar = ({
             }`}
           >
             <ShieldAlert size={14} className="shrink-0" />
-            <span className="truncate">
-              18+{adultMode ? " On" : " Off"}
-            </span>
+            <span className="truncate">18+{adultMode ? " On" : " Off"}</span>
           </button>
         </div>
       </section>

@@ -730,7 +730,10 @@ export function useAppState() {
   const [scrolled, setScrolled] = useState(false);
   const [myList, setMyList] = useLocalStorage<any[]>("nebula-my-list", []);
   const [history, setHistory] = useLocalStorage<any[]>("nebula-history", []);
-  const [adultMode, setAdultMode] = useLocalStorage<boolean>("nebula-adult-mode", false);
+  const [adultMode, setAdultMode] = useLocalStorage<boolean>(
+    "nebula-adult-mode",
+    false,
+  );
 
   const filterAdultMovies = useCallback(
     (movies: NebulaMovie[]) => {
@@ -2100,7 +2103,13 @@ export function useAppState() {
 
       executeFetch(rowTitle);
     },
-    [rows, discoverMediaWithAdult, getRecommendations, getTrending, updateGlobalPool],
+    [
+      rows,
+      discoverMediaWithAdult,
+      getRecommendations,
+      getTrending,
+      updateGlobalPool,
+    ],
   );
 
   useEffect(() => {
@@ -2798,7 +2807,11 @@ export function useAppState() {
       ].includes(viewingCategory)
     ) {
       const existingData = getCategoryMovies();
-      if (isPageFetched(viewingCategory, selectedRegion, dramaPage) && existingData.length > 0) return;
+      if (
+        isPageFetched(viewingCategory, selectedRegion, dramaPage) &&
+        existingData.length > 0
+      )
+        return;
       const fetchMoreForCategory = async () => {
         let config = ROW_FETCH_CONFIG[viewingCategory];
         if (!config) {
