@@ -23,6 +23,7 @@ import {
   Upload,
   Zap,
   SkipForward,
+  Cloud,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -276,6 +277,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [showServerTip, setShowServerTip] = useState(false);
   const [showUi, setShowUi] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showServersModal, setShowServersModal] = useState(false);
+  const [showSubStyles, setShowSubStyles] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [streamReloadKey, setStreamReloadKey] = useState(0);
   const [currentTime, setCurrentTime] = useState("0:00");
@@ -421,6 +424,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     });
     setStreamUrl(m.url);
     setIsEmbed(m.type === "embed");
+    lastFragLoadedTime.current = Date.now();
 
     if ((m.type === "mp4_grouped" || m.type === "hls_grouped") && m.qualities) {
       setQualities(
@@ -512,10 +516,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const fetchSourceMirrors = useCallback(
     async (category: string, force: boolean) => {
-      console.log(`[PLAYER] Fetching mirrors for category: ${category} (force=${force})...`);
+      console.log(
+        `[PLAYER] Fetching mirrors for category: ${category} (force=${force})...`,
+      );
       const forceParam = force ? "&force=1" : "";
       let fetchUrl = "";
-      
+
       if (category === "Videasy") {
         fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
@@ -546,13 +552,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       const res = await fetch(fetchUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status} from backend`);
       const data = await res.json();
-      
+
       let updatedMirrors: any[] = [];
       if (category === "Videasy") {
         updatedMirrors = Object.entries(data)
           .filter(([_, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("videasy") ? name : `Videasy (${name})`,
+            source: name.toLowerCase().startsWith("videasy")
+              ? name
+              : `Videasy (${name})`,
             url: v.url,
             type: v.type || "hls",
             audio: v.audio || "",
@@ -562,7 +570,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         updatedMirrors = Object.entries(data)
           .filter(([_, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("vidrock") ? name : `VidRock (${name})`,
+            source: name.toLowerCase().startsWith("vidrock")
+              ? name
+              : `VidRock (${name})`,
             url: v.url,
             type: v.type || "hls",
             audio: v.audio || "",
@@ -572,7 +582,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         updatedMirrors = Object.entries(data)
           .filter(([_, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("filmu") ? name : `FilmU-${name}`,
+            source: name.toLowerCase().startsWith("filmu")
+              ? name
+              : `FilmU-${name}`,
             url: v.url,
             type: v.type || "hls",
             quality: (v as any).quality || "Auto",
@@ -581,7 +593,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         updatedMirrors = Object.entries(data)
           .filter(([_, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("vidnest") ? name : `Vidnest (${name})`,
+            source: name.toLowerCase().startsWith("vidnest")
+              ? name
+              : `Vidnest (${name})`,
             url: v.url,
             type: v.type || "mp4",
             quality: (v as any).quality || "Auto",
@@ -590,7 +604,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         updatedMirrors = Object.entries(data)
           .filter(([_, v]: any) => v && v.url)
           .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("vaplayer") ? name : `Vaplayer (${name})`,
+            source: name.toLowerCase().startsWith("vaplayer")
+              ? name
+              : `Vaplayer (${name})`,
             url: v.url,
             type: v.type || "hls",
             quality: (v as any).quality || "Auto",
@@ -607,23 +623,44 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       }
       return updatedMirrors;
     },
-    [movie.id, movie.type, movie.title, movie.year, movie.release_date, season, episode]
+    [
+      movie.id,
+      movie.type,
+      movie.title,
+      movie.year,
+      movie.release_date,
+      season,
+      episode,
+    ],
   );
 
-  const SOURCE_PRIORITY = ["VidRock", "VidLink", "Videasy", "Vidnest", "Vaplayer", "FilmU"];
+  const SOURCE_PRIORITY = [
+    "VidRock",
+    "VidLink",
+    "Videasy",
+    "Vidnest",
+    "Vaplayer",
+    "FilmU",
+  ];
 
   const switchToNextSource = useCallback(async () => {
     const currentCategory = getSourceCategory(mirrorsRef.current);
-    console.warn(`[PLAYER] Source ${currentCategory} exhausted. Attempting automatic fallback...`);
-    
+    console.warn(
+      `[PLAYER] Source ${currentCategory} exhausted. Attempting automatic fallback...`,
+    );
+
     failedSourcesRef.current.add(currentCategory);
     setFailedSourcesList(Array.from(failedSourcesRef.current));
 
-    const nextSource = SOURCE_PRIORITY.find(src => !failedSourcesRef.current.has(src));
+    const nextSource = SOURCE_PRIORITY.find(
+      (src) => !failedSourcesRef.current.has(src),
+    );
     if (nextSource) {
-      console.log(`[PLAYER] Automatically switching to next available source: ${nextSource}`);
+      console.log(
+        `[PLAYER] Automatically switching to next available source: ${nextSource}`,
+      );
       showToast(`Current source failed. Switching to ${nextSource}...`, "info");
-      
+
       try {
         setLoading(true);
         setError("");
@@ -636,7 +673,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const processed = updatedMirrors.map((m: any) => {
             if (m.type === "embed") return m;
             const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
-            const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+            const proxyEndpoint = isMp4
+              ? "/api/proxy/segment"
+              : "/api/proxy/stream";
             const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
             return { ...m, url: proxiedUrl };
           });
@@ -644,15 +683,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const newGrouped = groupMirrors(processed);
           setMirrors(newGrouped);
           mirrorsRef.current = newGrouped;
-          
+
           // Sync URL params
           const queryParams = new URLSearchParams(window.location.search);
-          const activeSrcString = newGrouped.map((s: any) => {
-            const cleanUrl = s.url.replace(`${API}/api/proxy/stream?url=`, "").replace(`${API}/api/proxy/segment?url=`, "");
-            return `${cleanUrl}#${s.source}#${s.type}`;
-          }).join("|");
+          const activeSrcString = newGrouped
+            .map((s: any) => {
+              const cleanUrl = s.url
+                .replace(`${API}/api/proxy/stream?url=`, "")
+                .replace(`${API}/api/proxy/segment?url=`, "");
+              return `${cleanUrl}#${s.source}#${s.type}`;
+            })
+            .join("|");
           queryParams.set("source", activeSrcString);
-          navigate(`${window.location.pathname}?${queryParams.toString()}`, { replace: true });
+          navigate(`${window.location.pathname}?${queryParams.toString()}`, {
+            replace: true,
+          });
 
           setTimeout(() => {
             selectMirror(0, newGrouped);
@@ -665,7 +710,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           await switchToNextSource();
         }
       } catch (err: any) {
-        console.error(`[PLAYER] Failed to switch to source ${nextSource}:`, err);
+        console.error(
+          `[PLAYER] Failed to switch to source ${nextSource}:`,
+          err,
+        );
         failedSourcesRef.current.add(nextSource);
         setFailedSourcesList(Array.from(failedSourcesRef.current));
         await switchToNextSource();
@@ -675,7 +723,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setError("All available sources failed. Please try again later.");
       setLoading(false);
     }
-  }, [fetchSourceMirrors, getSourceCategory, selectMirror, navigate, showToast]);
+  }, [
+    fetchSourceMirrors,
+    getSourceCategory,
+    selectMirror,
+    navigate,
+    showToast,
+  ]);
 
   const reScrapeStream = useCallback(
     async (isAuto = false) => {
@@ -684,7 +738,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setError("");
 
       const currentCategory = getSourceCategory(mirrorsRef.current);
-      console.log(`[PLAYER] Re-scraping stream mirrors for ${currentCategory} (auto=${isAuto})...`);
+      console.log(
+        `[PLAYER] Re-scraping stream mirrors for ${currentCategory} (auto=${isAuto})...`,
+      );
 
       try {
         setLoading(true);
@@ -694,7 +750,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const processed = updatedMirrors.map((m: any) => {
             if (m.type === "embed") return m;
             const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
-            const proxyEndpoint = isMp4 ? "/api/proxy/segment" : "/api/proxy/stream";
+            const proxyEndpoint = isMp4
+              ? "/api/proxy/segment"
+              : "/api/proxy/stream";
             const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
             return { ...m, url: proxiedUrl };
           });
@@ -724,7 +782,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         setIsRefreshing(false);
       }
     },
-    [isRefreshing, getSourceCategory, fetchSourceMirrors, selectMirror, switchToNextSource]
+    [
+      isRefreshing,
+      getSourceCategory,
+      fetchSourceMirrors,
+      selectMirror,
+      switchToNextSource,
+    ],
   );
 
   const handleMirrorExhaustion = useCallback(
@@ -736,7 +800,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         await switchToNextSource();
       }
     },
-    [reScrapeStream, switchToNextSource]
+    [reScrapeStream, switchToNextSource],
   );
 
   const showBufferingWithDelay = useCallback((delay = 600) => {
@@ -1325,10 +1389,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             }
           })
           .catch((err) => {
-            console.debug(
-              "[PLAYER] IntroDB fetch failed (non-critical):",
-              err,
-            );
+            console.debug("[PLAYER] IntroDB fetch failed (non-critical):", err);
           });
       });
 
@@ -1987,7 +2048,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
-            handleMirrorExhaustion(`Stream failed (${statusCode}). All mirrors exhausted.`);
+            handleMirrorExhaustion(
+              `Stream failed (${statusCode}). All mirrors exhausted.`,
+            );
           }
           return;
         }
@@ -2014,7 +2077,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             }));
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
-            handleMirrorExhaustion("Stream loading failed. All mirrors exhausted.");
+            handleMirrorExhaustion(
+              "Stream loading failed. All mirrors exhausted.",
+            );
           }
           return;
         }
@@ -2083,7 +2148,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               }));
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
-              handleMirrorExhaustion("Initial playback failed. All mirrors exhausted.");
+              handleMirrorExhaustion(
+                "Initial playback failed. All mirrors exhausted.",
+              );
             }
           }
           return;
@@ -2133,7 +2200,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               );
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
-              handleMirrorExhaustion("Stream connection lost. All mirrors exhausted.");
+              handleMirrorExhaustion(
+                "Stream connection lost. All mirrors exhausted.",
+              );
             }
           }
         } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -2224,8 +2293,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setHoverTime(null);
     hasPrefetchedNextEpisode.current = false;
   }, [season, episode]);
-
-
 
   // ── Video event listeners ─────────────────────────────────────────────────
   useEffect(() => {
@@ -2377,6 +2444,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               .catch((err) =>
                 console.warn(
                   `[PLAYER] Prefetch Vaplayer failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
+                ),
+              );
+
+            // 7. Subtitles prefetch
+            let subPrefetchUrl = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(subPrefetchUrl)
+              .then((r) => r.json())
+              .then(() =>
+                console.log(
+                  `[PLAYER] Prefetched next episode subtitles (S${nextEp.season}E${nextEp.episode})`,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch subtitles failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 ),
               );
           }
@@ -2537,18 +2619,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         `[PLAYER] Video element error: code=${err?.code} msg=${err?.message}`,
       );
       if (err) {
-        if (hlsRef.current) {
-          // MEDIA_ERR_NETWORK (2) or MEDIA_ERR_DECODE (3): try HLS recovery
-          if (err.code === 2 || err.code === 3) {
-            console.warn(
-              "[PLAYER] Attempting HLS media error recovery from video element error...",
-            );
-            hlsRef.current.recoverMediaError();
-          }
-        } else {
-          // Native MP4 error recovery: try next mirror
+        let hlsRecovered = false;
+        if (hlsRef.current && (err.code === 2 || err.code === 3)) {
           console.warn(
-            "[PLAYER] Native video error. Attempting mirror fallback...",
+            "[PLAYER] Attempting HLS media error recovery from video element error...",
+          );
+          hlsRef.current.recoverMediaError();
+          hlsRecovered = true;
+        }
+
+        if (!hlsRecovered) {
+          // Native MP4 error recovery or failed HLS: try next mirror
+          console.warn(
+            `[PLAYER] Video error (code=${err.code}). Attempting mirror fallback...`,
           );
           const nextIdx = activeMirrorRef.current + 1;
           if (nextIdx < mirrorsRef.current.length) {
@@ -2559,7 +2642,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             }));
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
-            handleMirrorExhaustion(`Playback failed: ${err.message || "Media source error"}`);
+            handleMirrorExhaustion(
+              `Playback failed: ${err.message || "Media source error"}`,
+            );
           }
         }
       }
@@ -2721,10 +2806,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setShowUi(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      if (!isPaused && !showSettings && !showSubtitles && !showEpisodeDrawer && !isDragging)
+      if (
+        !isPaused &&
+        !showSettings &&
+        !showSubtitles &&
+        !showEpisodeDrawer &&
+        !showServersModal &&
+        !isDragging
+      )
         setShowUi(false);
     }, 3000);
-  }, [isPaused, showSettings, showSubtitles, showEpisodeDrawer, isDragging]);
+  }, [
+    isPaused,
+    showSettings,
+    showSubtitles,
+    showEpisodeDrawer,
+    showServersModal,
+    isDragging,
+  ]);
 
   // Tap on the video/empty area:
   //  - If a menu is open → close it
@@ -2736,11 +2835,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       isLongPressing.current = false;
       return;
     }
-    if (showSettings || showSubtitles || showEpisodeDrawer) {
+    if (
+      showSettings ||
+      showSubtitles ||
+      showEpisodeDrawer ||
+      showServersModal
+    ) {
       // Close whichever menu is open
       setShowSettings(false);
       setShowSubtitles(false);
       setShowEpisodeDrawer(false);
+      setShowServersModal(false);
       resetHideTimer();
     } else if (!showUi) {
       resetHideTimer();
@@ -2749,7 +2854,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setShowUi(false);
       setShowMobileVolume(false);
     }
-  }, [showUi, showSettings, showSubtitles, showEpisodeDrawer, resetHideTimer]);
+  }, [
+    showUi,
+    showSettings,
+    showSubtitles,
+    showEpisodeDrawer,
+    showServersModal,
+    resetHideTimer,
+  ]);
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent<HTMLDivElement>) => {
@@ -3062,6 +3174,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       if (!tvDetails || !tvDetails.seasons) {
         return null;
       }
+
+      const lastEpS = tvDetails.last_episode_to_air?.season_number;
+      const lastEpE = tvDetails.last_episode_to_air?.episode_number;
+
+      const checkEpisodeAired = (targetS: number, targetE: number) => {
+        if (lastEpS === undefined || lastEpE === undefined) return true; // fallback
+        if (targetS > lastEpS) return false;
+        if (targetS === lastEpS && targetE > lastEpE) return false;
+        return true;
+      };
+
       const sortedSeasons = tvDetails.seasons
         .filter((sInfo: any) => sInfo.season_number > 0)
         .sort((a: any, b: any) => a.season_number - b.season_number);
@@ -3073,7 +3196,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       const maxEpisodes = currentSeasonInfo.episode_count;
       if (e < maxEpisodes) {
-        return { season: s, episode: e + 1 };
+        return checkEpisodeAired(s, e + 1)
+          ? { season: s, episode: e + 1 }
+          : null;
       }
 
       // Check if there is a next season
@@ -3085,7 +3210,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         currentSeasonIdx < sortedSeasons.length - 1
       ) {
         const nextSeason = sortedSeasons[currentSeasonIdx + 1];
-        return { season: nextSeason.season_number, episode: 1 };
+        return checkEpisodeAired(nextSeason.season_number, 1)
+          ? { season: nextSeason.season_number, episode: 1 }
+          : null;
       }
 
       return null;
@@ -3143,22 +3270,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       <AnimatePresence>
         {toast && (
           <motion.div
-            initial={{ opacity: 0, y: -20, x: "-50%" }}
+            initial={{ opacity: 0, y: -10, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
-            exit={{ opacity: 0, y: -20, x: "-50%" }}
-            className="absolute top-12 left-1/2 z-[600] pointer-events-none"
+            exit={{ opacity: 0, y: -10, x: "-50%" }}
+            className="absolute top-6 left-1/2 z-[600] pointer-events-none"
           >
-            <div
-              className={`px-6 py-3 rounded-full backdrop-blur-xl border ${
-                toast.type === "error"
-                  ? "bg-red-500/20 border-red-500/50"
-                  : "bg-nebula-cyan/20 border-nebula-cyan/50"
-              } flex items-center gap-3 shadow-2xl shadow-black`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${toast.type === "error" ? "bg-red-500" : "bg-nebula-cyan"} animate-pulse`}
-              />
-              <span className="text-white font-bold text-[10px] uppercase tracking-widest">
+            <div className="px-4 py-2 rounded-full bg-black/85 backdrop-blur-xl border border-white/10 flex items-center gap-2.5 shadow-2xl shadow-black/85">
+              {toast.type === "error" ? (
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+              ) : toast.type === "success" ? (
+                <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shrink-0 animate-pulse" />
+              ) : (
+                <div className="w-1.5 h-1.5 rounded-full bg-white/60 shrink-0" />
+              )}
+              <span className="text-white font-bold text-[10px] uppercase tracking-widest font-sans leading-none">
                 {toast.message}
               </span>
             </div>
@@ -3663,6 +3788,142 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </div>
             </div>
           )}
+          {mirrors.length > 0 && !isEmbed && (
+            <div className="relative shrink-0 pointer-events-auto">
+              <button
+                onClick={() => {
+                  setShowServersModal((p) => !p);
+                  setShowSettings(false);
+                  setShowSubtitles(false);
+                  setShowEpisodeDrawer(false);
+                }}
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border border-white/5 ${
+                  showServersModal
+                    ? "bg-white text-black scale-105"
+                    : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20 hover:scale-105"
+                }`}
+                title="Servers & Mirrors"
+              >
+                <Cloud size={18} />
+              </button>
+
+              {showServersModal && (
+                <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-72 max-h-[60vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
+                  <div className="px-2.5 pb-2 mb-2 border-b border-white/5">
+                    <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                      <Cloud size={13} className="text-nebula-cyan" />
+                      <span>Servers & Mirrors</span>
+                    </h3>
+                    <p className="text-[9px] text-white/40 mt-1 leading-normal font-medium">
+                      Select a source provider below if playback is slow or
+                      failing.
+                    </p>
+                  </div>
+
+                  {(() => {
+                    const groupedByCategory: Record<
+                      string,
+                      { mirror: any; originalIndex: number }[]
+                    > = {};
+                    mirrors.forEach((m, i) => {
+                      const { category, name } = parseMirrorDetails(m.source);
+                      if (!groupedByCategory[category]) {
+                        groupedByCategory[category] = [];
+                      }
+                      groupedByCategory[category].push({
+                        mirror: { ...m, cleanName: name },
+                        originalIndex: i,
+                      });
+                    });
+
+                    return Object.entries(groupedByCategory).map(
+                      ([category, items]) => {
+                        items.sort((a, b) => {
+                          return (
+                            getMirrorPriority(a.mirror.source) -
+                            getMirrorPriority(b.mirror.source)
+                          );
+                        });
+
+                        return (
+                          <div key={category} className="mb-3 last:mb-1">
+                            <div className="flex items-center gap-1.5 px-2 mb-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
+                              <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
+                                {category}
+                              </span>
+                            </div>
+                            <div className="flex flex-col gap-1 px-1">
+                              {items.map(
+                                ({ mirror: m, originalIndex: idx }) => {
+                                  const flagCode = m.flag
+                                    ? m.flag.toLowerCase()
+                                    : "us";
+                                  const countryCode =
+                                    flagCode === "en" ? "us" : flagCode;
+                                  const isSelected = activeMirror === idx;
+                                  const failedReason = failedMirrors[idx];
+                                  return (
+                                    <button
+                                      key={idx}
+                                      onClick={() => {
+                                        selectMirror(idx, mirrors);
+                                      }}
+                                      className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
+                                        isSelected
+                                          ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                          : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2.5 min-w-0">
+                                        <img
+                                          src={`https://flagcdn.com/w20/${countryCode}.png`}
+                                          alt={flagCode}
+                                          className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
+                                          onError={(e) => {
+                                            e.currentTarget.src =
+                                              "https://flagcdn.com/w20/us.png";
+                                          }}
+                                        />
+                                        <div className="flex flex-col min-w-0">
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="truncate text-xs font-semibold leading-tight font-display text-white">
+                                              {m.cleanName}
+                                            </span>
+                                            {failedReason && (
+                                              <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 uppercase tracking-wider shrink-0">
+                                                {failedReason}
+                                              </span>
+                                            )}
+                                          </div>
+                                          {m.audio && (
+                                            <span className="text-[9px] text-white/40 font-normal leading-tight mt-0.5">
+                                              {m.audio}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                        {isSelected ? (
+                                          <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                                        ) : (
+                                          <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors" />
+                                        )}
+                                      </div>
+                                    </button>
+                                  );
+                                },
+                              )}
+                            </div>
+                          </div>
+                        );
+                      },
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div
@@ -3888,7 +4149,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </button>
               {movie.type === "tv" && (
                 <button
-                  onClick={() => setShowEpisodeDrawer(true)}
+                  onClick={() => {
+                    setShowEpisodeDrawer(true);
+                    setShowSettings(false);
+                    setShowSubtitles(false);
+                    setShowServersModal(false);
+                  }}
                   className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showEpisodeDrawer ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
                   title="Episodes"
                 >
@@ -3902,6 +4168,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     onClick={() => {
                       setShowSubtitles((p) => !p);
                       setShowSettings(false);
+                      setShowServersModal(false);
+                      setShowEpisodeDrawer(false);
                     }}
                     className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSubtitles ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
                     title="Subtitles"
@@ -3914,6 +4182,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     onClick={() => {
                       setShowSettings((p) => !p);
                       setShowSubtitles(false);
+                      setShowServersModal(false);
+                      setShowEpisodeDrawer(false);
                     }}
                     className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSettings ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
                     title="Settings"
@@ -3933,25 +4203,318 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               {/* Subtitles Menu */}
               {showSubtitles && (
                 <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2 animate-in slide-in-from-bottom-2 duration-200">
-                  <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 flex items-center justify-between">
-                    <span>Subtitles</span>
-                    <span className="flex items-center gap-1.5">
+                  <div className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2.5 pb-1.5 flex items-center justify-between border-b border-white/5 mb-1">
+                    <span className="font-bold text-white/60">Subtitles</span>
+                    <span className="flex items-center gap-1.5 pointer-events-auto">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowSubStyles((p) => !p);
+                        }}
+                        title="Subtitle Styling & Presets"
+                        className={`flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded border transition-all ${
+                          showSubStyles
+                            ? "bg-nebula-cyan/15 border-nebula-cyan/30 text-nebula-cyan"
+                            : "bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10"
+                        }`}
+                      >
+                        <Settings size={9} />
+                        <span>Style</span>
+                      </button>
                       {fetchingSubtitles ? (
-                        <Loader2
-                          size={10}
-                          className="animate-spin text-nebula-cyan"
-                        />
+                        <div className="flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded border bg-white/5 border-white/10 text-nebula-cyan animate-pulse">
+                          <Loader2 size={9} className="animate-spin" />
+                          <span>Loading</span>
+                        </div>
                       ) : (
                         <button
                           onClick={() => refetchSubtitles(true)}
                           title="Refetch from all sources"
-                          className="text-white/30 hover:text-nebula-cyan transition-colors"
+                          className="flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded border bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all"
                         >
-                          <RefreshCw size={10} />
+                          <RefreshCw size={9} />
+                          <span>Reload</span>
                         </button>
                       )}
                     </span>
-                  </p>
+                  </div>
+
+                  {showSubStyles && (
+                    <div className="mx-1 mb-2 p-2 bg-white/5 rounded-lg border border-white/10 flex flex-col gap-3 text-left">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                          Preset
+                        </span>
+                        <div className="grid grid-cols-4 gap-1 px-1">
+                          {(
+                            ["vlc", "netflix", "anime", "minimal"] as const
+                          ).map((preset) => (
+                            <button
+                              key={preset}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectPreset(preset);
+                              }}
+                              className={`text-center py-1 text-[9px] rounded transition-colors font-bold capitalize ${
+                                prefs.preset === preset
+                                  ? "text-black bg-white"
+                                  : "text-white/60 hover:text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {preset === "vlc" ? "VLC" : preset}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                          Font Size
+                        </span>
+                        <div className="grid grid-cols-5 gap-1 px-1">
+                          {[
+                            { label: "75%", value: 0.75 },
+                            { label: "100%", value: 1.0 },
+                            { label: "125%", value: 1.25 },
+                            { label: "150%", value: 1.5 },
+                            { label: "200%", value: 2.0 },
+                          ].map((sz) => (
+                            <button
+                              key={sz.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updatePreference("size", sz.value);
+                              }}
+                              className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                prefs.size === sz.value
+                                  ? "text-black bg-white"
+                                  : "text-white/60 hover:text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {sz.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                          Font Color
+                        </span>
+                        <div className="flex items-center gap-2 px-2">
+                          {[
+                            { name: "White", value: "#ffffff" },
+                            { name: "Yellow", value: "#ffff00" },
+                            { name: "Green", value: "#00ff00" },
+                            { name: "Cyan", value: "#00e5ff" },
+                            { name: "Red", value: "#e50914" },
+                          ].map((color) => (
+                            <button
+                              key={color.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updatePreference("color", color.value);
+                              }}
+                              className={`w-5 h-5 rounded-full border transition-all ${
+                                prefs.color === color.value
+                                  ? "ring-2 ring-nebula-cyan border-black scale-110"
+                                  : "border-white/20 hover:scale-105"
+                              }`}
+                              style={{ backgroundColor: color.value }}
+                              title={color.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">
+                            Background Color
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {[
+                              { name: "Black", value: "#000000" },
+                              { name: "Dark Gray", value: "#1a1a1a" },
+                              { name: "Blue", value: "#0000ff" },
+                            ].map((color) => (
+                              <button
+                                key={color.value}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePreference("bgColor", color.value);
+                                }}
+                                className={`w-3.5 h-3.5 rounded-sm border transition-all ${
+                                  prefs.bgColor === color.value
+                                    ? "border-nebula-cyan scale-110"
+                                    : "border-white/20 hover:scale-105"
+                                }`}
+                                style={{ backgroundColor: color.value }}
+                                title={color.name}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                            Background Opacity
+                          </span>
+                          <div className="grid grid-cols-5 gap-1 px-1">
+                            {[0.0, 0.25, 0.5, 0.75, 1.0].map((op) => (
+                              <button
+                                key={op}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePreference("bgOpacity", op);
+                                }}
+                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                  prefs.bgOpacity === op
+                                    ? "text-black bg-white"
+                                    : "text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {op * 100}%
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                          Outline Width
+                        </span>
+                        <div className="grid grid-cols-4 gap-1 px-1">
+                          {["0px", "1px", "2px", "3px"].map((width) => (
+                            <button
+                              key={width}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updatePreference("outlineWidth", width);
+                              }}
+                              className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                prefs.outlineWidth === width
+                                  ? "text-black bg-white"
+                                  : "text-white/60 hover:text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {width}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                          Font Weight
+                        </span>
+                        <div className="grid grid-cols-4 gap-1 px-1">
+                          {[
+                            { label: "Light", value: "300" },
+                            { label: "Normal", value: "normal" },
+                            { label: "Bold", value: "bold" },
+                            { label: "X-Bold", value: "800" },
+                          ].map((fw) => (
+                            <button
+                              key={fw.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updatePreference("fontWeight", fw.value);
+                              }}
+                              className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                prefs.fontWeight === fw.value
+                                  ? "text-black bg-white"
+                                  : "text-white/60 hover:text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {fw.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                          Font Style
+                        </span>
+                        <div className="grid grid-cols-2 gap-1 px-1">
+                          {[
+                            { label: "Normal", value: "normal" },
+                            { label: "Italic", value: "italic" },
+                          ].map((fs) => (
+                            <button
+                              key={fs.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updatePreference("fontStyle", fs.value);
+                              }}
+                              className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
+                                prefs.fontStyle === fs.value
+                                  ? "text-black bg-white"
+                                  : "text-white/60 hover:text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {fs.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
+                          Font Family
+                        </span>
+                        <div className="px-1">
+                          <select
+                            value={prefs.fontFamily}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              updatePreference("fontFamily", e.target.value);
+                            }}
+                            className="w-full bg-[#222]/80 border border-white/10 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-white/30 cursor-pointer"
+                          >
+                            <option value="Arial, Helvetica, sans-serif">
+                              Arial
+                            </option>
+                            <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">
+                              Helvetica Neue
+                            </option>
+                            <option value="'Trebuchet MS', 'Segoe UI', Verdana, sans-serif">
+                              Trebuchet MS
+                            </option>
+                            <option value="'Inter', 'Segoe UI', system-ui, sans-serif">
+                              Inter
+                            </option>
+                            <option value="Georgia, 'Times New Roman', serif">
+                              Georgia (Serif)
+                            </option>
+                            <option value="'Courier New', Courier, monospace">
+                              Courier (Monospace)
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-white/5 pt-2 px-1">
+                        <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">
+                          Use Native Subtitles
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={prefs.useNativeSubtitles}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            updatePreference(
+                              "useNativeSubtitles",
+                              e.target.checked,
+                            );
+                          }}
+                          className="cursor-pointer accent-nebula-cyan w-3.5 h-3.5 rounded border-white/20 bg-white/5"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {activeSubtitle !== -1 && !fetchingSubtitles && (
                     <div className="mx-2 mb-3 p-3 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
@@ -4123,100 +4686,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       ))}
                     </div>
                   </div>
-                  {mirrors.length > 0 &&
-                    (() => {
-                      const groupedByCategory: Record<
-                        string,
-                        { mirror: any; originalIndex: number }[]
-                      > = {};
-                      mirrors.forEach((m, i) => {
-                        const { category, name } = parseMirrorDetails(m.source);
-                        if (!groupedByCategory[category]) {
-                          groupedByCategory[category] = [];
-                        }
-                        groupedByCategory[category].push({
-                          mirror: { ...m, cleanName: name },
-                          originalIndex: i,
-                        });
-                      });
-
-                      return Object.entries(groupedByCategory).map(
-                        ([category, items], catIdx) => {
-                          items.sort((a, b) => {
-                            return (
-                              getMirrorPriority(a.mirror.source) -
-                              getMirrorPriority(b.mirror.source)
-                            );
-                          });
-
-                          return (
-                            <div key={category} className="mb-2">
-                              <p
-                                className={`text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 ${catIdx > 0 ? "border-t border-white/10" : "border-t border-white/10"}`}
-                              >
-                                {category}
-                              </p>
-                              <div className="flex flex-col px-2 gap-0.5">
-                                {items.map(
-                                  ({ mirror: m, originalIndex: idx }) => {
-                                    const flagCode = m.flag
-                                      ? m.flag.toLowerCase()
-                                      : "us";
-                                    const countryCode =
-                                      flagCode === "en" ? "us" : flagCode;
-                                    const isSelected = activeMirror === idx;
-                                    const failedReason = failedMirrors[idx];
-                                    return (
-                                      <button
-                                        key={idx}
-                                        onClick={() => {
-                                          selectMirror(idx, mirrors);
-                                        }}
-                                        className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${isSelected ? "text-white bg-white/10 font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
-                                      >
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                          <img
-                                            src={`https://flagcdn.com/w20/${countryCode}.png`}
-                                            alt={flagCode}
-                                            className="w-4 h-3 object-cover rounded-[1px] shrink-0 border border-white/10"
-                                            onError={(e) => {
-                                              e.currentTarget.src =
-                                                "https://flagcdn.com/w20/us.png";
-                                            }}
-                                          />
-                                          <div className="flex flex-col min-w-0">
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                              <span className="truncate text-[11.5px] font-semibold leading-tight text-white font-display">
-                                                {m.cleanName}
-                                              </span>
-                                              {failedReason && (
-                                                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 uppercase tracking-wider shrink-0">
-                                                  {failedReason}
-                                                </span>
-                                              )}
-                                            </div>
-                                            {m.audio && (
-                                              <span className="text-[9.5px] text-white/40 font-normal leading-tight mt-0.5">
-                                                {m.audio}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                        {isSelected && (
-                                          <span className="text-nebula-cyan text-[10px] font-bold shrink-0 ml-2">
-                                            ✓
-                                          </span>
-                                        )}
-                                      </button>
-                                    );
-                                  },
-                                )}
-                              </div>
-                            </div>
-                          );
-                        },
-                      );
-                    })()}
                   {qualities.length > 0 && (
                     <div className="mb-2">
                       <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">
@@ -4246,308 +4715,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       </div>
                     </div>
                   )}
-                  {/* Collapsible Style Customizer */}
-                  <div className="border-t border-white/10 mt-1 pt-2 px-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowStyleCustomizer(!showStyleCustomizer);
-                      }}
-                      className="w-full flex items-center justify-between px-2 py-2 text-[11px] text-white/50 hover:text-white hover:bg-white/5 rounded-md transition-colors font-bold uppercase tracking-wider"
-                    >
-                      <span>Subtitle Styles</span>
-                      <span className="text-[9px]">
-                        {showStyleCustomizer ? "▲" : "▼"}
-                      </span>
-                    </button>
-
-                    {showStyleCustomizer && (
-                      <div className="flex flex-col gap-3 mt-2 pb-2">
-                        {/* Preset Selection */}
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
-                            Preset
-                          </span>
-                          <div className="grid grid-cols-4 gap-1 px-1">
-                            {(
-                              ["vlc", "netflix", "anime", "minimal"] as const
-                            ).map((preset) => (
-                              <button
-                                key={preset}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  selectPreset(preset);
-                                }}
-                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold capitalize ${
-                                  prefs.preset === preset
-                                    ? "text-black bg-white"
-                                    : "text-white/60 hover:text-white hover:bg-white/10"
-                                }`}
-                              >
-                                {preset === "vlc" ? "VLC" : preset}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Font Size Selection */}
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
-                            Font Size
-                          </span>
-                          <div className="grid grid-cols-5 gap-1 px-1">
-                            {[
-                              { label: "75%", value: 0.75 },
-                              { label: "100%", value: 1.0 },
-                              { label: "125%", value: 1.25 },
-                              { label: "150%", value: 1.5 },
-                              { label: "200%", value: 2.0 },
-                            ].map((sz) => (
-                              <button
-                                key={sz.value}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updatePreference("size", sz.value);
-                                }}
-                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
-                                  prefs.size === sz.value
-                                    ? "text-black bg-white"
-                                    : "text-white/60 hover:text-white hover:bg-white/10"
-                                }`}
-                              >
-                                {sz.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Font Color Selection */}
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
-                            Font Color
-                          </span>
-                          <div className="flex items-center gap-2 px-2">
-                            {[
-                              { name: "White", value: "#ffffff" },
-                              { name: "Yellow", value: "#ffff00" },
-                              { name: "Green", value: "#00ff00" },
-                              { name: "Cyan", value: "#00e5ff" },
-                              { name: "Red", value: "#e50914" },
-                            ].map((color) => (
-                              <button
-                                key={color.value}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updatePreference("color", color.value);
-                                }}
-                                className={`w-5 h-5 rounded-full border transition-all ${
-                                  prefs.color === color.value
-                                    ? "ring-2 ring-nebula-cyan border-black scale-110"
-                                    : "border-white/20 hover:scale-105"
-                                }`}
-                                style={{ backgroundColor: color.value }}
-                                title={color.name}
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Background & Opacity */}
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">
-                              Background Color
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              {[
-                                { name: "Black", value: "#000000" },
-                                { name: "Dark Gray", value: "#1a1a1a" },
-                                { name: "Blue", value: "#0000ff" },
-                              ].map((color) => (
-                                <button
-                                  key={color.value}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updatePreference("bgColor", color.value);
-                                  }}
-                                  className={`w-3.5 h-3.5 rounded-sm border transition-all ${
-                                    prefs.bgColor === color.value
-                                      ? "border-nebula-cyan scale-110"
-                                      : "border-white/20 hover:scale-105"
-                                  }`}
-                                  style={{ backgroundColor: color.value }}
-                                  title={color.name}
-                                />
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
-                              Background Opacity
-                            </span>
-                            <div className="grid grid-cols-5 gap-1 px-1">
-                              {[0.0, 0.25, 0.5, 0.75, 1.0].map((op) => (
-                                <button
-                                  key={op}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updatePreference("bgOpacity", op);
-                                  }}
-                                  className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
-                                    prefs.bgOpacity === op
-                                      ? "text-black bg-white"
-                                      : "text-white/60 hover:text-white hover:bg-white/10"
-                                  }`}
-                                >
-                                  {op * 100}%
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Outline Width */}
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
-                            Outline Width
-                          </span>
-                          <div className="grid grid-cols-4 gap-1 px-1">
-                            {["0px", "1px", "2px", "3px"].map((width) => (
-                              <button
-                                key={width}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updatePreference("outlineWidth", width);
-                                }}
-                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
-                                  prefs.outlineWidth === width
-                                    ? "text-black bg-white"
-                                    : "text-white/60 hover:text-white hover:bg-white/10"
-                                }`}
-                              >
-                                {width}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Font Weight */}
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
-                            Font Weight
-                          </span>
-                          <div className="grid grid-cols-4 gap-1 px-1">
-                            {[
-                              { label: "Light", value: "300" },
-                              { label: "Normal", value: "normal" },
-                              { label: "Bold", value: "bold" },
-                              { label: "X-Bold", value: "800" },
-                            ].map((fw) => (
-                              <button
-                                key={fw.value}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updatePreference("fontWeight", fw.value);
-                                }}
-                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
-                                  prefs.fontWeight === fw.value
-                                    ? "text-black bg-white"
-                                    : "text-white/60 hover:text-white hover:bg-white/10"
-                                }`}
-                              >
-                                {fw.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Font Style */}
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
-                            Font Style
-                          </span>
-                          <div className="grid grid-cols-2 gap-1 px-1">
-                            {[
-                              { label: "Normal", value: "normal" },
-                              { label: "Italic", value: "italic" },
-                            ].map((fs) => (
-                              <button
-                                key={fs.value}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updatePreference("fontStyle", fs.value);
-                                }}
-                                className={`text-center py-1 text-[9px] rounded transition-colors font-bold ${
-                                  prefs.fontStyle === fs.value
-                                    ? "text-black bg-white"
-                                    : "text-white/60 hover:text-white hover:bg-white/10"
-                                }`}
-                              >
-                                {fs.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Font Family */}
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold px-1">
-                            Font Family
-                          </span>
-                          <div className="px-1">
-                            <select
-                              value={prefs.fontFamily}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                updatePreference("fontFamily", e.target.value);
-                              }}
-                              className="w-full bg-[#222]/80 border border-white/10 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-white/30 cursor-pointer"
-                            >
-                              <option value="Arial, Helvetica, sans-serif">
-                                Arial
-                              </option>
-                              <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">
-                                Helvetica Neue
-                              </option>
-                              <option value="'Trebuchet MS', 'Segoe UI', Verdana, sans-serif">
-                                Trebuchet MS
-                              </option>
-                              <option value="'Inter', 'Segoe UI', system-ui, sans-serif">
-                                Inter
-                              </option>
-                              <option value="Georgia, 'Times New Roman', serif">
-                                Georgia (Serif)
-                              </option>
-                              <option value="'Courier New', Courier, monospace">
-                                Courier (Monospace)
-                              </option>
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Accessibility Toggle */}
-                        <div className="flex items-center justify-between border-t border-white/5 pt-2 px-1">
-                          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">
-                            Use Native Subtitles
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={prefs.useNativeSubtitles}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              updatePreference(
-                                "useNativeSubtitles",
-                                e.target.checked,
-                              );
-                            }}
-                            className="cursor-pointer accent-nebula-cyan w-3.5 h-3.5 rounded border-white/20 bg-white/5"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Switch Source */}
                   <div className="mt-1 border-t border-white/10 pt-2 px-2">
                     <button
@@ -4643,7 +4810,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               {/* Countdown Progress Bar (Filling up) */}
               <div
                 className="absolute bottom-0 left-0 h-[2.5px] bg-nebula-cyan transition-all duration-100 ease-linear"
-                style={{ width: `${((SKIP_BUTTON_DURATION - skipTimer) / SKIP_BUTTON_DURATION) * 100}%` }}
+                style={{
+                  width: `${((SKIP_BUTTON_DURATION - skipTimer) / SKIP_BUTTON_DURATION) * 100}%`,
+                }}
               />
             </button>
           </motion.div>
@@ -5181,18 +5350,24 @@ export function InPlayerSourcePicker({
     srcName: string,
     activeName: string,
     loadingFlag: boolean,
-    hasDataFlag: boolean
+    hasDataFlag: boolean,
   ) => {
     const isFailed = failedSources.includes(srcName);
     const isActive = activeName === srcName;
-    
+
     if (isActive) {
-      if (srcName === "VidRock") return "border-nebula-cyan bg-nebula-cyan/10 shadow-[0_0_15px_rgba(0,229,255,0.12)] ring-1 ring-nebula-cyan/35 scale-[1.01] cursor-default";
-      if (srcName === "Vidnest") return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Vaplayer") return "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default";
-      if (srcName === "FilmU") return "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default";
-      if (srcName === "VidLink") return "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default";
-      if (srcName === "Videasy") return "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default";
+      if (srcName === "VidRock")
+        return "border-nebula-cyan bg-nebula-cyan/10 shadow-[0_0_15px_rgba(0,229,255,0.12)] ring-1 ring-nebula-cyan/35 scale-[1.01] cursor-default";
+      if (srcName === "Vidnest")
+        return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
+      if (srcName === "Vaplayer")
+        return "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default";
+      if (srcName === "FilmU")
+        return "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default";
+      if (srcName === "VidLink")
+        return "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default";
+      if (srcName === "Videasy")
+        return "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default";
     }
 
     if (isFailed) {
@@ -5204,12 +5379,18 @@ export function InPlayerSourcePicker({
     }
 
     if (hasDataFlag) {
-      if (srcName === "VidRock") return "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95 cursor-pointer";
-      if (srcName === "Vidnest") return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Vaplayer") return "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "FilmU") return "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "VidLink") return "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer";
-      if (srcName === "Videasy") return "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "VidRock")
+        return "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95 cursor-pointer";
+      if (srcName === "Vidnest")
+        return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "Vaplayer")
+        return "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "FilmU")
+        return "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "VidLink")
+        return "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer";
+      if (srcName === "Videasy")
+        return "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer";
     }
 
     return "border-white/5 bg-white/2 opacity-40 cursor-not-allowed";
@@ -5219,11 +5400,20 @@ export function InPlayerSourcePicker({
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 overflow-y-auto max-h-[70vh]">
       {/* VidRock */}
       <button
-        onClick={() => (sources.length > 0 || failedSources.includes("VidRock")) && onSelect(vidrockUrl)}
-        disabled={activeSource === "VidRock" || (loading && !failedSources.includes("VidRock"))}
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          getButtonClass("VidRock", activeSource || "", loading, sources.length > 0)
-        }`}
+        onClick={() =>
+          (sources.length > 0 || failedSources.includes("VidRock")) &&
+          onSelect(vidrockUrl)
+        }
+        disabled={
+          activeSource === "VidRock" ||
+          (loading && !failedSources.includes("VidRock"))
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+          "VidRock",
+          activeSource || "",
+          loading,
+          sources.length > 0,
+        )}`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan">
@@ -5282,11 +5472,20 @@ export function InPlayerSourcePicker({
 
       {/* Vidnest */}
       <button
-        onClick={() => (vidnestSources.length > 0 || failedSources.includes("Vidnest")) && onSelect(vidnestUrl)}
-        disabled={activeSource === "Vidnest" || (vidnestLoading && !failedSources.includes("Vidnest"))}
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          getButtonClass("Vidnest", activeSource || "", vidnestLoading, vidnestSources.length > 0)
-        }`}
+        onClick={() =>
+          (vidnestSources.length > 0 || failedSources.includes("Vidnest")) &&
+          onSelect(vidnestUrl)
+        }
+        disabled={
+          activeSource === "Vidnest" ||
+          (vidnestLoading && !failedSources.includes("Vidnest"))
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+          "Vidnest",
+          activeSource || "",
+          vidnestLoading,
+          vidnestSources.length > 0,
+        )}`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400">
@@ -5351,11 +5550,20 @@ export function InPlayerSourcePicker({
 
       {/* Vaplayer */}
       <button
-        onClick={() => (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) && onSelect(vaplayerUrl)}
-        disabled={activeSource === "Vaplayer" || (vaplayerLoading && !failedSources.includes("Vaplayer"))}
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          getButtonClass("Vaplayer", activeSource || "", vaplayerLoading, vaplayerSources.length > 0)
-        }`}
+        onClick={() =>
+          (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) &&
+          onSelect(vaplayerUrl)
+        }
+        disabled={
+          activeSource === "Vaplayer" ||
+          (vaplayerLoading && !failedSources.includes("Vaplayer"))
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+          "Vaplayer",
+          activeSource || "",
+          vaplayerLoading,
+          vaplayerSources.length > 0,
+        )}`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400">
@@ -5413,11 +5621,20 @@ export function InPlayerSourcePicker({
 
       {/* FilmU */}
       <button
-        onClick={() => (filmuSources.length > 0 || failedSources.includes("FilmU")) && onSelect(filmuUrl)}
-        disabled={activeSource === "FilmU" || (filmuLoading && !failedSources.includes("FilmU"))}
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          getButtonClass("FilmU", activeSource || "", filmuLoading, filmuSources.length > 0)
-        }`}
+        onClick={() =>
+          (filmuSources.length > 0 || failedSources.includes("FilmU")) &&
+          onSelect(filmuUrl)
+        }
+        disabled={
+          activeSource === "FilmU" ||
+          (filmuLoading && !failedSources.includes("FilmU"))
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+          "FilmU",
+          activeSource || "",
+          filmuLoading,
+          filmuSources.length > 0,
+        )}`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400">
@@ -5477,9 +5694,12 @@ export function InPlayerSourcePicker({
       <button
         onClick={() => onSelect()}
         disabled={activeSource === "VidLink"}
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          getButtonClass("VidLink", activeSource || "", false, true)
-        }`}
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+          "VidLink",
+          activeSource || "",
+          false,
+          true,
+        )}`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white/60">
@@ -5513,11 +5733,20 @@ export function InPlayerSourcePicker({
 
       {/* Videasy */}
       <button
-        onClick={() => (videasySources.length > 0 || failedSources.includes("Videasy")) && onSelect(videasyUrl)}
-        disabled={activeSource === "Videasy" || (videasyLoading && !failedSources.includes("Videasy"))}
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${
-          getButtonClass("Videasy", activeSource || "", videasyLoading, videasySources.length > 0)
-        }`}
+        onClick={() =>
+          (videasySources.length > 0 || failedSources.includes("Videasy")) &&
+          onSelect(videasyUrl)
+        }
+        disabled={
+          activeSource === "Videasy" ||
+          (videasyLoading && !failedSources.includes("Videasy"))
+        }
+        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+          "Videasy",
+          activeSource || "",
+          videasyLoading,
+          videasySources.length > 0,
+        )}`}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400">

@@ -1922,19 +1922,44 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   a.season_number - b.season_number,
                               );
 
+                            const lastEpS =
+                              tvDetails.last_episode_to_air?.season_number;
+                            const lastEpE =
+                              tvDetails.last_episode_to_air?.episode_number;
+
+                            const checkEpisodeAired = (
+                              s: number,
+                              e: number,
+                            ) => {
+                              if (
+                                lastEpS === undefined ||
+                                lastEpE === undefined
+                              )
+                                return true; // fallback
+                              if (s > lastEpS) return false;
+                              if (s === lastEpS && e > lastEpE) return false;
+                              return true;
+                            };
+
                             const currentSeasonInfo = sortedSeasons.find(
                               (s: any) => s.season_number === latest.season,
                             );
                             if (currentSeasonInfo) {
                               const maxEpisodes =
                                 currentSeasonInfo.episode_count;
-                              if (latest.episode < maxEpisodes) {
+                              if (
+                                latest.episode < maxEpisodes &&
+                                checkEpisodeAired(
+                                  latest.season,
+                                  latest.episode + 1,
+                                )
+                              ) {
                                 resumeData = {
                                   season: latest.season,
                                   episode: latest.episode + 1,
                                   _isNext: true,
                                 };
-                              } else {
+                              } else if (latest.episode >= maxEpisodes) {
                                 // Transition to next season
                                 const currentSeasonIdx =
                                   sortedSeasons.findIndex(
@@ -1947,27 +1972,81 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 ) {
                                   const nextSeason =
                                     sortedSeasons[currentSeasonIdx + 1];
-                                  resumeData = {
-                                    season: nextSeason.season_number,
-                                    episode: 1,
-                                    _isNext: true,
-                                  };
+                                  if (
+                                    checkEpisodeAired(
+                                      nextSeason.season_number,
+                                      1,
+                                    )
+                                  ) {
+                                    resumeData = {
+                                      season: nextSeason.season_number,
+                                      episode: 1,
+                                      _isNext: true,
+                                    };
+                                  } else {
+                                    // Next season is not aired yet!
+                                    const isOngoing =
+                                      tvDetails.in_production ||
+                                      (tvDetails.status !== "Ended" &&
+                                        tvDetails.status !== "Canceled");
+                                    resumeData = {
+                                      season: latest.season,
+                                      episode: latest.episode,
+                                      _completed: !isOngoing,
+                                      _caughtUp: isOngoing,
+                                    };
+                                  }
                                 } else {
                                   // No more seasons or episodes!
+                                  const isOngoing =
+                                    tvDetails.in_production ||
+                                    (tvDetails.status !== "Ended" &&
+                                      tvDetails.status !== "Canceled");
                                   resumeData = {
                                     season: latest.season,
                                     episode: latest.episode,
-                                    _completed: true,
+                                    _completed: !isOngoing,
+                                    _caughtUp: isOngoing,
                                   };
                                 }
+                              } else {
+                                // next episode in current season is not aired yet!
+                                const isOngoing =
+                                  tvDetails.in_production ||
+                                  (tvDetails.status !== "Ended" &&
+                                    tvDetails.status !== "Canceled");
+                                resumeData = {
+                                  season: latest.season,
+                                  episode: latest.episode,
+                                  _completed: !isOngoing,
+                                  _caughtUp: isOngoing,
+                                };
                               }
                             } else {
                               // Fallback if current season info not found
-                              resumeData = {
-                                season: latest.season,
-                                episode: latest.episode + 1,
-                                _isNext: true,
-                              };
+                              if (
+                                checkEpisodeAired(
+                                  latest.season,
+                                  latest.episode + 1,
+                                )
+                              ) {
+                                resumeData = {
+                                  season: latest.season,
+                                  episode: latest.episode + 1,
+                                  _isNext: true,
+                                };
+                              } else {
+                                const isOngoing =
+                                  tvDetails.in_production ||
+                                  (tvDetails.status !== "Ended" &&
+                                    tvDetails.status !== "Canceled");
+                                resumeData = {
+                                  season: latest.season,
+                                  episode: latest.episode,
+                                  _completed: !isOngoing,
+                                  _caughtUp: isOngoing,
+                                };
+                              }
                             }
                           } else {
                             // tvDetails not loaded yet, fallback to next episode
@@ -2011,7 +2090,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     if (isTBA) {
                       label = resumeData ? "Resume (TBA)" : "Try Playback";
                     } else if (resumeData && resumeData._completed) {
-                      label = "Series Completed";
+                      label = "Rewatch Series";
+                    } else if (resumeData && resumeData._caughtUp) {
+                      label = `Play S${resumeData.season}E${resumeData.episode}`;
                     } else if (!resumeData) {
                       label = "Watch Now";
                     } else if (resumeData._isNext) {
@@ -2025,7 +2106,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       label = "Resume Watching";
                     }
 
-                    const isDisabled = resumeData && resumeData._completed;
+                    const isDisabled = false;
 
                     return (
                       <div className="flex-1 sm:flex-none">

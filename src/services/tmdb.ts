@@ -590,7 +590,11 @@ export const searchMedia = async (
     queryPromises.push(
       fetchFromTMDB(
         "/search/multi",
-        { query: trimmedQuery, page: "2", include_adult: includeAdult.toString() },
+        {
+          query: trimmedQuery,
+          page: "2",
+          include_adult: includeAdult.toString(),
+        },
         TTL.SEARCH,
         signal,
       )
@@ -1074,6 +1078,10 @@ export const getTVDetails = async (id: string | number) => {
     return {
       number_of_seasons: data.number_of_seasons,
       seasons: data.seasons,
+      in_production: data.in_production,
+      status: data.status,
+      last_episode_to_air: data.last_episode_to_air,
+      next_episode_to_air: data.next_episode_to_air,
     };
   } catch {
     return null;
