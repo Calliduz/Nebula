@@ -2297,6 +2297,65 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   className="space-y-6"
                 >
+                  {(() => {
+                    const nextEp = tvDetails?.next_episode_to_air;
+                    if (!nextEp || !nextEp.air_date) return null;
+
+                    const airDate = new Date(nextEp.air_date);
+                    const now = new Date();
+                    airDate.setHours(0, 0, 0, 0);
+                    now.setHours(0, 0, 0, 0);
+                    const diffTime = airDate.getTime() - now.getTime();
+                    const diffDays = Math.ceil(
+                      diffTime / (1000 * 60 * 60 * 24),
+                    );
+
+                    const formattedDate = new Date(
+                      nextEp.air_date,
+                    ).toLocaleDateString(undefined, {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    });
+
+                    let countdownText = "";
+                    if (diffDays === 0) {
+                      countdownText = `Next Episode (S${nextEp.season_number}E${nextEp.episode_number} - "${nextEp.name || "TBA"}") airs TODAY!`;
+                    } else if (diffDays === 1) {
+                      countdownText = `Next Episode (S${nextEp.season_number}E${nextEp.episode_number} - "${nextEp.name || "TBA"}") airs TOMORROW! (${formattedDate})`;
+                    } else if (diffDays > 1) {
+                      countdownText = `Next Episode (S${nextEp.season_number}E${nextEp.episode_number} - "${nextEp.name || "TBA"}") airs in ${diffDays} days on ${formattedDate}.`;
+                    } else {
+                      countdownText = `Next Episode (S${nextEp.season_number}E${nextEp.episode_number} - "${nextEp.name || "TBA"}") aired on ${formattedDate}.`;
+                    }
+
+                    return (
+                      <div className="p-4 bg-nebula-cyan/10 border border-nebula-cyan/30 rounded-2xl flex items-start gap-3 shadow-lg">
+                        <div className="w-8 h-8 rounded-full bg-nebula-cyan/20 flex items-center justify-center text-nebula-cyan shrink-0 animate-pulse mt-0.5">
+                          <Tv size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-white font-bold text-xs uppercase tracking-wider">
+                            Upcoming Episode
+                          </h4>
+                          <p className="text-[11px] text-white/80 mt-1 leading-normal font-medium">
+                            {countdownText}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-2 text-[9px] text-nebula-cyan/80 bg-nebula-cyan/5 border border-nebula-cyan/20 px-2 py-1.5 rounded-lg w-max max-w-full">
+                            <Info size={10} className="shrink-0" />
+                            <span>Note: Release is typically delayed by 6+ hours depending on source availability.</span>
+                          </div>
+                          {nextEp.overview && (
+                            <p className="text-[10px] text-white/50 mt-2.5 leading-relaxed line-clamp-2 italic">
+                              "{nextEp.overview}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {tvDetails?.seasons?.length > 0 && (
                     <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                       {tvDetails.seasons

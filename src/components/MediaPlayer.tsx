@@ -2812,6 +2812,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         !showSubtitles &&
         !showEpisodeDrawer &&
         !showServersModal &&
+        !sourceSelect &&
         !isDragging
       )
         setShowUi(false);
@@ -2822,7 +2823,32 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     showSubtitles,
     showEpisodeDrawer,
     showServersModal,
+    sourceSelect,
     isDragging,
+  ]);
+
+  // Prevent auto-hiding controls when any menu/drawer is open
+  useEffect(() => {
+    const isMenuOpen =
+      showSettings ||
+      showSubtitles ||
+      showEpisodeDrawer ||
+      showServersModal ||
+      Boolean(sourceSelect);
+
+    if (isMenuOpen) {
+      setShowUi(true);
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+    }
+  }, [
+    showSettings,
+    showSubtitles,
+    showEpisodeDrawer,
+    showServersModal,
+    sourceSelect,
   ]);
 
   // Tap on the video/empty area:
@@ -2839,13 +2865,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       showSettings ||
       showSubtitles ||
       showEpisodeDrawer ||
-      showServersModal
+      showServersModal ||
+      sourceSelect
     ) {
       // Close whichever menu is open
       setShowSettings(false);
       setShowSubtitles(false);
       setShowEpisodeDrawer(false);
       setShowServersModal(false);
+      setSourceSelect(null);
       resetHideTimer();
     } else if (!showUi) {
       resetHideTimer();
@@ -2860,6 +2888,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     showSubtitles,
     showEpisodeDrawer,
     showServersModal,
+    sourceSelect,
     resetHideTimer,
   ]);
 
@@ -3788,79 +3817,210 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </div>
             </div>
           )}
-          {mirrors.length > 0 && !isEmbed && (
-            <div className="relative shrink-0 pointer-events-auto">
-              <button
-                onClick={() => {
-                  setShowServersModal((p) => !p);
-                  setShowSettings(false);
-                  setShowSubtitles(false);
-                  setShowEpisodeDrawer(false);
-                }}
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border border-white/5 ${
-                  showServersModal
-                    ? "bg-white text-black scale-105"
-                    : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20 hover:scale-105"
-                }`}
-                title="Servers & Mirrors"
-              >
-                <Cloud size={18} />
-              </button>
 
-              {showServersModal && (
-                <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-72 max-h-[60vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
-                  <div className="px-2.5 pb-2 mb-2 border-b border-white/5">
-                    <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
-                      <Cloud size={13} className="text-nebula-cyan" />
-                      <span>Servers & Mirrors</span>
-                    </h3>
-                    <p className="text-[9px] text-white/40 mt-1 leading-normal font-medium">
-                      Select a source provider below if playback is slow or
-                      failing.
-                    </p>
-                  </div>
-
-                  {(() => {
-                    const groupedByCategory: Record<
-                      string,
-                      { mirror: any; originalIndex: number }[]
-                    > = {};
-                    mirrors.forEach((m, i) => {
-                      const { category, name } = parseMirrorDetails(m.source);
-                      if (!groupedByCategory[category]) {
-                        groupedByCategory[category] = [];
-                      }
-                      groupedByCategory[category].push({
-                        mirror: { ...m, cleanName: name },
-                        originalIndex: i,
+          {!isEmbed && (
+            <div className="flex items-center gap-2 shrink-0 pointer-events-auto">
+              {/* Sources Button & Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    if (sourceSelect) {
+                      setSourceSelect(null);
+                    } else {
+                      setSourceSelect({
+                        season: season ?? 1,
+                        episode: episode ?? 1,
                       });
-                    });
+                      setShowServersModal(false);
+                      setShowSettings(false);
+                      setShowSubtitles(false);
+                      setShowEpisodeDrawer(false);
+                    }
+                  }}
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border border-white/5 ${
+                    sourceSelect
+                      ? "bg-white text-black scale-105"
+                      : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20 hover:scale-105"
+                  }`}
+                  title="Sources"
+                >
+                  <Tv size={18} />
+                </button>
 
-                    return Object.entries(groupedByCategory).map(
-                      ([category, items]) => {
-                        items.sort((a, b) => {
+                {sourceSelect && (
+                  <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-80 max-h-[60vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
+                    {/* Header */}
+                    <div className="px-2.5 pb-2 mb-2 border-b border-white/5 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                          <Tv size={13} className="text-nebula-cyan" />
+                          <span>Stream Source</span>
+                        </h3>
+                        <p className="text-[9px] text-white/40 mt-1 leading-normal font-medium">
+                          {movie.title}
+                          {movie.type === "tv" && ` · S${sourceSelect.season}E${sourceSelect.episode}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {/* Previous Episode */}
+                        {movie.type === "tv" && (() => {
+                          const prevEp = getPreviousEpisodeFor(sourceSelect.season, sourceSelect.episode);
                           return (
-                            getMirrorPriority(a.mirror.source) -
-                            getMirrorPriority(b.mirror.source)
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (prevEp) {
+                                  setSourceSelect(prevEp);
+                                  setForceRefetchTrigger(0);
+                                }
+                              }}
+                              disabled={!prevEp}
+                              className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
+                                prevEp
+                                  ? "bg-white/5 hover:bg-white/10 text-white/80 border-white/5"
+                                  : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
+                              }`}
+                            >
+                              <ChevronLeft size={12} />
+                            </button>
                           );
+                        })()}
+                        {/* Refetch */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setForceRefetchTrigger((t) => t + 1);
+                          }}
+                          disabled={sourcesLoading}
+                          className="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all border border-white/5 disabled:opacity-40"
+                        >
+                          <RefreshCw size={10} className={sourcesLoading ? "animate-spin text-nebula-cyan" : ""} />
+                        </button>
+                        {/* Next Episode */}
+                        {movie.type === "tv" && (() => {
+                          const nextEp = getNextEpisodeFor(sourceSelect.season, sourceSelect.episode);
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (nextEp) {
+                                  setSourceSelect(nextEp);
+                                  setForceRefetchTrigger(0);
+                                }
+                              }}
+                              disabled={!nextEp}
+                              className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
+                                nextEp
+                                  ? "bg-white/5 hover:bg-white/10 text-white/80 border-white/5"
+                                  : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
+                              }`}
+                            >
+                              <ChevronRight size={12} />
+                            </button>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 max-h-[45vh] overflow-y-auto custom-scrollbar">
+                      <InPlayerSourcePicker
+                        movie={movie}
+                        season={sourceSelect.season}
+                        episode={sourceSelect.episode}
+                        forceRefetchTrigger={forceRefetchTrigger}
+                        onLoadingChange={setSourcesLoading}
+                        activeSource={
+                          (movie.type !== "tv" ||
+                            (sourceSelect.season === season &&
+                              sourceSelect.episode === episode)) &&
+                          mirrors[activeMirror]
+                            ? parseMirrorDetails(mirrors[activeMirror].source).category
+                            : ""
+                        }
+                        failedSources={failedSourcesList}
+                        onSelect={(src) => {
+                          setSourceSelect(null);
+                          const queryParams = new URLSearchParams();
+                          if (movie.type === "tv") {
+                            queryParams.set("season", String(sourceSelect.season));
+                            queryParams.set("episode", String(sourceSelect.episode));
+                          }
+                          if (src) {
+                            queryParams.set("source", src);
+                          }
+                          const queryString = queryParams.toString();
+                          navigate(
+                            `/watch/${movie.type || "movie"}/${movie.id}${queryString ? `?${queryString}` : ""}`,
+                          );
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Servers & Mirrors Button & Dropdown */}
+              {mirrors.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowServersModal((p) => !p);
+                      setSourceSelect(null);
+                      setShowSettings(false);
+                      setShowSubtitles(false);
+                      setShowEpisodeDrawer(false);
+                    }}
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border border-white/5 ${
+                      showServersModal
+                        ? "bg-white text-black scale-105"
+                        : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20 hover:scale-105"
+                    }`}
+                    title="Servers & Mirrors"
+                  >
+                    <Cloud size={18} />
+                  </button>
+
+                  {showServersModal && (
+                    <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-72 max-h-[60vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
+                      <div className="px-2.5 pb-2 mb-2 border-b border-white/5">
+                        <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                          <Cloud size={13} className="text-nebula-cyan" />
+                          <span>Servers & Mirrors</span>
+                        </h3>
+                        <p className="text-[9px] text-white/40 mt-1 leading-normal font-medium">
+                          Select a source provider below if playback is slow or failing.
+                        </p>
+                      </div>
+
+                      {(() => {
+                        const groupedByCategory: Record<
+                          string,
+                          { mirror: any; originalIndex: number }[]
+                        > = {};
+                        mirrors.forEach((m, i) => {
+                          const { category, name } = parseMirrorDetails(m.source);
+                          if (!groupedByCategory[category]) {
+                            groupedByCategory[category] = [];
+                          }
+                          groupedByCategory[category].push({
+                            mirror: { ...m, cleanName: name },
+                            originalIndex: i,
+                          });
                         });
 
-                        return (
-                          <div key={category} className="mb-3 last:mb-1">
-                            <div className="flex items-center gap-1.5 px-2 mb-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
-                              <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
-                                {category}
-                              </span>
-                            </div>
-                            <div className="flex flex-col gap-1 px-1">
-                              {items.map(
-                                ({ mirror: m, originalIndex: idx }) => {
-                                  const flagCode = m.flag
-                                    ? m.flag.toLowerCase()
-                                    : "us";
-                                  const countryCode =
-                                    flagCode === "en" ? "us" : flagCode;
+                        return Object.entries(groupedByCategory).map(
+                          ([category, items]) => (
+                            <div key={category} className="mb-2 last:mb-0">
+                              <div className="flex items-center gap-1.5 px-2 mb-1.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
+                                <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
+                                  {category}
+                                </span>
+                              </div>
+                              <div className="flex flex-col gap-1 px-1">
+                                {items.map(({ mirror: m, originalIndex: idx }) => {
+                                  const flagCode = m.flag ? m.flag.toLowerCase() : "us";
+                                  const countryCode = flagCode === "en" ? "us" : flagCode;
                                   const isSelected = activeMirror === idx;
                                   const failedReason = failedMirrors[idx];
                                   return (
@@ -3868,6 +4028,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                       key={idx}
                                       onClick={() => {
                                         selectMirror(idx, mirrors);
+                                        setShowServersModal(false);
                                       }}
                                       className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
                                         isSelected
@@ -3881,8 +4042,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                           alt={flagCode}
                                           className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
                                           onError={(e) => {
-                                            e.currentTarget.src =
-                                              "https://flagcdn.com/w20/us.png";
+                                            e.currentTarget.src = "https://flagcdn.com/w20/us.png";
                                           }}
                                         />
                                         <div className="flex flex-col min-w-0">
@@ -3916,15 +4076,16 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                               )}
                             </div>
                           </div>
-                        );
-                      },
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                        )
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
         <div
           className={`px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 ${!isEmbed ? "bg-gradient-to-t from-black/90 to-transparent" : ""}`}
@@ -4135,18 +4296,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4 relative">
-              <button
-                onClick={() =>
-                  setSourceSelect({
-                    season: season ?? 1,
-                    episode: episode ?? 1,
-                  })
-                }
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${sourceSelect ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
-                title="Sources"
-              >
-                <Tv size={16} />
-              </button>
               {movie.type === "tv" && (
                 <button
                   onClick={() => {
@@ -4556,44 +4705,76 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-0.5">
-                    <button
-                      onClick={() => handleSubtitleChange(-1)}
-                      className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors ${activeSubtitle === -1 ? "text-black bg-white font-bold" : "text-white/60 hover:text-white hover:bg-white/5"}`}
-                    >
-                      Off
-                    </button>
-                    {subtitles.map((sub, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleSubtitleChange(i)}
-                        className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${
-                          sub.failed
-                            ? "text-red-500/50 hover:bg-white/5 line-through decoration-red-500/50"
-                            : activeSubtitle === i
-                              ? "text-black bg-white font-bold"
-                              : "text-white/60 hover:text-white hover:bg-white/5"
-                        }`}
-                      >
-                        <span className="truncate pr-2">
-                          {sub.languageName} {sub.failed && "(Failed to load)"}
-                        </span>
-                        {sub.source && (
-                          <span
-                            className={`text-[8px] px-1 rounded uppercase font-black ${
-                              sub.failed
-                                ? "bg-red-500/10 text-red-500/60"
-                                : activeSubtitle === i
-                                  ? "bg-black/20 text-black/60"
-                                  : "bg-white/5 text-white/30"
-                            }`}
-                          >
-                            {sub.source}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                   <div className="flex flex-col gap-1 px-1">
+                     <button
+                       onClick={() => handleSubtitleChange(-1)}
+                       className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group text-xs ${
+                         activeSubtitle === -1
+                           ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                           : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                       }`}
+                     >
+                       <span>Off</span>
+                       {activeSubtitle === -1 && (
+                         <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                       )}
+                     </button>
+                     {subtitles.map((sub, i) => {
+                       const cleanLangName = sub.languageName
+                         .replace(/\s*\(External\).*/i, "")
+                         .trim();
+                       const cleanSource = (() => {
+                         if (!sub.source) return "";
+                         const s = sub.source.toLowerCase();
+                         if (s === "opensubtitles") return "OpenSubtitles";
+                         if (s === "vidrock") return "VidRock";
+                         if (s === "vidnest") return "VidNest";
+                         if (s === "vaplayer") return "VAPlayer";
+                         if (s === "filmu") return "FilmU";
+                         if (s === "vidlink") return "VidLink";
+                         if (s === "videasy") return "Videasy";
+                         if (s === "custom") return "Custom";
+                         return sub.source;
+                       })();
+                       return (
+                         <button
+                           key={i}
+                           onClick={() => handleSubtitleChange(i)}
+                           className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-200 flex items-center justify-between group text-xs ${
+                             sub.failed
+                               ? "text-red-500/40 bg-red-500/5 border-red-500/10 line-through decoration-red-500/50 cursor-not-allowed"
+                               : activeSubtitle === i
+                                 ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                 : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                           }`}
+                         >
+                           <span className="truncate pr-2">
+                             {cleanLangName} {sub.failed && "(Failed to load)"}
+                           </span>
+                           <div className="flex items-center gap-2 shrink-0">
+                             {sub.source && (
+                               <span
+                                 className={`text-[8px] px-1.5 py-0.5 rounded font-black tracking-wider uppercase border ${
+                                   sub.failed
+                                     ? "bg-red-500/10 text-red-500/40 border-red-500/10"
+                                     : activeSubtitle === i
+                                       ? "bg-white/10 text-white/70 border-white/10"
+                                       : sub.source.toLowerCase() === "opensubtitles"
+                                         ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
+                                         : "bg-nebula-cyan/10 text-nebula-cyan border-nebula-cyan/20"
+                                 }`}
+                               >
+                                 {cleanSource}
+                               </span>
+                             )}
+                             {activeSubtitle === i && !sub.failed && (
+                               <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                             )}
+                           </div>
+                         </button>
+                       );
+                     })}
+                   </div>
 
                   {/* Upload custom subtitle */}
                   <div className="mx-2 mt-1 mb-2">
@@ -4623,7 +4804,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                             .replace(/\r\n/g, "\n")
                             .replace(/\r/g, "\n");
                           if (ext === "srt") {
-                            // SRT → VTT conversion
                             content = content.replace(
                               /(\d{2}:\d{2}:\d{2}),(\d{3})/g,
                               "$1.$2",
@@ -4669,70 +4849,102 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               )}
 
               {showSettings && (
-                <div className="absolute bottom-12 right-0 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl w-60 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1 p-2 animate-in slide-in-from-bottom-2 duration-200">
-                  <div className="mb-2">
-                    <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1">
-                      Speed
-                    </p>
-                    <div className="grid grid-cols-4 gap-1 px-2">
+                <div className="absolute bottom-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-60 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1.5 p-3.5 animate-in slide-in-from-bottom-2 duration-200 text-left">
+                  <div className="px-2 pb-2 mb-2 border-b border-white/5">
+                    <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                      <Settings size={13} className="text-nebula-cyan" />
+                      <span>Settings</span>
+                    </h3>
+                  </div>
+
+                  <div className="mb-3">
+                    <div className="flex items-center gap-1.5 px-2 mb-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
+                      <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
+                        Playback Speed
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 px-1">
                       {[0.5, 1, 1.5, 2].map((s) => (
                         <button
                           key={s}
                           onClick={() => setPlaybackSpeed(s)}
-                          className={`w-full text-center py-1.5 text-xs rounded-md transition-colors ${speed === s ? "text-black bg-white font-bold" : "text-white/60 hover:text-white hover:bg-white/10"}`}
+                          className={`text-center py-1.5 text-xs rounded-lg transition-all font-bold border ${
+                            speed === s
+                              ? "text-white bg-white/10 border-white/15 shadow-sm shadow-black/20"
+                              : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5"
+                          }`}
                         >
                           {s === 1 ? "1x" : `${s}x`}
                         </button>
                       ))}
                     </div>
                   </div>
+
                   {qualities.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-white/30 text-[10px] uppercase tracking-widest px-3 pt-2 pb-1 border-t border-white/10">
-                        Quality
-                      </p>
-                      <div className="flex flex-col px-2">
+                    <div className="mb-3">
+                      <div className="flex items-center gap-1.5 px-2 mb-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
+                        <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
+                          Video Quality
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1 px-1">
                         <button
                           onClick={() => setQuality(-1)}
-                          className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors flex items-center justify-between ${activeQuality === -1 ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+                          className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
+                            activeQuality === -1
+                              ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                              : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5"
+                          }`}
                         >
-                          <span>Auto</span>
-                          {activeQuality === -1 && currentHeight && (
-                            <span className="text-[9px] opacity-40">
-                              {currentHeight}p
-                            </span>
-                          )}
+                          <span className="text-xs font-semibold leading-tight">
+                            Auto
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            {activeQuality === -1 && currentHeight && (
+                              <span className="text-[9px] text-white/40 font-normal">
+                                {currentHeight}p
+                              </span>
+                            )}
+                            {activeQuality === -1 ? (
+                              <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                            ) : (
+                              <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30" />
+                            )}
+                          </div>
                         </button>
-                        {qualities.map((q) => (
-                          <button
-                            key={q.levelId}
-                            onClick={() => setQuality(q.levelId)}
-                            className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${activeQuality === q.levelId ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"}`}
-                          >
-                            {q.height}p
-                          </button>
-                        ))}
+                        {qualities.map((q) => {
+                          const isSelected = activeQuality === q.levelId;
+                          return (
+                            <button
+                              key={q.levelId}
+                              onClick={() => setQuality(q.levelId)}
+                              className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
+                                isSelected
+                                  ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                  : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <span className="text-xs font-semibold leading-tight">
+                                {q.height}p
+                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                {isSelected ? (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                                ) : (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30" />
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
-                  {/* Switch Source */}
-                  <div className="mt-1 border-t border-white/10 pt-2 px-2">
-                    <button
-                      onClick={() => {
-                        setShowSettings(false);
-                        setSourceSelect({
-                          season: season ?? 1,
-                          episode: episode ?? 1,
-                        });
-                      }}
-                      className="w-full flex items-center gap-2 px-2 py-2 text-[11px] text-nebula-cyan/80 hover:text-nebula-cyan hover:bg-nebula-cyan/10 rounded-md transition-colors"
-                    >
-                      <Tv size={13} />
-                      <span>Switch Source</span>
-                    </button>
-                  </div>
+
                   {/* Reload Stream — recovers from stuck seek/fast-forward */}
-                  <div className="mt-1 border-t border-white/10 pt-2 px-2">
+                  <div className="border-t border-white/5 pt-3 mt-1 px-1">
                     <button
                       id="reload-stream-btn"
                       onClick={() => {
@@ -4906,160 +5118,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </div>
             </motion.div>
           </>
-        )}
-      </AnimatePresence>
-      {/* ── In-Player Source Picker ── */}
-      <AnimatePresence>
-        {sourceSelect && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-sm p-3"
-            onClick={() => setSourceSelect(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.92, y: 16 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.92, y: 16 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg bg-[#0d0d0d] border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                <div>
-                  <p className="text-[10px] text-nebula-cyan uppercase tracking-widest font-black">
-                    Stream Source
-                  </p>
-                  <p className="text-sm font-bold text-white">
-                    {movie.title}
-                    {movie.type === "tv" &&
-                      ` · S${sourceSelect.season}E${sourceSelect.episode}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* Previous Episode Button */}
-                  {movie.type === "tv" &&
-                    (() => {
-                      const prevEp = getPreviousEpisodeFor(
-                        sourceSelect.season,
-                        sourceSelect.episode,
-                      );
-                      return (
-                        <button
-                          onClick={() => {
-                            if (prevEp) {
-                              setSourceSelect(prevEp);
-                              setForceRefetchTrigger(0);
-                            }
-                          }}
-                          disabled={!prevEp}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
-                            prevEp
-                              ? "bg-white/5 hover:bg-white/10 text-white border-white/5"
-                              : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
-                          }`}
-                          title={
-                            prevEp
-                              ? `Previous Episode (S${prevEp.season}E${prevEp.episode})`
-                              : "No Previous Episode"
-                          }
-                        >
-                          <ChevronLeft size={16} />
-                        </button>
-                      );
-                    })()}
-
-                  {/* Refetch Button */}
-                  <button
-                    onClick={() => setForceRefetchTrigger((t) => t + 1)}
-                    disabled={sourcesLoading}
-                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-95 border border-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="Force refetch all sources"
-                  >
-                    <RefreshCw
-                      size={14}
-                      className={
-                        sourcesLoading ? "animate-spin text-nebula-cyan" : ""
-                      }
-                    />
-                  </button>
-
-                  {/* Next Episode Button */}
-                  {movie.type === "tv" &&
-                    (() => {
-                      const nextEp = getNextEpisodeFor(
-                        sourceSelect.season,
-                        sourceSelect.episode,
-                      );
-                      return (
-                        <button
-                          onClick={() => {
-                            if (nextEp) {
-                              setSourceSelect(nextEp);
-                              setForceRefetchTrigger(0);
-                            }
-                          }}
-                          disabled={!nextEp}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
-                            nextEp
-                              ? "bg-white/5 hover:bg-white/10 text-white border-white/5"
-                              : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
-                          }`}
-                          title={
-                            nextEp
-                              ? `Next Episode (S${nextEp.season}E${nextEp.episode})`
-                              : "No More Episodes"
-                          }
-                        >
-                          <ChevronRight size={16} />
-                        </button>
-                      );
-                    })()}
-
-                  <button
-                    onClick={() => setSourceSelect(null)}
-                    className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:text-white transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Cards — horizontal on landscape, stacked on portrait */}
-              <InPlayerSourcePicker
-                movie={movie}
-                season={sourceSelect.season}
-                episode={sourceSelect.episode}
-                forceRefetchTrigger={forceRefetchTrigger}
-                onLoadingChange={setSourcesLoading}
-                activeSource={
-                  (movie.type !== "tv" ||
-                    (sourceSelect.season === season &&
-                      sourceSelect.episode === episode)) &&
-                  mirrors[activeMirror]
-                    ? parseMirrorDetails(mirrors[activeMirror].source).category
-                    : ""
-                }
-                failedSources={failedSourcesList}
-                onSelect={(src) => {
-                  setSourceSelect(null);
-                  const queryParams = new URLSearchParams();
-                  if (movie.type === "tv") {
-                    queryParams.set("season", String(sourceSelect.season));
-                    queryParams.set("episode", String(sourceSelect.episode));
-                  }
-                  if (src) {
-                    queryParams.set("source", src);
-                  }
-                  const queryString = queryParams.toString();
-                  navigate(
-                    `/watch/${movie.type || "movie"}/${movie.id}${queryString ? `?${queryString}` : ""}`,
-                  );
-                }}
-              />
-            </motion.div>
-          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -5397,7 +5455,7 @@ export function InPlayerSourcePicker({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 overflow-y-auto max-h-[70vh]">
+    <div className="flex flex-col gap-2 p-1 overflow-y-auto max-h-[45vh] custom-scrollbar">
       {/* VidRock */}
       <button
         onClick={() =>
@@ -5408,52 +5466,52 @@ export function InPlayerSourcePicker({
           activeSource === "VidRock" ||
           (loading && !failedSources.includes("VidRock"))
         }
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
           "VidRock",
           activeSource || "",
           loading,
           sources.length > 0,
         )}`}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan">
-            {loading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Info size={14} />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                VidRock
-              </p>
-              {activeSource === "VidRock" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan text-obsidian uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-              {failedSources.includes("VidRock") && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
-                  FAILED
-                </span>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan shrink-0">
+              {loading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Info size={13} />
               )}
             </div>
-            <p className="text-[8px] text-white/40 uppercase">
-              {loading ? "Scanning..." : "High-Speed"}
-            </p>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  VidRock
+                </p>
+                {failedSources.includes("VidRock") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {loading ? "Scanning..." : "High-Speed"}
+              </p>
+            </div>
           </div>
+          {activeSource === "VidRock" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff] shrink-0" />
+          )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {loading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
               Running uplink check...
             </span>
           ) : sources.length > 0 ? (
             sources.map((s) => (
               <span
                 key={s.name}
-                className="text-[7px] font-bold px-1 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase"
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase tracking-wide"
               >
                 {s.name
                   .replace(/^VidRock\s*\((.*?)\)$/i, "$1")
@@ -5463,7 +5521,7 @@ export function InPlayerSourcePicker({
               </span>
             ))
           ) : (
-            <span className="text-[8px] text-rose-400 uppercase">
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
               {error || "No mirrors"}
             </span>
           )}
@@ -5480,68 +5538,64 @@ export function InPlayerSourcePicker({
           activeSource === "Vidnest" ||
           (vidnestLoading && !failedSources.includes("Vidnest"))
         }
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
           "Vidnest",
           activeSource || "",
           vidnestLoading,
           vidnestSources.length > 0,
         )}`}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400">
-            {vidnestLoading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Zap size={14} />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                Vidnest
-              </p>
-              {activeSource === "Vidnest" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-obsidian uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-              {failedSources.includes("Vidnest") && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
-                  FAILED
-                </span>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 shrink-0">
+              {vidnestLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Zap size={13} />
               )}
             </div>
-            <p className="text-[8px] text-white/40 uppercase">
-              {vidnestLoading ? "Scanning..." : "Active"}
-            </p>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Vidnest
+                </p>
+                {failedSources.includes("Vidnest") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {vidnestLoading ? "Scanning..." : "Active"}
+              </p>
+            </div>
           </div>
+          {activeSource === "Vidnest" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0" />
+          )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {vidnestLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
               Running uplink check...
             </span>
           ) : vidnestSources.length > 0 ? (
             vidnestSources.map((s) => (
               <span
                 key={s.name}
-                className="text-[7px] font-bold px-1 py-0.5 rounded border border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5 uppercase"
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5 uppercase tracking-wide"
               >
-                {/* Badge label transformation:
-                  "Vidnest (1080p)"           → "1080P"
-                  "Vidnest - AllMovies (Auto)" → "ALLMOVIES (AUTO)"
-                  "Vidnest - KlikXXI (auto)"  → "KLIKXXI (AUTO)" */}
                 {s.name
-                  .replace(/^Vidnest\s*-\s*/i, "") // "Vidnest - AllMovies (Auto)" → "AllMovies (Auto)"
-                  .replace(/^Vidnest\s*\(([^)]+)\)$/i, "$1") // "Vidnest (1080p)" → "1080p"
-                  .replace(/^Vidnest\s*/i, "") // any leftover "Vidnest" prefix
-                  .replace(/^\(([^)]+)\)$/, "$1") // "(1080p)" → "1080p" (safety strip)
+                  .replace(/^Vidnest\s*-\s*/i, "")
+                  .replace(/^Vidnest\s*\(([^)]+)\)$/i, "$1")
+                  .replace(/^Vidnest\s*/i, "")
+                  .replace(/^\(([^)]+)\)$/, "$1")
                   .trim()
                   .toUpperCase()}
               </span>
             ))
           ) : (
-            <span className="text-[8px] text-rose-400 uppercase">
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
               {vidnestError || "No mirrors"}
             </span>
           )}
@@ -5558,52 +5612,52 @@ export function InPlayerSourcePicker({
           activeSource === "Vaplayer" ||
           (vaplayerLoading && !failedSources.includes("Vaplayer"))
         }
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
           "Vaplayer",
           activeSource || "",
           vaplayerLoading,
           vaplayerSources.length > 0,
         )}`}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400">
-            {vaplayerLoading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Tv size={14} />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                Vaplayer
-              </p>
-              {activeSource === "Vaplayer" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-cyan-500 text-obsidian uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-              {failedSources.includes("Vaplayer") && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
-                  FAILED
-                </span>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0">
+              {vaplayerLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Tv size={13} />
               )}
             </div>
-            <p className="text-[8px] text-white/40 uppercase">
-              {vaplayerLoading ? "Scanning..." : "Active"}
-            </p>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Vaplayer
+                </p>
+                {failedSources.includes("Vaplayer") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {vaplayerLoading ? "Scanning..." : "Active"}
+              </p>
+            </div>
           </div>
+          {activeSource === "Vaplayer" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" />
+          )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {vaplayerLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
               Running direct scan...
             </span>
           ) : vaplayerSources.length > 0 ? (
             vaplayerSources.map((s) => (
               <span
                 key={s.name}
-                className="text-[7px] font-bold px-1 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase"
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase tracking-wide"
               >
                 {s.name
                   .replace(/^Vaplayer[\s-]*/i, "")
@@ -5612,7 +5666,7 @@ export function InPlayerSourcePicker({
               </span>
             ))
           ) : (
-            <span className="text-[8px] text-rose-400 uppercase">
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
               {vaplayerError || "No mirrors"}
             </span>
           )}
@@ -5629,52 +5683,52 @@ export function InPlayerSourcePicker({
           activeSource === "FilmU" ||
           (filmuLoading && !failedSources.includes("FilmU"))
         }
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
           "FilmU",
           activeSource || "",
           filmuLoading,
           filmuSources.length > 0,
         )}`}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400">
-            {filmuLoading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Info size={14} />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                FilmU
-              </p>
-              {activeSource === "FilmU" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-obsidian uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-              {failedSources.includes("FilmU") && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
-                  FAILED
-                </span>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400 shrink-0">
+              {filmuLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Info size={13} />
               )}
             </div>
-            <p className="text-[8px] text-white/40 uppercase">
-              {filmuLoading ? "Scanning..." : "Active"}
-            </p>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  FilmU
+                </p>
+                {failedSources.includes("FilmU") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {filmuLoading ? "Scanning..." : "Active"}
+              </p>
+            </div>
           </div>
+          {activeSource === "FilmU" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)] shrink-0" />
+          )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {filmuLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
               Running uplink check...
             </span>
           ) : filmuSources.length > 0 ? (
             filmuSources.map((s) => (
               <span
                 key={s.name}
-                className="text-[7px] font-bold px-1 py-0.5 rounded border border-amber-500/20 text-amber-400/80 bg-amber-500/5 uppercase"
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20 text-amber-400/80 bg-amber-500/5 uppercase tracking-wide"
               >
                 {s.name
                   .replace(/^FilmU[\s-]*/i, "")
@@ -5683,7 +5737,7 @@ export function InPlayerSourcePicker({
               </span>
             ))
           ) : (
-            <span className="text-[8px] text-rose-400 uppercase">
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
               {filmuError || "No mirrors"}
             </span>
           )}
@@ -5694,38 +5748,38 @@ export function InPlayerSourcePicker({
       <button
         onClick={() => onSelect()}
         disabled={activeSource === "VidLink"}
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
           "VidLink",
           activeSource || "",
           false,
           true,
         )}`}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white/60">
-            <Search size={14} />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                VidLink
-              </p>
-              {activeSource === "VidLink" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white text-obsidian uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-              {failedSources.includes("VidLink") && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
-                  FAILED
-                </span>
-              )}
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-white/10 flex items-center justify-center text-white/60 shrink-0">
+              <Search size={13} />
             </div>
-            <p className="text-[8px] text-white/40 uppercase">Standard</p>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  VidLink
+                </p>
+                {failedSources.includes("VidLink") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">Standard</p>
+            </div>
           </div>
+          {activeSource === "VidLink" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] shrink-0" />
+          )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
-          <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase">
+          <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase tracking-wide">
             Auto-Failover
           </span>
         </div>
@@ -5741,45 +5795,45 @@ export function InPlayerSourcePicker({
           activeSource === "Videasy" ||
           (videasyLoading && !failedSources.includes("Videasy"))
         }
-        className={`flex flex-col gap-2 p-4 rounded-xl border text-left transition-all ${getButtonClass(
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
           "Videasy",
           activeSource || "",
           videasyLoading,
           videasySources.length > 0,
         )}`}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400">
-            {videasyLoading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Tv size={14} />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-black text-white uppercase tracking-tight">
-                Videasy
-              </p>
-              {activeSource === "Videasy" && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-indigo-500 text-white uppercase tracking-wider font-sans">
-                  ACTIVE
-                </span>
-              )}
-              {failedSources.includes("Videasy") && (
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider font-sans">
-                  FAILED
-                </span>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400 shrink-0">
+              {videasyLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Tv size={13} />
               )}
             </div>
-            <p className="text-[8px] text-white/40 uppercase">
-              {videasyLoading ? "Decrypting..." : "Decrypted"}
-            </p>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Videasy
+                </p>
+                {failedSources.includes("Videasy") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {videasyLoading ? "Decrypting..." : "Decrypted"}
+              </p>
+            </div>
           </div>
+          {activeSource === "Videasy" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] shrink-0" />
+          )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {videasyLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse">
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
               Running decrypt scan...
             </span>
           ) : videasySources.length > 0 ? (
@@ -5787,7 +5841,7 @@ export function InPlayerSourcePicker({
               {videasySources.slice(0, 3).map((s) => (
                 <span
                   key={s.name}
-                  className="text-[7px] font-bold px-1 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase"
+                  className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase tracking-wide"
                 >
                   {s.name
                     .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
@@ -5797,13 +5851,13 @@ export function InPlayerSourcePicker({
                 </span>
               ))}
               {videasySources.length > 3 && (
-                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase">
+                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase tracking-wide">
                   +{videasySources.length - 3}
                 </span>
               )}
             </>
           ) : (
-            <span className="text-[8px] text-rose-400 uppercase">
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
               {videasyError || "No mirrors"}
             </span>
           )}
