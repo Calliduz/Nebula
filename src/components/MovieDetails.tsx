@@ -1285,6 +1285,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   }, [showSeasonDropdown]);
 
   const [episodes, setEpisodes] = useState<any[]>([]);
+  const [episodesLoading, setEpisodesLoading] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEpForModal, setSelectedEpForModal] = useState<{
@@ -1722,7 +1723,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       movie?.origin !== "dramacool" &&
       !movie?.isDrama
     ) {
-      getTVSeasonEpisodes(movie.id, activeSeason).then(setEpisodes);
+      setEpisodesLoading(true);
+      getTVSeasonEpisodes(movie.id, activeSeason)
+        .then(setEpisodes)
+        .finally(() => setEpisodesLoading(false));
     }
   }, [activeSeason]);
 
@@ -2418,7 +2422,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                <button
                                  key={s.season_number}
                                  onClick={() => setActiveSeason(s.season_number)}
-                                 className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeSeason === s.season_number ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-white"}`}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeSeason === s.season_number ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-white"}`}
                                >
                                  Season {s.season_number}
                                </button>
@@ -2427,134 +2431,152 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                        )}
                      </div>
                    )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {episodes.map((ep: any) => {
-                      // Read per-episode progress from localStorage
-                      const epProgressData = JSON.parse(
-                        localStorage.getItem("nebula-progress") || "{}",
-                      );
-                      const epKey = `${movie.id}-S${activeSeason}E${ep.episode_number}`;
-                      const epProg = epProgressData[epKey];
-                      const epPct =
-                        epProg && epProg.duration > 0
-                          ? Math.min(100, (epProg.time / epProg.duration) * 100)
-                          : 0;
-                      const epWatched =
-                        (epProg && epProg.watched) || epPct >= 90;
+                  {episodesLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center gap-4 w-full">
+                      <Loader2 size={32} className="animate-spin text-nebula-cyan" />
+                      <p className="text-xs text-white/40 uppercase tracking-widest font-bold">
+                        Loading episodes...
+                      </p>
+                    </div>
+                  ) : episodes.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {episodes.map((ep: any) => {
+                        // Read per-episode progress from localStorage
+                        const epProgressData = JSON.parse(
+                          localStorage.getItem("nebula-progress") || "{}",
+                        );
+                        const epKey = `${movie.id}-S${activeSeason}E${ep.episode_number}`;
+                        const epProg = epProgressData[epKey];
+                        const epPct =
+                          epProg && epProg.duration > 0
+                            ? Math.min(100, (epProg.time / epProg.duration) * 100)
+                            : 0;
+                        const epWatched =
+                          (epProg && epProg.watched) || epPct >= 90;
 
-                      return (
-                        <div
-                          key={ep.episode_number}
-                          className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30"
-                          onClick={() =>
-                            handlePlayClick(activeSeason, ep.episode_number)
-                          }
-                        >
-                          <div className="aspect-video bg-black/50 relative overflow-hidden">
-                            {ep.still_path ? (
-                              <img
-                                src={ep.still_path}
-                                className={`w-full h-full object-cover transition-opacity duration-500 ${
-                                  epWatched
-                                    ? "opacity-40 group-hover:opacity-70"
-                                    : "opacity-70 group-hover:opacity-100"
-                                } group-hover:scale-105 duration-500`}
-                                alt={ep.name}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-white/20">
-                                <Play size={32} />
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all" />
-
-                            {/* Episode number badge */}
-                            <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 rounded font-bold text-[10px] text-white backdrop-blur">
-                              E{ep.episode_number}
-                            </div>
-
-                            {/* Watched checkmark overlay */}
-                            {epWatched && (
-                              <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-sm border border-white/10">
-                                <svg
-                                  width="10"
-                                  height="9"
-                                  viewBox="0 0 10 9"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M1.5 4.5L4 7L8.5 1.5"
-                                    stroke="white"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                                <span className="text-[8px] font-black uppercase tracking-widest text-white/70">
-                                  Watched
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Play button hover */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="w-12 h-12 bg-nebula-cyan/90 text-obsidian rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-110 transition-all">
-                                <Play
-                                  size={20}
-                                  fill="currentColor"
-                                  className="ml-1"
+                        return (
+                          <div
+                            key={ep.episode_number}
+                            className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30"
+                            onClick={() =>
+                              handlePlayClick(activeSeason, ep.episode_number)
+                            }
+                          >
+                            <div className="aspect-video bg-black/50 relative overflow-hidden">
+                              {ep.still_path ? (
+                                <img
+                                  src={ep.still_path}
+                                  className={`w-full h-full object-cover transition-opacity duration-500 ${
+                                    epWatched
+                                      ? "opacity-40 group-hover:opacity-70"
+                                      : "opacity-70 group-hover:opacity-100"
+                                  } group-hover:scale-105 duration-500`}
+                                  alt={ep.name}
                                 />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-white/20">
+                                  <Play size={32} />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all" />
+
+                              {epWatched && (
+                                <div className="absolute top-2 right-2 flex items-center gap-1 bg-[#e50914] px-1.5 py-0.5 rounded text-[8px] tracking-wide font-black uppercase text-white shadow-lg">
+                                  <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 10 10"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      d="M1.5 4.5L4 7L8.5 1.5"
+                                      stroke="white"
+                                      strokeWidth="1.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                  <span className="text-[8px] font-black uppercase tracking-widest text-white/70">
+                                    Watched
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Play button hover */}
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="w-12 h-12 bg-nebula-cyan/90 text-obsidian rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-110 transition-all">
+                                  <Play
+                                    size={20}
+                                    fill="currentColor"
+                                    className="ml-1"
+                                  />
+                                </div>
                               </div>
+
+                              {/* ── Netflix-style progress bar at bottom of thumbnail ── */}
+                              {epPct >= 1 && !epWatched && (
+                                <div className="absolute bottom-0 left-0 right-0">
+                                  <div className="h-[5px] w-full bg-black/40">
+                                    <div
+                                      className="h-full"
+                                      style={{
+                                        width: `${epPct}%`,
+                                        background: "#e50914",
+                                        boxShadow: "0 0 4px rgba(229,9,20,0.7)",
+                                        transition:
+                                          "width 0.4s cubic-bezier(0.4,0,0.2,1)",
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {/* Watched: full 100% red bar (consistent with in-progress style) */}
+                              {epWatched && (
+                                <div className="absolute bottom-0 left-0 right-0">
+                                  <div className="h-[5px] w-full bg-black/40">
+                                    <div
+                                      className="h-full w-full"
+                                      style={{
+                                        background: "#e50914",
+                                        boxShadow: "0 0 4px rgba(229,9,20,0.7)",
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
                             </div>
 
-                            {/* ── Netflix-style progress bar at bottom of thumbnail ── */}
-                            {epPct >= 1 && !epWatched && (
-                              <div className="absolute bottom-0 left-0 right-0">
-                                <div className="h-[5px] w-full bg-black/40">
-                                  <div
-                                    className="h-full"
-                                    style={{
-                                      width: `${epPct}%`,
-                                      background: "#e50914",
-                                      boxShadow: "0 0 4px rgba(229,9,20,0.7)",
-                                      transition:
-                                        "width 0.4s cubic-bezier(0.4,0,0.2,1)",
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            {/* Watched: full 100% red bar (consistent with in-progress style) */}
-                            {epWatched && (
-                              <div className="absolute bottom-0 left-0 right-0">
-                                <div className="h-[5px] w-full bg-black/40">
-                                  <div
-                                    className="h-full w-full"
-                                    style={{
-                                      background: "#e50914",
-                                      boxShadow: "0 0 4px rgba(229,9,20,0.7)",
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )}
+                            <div className="p-4 flex flex-col flex-1">
+                              <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors line-clamp-1 mb-1">
+                                {ep.episode_number}.{" "}
+                                {!ep.name || ep.name.includes("Episode")
+                                  ? `Episode ${ep.episode_number}`
+                                  : ep.name}
+                              </h4>
+                              <p className="text-xs text-dim line-clamp-2 mt-auto">
+                                {ep.overview || "No description available."}
+                              </p>
+                            </div>
                           </div>
-
-                          <div className="p-4 flex flex-col flex-1">
-                            <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors line-clamp-1 mb-1">
-                              {ep.episode_number}.{" "}
-                              {!ep.name || ep.name.includes("Episode")
-                                ? `Episode ${ep.episode_number}`
-                                : ep.name}
-                            </h4>
-                            <p className="text-xs text-dim line-clamp-2 mt-auto">
-                              {ep.overview || "No description available."}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white/2 border border-white/5 rounded-2xl gap-4 w-full">
+                      <div className="w-12 h-12 rounded-full bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan">
+                        <Calendar size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-sm uppercase tracking-wider">
+                          Season Not Yet Released
+                        </h4>
+                        <p className="text-xs text-white/40 mt-1 max-w-sm leading-relaxed font-semibold">
+                          There are no episodes available for Season {activeSeason} yet. Please check back later or select another season.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
