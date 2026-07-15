@@ -1747,7 +1747,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               s.languageName?.toLowerCase().includes("english")
                 ? "English"
                 : s.languageName || lang.toUpperCase();
-            name = `${base} (${srcLabel})${suffix}`;
+            name = `${base}${suffix}`;
           }
           processed.push({ ...s, languageName: name });
         });
@@ -1757,9 +1757,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const count = extCount[lang] || 0;
           if (count < 3) {
             extCount[lang] = count + 1;
-            const sourceSuffix =
-              s.source === "OpenSubtitles" ? " (OpenSubtitles)" : "";
-            const name = `${s.languageName} #${extCount[lang]} (External)${sourceSuffix}`;
+            const name = `${s.languageName} #${extCount[lang]}`;
             processed.push({ ...s, languageName: name });
           }
         });
