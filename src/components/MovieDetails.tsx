@@ -1272,6 +1272,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
   const [tvDetails, setTvDetails] = useState<any>(null);
   const [activeSeason, setActiveSeason] = useState<number>(1);
+  const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
+  const [dropUpSeasonDropdown, setDropUpSeasonDropdown] = useState(false);
+  const seasonButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (showSeasonDropdown && seasonButtonRef.current) {
+      const rect = seasonButtonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setDropUpSeasonDropdown(spaceBelow < 280);
+    }
+  }, [showSeasonDropdown]);
+
   const [episodes, setEpisodes] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -2356,21 +2368,65 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     );
                   })()}
 
-                  {tvDetails?.seasons?.length > 0 && (
-                    <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                      {tvDetails.seasons
-                        .filter((s: any) => s.season_number > 0)
-                        .map((s: any) => (
-                          <button
-                            key={s.season_number}
-                            onClick={() => setActiveSeason(s.season_number)}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeSeason === s.season_number ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-white"}`}
-                          >
-                            Season {s.season_number}
-                          </button>
-                        ))}
-                    </div>
-                  )}
+                   {tvDetails?.seasons?.length > 0 && (
+                     <div className="relative">
+                       {tvDetails.seasons.filter((s: any) => s.season_number > 0).length > 6 ? (
+                         <div className="relative inline-block text-left z-20">
+                           <button
+                             ref={seasonButtonRef}
+                             onClick={() => setShowSeasonDropdown((p) => !p)}
+                             className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 shadow-md"
+                           >
+                             <span>Season {activeSeason}</span>
+                             <ChevronDown size={14} className={`transition-transform duration-200 ${showSeasonDropdown ? "rotate-180" : ""}`} />
+                           </button>
+                           
+                           {showSeasonDropdown && (
+                             <>
+                               <div className="fixed inset-0 z-10" onClick={() => setShowSeasonDropdown(false)} />
+                               <div className={`absolute left-0 w-48 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.85)] max-h-72 overflow-y-auto custom-scrollbar z-20 animate-in fade-in duration-150 ${dropUpSeasonDropdown ? "bottom-full mb-2" : "top-full mt-2"}`}>
+                                 {tvDetails.seasons
+                                   .filter((s: any) => s.season_number > 0)
+                                   .map((s: any) => (
+                                     <button
+                                       key={s.season_number}
+                                       onClick={() => {
+                                         setActiveSeason(s.season_number);
+                                         setShowSeasonDropdown(false);
+                                       }}
+                                       className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-between ${
+                                         activeSeason === s.season_number
+                                           ? "text-white bg-white/10 font-bold"
+                                           : "text-white/60 hover:text-white hover:bg-white/5"
+                                       }`}
+                                     >
+                                       <span>Season {s.season_number}</span>
+                                       {activeSeason === s.season_number && (
+                                         <span className="w-1 h-1 rounded-full bg-nebula-cyan shadow-[0_0_6px_#00e5ff]" />
+                                       )}
+                                     </button>
+                                   ))}
+                               </div>
+                             </>
+                           )}
+                         </div>
+                       ) : (
+                         <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                           {tvDetails.seasons
+                             .filter((s: any) => s.season_number > 0)
+                             .map((s: any) => (
+                               <button
+                                 key={s.season_number}
+                                 onClick={() => setActiveSeason(s.season_number)}
+                                 className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeSeason === s.season_number ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-white"}`}
+                               >
+                                 Season {s.season_number}
+                               </button>
+                             ))}
+                         </div>
+                       )}
+                     </div>
+                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {episodes.map((ep: any) => {
                       // Read per-episode progress from localStorage
