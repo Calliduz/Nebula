@@ -37,8 +37,8 @@ import {
   handleImageError,
   handleClearLogoError,
   triggerPopunder,
-  fetchVideasySeed,
 } from "../utils/helpers";
+import { fetchVideasySourcesDirect } from "../services/videasy";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   getMediaDetails,
@@ -140,46 +140,31 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
     // 2. Videasy Fetch
     (async () => {
-      let videasyFetchUrl = `${API_BASE_URL}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-      if (season !== undefined) videasyFetchUrl += `&season=${season}`;
-      if (episode !== undefined) videasyFetchUrl += `&episode=${episode}`;
-
       try {
-        const seed = await fetchVideasySeed(movie.id.toString());
-        if (seed) videasyFetchUrl += `&seed=${encodeURIComponent(seed)}`;
-      } catch (seedErr) {
-        console.warn(
-          "[VIDEASY] Seed fetch error, proceeding without seed:",
-          seedErr,
+        const data = await fetchVideasySourcesDirect(
+          movie,
+          season,
+          episode,
+          API_BASE_URL,
         );
+        if (!isMountedRef.current) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
+            url: value.url,
+            type: value.type || "hls",
+            audio: value.audio || "Original audio",
+            flag: value.flag || "us",
+          }));
+        setVideasySources(activeSources);
+      } catch (err: any) {
+        if (!isMountedRef.current) return;
+        setVideasyError(err.message || "Failed to contact Videasy.");
+      } finally {
+        if (!isMountedRef.current) return;
+        setVideasyLoading(false);
       }
-
-      fetch(videasyFetchUrl)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to scan Videasy uplink");
-          return res.json();
-        })
-        .then((data) => {
-          if (!isMountedRef.current) return;
-          const activeSources = Object.entries(data)
-            .filter(([_, value]: any) => value && value.url)
-            .map(([name, value]: any) => ({
-              name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
-              url: value.url,
-              type: value.type || "hls",
-              audio: value.audio || "Original audio",
-              flag: value.flag || "us",
-            }));
-          setVideasySources(activeSources);
-        })
-        .catch((err) => {
-          if (!isMountedRef.current) return;
-          setVideasyError(err.message || "Failed to contact Videasy.");
-        })
-        .finally(() => {
-          if (!isMountedRef.current) return;
-          setVideasyLoading(false);
-        });
     })();
 
     // 3. VidLink Fetch

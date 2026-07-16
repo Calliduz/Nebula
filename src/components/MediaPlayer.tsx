@@ -31,7 +31,8 @@ import { useSubtitleManager } from "../hooks/useSubtitleManager";
 import { SubtitleOverlay } from "./SubtitleOverlay";
 
 import { API_BASE_URL } from "../config";
-import { handleClearLogoError, fetchVideasySeed } from "../utils/helpers";
+import { handleClearLogoError } from "../utils/helpers";
+import { fetchVideasySourcesDirect } from "../services/videasy";
 import {
   type SkipSegment,
   parseIntroDBResponse,
@@ -520,40 +521,39 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         `[PLAYER] Fetching mirrors for category: ${category} (force=${force})...`,
       );
       const forceParam = force ? "&force=1" : "";
-      let fetchUrl = "";
+      let data: any = null;
 
       if (category === "Videasy") {
-        const seed = await fetchVideasySeed(movie.id.toString());
-        fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-        if (season !== undefined) fetchUrl += `&season=${season}`;
-        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-        if (seed) fetchUrl += `&seed=${encodeURIComponent(seed)}`;
-      } else if (category === "VidRock") {
-        fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-        if (season !== undefined) fetchUrl += `&season=${season}`;
-        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-      } else if (category === "FilmU") {
-        fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-        if (season !== undefined) fetchUrl += `&season=${season}`;
-        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-      } else if (category === "Vidnest") {
-        fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-        if (season !== undefined) fetchUrl += `&season=${season}`;
-        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-      } else if (category === "Vaplayer") {
-        fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-        if (season !== undefined) fetchUrl += `&season=${season}`;
-        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        data = await fetchVideasySourcesDirect(movie, season, episode, API);
       } else {
-        // VidLink
-        fetchUrl = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}&releaseDate=${movie.release_date || ""}${forceParam}`;
-        if (season !== undefined) fetchUrl += `&season=${season}`;
-        if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-      }
+        let fetchUrl = "";
+        if (category === "VidRock") {
+          fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "FilmU") {
+          fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "Vidnest") {
+          fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "Vaplayer") {
+          fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else {
+          // VidLink
+          fetchUrl = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}&releaseDate=${movie.release_date || ""}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        }
 
-      const res = await fetch(fetchUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status} from backend`);
-      const data = await res.json();
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status} from backend`);
+        data = await res.json();
+      }
 
       let updatedMirrors: any[] = [];
       if (category === "Videasy") {
@@ -1090,34 +1090,41 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             m.source.toLowerCase().startsWith("vaplayer"),
           );
 
-          let fetchUrl = "";
+          let dataPromise: Promise<any>;
           if (isVideasy) {
-            const seed = await fetchVideasySeed(movie.id.toString());
-            fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
-            if (season !== undefined) fetchUrl += `&season=${season}`;
-            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-            if (seed) fetchUrl += `&seed=${encodeURIComponent(seed)}`;
-          } else if (isVidrock) {
-            fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
-            if (season !== undefined) fetchUrl += `&season=${season}`;
-            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-          } else if (isFilmu) {
-            fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
-            if (season !== undefined) fetchUrl += `&season=${season}`;
-            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-          } else if (isVidnest) {
-            fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}`;
-            if (season !== undefined) fetchUrl += `&season=${season}`;
-            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-          } else if (isVaplayer) {
-            fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}`;
-            if (season !== undefined) fetchUrl += `&season=${season}`;
-            if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            dataPromise = fetchVideasySourcesDirect(
+              movie,
+              season,
+              episode,
+              API,
+            );
+          } else {
+            let fetchUrl = "";
+            if (isVidrock) {
+              fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
+              if (season !== undefined) fetchUrl += `&season=${season}`;
+              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            } else if (isFilmu) {
+              fetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
+              if (season !== undefined) fetchUrl += `&season=${season}`;
+              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            } else if (isVidnest) {
+              fetchUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}`;
+              if (season !== undefined) fetchUrl += `&season=${season}`;
+              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            } else if (isVaplayer) {
+              fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}`;
+              if (season !== undefined) fetchUrl += `&season=${season}`;
+              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            }
+
+            dataPromise = fetchUrl
+              ? fetch(fetchUrl).then((r) => r.json())
+              : Promise.reject(new Error("No URL"));
           }
 
-          if (fetchUrl && !cancelled) {
-            fetch(fetchUrl)
-              .then((r) => r.json())
+          if (!cancelled) {
+            dataPromise
               .then((data) => {
                 if (cancelled) return;
 
@@ -2401,26 +2408,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             // 3. Videasy prefetch
             (async () => {
               try {
-                const seed = await fetchVideasySeed(movie.id.toString());
-                let videasyPrefetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
-                if (seed)
-                  videasyPrefetchUrl += `&seed=${encodeURIComponent(seed)}`;
-                fetch(videasyPrefetchUrl)
-                  .then((r) => r.json())
-                  .then(() =>
-                    console.log(
-                      `[PLAYER] Prefetched next episode from Videasy (S${nextEp.season}E${nextEp.episode})`,
-                    ),
-                  )
-                  .catch((err) =>
-                    console.warn(
-                      `[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
-                    ),
-                  );
-              } catch (err) {
+                await fetchVideasySourcesDirect(
+                  movie,
+                  nextEp.season,
+                  nextEp.episode,
+                  API,
+                );
+                console.log(
+                  `[PLAYER] Prefetched next episode from Videasy (S${nextEp.season}E${nextEp.episode})`,
+                );
+              } catch (err: any) {
                 console.warn(
-                  "[PLAYER] Videasy prefetch failed to get seed:",
-                  err,
+                  `[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
                 );
               }
             })();
@@ -5282,16 +5281,12 @@ export function InPlayerSourcePicker({
 
       // 2. Videasy Fetch
       const pVideasy = (async () => {
-        let videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-        if (season !== undefined) videasyUrl += `&season=${season}`;
-        if (episode !== undefined) videasyUrl += `&episode=${episode}`;
-
-        const seed = await fetchVideasySeed(movie.id.toString());
-        if (seed) videasyUrl += `&seed=${encodeURIComponent(seed)}`;
-
-        const r = await fetch(videasyUrl);
-        if (!r.ok) throw new Error("Videasy scan failed");
-        const data = await r.json();
+        const data = await fetchVideasySourcesDirect(
+          movie,
+          season,
+          episode,
+          API,
+        );
 
         const list = Object.entries(data)
           .filter(([, v]: any) => v && v.url)
