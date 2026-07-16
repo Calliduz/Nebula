@@ -1275,6 +1275,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
   const [dropUpSeasonDropdown, setDropUpSeasonDropdown] = useState(false);
   const seasonButtonRef = useRef<HTMLButtonElement>(null);
+  const seasonContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (showSeasonDropdown && seasonButtonRef.current) {
@@ -1282,6 +1283,27 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       const spaceBelow = window.innerHeight - rect.bottom;
       setDropUpSeasonDropdown(spaceBelow < 280);
     }
+  }, [showSeasonDropdown]);
+
+  useEffect(() => {
+    if (!showSeasonDropdown) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        seasonContainerRef.current &&
+        !seasonContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowSeasonDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside, { passive: true });
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, [showSeasonDropdown]);
 
   const [episodes, setEpisodes] = useState<any[]>([]);
@@ -2375,7 +2397,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                    {tvDetails?.seasons?.length > 0 && (
                      <div className="relative">
                        {tvDetails.seasons.filter((s: any) => s.season_number > 0).length > 6 ? (
-                         <div className="relative inline-block text-left z-20">
+                         <div ref={seasonContainerRef} className="relative inline-block text-left z-20">
                            <button
                              ref={seasonButtonRef}
                              onClick={() => setShowSeasonDropdown((p) => !p)}
@@ -2386,9 +2408,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                            </button>
                            
                            {showSeasonDropdown && (
-                             <>
-                               <div className="fixed inset-0 z-10" onClick={() => setShowSeasonDropdown(false)} />
-                               <div className={`absolute left-0 w-48 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.85)] max-h-72 overflow-y-auto custom-scrollbar z-20 animate-in fade-in duration-150 ${dropUpSeasonDropdown ? "bottom-full mb-2" : "top-full mt-2"}`}>
+                             <div className={`absolute left-0 w-48 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.85)] max-h-72 overflow-y-auto custom-scrollbar z-20 animate-in fade-in duration-150 ${dropUpSeasonDropdown ? "bottom-full mb-2" : "top-full mt-2"}`}>
                                  {tvDetails.seasons
                                    .filter((s: any) => s.season_number > 0)
                                    .map((s: any) => (
@@ -2411,8 +2431,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                      </button>
                                    ))}
                                </div>
-                             </>
-                           )}
+                            )}
                          </div>
                        ) : (
                          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
