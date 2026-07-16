@@ -52,3 +52,21 @@ export const triggerPopunder = () => {
     }
   }
 };
+
+/**
+ * Fetches a fresh seed from api.wingsdatabase.com for Videasy decryption.
+ * If the fetch fails, it returns an empty string so the backend can fall back.
+ */
+export async function fetchVideasySeed(mediaId: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://api.wingsdatabase.com/seed?mediaId=${mediaId}`,
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data?.seed || "";
+  } catch (err) {
+    console.warn("[VIDEASY] Failed to fetch seed directly from browser:", err);
+    return "";
+  }
+}

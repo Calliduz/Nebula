@@ -37,6 +37,7 @@ import {
   handleImageError,
   handleClearLogoError,
   triggerPopunder,
+  fetchVideasySeed,
 } from "../utils/helpers";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
@@ -138,36 +139,48 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       });
 
     // 2. Videasy Fetch
-    let videasyFetchUrl = `${API_BASE_URL}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-    if (season !== undefined) videasyFetchUrl += `&season=${season}`;
-    if (episode !== undefined) videasyFetchUrl += `&episode=${episode}`;
+    (async () => {
+      let videasyFetchUrl = `${API_BASE_URL}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
+      if (season !== undefined) videasyFetchUrl += `&season=${season}`;
+      if (episode !== undefined) videasyFetchUrl += `&episode=${episode}`;
 
-    fetch(videasyFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan Videasy uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
-            url: value.url,
-            type: value.type || "hls",
-            audio: value.audio || "Original audio",
-            flag: value.flag || "us",
-          }));
-        setVideasySources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setVideasyError(err.message || "Failed to contact Videasy.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setVideasyLoading(false);
-      });
+      try {
+        const seed = await fetchVideasySeed(movie.id.toString());
+        if (seed) videasyFetchUrl += `&seed=${encodeURIComponent(seed)}`;
+      } catch (seedErr) {
+        console.warn(
+          "[VIDEASY] Seed fetch error, proceeding without seed:",
+          seedErr,
+        );
+      }
+
+      fetch(videasyFetchUrl)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to scan Videasy uplink");
+          return res.json();
+        })
+        .then((data) => {
+          if (!isMountedRef.current) return;
+          const activeSources = Object.entries(data)
+            .filter(([_, value]: any) => value && value.url)
+            .map(([name, value]: any) => ({
+              name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
+              url: value.url,
+              type: value.type || "hls",
+              audio: value.audio || "Original audio",
+              flag: value.flag || "us",
+            }));
+          setVideasySources(activeSources);
+        })
+        .catch((err) => {
+          if (!isMountedRef.current) return;
+          setVideasyError(err.message || "Failed to contact Videasy.");
+        })
+        .finally(() => {
+          if (!isMountedRef.current) return;
+          setVideasyLoading(false);
+        });
+    })();
 
     // 3. VidLink Fetch
     let vidlinkFetchUrl = `${API_BASE_URL}/api/vidlink?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
@@ -1298,7 +1311,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside, { passive: true });
+    document.addEventListener("touchstart", handleClickOutside, {
+      passive: true,
+    });
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -2382,7 +2397,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                           </p>
                           <div className="flex items-center gap-1.5 mt-2 text-[9px] text-nebula-cyan/80 bg-nebula-cyan/5 border border-nebula-cyan/20 px-2 py-1.5 rounded-lg w-max max-w-full">
                             <Info size={10} className="shrink-0" />
-                            <span>Note: Release is typically delayed by 6+ hours depending on source availability.</span>
+                            <span>
+                              Note: Release is typically delayed by 6+ hours
+                              depending on source availability.
+                            </span>
                           </div>
                           {nextEp.overview && (
                             <p className="text-[10px] text-white/50 mt-2.5 leading-relaxed line-clamp-2 italic">
@@ -2394,65 +2412,77 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     );
                   })()}
 
-                   {tvDetails?.seasons?.length > 0 && (
-                     <div className="relative">
-                       {tvDetails.seasons.filter((s: any) => s.season_number > 0).length > 6 ? (
-                         <div ref={seasonContainerRef} className="relative inline-block text-left z-20">
-                           <button
-                             ref={seasonButtonRef}
-                             onClick={() => setShowSeasonDropdown((p) => !p)}
-                             className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 shadow-md"
-                           >
-                             <span>Season {activeSeason}</span>
-                             <ChevronDown size={14} className={`transition-transform duration-200 ${showSeasonDropdown ? "rotate-180" : ""}`} />
-                           </button>
-                           
-                           {showSeasonDropdown && (
-                             <div className={`absolute left-0 w-48 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.85)] max-h-72 overflow-y-auto custom-scrollbar z-20 animate-in fade-in duration-150 ${dropUpSeasonDropdown ? "bottom-full mb-2" : "top-full mt-2"}`}>
-                                 {tvDetails.seasons
-                                   .filter((s: any) => s.season_number > 0)
-                                   .map((s: any) => (
-                                     <button
-                                       key={s.season_number}
-                                       onClick={() => {
-                                         setActiveSeason(s.season_number);
-                                         setShowSeasonDropdown(false);
-                                       }}
-                                       className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-between ${
-                                         activeSeason === s.season_number
-                                           ? "text-white bg-white/10 font-bold"
-                                           : "text-white/60 hover:text-white hover:bg-white/5"
-                                       }`}
-                                     >
-                                       <span>Season {s.season_number}</span>
-                                       {activeSeason === s.season_number && (
-                                         <span className="w-1 h-1 rounded-full bg-nebula-cyan shadow-[0_0_6px_#00e5ff]" />
-                                       )}
-                                     </button>
-                                   ))}
-                               </div>
-                            )}
-                         </div>
-                       ) : (
-                         <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                           {tvDetails.seasons
-                             .filter((s: any) => s.season_number > 0)
-                             .map((s: any) => (
-                               <button
-                                 key={s.season_number}
-                                 onClick={() => setActiveSeason(s.season_number)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeSeason === s.season_number ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-white"}`}
-                               >
-                                 Season {s.season_number}
-                               </button>
-                             ))}
-                         </div>
-                       )}
-                     </div>
-                   )}
+                  {tvDetails?.seasons?.length > 0 && (
+                    <div className="relative">
+                      {tvDetails.seasons.filter((s: any) => s.season_number > 0)
+                        .length > 6 ? (
+                        <div
+                          ref={seasonContainerRef}
+                          className="relative inline-block text-left z-20"
+                        >
+                          <button
+                            ref={seasonButtonRef}
+                            onClick={() => setShowSeasonDropdown((p) => !p)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 shadow-md"
+                          >
+                            <span>Season {activeSeason}</span>
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform duration-200 ${showSeasonDropdown ? "rotate-180" : ""}`}
+                            />
+                          </button>
+
+                          {showSeasonDropdown && (
+                            <div
+                              className={`absolute left-0 w-48 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.85)] max-h-72 overflow-y-auto custom-scrollbar z-20 animate-in fade-in duration-150 ${dropUpSeasonDropdown ? "bottom-full mb-2" : "top-full mt-2"}`}
+                            >
+                              {tvDetails.seasons
+                                .filter((s: any) => s.season_number > 0)
+                                .map((s: any) => (
+                                  <button
+                                    key={s.season_number}
+                                    onClick={() => {
+                                      setActiveSeason(s.season_number);
+                                      setShowSeasonDropdown(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-between ${
+                                      activeSeason === s.season_number
+                                        ? "text-white bg-white/10 font-bold"
+                                        : "text-white/60 hover:text-white hover:bg-white/5"
+                                    }`}
+                                  >
+                                    <span>Season {s.season_number}</span>
+                                    {activeSeason === s.season_number && (
+                                      <span className="w-1 h-1 rounded-full bg-nebula-cyan shadow-[0_0_6px_#00e5ff]" />
+                                    )}
+                                  </button>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                          {tvDetails.seasons
+                            .filter((s: any) => s.season_number > 0)
+                            .map((s: any) => (
+                              <button
+                                key={s.season_number}
+                                onClick={() => setActiveSeason(s.season_number)}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeSeason === s.season_number ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-white"}`}
+                              >
+                                Season {s.season_number}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {episodesLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center gap-4 w-full">
-                      <Loader2 size={32} className="animate-spin text-nebula-cyan" />
+                      <Loader2
+                        size={32}
+                        className="animate-spin text-nebula-cyan"
+                      />
                       <p className="text-xs text-white/40 uppercase tracking-widest font-bold">
                         Loading episodes...
                       </p>
@@ -2468,7 +2498,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         const epProg = epProgressData[epKey];
                         const epPct =
                           epProg && epProg.duration > 0
-                            ? Math.min(100, (epProg.time / epProg.duration) * 100)
+                            ? Math.min(
+                                100,
+                                (epProg.time / epProg.duration) * 100,
+                              )
                             : 0;
                         const epWatched =
                           (epProg && epProg.watched) || epPct >= 90;
@@ -2591,7 +2624,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                           Season Not Yet Released
                         </h4>
                         <p className="text-xs text-white/40 mt-1 max-w-sm leading-relaxed font-semibold">
-                          There are no episodes available for Season {activeSeason} yet. Please check back later or select another season.
+                          There are no episodes available for Season{" "}
+                          {activeSeason} yet. Please check back later or select
+                          another season.
                         </p>
                       </div>
                     </div>

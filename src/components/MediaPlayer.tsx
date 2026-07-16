@@ -31,7 +31,7 @@ import { useSubtitleManager } from "../hooks/useSubtitleManager";
 import { SubtitleOverlay } from "./SubtitleOverlay";
 
 import { API_BASE_URL } from "../config";
-import { handleClearLogoError } from "../utils/helpers";
+import { handleClearLogoError, fetchVideasySeed } from "../utils/helpers";
 import {
   type SkipSegment,
   parseIntroDBResponse,
@@ -523,9 +523,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       let fetchUrl = "";
 
       if (category === "Videasy") {
+        const seed = await fetchVideasySeed(movie.id.toString());
         fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
         if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        if (seed) fetchUrl += `&seed=${encodeURIComponent(seed)}`;
       } else if (category === "VidRock") {
         fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
         if (season !== undefined) fetchUrl += `&season=${season}`;
@@ -1071,7 +1073,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         setLoading(false);
 
         // Fetch updated mirrors in the background progressively at 10s, 20s, and 45s to capture slow parallel scrapes
-        const runSync = () => {
+        const runSync = async () => {
           const isVideasy = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("videasy"),
           );
@@ -1090,9 +1092,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
           let fetchUrl = "";
           if (isVideasy) {
+            const seed = await fetchVideasySeed(movie.id.toString());
             fetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}`;
             if (season !== undefined) fetchUrl += `&season=${season}`;
             if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            if (seed) fetchUrl += `&seed=${encodeURIComponent(seed)}`;
           } else if (isVidrock) {
             fetchUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}`;
             if (season !== undefined) fetchUrl += `&season=${season}`;
@@ -2395,19 +2399,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               );
 
             // 3. Videasy prefetch
-            let videasyPrefetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
-            fetch(videasyPrefetchUrl)
-              .then((r) => r.json())
-              .then(() =>
-                console.log(
-                  `[PLAYER] Prefetched next episode from Videasy (S${nextEp.season}E${nextEp.episode})`,
-                ),
-              )
-              .catch((err) =>
+            (async () => {
+              try {
+                const seed = await fetchVideasySeed(movie.id.toString());
+                let videasyPrefetchUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
+                if (seed)
+                  videasyPrefetchUrl += `&seed=${encodeURIComponent(seed)}`;
+                fetch(videasyPrefetchUrl)
+                  .then((r) => r.json())
+                  .then(() =>
+                    console.log(
+                      `[PLAYER] Prefetched next episode from Videasy (S${nextEp.season}E${nextEp.episode})`,
+                    ),
+                  )
+                  .catch((err) =>
+                    console.warn(
+                      `[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
+                    ),
+                  );
+              } catch (err) {
                 console.warn(
-                  `[PLAYER] Prefetch Videasy failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
-                ),
-              );
+                  "[PLAYER] Videasy prefetch failed to get seed:",
+                  err,
+                );
+              }
+            })();
 
             // 4. FilmU prefetch
             let filmuPrefetchUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title)}&releaseYear=${movie.year}&season=${nextEp.season}&episode=${nextEp.episode}`;
@@ -3865,33 +3881,38 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         </h3>
                         <p className="text-[9px] text-white/40 mt-1 leading-normal font-medium">
                           {movie.title}
-                          {movie.type === "tv" && ` · S${sourceSelect.season}E${sourceSelect.episode}`}
+                          {movie.type === "tv" &&
+                            ` · S${sourceSelect.season}E${sourceSelect.episode}`}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
                         {/* Previous Episode */}
-                        {movie.type === "tv" && (() => {
-                          const prevEp = getPreviousEpisodeFor(sourceSelect.season, sourceSelect.episode);
-                          return (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (prevEp) {
-                                  setSourceSelect(prevEp);
-                                  setForceRefetchTrigger(0);
-                                }
-                              }}
-                              disabled={!prevEp}
-                              className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
-                                prevEp
-                                  ? "bg-white/5 hover:bg-white/10 text-white/80 border-white/5"
-                                  : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
-                              }`}
-                            >
-                              <ChevronLeft size={12} />
-                            </button>
-                          );
-                        })()}
+                        {movie.type === "tv" &&
+                          (() => {
+                            const prevEp = getPreviousEpisodeFor(
+                              sourceSelect.season,
+                              sourceSelect.episode,
+                            );
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (prevEp) {
+                                    setSourceSelect(prevEp);
+                                    setForceRefetchTrigger(0);
+                                  }
+                                }}
+                                disabled={!prevEp}
+                                className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
+                                  prevEp
+                                    ? "bg-white/5 hover:bg-white/10 text-white/80 border-white/5"
+                                    : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
+                                }`}
+                              >
+                                <ChevronLeft size={12} />
+                              </button>
+                            );
+                          })()}
                         {/* Refetch */}
                         <button
                           onClick={(e) => {
@@ -3901,31 +3922,42 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           disabled={sourcesLoading}
                           className="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all border border-white/5 disabled:opacity-40"
                         >
-                          <RefreshCw size={10} className={sourcesLoading ? "animate-spin text-nebula-cyan" : ""} />
+                          <RefreshCw
+                            size={10}
+                            className={
+                              sourcesLoading
+                                ? "animate-spin text-nebula-cyan"
+                                : ""
+                            }
+                          />
                         </button>
                         {/* Next Episode */}
-                        {movie.type === "tv" && (() => {
-                          const nextEp = getNextEpisodeFor(sourceSelect.season, sourceSelect.episode);
-                          return (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (nextEp) {
-                                  setSourceSelect(nextEp);
-                                  setForceRefetchTrigger(0);
-                                }
-                              }}
-                              disabled={!nextEp}
-                              className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
-                                nextEp
-                                  ? "bg-white/5 hover:bg-white/10 text-white/80 border-white/5"
-                                  : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
-                              }`}
-                            >
-                              <ChevronRight size={12} />
-                            </button>
-                          );
-                        })()}
+                        {movie.type === "tv" &&
+                          (() => {
+                            const nextEp = getNextEpisodeFor(
+                              sourceSelect.season,
+                              sourceSelect.episode,
+                            );
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (nextEp) {
+                                    setSourceSelect(nextEp);
+                                    setForceRefetchTrigger(0);
+                                  }
+                                }}
+                                disabled={!nextEp}
+                                className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
+                                  nextEp
+                                    ? "bg-white/5 hover:bg-white/10 text-white/80 border-white/5"
+                                    : "bg-white/5 text-white/20 border-transparent opacity-40 cursor-not-allowed"
+                                }`}
+                              >
+                                <ChevronRight size={12} />
+                              </button>
+                            );
+                          })()}
                       </div>
                     </div>
 
@@ -3941,7 +3973,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                             (sourceSelect.season === season &&
                               sourceSelect.episode === episode)) &&
                           mirrors[activeMirror]
-                            ? parseMirrorDetails(mirrors[activeMirror].source).category
+                            ? parseMirrorDetails(mirrors[activeMirror].source)
+                                .category
                             : ""
                         }
                         failedSources={failedSourcesList}
@@ -3949,8 +3982,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           setSourceSelect(null);
                           const queryParams = new URLSearchParams();
                           if (movie.type === "tv") {
-                            queryParams.set("season", String(sourceSelect.season));
-                            queryParams.set("episode", String(sourceSelect.episode));
+                            queryParams.set(
+                              "season",
+                              String(sourceSelect.season),
+                            );
+                            queryParams.set(
+                              "episode",
+                              String(sourceSelect.episode),
+                            );
                           }
                           if (src) {
                             queryParams.set("source", src);
@@ -3995,7 +4034,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           <span>Servers & Mirrors</span>
                         </h3>
                         <p className="text-[9px] text-white/40 mt-1 leading-normal font-medium">
-                          Select a source provider below if playback is slow or failing.
+                          Select a source provider below if playback is slow or
+                          failing.
                         </p>
                       </div>
 
@@ -4005,7 +4045,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           { mirror: any; originalIndex: number }[]
                         > = {};
                         mirrors.forEach((m, i) => {
-                          const { category, name } = parseMirrorDetails(m.source);
+                          const { category, name } = parseMirrorDetails(
+                            m.source,
+                          );
                           if (!groupedByCategory[category]) {
                             groupedByCategory[category] = [];
                           }
@@ -4025,74 +4067,79 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                 </span>
                               </div>
                               <div className="flex flex-col gap-1 px-1">
-                                {items.map(({ mirror: m, originalIndex: idx }) => {
-                                  const flagCode = m.flag ? m.flag.toLowerCase() : "us";
-                                  const countryCode = flagCode === "en" ? "us" : flagCode;
-                                  const isSelected = activeMirror === idx;
-                                  const failedReason = failedMirrors[idx];
-                                  return (
-                                    <button
-                                      key={idx}
-                                      onClick={() => {
-                                        selectMirror(idx, mirrors);
-                                        setShowServersModal(false);
-                                      }}
-                                      className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
-                                        isSelected
-                                          ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
-                                          : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        <img
-                                          src={`https://flagcdn.com/w20/${countryCode}.png`}
-                                          alt={flagCode}
-                                          className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
-                                          onError={(e) => {
-                                            e.currentTarget.src = "https://flagcdn.com/w20/us.png";
-                                          }}
-                                        />
-                                        <div className="flex flex-col min-w-0">
-                                          <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="truncate text-xs font-semibold leading-tight font-display text-white">
-                                              {m.cleanName}
-                                            </span>
-                                            {failedReason && (
-                                              <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 uppercase tracking-wider shrink-0">
-                                                {failedReason}
+                                {items.map(
+                                  ({ mirror: m, originalIndex: idx }) => {
+                                    const flagCode = m.flag
+                                      ? m.flag.toLowerCase()
+                                      : "us";
+                                    const countryCode =
+                                      flagCode === "en" ? "us" : flagCode;
+                                    const isSelected = activeMirror === idx;
+                                    const failedReason = failedMirrors[idx];
+                                    return (
+                                      <button
+                                        key={idx}
+                                        onClick={() => {
+                                          selectMirror(idx, mirrors);
+                                          setShowServersModal(false);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
+                                          isSelected
+                                            ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                            : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                          <img
+                                            src={`https://flagcdn.com/w20/${countryCode}.png`}
+                                            alt={flagCode}
+                                            className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
+                                            onError={(e) => {
+                                              e.currentTarget.src =
+                                                "https://flagcdn.com/w20/us.png";
+                                            }}
+                                          />
+                                          <div className="flex flex-col min-w-0">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                              <span className="truncate text-xs font-semibold leading-tight font-display text-white">
+                                                {m.cleanName}
+                                              </span>
+                                              {failedReason && (
+                                                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 uppercase tracking-wider shrink-0">
+                                                  {failedReason}
+                                                </span>
+                                              )}
+                                            </div>
+                                            {m.audio && (
+                                              <span className="text-[9px] text-white/40 font-normal leading-tight mt-0.5">
+                                                {m.audio}
                                               </span>
                                             )}
                                           </div>
-                                          {m.audio && (
-                                            <span className="text-[9px] text-white/40 font-normal leading-tight mt-0.5">
-                                              {m.audio}
-                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                          {isSelected ? (
+                                            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                                          ) : (
+                                            <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors" />
                                           )}
                                         </div>
-                                      </div>
-                                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                        {isSelected ? (
-                                          <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
-                                        ) : (
-                                          <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors" />
-                                        )}
-                                      </div>
-                                    </button>
-                                  );
-                                },
-                              )}
+                                      </button>
+                                    );
+                                  },
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+                          ),
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         <div
           className={`px-3 sm:px-6 pb-4 sm:pb-6 pt-12 sm:pt-16 ${!isEmbed ? "bg-gradient-to-t from-black/90 to-transparent" : ""}`}
@@ -4712,76 +4759,77 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     </div>
                   )}
 
-                   <div className="flex flex-col gap-1 px-1">
-                     <button
-                       onClick={() => handleSubtitleChange(-1)}
-                       className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group text-xs ${
-                         activeSubtitle === -1
-                           ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
-                           : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
-                       }`}
-                     >
-                       <span>Off</span>
-                       {activeSubtitle === -1 && (
-                         <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
-                       )}
-                     </button>
-                     {subtitles.map((sub, i) => {
-                       const cleanLangName = sub.languageName
-                         .replace(/\s*\(External\).*/i, "")
-                         .trim();
-                       const cleanSource = (() => {
-                         if (!sub.source) return "";
-                         const s = sub.source.toLowerCase();
-                         if (s === "opensubtitles") return "OpenSubtitles";
-                         if (s === "vidrock") return "VidRock";
-                         if (s === "vidnest") return "VidNest";
-                         if (s === "vaplayer") return "VAPlayer";
-                         if (s === "filmu") return "FilmU";
-                         if (s === "vidlink") return "VidLink";
-                         if (s === "videasy") return "Videasy";
-                         if (s === "custom") return "Custom";
-                         return sub.source;
-                       })();
-                       return (
-                         <button
-                           key={i}
-                           onClick={() => handleSubtitleChange(i)}
-                           className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-200 flex items-center justify-between group text-xs ${
-                             sub.failed
-                               ? "text-red-500/40 bg-red-500/5 border-red-500/10 line-through decoration-red-500/50 cursor-not-allowed"
-                               : activeSubtitle === i
-                                 ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
-                                 : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
-                           }`}
-                         >
-                           <span className="truncate pr-2">
-                             {cleanLangName} {sub.failed && "(Failed to load)"}
-                           </span>
-                           <div className="flex items-center gap-2 shrink-0">
-                             {sub.source && (
-                               <span
-                                 className={`text-[8px] px-1.5 py-0.5 rounded font-black tracking-wider uppercase border ${
-                                   sub.failed
-                                     ? "bg-red-500/10 text-red-500/40 border-red-500/10"
-                                     : activeSubtitle === i
-                                       ? "bg-white/10 text-white/70 border-white/10"
-                                       : sub.source.toLowerCase() === "opensubtitles"
-                                         ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
-                                         : "bg-nebula-cyan/10 text-nebula-cyan border-nebula-cyan/20"
-                                 }`}
-                               >
-                                 {cleanSource}
-                               </span>
-                             )}
-                             {activeSubtitle === i && !sub.failed && (
-                               <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
-                             )}
-                           </div>
-                         </button>
-                       );
-                     })}
-                   </div>
+                  <div className="flex flex-col gap-1 px-1">
+                    <button
+                      onClick={() => handleSubtitleChange(-1)}
+                      className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group text-xs ${
+                        activeSubtitle === -1
+                          ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                          : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                      }`}
+                    >
+                      <span>Off</span>
+                      {activeSubtitle === -1 && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                      )}
+                    </button>
+                    {subtitles.map((sub, i) => {
+                      const cleanLangName = sub.languageName
+                        .replace(/\s*\(External\).*/i, "")
+                        .trim();
+                      const cleanSource = (() => {
+                        if (!sub.source) return "";
+                        const s = sub.source.toLowerCase();
+                        if (s === "opensubtitles") return "OpenSubtitles";
+                        if (s === "vidrock") return "VidRock";
+                        if (s === "vidnest") return "VidNest";
+                        if (s === "vaplayer") return "VAPlayer";
+                        if (s === "filmu") return "FilmU";
+                        if (s === "vidlink") return "VidLink";
+                        if (s === "videasy") return "Videasy";
+                        if (s === "custom") return "Custom";
+                        return sub.source;
+                      })();
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handleSubtitleChange(i)}
+                          className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-200 flex items-center justify-between group text-xs ${
+                            sub.failed
+                              ? "text-red-500/40 bg-red-500/5 border-red-500/10 line-through decoration-red-500/50 cursor-not-allowed"
+                              : activeSubtitle === i
+                                ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                          }`}
+                        >
+                          <span className="truncate pr-2">
+                            {cleanLangName} {sub.failed && "(Failed to load)"}
+                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {sub.source && (
+                              <span
+                                className={`text-[8px] px-1.5 py-0.5 rounded font-black tracking-wider uppercase border ${
+                                  sub.failed
+                                    ? "bg-red-500/10 text-red-500/40 border-red-500/10"
+                                    : activeSubtitle === i
+                                      ? "bg-white/10 text-white/70 border-white/10"
+                                      : sub.source.toLowerCase() ===
+                                          "opensubtitles"
+                                        ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
+                                        : "bg-nebula-cyan/10 text-nebula-cyan border-nebula-cyan/20"
+                                }`}
+                              >
+                                {cleanSource}
+                              </span>
+                            )}
+                            {activeSubtitle === i && !sub.failed && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
 
                   {/* Upload custom subtitle */}
                   <div className="mx-2 mt-1 mb-2">
@@ -5233,27 +5281,29 @@ export function InPlayerSourcePicker({
         });
 
       // 2. Videasy Fetch
-      let videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-      if (season !== undefined) videasyUrl += `&season=${season}`;
-      if (episode !== undefined) videasyUrl += `&episode=${episode}`;
+      const pVideasy = (async () => {
+        let videasyUrl = `${API}/api/videasy?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
+        if (season !== undefined) videasyUrl += `&season=${season}`;
+        if (episode !== undefined) videasyUrl += `&episode=${episode}`;
 
-      const pVideasy = fetch(videasyUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Videasy scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
-              url: v.url,
-              type: v.type || "hls",
-              audio: v.audio || "",
-            }));
-          setVideasySources(list);
-          if (!isBackground) setVideasyError("");
-        })
+        const seed = await fetchVideasySeed(movie.id.toString());
+        if (seed) videasyUrl += `&seed=${encodeURIComponent(seed)}`;
+
+        const r = await fetch(videasyUrl);
+        if (!r.ok) throw new Error("Videasy scan failed");
+        const data = await r.json();
+
+        const list = Object.entries(data)
+          .filter(([, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            audio: v.audio || "",
+          }));
+        setVideasySources(list);
+        if (!isBackground) setVideasyError("");
+      })()
         .catch((e) => {
           if (!isBackground) setVideasyError(e.message);
         })
@@ -5778,7 +5828,9 @@ export function InPlayerSourcePicker({
                   </span>
                 )}
               </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">Standard</p>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                Standard
+              </p>
             </div>
           </div>
           {activeSource === "VidLink" && (
