@@ -1337,6 +1337,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         console.log(
           `[PLAYER] Server Cache: loaded ${parsed.length} skip segment(s)`,
         );
+        if (parsed.length === 0) {
+          showToast("No skip segments available in IntroDB", "info");
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -1353,7 +1356,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
         fetch(externalUrl)
           .then((r) => {
-            if (!r.ok) return; // 404 = no data, silently ignore
+            if (!r.ok) {
+              showToast("No skip segments available in IntroDB", "info");
+              return;
+            }
             return r.json();
           })
           .then((data) => {
@@ -1386,17 +1392,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   err,
                 );
               });
+            } else {
+              showToast("No skip segments available in IntroDB", "info");
             }
           })
           .catch((err) => {
             console.debug("[PLAYER] IntroDB fetch failed (non-critical):", err);
+            showToast("No skip segments available in IntroDB", "info");
           });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [movie.id, movie.type, season, episode]);
+  }, [movie.id, movie.type, season, episode, showToast]);
 
   // ── Subtitle fetch (auto + manual refetch) ───────────────────────────────
   const refetchSubtitles = useCallback(
@@ -3817,7 +3826,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           )}
 
           {!isEmbed && (
-            <div className="flex items-center gap-2 shrink-0 pointer-events-auto">
+            <div className="flex items-center gap-2 shrink-0">
               {/* Sources Button & Dropdown */}
               <div className="relative">
                 <button
