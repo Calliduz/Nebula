@@ -2595,8 +2595,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                       className="h-full"
                                       style={{
                                         width: `${epPct}%`,
-                                        background: "#00e5ff",
-                                        boxShadow: "0 0 4px rgba(0, 229, 255, 0.7)",
+                                        background: "#e50914",
+                                        boxShadow: "0 0 4px rgba(229,9,20,0.7)",
                                         transition:
                                           "width 0.4s cubic-bezier(0.4,0,0.2,1)",
                                       }}
@@ -2611,8 +2611,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     <div
                                       className="h-full w-full"
                                       style={{
-                                        background: "#00e5ff",
-                                        boxShadow: "0 0 4px rgba(0, 229, 255, 0.7)",
+                                        background: "#e50914",
+                                        boxShadow: "0 0 4px rgba(229,9,20,0.7)",
                                       }}
                                     />
                                   </div>
