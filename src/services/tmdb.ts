@@ -239,7 +239,7 @@ const normalizeMovie = (
   description: item.overview || "No overview available.",
   image: item.poster_path
     ? proxyImage(`${IMAGE_BASE_URL}${item.poster_path}`)
-    : proxyImage("https://picsum.photos/seed/nebula/400/600"),
+    : "/no-image.svg",
   backdrop: item.backdrop_path
     ? proxyImage(`${BACKDROP_BASE_URL}${item.backdrop_path}`)
     : "",
