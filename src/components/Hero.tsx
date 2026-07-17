@@ -28,7 +28,6 @@ export const Hero: React.FC<HeroProps> = ({
   setSelectedMovie,
   featuredMovies,
 }) => {
-  const [isFocusing, setIsFocusing] = React.useState<number | null>(null);
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
   const [logoFailed, setLogoFailed] = React.useState(false);
 
@@ -57,12 +56,7 @@ export const Hero: React.FC<HeroProps> = ({
 
   const handleThumbClick = (index: number) => {
     if (index === currentHeroIndex) return;
-    setIsFocusing(index);
-    // Intentional delay to "focus" before swapping background
-    setTimeout(() => {
-      setCurrentHeroIndex(index);
-      setIsFocusing(null);
-    }, 400);
+    setCurrentHeroIndex(index);
   };
 
   const activeHero = featuredMovies[currentHeroIndex];
@@ -242,45 +236,33 @@ export const Hero: React.FC<HeroProps> = ({
       </div>
 
       <div className="hidden absolute bottom-20 right-12 md:flex flex-col justify-center gap-4 z-30">
-        {featuredMovies.map((movie, i) => (
-          <button
-            key={`hero-thumb-${movie.id || i}`}
-            onClick={() => handleThumbClick(i)}
-            className="group relative flex items-center justify-center md:justify-end"
-          >
-            <motion.div
-              initial={false}
-              animate={{
-                scale: isFocusing === i ? 1.2 : 1,
-                borderColor:
-                  isFocusing === i
-                    ? "#00E5FF"
-                    : currentHeroIndex === i
-                      ? "#00E5FF"
-                      : "rgba(255,255,255,0.2)",
-              }}
-              className={`aspect-[2/3] rounded-lg overflow-hidden border transition-all duration-300 ${
-                currentHeroIndex === i
-                  ? "w-[60px] md:w-[100px] opacity-100"
-                  : "w-[40px] md:w-[70px] opacity-40"
-              }`}
+        {featuredMovies.map((movie, i) => {
+          const isActive = currentHeroIndex === i;
+          return (
+            <motion.button
+              key={`hero-thumb-${movie.id || i}`}
+              onClick={() => handleThumbClick(i)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="group relative flex items-center justify-center md:justify-end focus:outline-none cursor-pointer"
             >
-              <img
-                src={movie.image}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                onError={handleImageError}
-              />
-              {isFocusing === i && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 1, 0.5] }}
-                  className="absolute inset-0 bg-nebula-cyan/20 animate-pulse"
+              <div
+                className={`aspect-[2/3] rounded-lg overflow-hidden border transition-all duration-300 ${
+                  isActive
+                    ? "w-[60px] md:w-[100px] border-nebula-cyan shadow-[0_0_15px_rgba(0,229,255,0.4)] opacity-100 scale-105"
+                    : "w-[40px] md:w-[70px] border-white/20 opacity-40 hover:opacity-85"
+                }`}
+              >
+                <img
+                  src={movie.image}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={handleImageError}
                 />
-              )}
-            </motion.div>
-          </button>
-        ))}
+              </div>
+            </motion.button>
+          );
+        })}
       </div>
     </section>
   );
