@@ -2303,6 +2303,21 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                             referrerPolicy="no-referrer"
                             onError={handleImageError}
                           />
+
+                          {/* Type badge — integrated top-left corner tab */}
+                          {m.type && (
+                            <div className="absolute top-0 left-0 z-20 pointer-events-none bg-black/60 backdrop-blur-md text-white/80 text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-br-md sm:rounded-br-lg border-r border-b border-white/5 leading-none">
+                              {m.type === "tv" ? "TV" : "Film"}
+                            </div>
+                          )}
+
+                          {/* Rating badge — integrated top-right corner tab */}
+                          {m.imdb && m.imdb > 0 && (
+                            <div className="absolute top-0 right-0 z-20 pointer-events-none bg-black/60 backdrop-blur-md text-nebula-cyan text-[7px] sm:text-[8px] font-black tracking-wider px-2 py-1 rounded-bl-md sm:rounded-bl-lg border-l border-b border-white/5 leading-none">
+                              ★ {m.imdb}
+                            </div>
+                          )}
+
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                             <p className="text-[9px] font-bold text-nebula-cyan mb-0.5 uppercase tracking-widest truncate">
                               {m.genre}
