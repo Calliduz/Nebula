@@ -228,7 +228,7 @@ export async function fetchVideasySourcesDirect(
 
       try {
         const url = new URL(
-          `https://api.speedracelight.com/${prov.path}/sources-with-title`,
+          `https://api.wingsdatabase.com/${prov.path}/sources-with-title`,
         );
         url.searchParams.append("title", encodeURIComponent(title));
         url.searchParams.append("mediaType", mediaType);
