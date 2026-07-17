@@ -82,6 +82,26 @@ export const MovieCard = memo<MovieCardProps>(
             loading="lazy"
           />
 
+          {/* Type badge — top-left */}
+          {movie.type && (
+            <div className="absolute top-1 left-1 z-20 pointer-events-none">
+              <span
+                className="text-[7px] sm:text-[8px] font-black uppercase tracking-wide px-1.5 py-[2px] rounded backdrop-blur-md shadow-sm leading-none bg-black/60 text-white/80 border border-white/10"
+              >
+                {movie.type === "tv" ? "TV" : "Film"}
+              </span>
+            </div>
+          )}
+
+          {/* Rating badge — top-right */}
+          {movie.imdb && movie.imdb > 0 && (
+            <div className="absolute top-1 right-1 z-20 pointer-events-none">
+              <span className="text-[7px] sm:text-[8px] font-black text-nebula-cyan bg-black/60 border border-nebula-cyan/25 px-1.5 py-[2px] rounded backdrop-blur-md leading-none">
+                ★ {movie.imdb}
+              </span>
+            </div>
+          )}
+
           {/* Progress Bar for Continue Watching — Netflix-style */}
           {hasProgress && (
             <div
@@ -123,10 +143,19 @@ export const MovieCard = memo<MovieCardProps>(
             </div>
           )}
 
-          {/* New Episode Tag (Sleek integrated full-width bottom banner) */}
+          {/* New Episode Tag */}
           {movie.hasNewEpisode && (
             <div className="absolute bottom-0 inset-x-0 bg-nebula-cyan text-obsidian font-black uppercase text-[8px] sm:text-[9px] py-1 text-center tracking-widest select-none z-30 shadow-[0_-2px_10px_rgba(0,229,255,0.25)] border-t border-nebula-cyan/30">
               New Episode
+            </div>
+          )}
+
+          {/* Year — bottom-left, subtle */}
+          {movie.year && !hasProgress && !movie.hasNewEpisode && (
+            <div className="absolute bottom-2 left-2 z-20 pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+              <span className="text-[8px] font-bold text-white/50 bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-sm">
+                {movie.year}
+              </span>
             </div>
           )}
 
@@ -135,6 +164,7 @@ export const MovieCard = memo<MovieCardProps>(
         </div>
       </div>
     );
+
   },
   (prevProps, nextProps) => {
     return (
@@ -154,6 +184,8 @@ export const MovieCard = memo<MovieCardProps>(
       prevProps.movie?.hasNewEpisode === nextProps.movie?.hasNewEpisode &&
       prevProps.movie?.clearLogo === nextProps.movie?.clearLogo &&
       prevProps.movie?.genre === nextProps.movie?.genre &&
+      prevProps.movie?.imdb === nextProps.movie?.imdb &&
+      prevProps.movie?.year === nextProps.movie?.year &&
       JSON.stringify(prevProps.movie?.progress) ===
         JSON.stringify(nextProps.movie?.progress)
     );

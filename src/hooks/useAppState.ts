@@ -2676,10 +2676,27 @@ export function useAppState() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "/" && !isSearchOpen) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isTyping = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable;
+
+      // Ctrl+K / Cmd+K — open search from anywhere
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        if (isSearchOpen) {
+          setIsSearchOpen(false);
+        } else {
+          setIsSearchOpen(true);
+        }
+        return;
+      }
+
+      // / — open search (only when not typing in an input)
+      if (e.key === "/" && !isSearchOpen && !isTyping) {
         e.preventDefault();
         setIsSearchOpen(true);
-      } else if (e.key === "Escape" && isSearchOpen) setIsSearchOpen(false);
+      } else if (e.key === "Escape" && isSearchOpen) {
+        setIsSearchOpen(false);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);

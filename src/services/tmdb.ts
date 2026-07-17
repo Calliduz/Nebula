@@ -625,40 +625,72 @@ export const searchMedia = async (
 
     // Sort direct results and people by relevance/popularity before slicing
     const queryNorm = getNormalizedTitle(trimmedQuery);
+    const now = Date.now();
 
-    const getScore = (item: any) => {
+    /**
+     * Composite score designed for "commonly watched" ranking (Netflix-style):
+     * - matchTier × 1000 — title match quality is always the primary signal
+     * - popularity  × 0.3  — TMDB popularity is recency-weighted, good secondary
+     * - vote_count  × 0.008 — proxy for how many people actually watched it
+     * - vote_avg    × 2    — small quality bonus (7.5+ films surface slightly higher)
+     * - future penalty      — unreleased content pushed below watchable titles
+     * - obscurity filter    — skip items with < 3 votes AND popularity < 1.5 (noise)
+     */
+    const getCompositeScore = (item: any): number => {
       const title = item.title || item.name || "";
       const titleNorm = getNormalizedTitle(title);
       const tier = getMatchTier(titleNorm, queryNorm);
       const popularity = item.popularity || 0;
-      return { tier, popularity };
+      const voteCount = item.vote_count || 0;
+      const voteAvg = item.vote_average || 0;
+
+      // Penalise content that hasn't been released yet
+      const releaseStr = item.release_date || item.first_air_date || "";
+      let futurePenalty = 0;
+      if (releaseStr) {
+        const releaseMs = new Date(releaseStr).getTime();
+        if (!isNaN(releaseMs) && releaseMs > now) futurePenalty = 500;
+      }
+
+      return (
+        tier * 1000 +
+        popularity * 0.3 +
+        voteCount * 0.008 +
+        voteAvg * 2 -
+        futurePenalty
+      );
     };
 
-    directResults.sort((a, b) => {
-      const scoreA = getScore(a);
-      const scoreB = getScore(b);
-      if (scoreA.tier !== scoreB.tier) {
-        return scoreB.tier - scoreA.tier;
-      }
-      return scoreB.popularity - scoreA.popularity;
+    // Filter out extremely obscure / irrelevant noise entries
+    const filteredDirectResults = directResults.filter((item) => {
+      const voteCount = item.vote_count || 0;
+      const popularity = item.popularity || 0;
+      // Keep items that have ANY real engagement, or are an exact/close title match
+      const title = item.title || item.name || "";
+      const titleNorm = getNormalizedTitle(title);
+      const tier = getMatchTier(titleNorm, queryNorm);
+      if (tier >= 2) return true; // Always keep exact/prefix matches regardless of votes
+      return voteCount >= 3 || popularity >= 1.5;
     });
+
+    filteredDirectResults.sort(
+      (a, b) => getCompositeScore(b) - getCompositeScore(a),
+    );
+
+    // Replace directResults with filtered+sorted version
+    directResults.length = 0;
+    filteredDirectResults.forEach((r) => directResults.push(r));
 
     const getPersonScore = (item: any) => {
       const name = item.name || "";
       const nameNorm = getNormalizedTitle(name);
       const tier = getMatchTier(nameNorm, queryNorm);
       const popularity = item.popularity || 0;
-      return { tier, popularity };
+      const voteCount = item.vote_count || 0;
+      return tier * 1000 + popularity * 0.3 + voteCount * 0.005;
     };
 
-    people.sort((a, b) => {
-      const scoreA = getPersonScore(a);
-      const scoreB = getPersonScore(b);
-      if (scoreA.tier !== scoreB.tier) {
-        return scoreB.tier - scoreA.tier;
-      }
-      return scoreB.popularity - scoreA.popularity;
-    });
+    people.sort((a, b) => getPersonScore(b) - getPersonScore(a));
 
     // Parallel fetch credits for top 3 people matched
     const personCreditsPromises = people.slice(0, 3).map(async (p) => {

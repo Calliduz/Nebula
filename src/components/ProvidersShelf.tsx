@@ -79,15 +79,16 @@ export const ProvidersShelf: React.FC<ProvidersShelfProps> = memo(
     return (
       <section className="mb-12 relative">
         <div className="flex items-center justify-between mb-8 px-4 sm:px-0">
-          <div className="flex items-center gap-4">
-            <h3 className="text-xl md:text-2xl font-display font-black uppercase tracking-tighter text-white/90">
+          <div className="flex items-center gap-3">
+            <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
+            <h3 className="text-xl md:text-2.5xl font-display font-black uppercase tracking-tighter text-white/90 leading-none">
               Providers
             </h3>
-            <span className="text-[9px] font-bold tracking-[0.2em] text-nebula-cyan uppercase">
+            <span className="text-[8px] sm:text-[9px] font-bold tracking-[0.2em] text-nebula-cyan uppercase border border-nebula-cyan/25 rounded px-1.5 py-0.5 leading-none">
               Official Feeds
             </span>
           </div>
-          <div className="h-px flex-1 mx-8 bg-gradient-to-r from-white/10 to-transparent" />
+          <div className="h-px flex-1 ml-6 bg-gradient-to-r from-white/10 to-transparent hidden sm:block" />
         </div>
 
         <div className="grid grid-cols-4 md:grid-cols-8 gap-4 md:gap-6 lg:gap-8 xl:gap-10 w-full justify-items-center">

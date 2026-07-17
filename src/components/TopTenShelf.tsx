@@ -50,10 +50,13 @@ export const TopTenShelf = memo(
         onMouseLeave={() => setIsHovered(false)}
       >
         <div className="flex items-center justify-between mb-6 px-4 sm:px-0">
-          <h3 className="text-xl md:text-3xl font-display font-black uppercase tracking-tighter">
-            Top Ten Operations
-          </h3>
-          <div className="h-px flex-1 mx-8 bg-gradient-to-r from-white/10 to-transparent" />
+          <div className="flex items-center gap-3">
+            <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
+            <h3 className="text-xl md:text-2xl font-display font-black uppercase tracking-tighter leading-none">
+              Top Ten Operations
+            </h3>
+          </div>
+          <div className="h-px flex-1 ml-6 bg-gradient-to-r from-white/10 to-transparent hidden sm:block" />
         </div>
 
         <div className="relative">

@@ -54,12 +54,22 @@ export const TopNav = ({
         <div className="flex items-center gap-4 sm:gap-6">
           <button
             onClick={onSearchClick}
-            className="text-white hover:text-nebula-cyan transition-colors"
+            className="flex items-center gap-2 text-white hover:text-nebula-cyan transition-colors group"
+            aria-label="Search (Ctrl+K)"
           >
             <Search size={22} />
+            <span className="hidden lg:flex items-center gap-1 text-[9px] font-black text-white/20 group-hover:text-nebula-cyan/50 transition-colors tracking-widest uppercase">
+              <span className="px-1.5 py-0.5 rounded border border-white/10 group-hover:border-nebula-cyan/20">
+                Ctrl
+              </span>
+              <span className="px-1.5 py-0.5 rounded border border-white/10 group-hover:border-nebula-cyan/20">
+                K
+              </span>
+            </span>
           </button>
         </div>
       </header>
+
 
       <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-obsidian border-t border-white/10 px-6 py-4 pb-6 flex items-center justify-between z-[100] shadow-[0_-20px_40px_rgba(0,0,0,0.8)] shrink-0">
         {NAV_ITEMS.map((item) => {

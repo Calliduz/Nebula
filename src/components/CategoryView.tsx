@@ -138,13 +138,13 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       className="min-h-screen pt-12 pl-2 pr-4 sm:px-6 md:px-12 pb-32"
     >
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-        <div>
+        <div className="flex flex-col gap-3">
           <button
             onClick={() => {
               setActiveTab("home");
               setViewingCategory(null);
             }}
-            className="flex items-center gap-2 text-nebula-cyan hover:text-white mb-6 transition-colors group"
+            className="flex items-center gap-2 text-nebula-cyan hover:text-white transition-colors group self-start"
           >
             <ArrowLeft
               size={16}
@@ -154,11 +154,14 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               Back to Command Center
             </span>
           </button>
-          <h2 className="text-4xl md:text-6xl font-display font-black tracking-tighter uppercase">
-            {STREAMING_PROVIDERS.some((p) => p.name === viewingCategory)
-              ? `Popular on ${viewingCategory}`
-              : viewingCategory}
-          </h2>
+          <div className="flex items-center gap-4">
+            <span className="w-1.5 h-10 sm:h-12 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
+            <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-black tracking-tighter uppercase leading-none">
+              {STREAMING_PROVIDERS.some((p) => p.name === viewingCategory)
+                ? `Popular on ${viewingCategory}`
+                : viewingCategory}
+            </h2>
+          </div>
           {(() => {
             const provider = STREAMING_PROVIDERS.find(
               (p) => p.name === viewingCategory,
@@ -205,9 +208,12 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
         <div className="space-y-16">
           <section>
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-display font-medium tracking-tight text-white">
-                My List
-              </h3>
+              <div className="flex items-center gap-3">
+                <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
+                <h3 className="text-xl md:text-2xl font-display font-black uppercase tracking-tighter text-white/90 leading-none">
+                  My List
+                </h3>
+              </div>
               {myList.length > 0 && (
                 <button
                   onClick={clearMyList}
@@ -266,9 +272,12 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
 
           <section>
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-display font-medium tracking-tight text-white">
-                Watch History
-              </h3>
+              <div className="flex items-center gap-3">
+                <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
+                <h3 className="text-xl md:text-2xl font-display font-black uppercase tracking-tighter text-white/90 leading-none">
+                  Watch History
+                </h3>
+              </div>
               {history.length > 0 && (
                 <button
                   onClick={clearHistory}
