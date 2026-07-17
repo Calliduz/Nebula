@@ -625,6 +625,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           quality: m.quality || "Auto",
         }));
       }
+
       return updatedMirrors;
     },
     [
@@ -668,29 +669,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       try {
         setLoading(true);
         setError("");
-        setFailedMirrors({});
-        setStreamUrl(null);
 
         // Fetch mirrors for the new source
         const updatedMirrors = await fetchSourceMirrors(nextSource, false);
         if (updatedMirrors && updatedMirrors.length > 0) {
-          const processed = updatedMirrors.map((m: any) => {
-            if (m.type === "embed") return m;
-            const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
-            const proxyEndpoint = isMp4
-              ? "/api/proxy/segment"
-              : "/api/proxy/stream";
-            const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
-            return { ...m, url: proxiedUrl };
-          });
-
-          const newGrouped = groupMirrors(processed);
-          setMirrors(newGrouped);
-          mirrorsRef.current = newGrouped;
-
           // Sync URL params
           const queryParams = new URLSearchParams(window.location.search);
-          const activeSrcString = newGrouped
+          const activeSrcString = updatedMirrors
             .map((s: any) => {
               const cleanUrl = s.url
                 .replace(`${API}/api/proxy/stream?url=`, "")
@@ -702,11 +687,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           navigate(`${window.location.pathname}?${queryParams.toString()}`, {
             replace: true,
           });
-
-          setTimeout(() => {
-            selectMirror(0, newGrouped);
-            setLoading(false);
-          }, 100);
         } else {
           // If the new source also has no mirrors, recursively try the next one!
           failedSourcesRef.current.add(nextSource);
@@ -2047,7 +2027,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         if (
           d.type === Hls.ErrorTypes.NETWORK_ERROR &&
           statusCode &&
-          (statusCode >= 400 || [401, 403, 404, 410, 429].includes(statusCode)) &&
+          (statusCode >= 400 ||
+            [401, 403, 404, 410, 429].includes(statusCode)) &&
           d.details !== "fragLoadError" &&
           d.details !== "fragLoadTimeOut"
         ) {
