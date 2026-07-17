@@ -432,6 +432,7 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     mediaType: "tv",
     discoverParams: {
       with_genres: "16",
+      with_keywords: "191696",
       include_adult: "true",
       with_original_language: "ja",
       sort_by: "popularity.desc",
