@@ -2554,7 +2554,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                               <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all" />
 
                               {epWatched && (
-                                <div className="absolute top-2 right-2 flex items-center gap-1 bg-[#e50914] px-1.5 py-0.5 rounded text-[8px] tracking-wide font-black uppercase text-white shadow-lg">
+                                <div className="absolute top-2 right-2 flex items-center gap-1 bg-nebula-cyan px-1.5 py-0.5 rounded text-[8px] tracking-wide font-black uppercase text-obsidian shadow-lg">
                                   <svg
                                     width="10"
                                     height="10"
@@ -2564,13 +2564,13 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   >
                                     <path
                                       d="M1.5 4.5L4 7L8.5 1.5"
-                                      stroke="white"
+                                      stroke="currentColor"
                                       strokeWidth="1.5"
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
                                     />
                                   </svg>
-                                  <span className="text-[8px] font-black uppercase tracking-widest text-white/70">
+                                  <span className="text-[8px] font-black uppercase tracking-widest text-obsidian/80">
                                     Watched
                                   </span>
                                 </div>
@@ -2595,8 +2595,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                       className="h-full"
                                       style={{
                                         width: `${epPct}%`,
-                                        background: "#e50914",
-                                        boxShadow: "0 0 4px rgba(229,9,20,0.7)",
+                                        background: "#00e5ff",
+                                        boxShadow: "0 0 4px rgba(0, 229, 255, 0.7)",
                                         transition:
                                           "width 0.4s cubic-bezier(0.4,0,0.2,1)",
                                       }}
@@ -2611,8 +2611,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     <div
                                       className="h-full w-full"
                                       style={{
-                                        background: "#e50914",
-                                        boxShadow: "0 0 4px rgba(229,9,20,0.7)",
+                                        background: "#00e5ff",
+                                        boxShadow: "0 0 4px rgba(0, 229, 255, 0.7)",
                                       }}
                                     />
                                   </div>

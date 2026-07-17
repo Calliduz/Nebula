@@ -134,8 +134,8 @@ export const MovieCard = memo<MovieCardProps>(
                   className="h-full"
                   style={{
                     width: `${pct}%`,
-                    background: "#e50914",
-                    boxShadow: "0 0 4px rgba(229,9,20,0.8)",
+                    background: "#00e5ff",
+                    boxShadow: "0 0 4px rgba(0,229,255,0.8)",
                     transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
                   }}
                 />
