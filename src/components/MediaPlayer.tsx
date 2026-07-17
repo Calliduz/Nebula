@@ -1616,6 +1616,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           subTextCache.current[activeSubUrl] = text;
         }
 
+        // Check if subtitle is empty/contains no cues
+        if (!text || !text.includes("-->")) {
+          showToast("Failed to load subtitle: track contains no cues", "error");
+          markFailedAndFallback();
+          return;
+        }
+
         setSubtitles((prev) =>
           prev.map((s, idx) =>
             idx === activeSubtitle && s.failed ? { ...s, failed: false } : s,
