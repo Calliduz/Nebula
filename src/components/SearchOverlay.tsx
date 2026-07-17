@@ -375,21 +375,17 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                                 onError={handleImageError}
                               />
 
-                              {/* Type badge — always visible */}
-                              <div className="absolute top-1 left-1 z-10">
-                                <span
-                                  className="text-[7px] sm:text-[8px] font-black uppercase tracking-wide px-1.5 py-[2px] rounded backdrop-blur-md shadow-sm bg-black/60 text-white/80 border border-white/10"
-                                >
+                              {/* Type badge — integrated top-left corner tab */}
+                              {movie.type && (
+                                <div className="absolute top-0 left-0 z-20 pointer-events-none bg-black/60 backdrop-blur-md text-white/80 text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-br-md sm:rounded-br-lg border-r border-b border-white/5 leading-none">
                                   {movie.type === "tv" ? "TV" : "Film"}
-                                </span>
-                              </div>
+                                </div>
+                              )}
 
-                              {/* Rating badge */}
+                              {/* Rating badge — integrated top-right corner tab */}
                               {movie.imdb && movie.imdb > 0 && (
-                                <div className="absolute top-1 right-1 z-10">
-                                  <span className="text-[7px] sm:text-[8px] font-black text-nebula-cyan bg-black/60 border border-nebula-cyan/25 px-1.5 py-[2px] rounded backdrop-blur-md">
-                                    ★ {movie.imdb}
-                                  </span>
+                                <div className="absolute top-0 right-0 z-20 pointer-events-none bg-black/60 backdrop-blur-md text-nebula-cyan text-[7px] sm:text-[8px] font-black tracking-wider px-2 py-1 rounded-bl-md sm:rounded-bl-lg border-l border-b border-white/5 leading-none">
+                                  ★ {movie.imdb}
                                 </div>
                               )}
 
