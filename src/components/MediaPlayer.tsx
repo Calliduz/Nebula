@@ -249,6 +249,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   useEffect(() => {
     setLogoFailed(false);
     hasAutoRetriedRef.current = false;
+    failedSourcesRef.current.clear();
+    setFailedSourcesList([]);
   }, [movie?.id, season, episode]);
   const {
     prefs,
@@ -638,11 +640,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const SOURCE_PRIORITY = [
     "VidRock",
-    "VidLink",
+    "Vaplayer",
     "Videasy",
     "Vidnest",
-    "Vaplayer",
     "FilmU",
+    "VidLink",
   ];
 
   const switchToNextSource = useCallback(async () => {
@@ -1002,8 +1004,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     mirrorsRef.current = [];
     activeMirrorRef.current = 0;
     setFailedMirrors({});
-    failedSourcesRef.current.clear();
-    setFailedSourcesList([]);
     setSubtitles([]);
     setActiveSubtitle(-1);
     hasAutoSelectedSub.current = false;
@@ -2042,10 +2042,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
         // If it's a network error with a hard status code >= 400 (e.g. 403, 404, 405, 500, 502, 503, 504),
         // fallback to the next mirror immediately instead of letting Hls.js retry/stall.
+        // Skip immediate mirror switch for fragment load errors so Hls.js can retry/recover,
+        // or trigger the 5s continuous error fallback.
         if (
           d.type === Hls.ErrorTypes.NETWORK_ERROR &&
           statusCode &&
-          (statusCode >= 400 || [401, 403, 404, 410, 429].includes(statusCode))
+          (statusCode >= 400 || [401, 403, 404, 410, 429].includes(statusCode)) &&
+          d.details !== "fragLoadError" &&
+          d.details !== "fragLoadTimeOut"
         ) {
           console.warn(
             `[HLS] Hard network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
@@ -3979,6 +3983,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         failedSources={failedSourcesList}
                         onSelect={(src) => {
                           setSourceSelect(null);
+                          failedSourcesRef.current.clear();
+                          setFailedSourcesList([]);
                           const queryParams = new URLSearchParams();
                           if (movie.type === "tv") {
                             queryParams.set(
@@ -5580,6 +5586,156 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
+      {/* Vaplayer */}
+      <button
+        onClick={() =>
+          (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) &&
+          onSelect(vaplayerUrl)
+        }
+        disabled={
+          activeSource === "Vaplayer" ||
+          (vaplayerLoading && !failedSources.includes("Vaplayer"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Vaplayer",
+          activeSource || "",
+          vaplayerLoading,
+          vaplayerSources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0">
+              {vaplayerLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Tv size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Vaplayer
+                </p>
+                {failedSources.includes("Vaplayer") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {vaplayerLoading ? "Scanning..." : "Active"}
+              </p>
+            </div>
+          </div>
+          {activeSource === "Vaplayer" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {vaplayerLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running direct scan...
+            </span>
+          ) : vaplayerSources.length > 0 ? (
+            vaplayerSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Vaplayer[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {vaplayerError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Videasy */}
+      <button
+        onClick={() =>
+          (videasySources.length > 0 || failedSources.includes("Videasy")) &&
+          onSelect(videasyUrl)
+        }
+        disabled={
+          activeSource === "Videasy" ||
+          (videasyLoading && !failedSources.includes("Videasy"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Videasy",
+          activeSource || "",
+          videasyLoading,
+          videasySources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400 shrink-0">
+              {videasyLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Tv size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Videasy
+                </p>
+                {failedSources.includes("Videasy") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {videasyLoading ? "Decrypting..." : "Decrypted"}
+              </p>
+            </div>
+          </div>
+          {activeSource === "Videasy" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {videasyLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running decrypt scan...
+            </span>
+          ) : videasySources.length > 0 ? (
+            <>
+              {videasySources.slice(0, 3).map((s) => (
+                <span
+                  key={s.name}
+                  className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase tracking-wide"
+                >
+                  {s.name
+                    .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
+                    .replace(/^Videasy/i, "")
+                    .trim()
+                    .toUpperCase()}
+                </span>
+              ))}
+              {videasySources.length > 3 && (
+                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase tracking-wide">
+                  +{videasySources.length - 3}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {videasyError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
       {/* Vidnest */}
       <button
         onClick={() =>
@@ -5649,77 +5805,6 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase font-medium">
               {vidnestError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Vaplayer */}
-      <button
-        onClick={() =>
-          (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) &&
-          onSelect(vaplayerUrl)
-        }
-        disabled={
-          activeSource === "Vaplayer" ||
-          (vaplayerLoading && !failedSources.includes("Vaplayer"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Vaplayer",
-          activeSource || "",
-          vaplayerLoading,
-          vaplayerSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0">
-              {vaplayerLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Tv size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Vaplayer
-                </p>
-                {failedSources.includes("Vaplayer") && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {vaplayerLoading ? "Scanning..." : "Active"}
-              </p>
-            </div>
-          </div>
-          {activeSource === "Vaplayer" && (
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {vaplayerLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running direct scan...
-            </span>
-          ) : vaplayerSources.length > 0 ? (
-            vaplayerSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Vaplayer[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {vaplayerError || "No mirrors"}
             </span>
           )}
         </div>
@@ -5836,85 +5921,6 @@ export function InPlayerSourcePicker({
           <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase tracking-wide">
             Auto-Failover
           </span>
-        </div>
-      </button>
-
-      {/* Videasy */}
-      <button
-        onClick={() =>
-          (videasySources.length > 0 || failedSources.includes("Videasy")) &&
-          onSelect(videasyUrl)
-        }
-        disabled={
-          activeSource === "Videasy" ||
-          (videasyLoading && !failedSources.includes("Videasy"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Videasy",
-          activeSource || "",
-          videasyLoading,
-          videasySources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400 shrink-0">
-              {videasyLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Tv size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Videasy
-                </p>
-                {failedSources.includes("Videasy") && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {videasyLoading ? "Decrypting..." : "Decrypted"}
-              </p>
-            </div>
-          </div>
-          {activeSource === "Videasy" && (
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {videasyLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running decrypt scan...
-            </span>
-          ) : videasySources.length > 0 ? (
-            <>
-              {videasySources.slice(0, 3).map((s) => (
-                <span
-                  key={s.name}
-                  className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase tracking-wide"
-                >
-                  {s.name
-                    .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
-                    .replace(/^Videasy/i, "")
-                    .trim()
-                    .toUpperCase()}
-                </span>
-              ))}
-              {videasySources.length > 3 && (
-                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase tracking-wide">
-                  +{videasySources.length - 3}
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {videasyError || "No mirrors"}
-            </span>
-          )}
         </div>
       </button>
     </div>
