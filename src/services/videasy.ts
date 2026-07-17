@@ -165,7 +165,7 @@ const providers: ProviderDef[] = [
 ];
 
 /**
- * Scrapes Videasy directly from the browser (with open CORS on wingsdatabase.com).
+ * Scrapes Videasy directly from the browser (with open CORS on speedracelight.com).
  * Falls back to backend endpoint if client-side scrape fails (e.g. adblock / CORS issues).
  */
 export async function fetchVideasySourcesDirect(
@@ -210,7 +210,7 @@ export async function fetchVideasySourcesDirect(
 
     // 1. Fetch Seed
     const seedRes = await fetch(
-      `https://api.wingsdatabase.com/seed?mediaId=${tmdbId}`,
+      `https://api.speedracelight.com/seed?mediaId=${tmdbId}`,
     );
     if (!seedRes.ok) throw new Error(`Seed endpoint HTTP ${seedRes.status}`);
     const seedData = await seedRes.json();
@@ -227,7 +227,7 @@ export async function fetchVideasySourcesDirect(
 
       try {
         const url = new URL(
-          `https://api.wingsdatabase.com/${prov.path}/sources-with-title`,
+          `https://api.speedracelight.com/${prov.path}/sources-with-title`,
         );
         url.searchParams.append("title", encodeURIComponent(title));
         url.searchParams.append("mediaType", mediaType);
