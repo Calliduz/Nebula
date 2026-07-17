@@ -658,6 +658,48 @@ export function rotateItems<T>(arr: T[], seed?: number): T[] {
   return [...arr.slice(shift), ...arr.slice(0, shift)];
 }
 
+function decorateMovieWithNewEpisode(
+  m: NebulaMovie,
+  myList: any[],
+  tvDetailsCache: Record<string, any>,
+): NebulaMovie {
+  if (!m) return m;
+  const isTv = m.type === "tv";
+  if (!isTv) return m;
+
+  const isFollowed = myList.some((item: any) => {
+    if (typeof item === "object" && item !== null) {
+      return item.id.toString() === m.id.toString() && item.type === "tv";
+    }
+    const str = String(item);
+    if (str.includes("_")) {
+      const parts = str.split("_");
+      return parts[1] === m.id.toString() && parts[0] === "tv";
+    }
+    return false;
+  });
+
+  if (!isFollowed) return m;
+
+  const details = tvDetailsCache[m.id.toString()];
+  let isNewEpisode = false;
+  if (details) {
+    const lastEp = details.last_episode_to_air;
+    if (lastEp && lastEp.air_date) {
+      const airDate = new Date(lastEp.air_date);
+      const now = new Date();
+      const diffTime = now.getTime() - airDate.getTime();
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      isNewEpisode = diffDays >= 0 && diffDays <= 7;
+    }
+  }
+
+  return {
+    ...m,
+    hasNewEpisode: isNewEpisode,
+  } as any;
+}
+
 export function useAppState() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -786,25 +828,73 @@ export function useAppState() {
     feedSeedRef.current = feedSeed;
   }, [feedSeed]);
 
+  const allMoviesRef = useRef(allMovies);
+  const historyRef = useRef(history);
+  const myListRef = useRef(myList);
+  const tvDetailsCacheRef = useRef(tvDetailsCache);
+  const featuredMoviesRef = useRef(featuredMovies);
+  const rowsRef = useRef(rows);
+
+  useEffect(() => {
+    allMoviesRef.current = allMovies;
+  }, [allMovies]);
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+  useEffect(() => {
+    myListRef.current = myList;
+  }, [myList]);
+  useEffect(() => {
+    tvDetailsCacheRef.current = tvDetailsCache;
+  }, [tvDetailsCache]);
+  useEffect(() => {
+    featuredMoviesRef.current = featuredMovies;
+  }, [featuredMovies]);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
   // Helper to merge new movies into the global pool uniquely
-  const updateGlobalPool = (newMovies: NebulaMovie[]) => {
-    const filtered = filterAdultMovies(newMovies);
-    setAllMovies((prev) => {
-      const existingIds = new Set(prev.map((m) => m.id.toString()));
+  const updateGlobalPool = useCallback(
+    (newMovies: NebulaMovie[]) => {
+      const filtered = filterAdultMovies(newMovies);
+
+      const existingIds = new Set(
+        allMoviesRef.current.map((m) => m.id.toString()),
+      );
       const uniqueNew = filtered.filter(
         (m) => !existingIds.has(m.id.toString()),
       );
-      if (uniqueNew.length === 0) return prev; // Referential stability — no change
-      return [...prev, ...uniqueNew];
-    });
-  };
+      if (uniqueNew.length > 0) {
+        allMoviesRef.current = [...allMoviesRef.current, ...uniqueNew];
+      }
+
+      setAllMovies((prev) => {
+        const existingIdsPrev = new Set(prev.map((m) => m.id.toString()));
+        const uniqueNewPrev = filtered.filter(
+          (m) => !existingIdsPrev.has(m.id.toString()),
+        );
+        if (uniqueNewPrev.length === 0) return prev; // Referential stability — no change
+        return [...prev, ...uniqueNewPrev];
+      });
+    },
+    [filterAdultMovies],
+  );
 
   const syncUserRows = useCallback(async () => {
+    let allMovies = allMoviesRef.current;
+    const history = historyRef.current;
+    const myList = myListRef.current;
+    const tvDetailsCache = tvDetailsCacheRef.current;
+    const featuredMovies = featuredMoviesRef.current;
+    const rows = rowsRef.current;
+
+
     if (allMovies.length === 0) return;
     if (syncInProgressRef.current) return;
     syncInProgressRef.current = true;
 
-    // 1. Continue Watching
+    // 1. Parse progress data
     const progressData = JSON.parse(
       localStorage.getItem("nebula-progress") || "{}",
     );
@@ -826,7 +916,6 @@ export function useAppState() {
       }
     }
 
-    const continueWatchingItems: any[] = [];
     const sortedProgressEntries = Object.entries(progressByTitle).sort(
       (a, b) => {
         const tsA = a[1].val?.timestamp ?? 0;
@@ -835,16 +924,96 @@ export function useAppState() {
       },
     );
 
+    // First pass: Find missing media
     const missingMedia: { id: string; type: "movie" | "tv" }[] = [];
 
+    for (const [baseId, { key }] of sortedProgressEntries) {
+      const type = key.includes("-") ? "tv" : "movie";
+      const exists = allMovies.some(
+        (m) =>
+          m &&
+          m.id &&
+          m.id.toString() === baseId &&
+          (m.type || "movie") === type,
+      );
+      if (!exists) {
+        missingMedia.push({ id: baseId, type });
+      }
+    }
+
+    for (const item of myList) {
+      const id = typeof item === "object" && item !== null ? item.id : item;
+      const type =
+        typeof item === "object" && item !== null ? item.type : "movie";
+      const exists = allMovies.some(
+        (m) =>
+          m &&
+          m.id &&
+          m.id.toString() === id.toString() &&
+          (m.type || "movie") === type,
+      );
+      if (!exists) {
+        missingMedia.push({ id: id.toString(), type });
+      }
+    }
+
+    for (const item of history) {
+      const rid = historyRawId(item);
+      const rtype = historyType(item);
+      const exists = allMovies.some(
+        (m) =>
+          m && m.id && m.id.toString() === rid && (m.type || "movie") === rtype,
+      );
+      if (!exists) {
+        missingMedia.push({ id: rid, type: rtype as "movie" | "tv" });
+      }
+    }
+
+    // Fetch missing movies if any — but skip IDs we already tried
+    if (missingMedia.length > 0) {
+      const uniqueMissing = missingMedia.filter(
+        (val, index, self) =>
+          self.findIndex((t) => t.id === val.id && t.type === val.type) ===
+            index && !fetchedMissingIdsRef.current.has(`${val.type}_${val.id}`),
+      );
+      // Mark these as attempted so we don't re-fetch on next cycle
+      uniqueMissing.forEach((m) =>
+        fetchedMissingIdsRef.current.add(`${m.type}_${m.id}`),
+      );
+      if (uniqueMissing.length > 0) {
+        try {
+          const fetched = await Promise.all(
+            uniqueMissing.map(async (item) => {
+              try {
+                return await getMediaBasicInfo(item.id, item.type);
+              } catch {
+                return null;
+              }
+            }),
+          );
+          const valid = fetched.filter(Boolean) as any[];
+          if (valid.length > 0) {
+            updateGlobalPool(valid);
+            allMovies = [...allMovies, ...valid];
+          }
+        } catch (err) {
+          console.error("Failed to fetch missing items in syncUserRows", err);
+        }
+      }
+    }
+
+    // Second pass: Build lists using fully populated allMovies
+    const continueWatchingItems: any[] = [];
     for (const [baseId, { key, val }] of sortedProgressEntries) {
       const type = key.includes("-") ? "tv" : "movie";
-      let movie = allMovies.find(
-        (m) => m.id.toString() === baseId && (m.type || "movie") === type,
+      const movie = allMovies.find(
+        (m) =>
+          m &&
+          m.id &&
+          m.id.toString() === baseId &&
+          (m.type || "movie") === type,
       );
-      if (!movie) {
-        missingMedia.push({ id: baseId, type });
-      } else {
+      if (movie) {
         const isMovie = type === "movie";
         if (isMovie) {
           const isWatched =
@@ -874,31 +1043,32 @@ export function useAppState() {
       }
     }
 
-    // 2. My List
     const myListItems = allMovies
-      .filter((m) =>
-        myList.some((item) => {
-          const id = typeof item === "object" && item !== null ? item.id : item;
-          const type =
-            typeof item === "object" && item !== null ? item.type : "movie";
-          return (
-            id.toString() === m.id.toString() && type === (m.type || "movie")
-          );
-        }),
+      .filter(
+        (m) =>
+          m &&
+          m.id &&
+          myList.some((item) => {
+            const id =
+              typeof item === "object" && item !== null ? item.id : item;
+            const type =
+              typeof item === "object" && item !== null ? item.type : "movie";
+            return (
+              id.toString() === m.id.toString() && type === (m.type || "movie")
+            );
+          }),
       )
       .slice(0, 20);
 
-    // 3. Watch It Again (History)
     const watchItAgainItems: any[] = [];
     for (const item of history) {
       const rid = historyRawId(item);
       const rtype = historyType(item);
-      let movie = allMovies.find(
-        (m) => m.id.toString() === rid && (m.type || "movie") === rtype,
+      const movie = allMovies.find(
+        (m) =>
+          m && m.id && m.id.toString() === rid && (m.type || "movie") === rtype,
       );
-      if (!movie) {
-        missingMedia.push({ id: rid, type: rtype as "movie" | "tv" });
-      } else {
+      if (movie) {
         if (isWatchItAgainItem(movie, progressData, tvDetailsCache)) {
           const progKey = Object.keys(progressData).find((k) =>
             k.startsWith(rid),
@@ -907,38 +1077,6 @@ export function useAppState() {
             ...movie,
             progress: progKey ? progressData[progKey] : null,
           });
-        }
-      }
-    }
-
-    // Fetch missing movies if any — but skip IDs we already tried
-    if (missingMedia.length > 0) {
-      const uniqueMissing = missingMedia.filter(
-        (val, index, self) =>
-          self.findIndex((t) => t.id === val.id && t.type === val.type) ===
-            index && !fetchedMissingIdsRef.current.has(`${val.type}_${val.id}`),
-      );
-      // Mark these as attempted so we don't re-fetch on next cycle
-      uniqueMissing.forEach((m) =>
-        fetchedMissingIdsRef.current.add(`${m.type}_${m.id}`),
-      );
-      if (uniqueMissing.length > 0) {
-        try {
-          const fetched = await Promise.all(
-            uniqueMissing.map(async (item) => {
-              try {
-                return await getMediaBasicInfo(item.id, item.type);
-              } catch {
-                return null;
-              }
-            }),
-          );
-          const valid = fetched.filter(Boolean) as any[];
-          if (valid.length > 0) {
-            updateGlobalPool(valid);
-          }
-        } catch (err) {
-          console.error("Failed to fetch missing items in syncUserRows", err);
         }
       }
     }
@@ -1101,6 +1239,7 @@ export function useAppState() {
     syncInProgressRef.current = false;
 
     setRows((prev) => {
+
       if (prev.length === 0) return prev;
       const staticRowsMap = new Map<string, any>();
       prev.forEach((r) => {
@@ -1192,9 +1331,10 @@ export function useAppState() {
 
       return rebuiltRows;
     });
-  }, [allMovies, history, myList, tvDetailsCache, featuredMovies, rows]);
+  }, [updateGlobalPool]);
 
   const fetchInitialData = async (overrideSeed?: number) => {
+
     // 0. Always clear sessionStorage pagination flags on app boot/refresh
     clearCategoryPageCache();
 
@@ -1252,6 +1392,11 @@ export function useAppState() {
 
           // Return early if cache is very fresh (< 3 hours) AND topTen is hydrated
           if (cacheAge < 1000 * 60 * 60 * 3 && cTopTen) {
+            // Still need to sync personalized rows (My List, Continue Watching) even on cache hit
+            featuredMoviesRef.current = cFeatured;
+            rowsRef.current = cRows;
+            allMoviesRef.current = cAll;
+            await syncUserRows();
             return;
           }
         } else {
@@ -1295,7 +1440,7 @@ export function useAppState() {
       const trending = hardDedupe([...rawTrendingPage1, ...rawTrendingPage2]);
       const pinoyDramas = hardDedupe(pinoyRes || []).slice(0, 24);
 
-      // Fetch basic info for user history & watchlist items in parallel
+      // Hydrate basic info for user history & watchlist items from the cached pool in currentPool
       const historyItems = [...history].reverse().slice(0, 10);
       const myListParsed = myList.slice(0, 20).map((item) => {
         if (typeof item === "object" && item !== null) {
@@ -1309,38 +1454,31 @@ export function useAppState() {
         return { id: str, type: "movie" };
       });
 
-      const [historyBasicInfos, myListBasicInfos] = await Promise.all([
-        Promise.all(
-          historyItems.map(async (hist) => {
-            const hid = historyRawId(hist);
-            const htype = historyType(hist);
-            try {
-              return await getMediaBasicInfo(hid, htype as "movie" | "tv");
-            } catch {
-              return null;
-            }
-          }),
-        ),
-        Promise.all(
-          myListParsed.map(async (item) => {
-            try {
-              return await getMediaBasicInfo(
-                item.id,
-                item.type as "movie" | "tv",
-              );
-            } catch {
-              return null;
-            }
-          }),
-        ),
-      ]);
+      const resolvedHistoryBasicInfos = historyItems
+        .map((hist) => {
+          const hid = historyRawId(hist);
+          const htype = historyType(hist);
+          return currentPool.find(
+            (m) =>
+              m &&
+              m.id &&
+              m.id.toString() === hid &&
+              (m.type || "movie") === htype,
+          );
+        })
+        .filter(Boolean) as any[];
 
-      const resolvedHistoryBasicInfos = historyBasicInfos.filter(
-        Boolean,
-      ) as any[];
-      const resolvedMyListBasicInfos = myListBasicInfos.filter(
-        Boolean,
-      ) as any[];
+      const resolvedMyListBasicInfos = myListParsed
+        .map((item) => {
+          return currentPool.find(
+            (m) =>
+              m &&
+              m.id &&
+              m.id.toString() === item.id &&
+              (m.type || "movie") === item.type,
+          );
+        })
+        .filter(Boolean) as any[];
 
       // Build continue watching and watch it again items
       const progressData = JSON.parse(
@@ -1470,6 +1608,13 @@ export function useAppState() {
           hasLoaded: true,
           isLoading: false,
         });
+      } else if (sortedProgressEntries.length > 0) {
+        initialRows.push({
+          title: "Continue Watching",
+          items: [],
+          hasLoaded: false,
+          isLoading: true,
+        });
       }
 
       // 2. Top in Philippines Row
@@ -1498,6 +1643,13 @@ export function useAppState() {
           items: myListItems,
           hasLoaded: true,
           isLoading: false,
+        });
+      } else if (myListParsed.length > 0) {
+        initialRows.push({
+          title: "My List",
+          items: [],
+          hasLoaded: false,
+          isLoading: true,
         });
       }
 
@@ -1531,6 +1683,13 @@ export function useAppState() {
           items: watchItAgainItems.slice(0, 20),
           hasLoaded: true,
           isLoading: false,
+        });
+      } else if (historyItems.length > 0) {
+        initialRows.push({
+          title: "Watch It Again",
+          items: [],
+          hasLoaded: false,
+          isLoading: true,
         });
       }
 
@@ -1871,7 +2030,12 @@ export function useAppState() {
         ...watchItAgainItems,
       ]);
       setAllMovies(finalPool);
+      featuredMoviesRef.current = enrichedFeatured;
+      rowsRef.current = initialRows;
+      allMoviesRef.current = finalPool;
+
       markInitialPagesAsFetched(initialRows);
+      await syncUserRows();
 
       // 7. Save to Cache for next session
       try {
@@ -1889,6 +2053,7 @@ export function useAppState() {
         localStorage.removeItem("nebula-feed-cache");
       }
     } catch (err) {
+
       console.error("Data acquisition failure", err);
     } finally {
       setIsLoading(false);
@@ -2239,9 +2404,6 @@ export function useAppState() {
     fetchInitialData();
   }, [adultMode]);
 
-  // Sync user-specific rows when history/myList change.
-  // NOTE: allMovies.length is intentionally EXCLUDED from deps to prevent
-  // the loop: syncUserRows → updateGlobalPool → allMovies change → re-trigger.
   useEffect(() => {
     const timer = setTimeout(() => {
       syncUserRows();
@@ -2403,22 +2565,14 @@ export function useAppState() {
     cleanup();
   }, []);
 
-  // Fetch basic metadata for any watch history or myList items missing from the cache pool
+  // Fetch TV details for watched shows (history) and followed shows (myList) in background for tracking new episodes
   useEffect(() => {
     if (allMovies.length === 0) return;
 
-    const fetchMissing = async () => {
-      const missingHistory = history
-        .map((h) => ({
-          id: historyRawId(h),
-          type: historyType(h),
-        }))
-        .filter((item) => {
-          return !allMovies.some(
-            (m) =>
-              m.id.toString() === item.id && (m.type || "movie") === item.type,
-          );
-        });
+    const fetchTvDetailsForUserItems = async () => {
+      const historyTv = history
+        .map((h) => (historyType(h) === "tv" ? historyRawId(h) : null))
+        .filter(Boolean) as string[];
 
       const parseMyListId = (item: any) => {
         if (typeof item === "object" && item !== null) {
@@ -2432,67 +2586,14 @@ export function useAppState() {
         return { id: str, type: "movie" };
       };
 
-      const missingMyList = myList
+      const myListTv = myList
         .map((item) => {
           const parsed = parseMyListId(item);
-          return { id: parsed.id, type: parsed.type };
-        })
-        .filter((item) => {
-          return !allMovies.some(
-            (m) =>
-              m.id.toString() === item.id && (m.type || "movie") === item.type,
-          );
-        });
-
-      const allMissing: { id: string; type: string }[] = [];
-      const seen = new Set<string>();
-
-      [...missingHistory, ...missingMyList].forEach((item) => {
-        const key = `${item.type}_${item.id}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          allMissing.push(item);
-        }
-      });
-
-      if (allMissing.length === 0) return;
-
-      try {
-        const fetched = await Promise.all(
-          allMissing.map(async (item) => {
-            try {
-              return await getMediaBasicInfo(
-                item.id,
-                item.type as "movie" | "tv",
-              );
-            } catch {
-              return null;
-            }
-          }),
-        );
-        const valid = fetched.filter(Boolean) as any[];
-        if (valid.length > 0) {
-          updateGlobalPool(valid);
-        }
-      } catch (err) {
-        console.error("Failed to fetch missing library items", err);
-      }
-    };
-
-    fetchMissing();
-  }, [history, myList, allMovies.length]);
-
-  useEffect(() => {
-    if (allMovies.length === 0) return;
-
-    const fetchHistoryTvDetails = async () => {
-      const tvShows = history
-        .map((h) => {
-          const rid = historyRawId(h);
-          const rtype = historyType(h);
-          return rtype === "tv" ? rid : null;
+          return parsed.type === "tv" ? parsed.id : null;
         })
         .filter(Boolean) as string[];
+
+      const tvShows = Array.from(new Set([...historyTv, ...myListTv]));
 
       for (const id of tvShows) {
         if (tvDetailsCache[id]) continue;
@@ -2507,13 +2608,13 @@ export function useAppState() {
             setTvDetailsCache((prev) => ({ ...prev, [id]: data }));
           }
         } catch (e) {
-          console.error("Failed to fetch TV details for history item", id, e);
+          console.error("Failed to fetch TV details for user item", id, e);
         }
       }
     };
 
-    fetchHistoryTvDetails();
-  }, [history, allMovies.length]);
+    fetchTvDetailsForUserItems();
+  }, [history, myList, allMovies.length]);
 
   // Synchronously flag scroll restoration on popstate (browser back/forward button clicks)
   // before React Router's post-render cycle triggers scroll collapse events
@@ -3074,6 +3175,47 @@ export function useAppState() {
     await fetchInitialData(newSeed);
   };
 
+  const decorateList = useCallback(
+    (list: any[]) => {
+      return list.map((m) =>
+        decorateMovieWithNewEpisode(m, myList, tvDetailsCache),
+      );
+    },
+    [myList, tvDetailsCache],
+  );
+
+  const decoratedRows = useMemo(() => {
+    return rows.map((r) => ({
+      ...r,
+      items: decorateList(r.items),
+    }));
+  }, [rows, decorateList]);
+
+  const decoratedTopTen = useMemo(
+    () => decorateList(topTenMovies),
+    [topTenMovies, decorateList],
+  );
+  const decoratedFeatured = useMemo(
+    () => decorateList(featuredMovies),
+    [featuredMovies, decorateList],
+  );
+  const decoratedSearch = useMemo(
+    () => decorateList(searchResults),
+    [searchResults, decorateList],
+  );
+  const decoratedFiltered = useMemo(
+    () => decorateList(filteredMovies),
+    [filteredMovies, decorateList],
+  );
+  const decoratedRecommendations = useMemo(
+    () => decorateList(recommendations),
+    [recommendations, decorateList],
+  );
+  const decoratedAllMovies = useMemo(
+    () => decorateList(allMovies),
+    [allMovies, decorateList],
+  );
+
   return {
     state: {
       activeTab,
@@ -3094,14 +3236,14 @@ export function useAppState() {
       myList,
       history,
       visibleCount,
-      filteredMovies,
-      searchResults,
+      filteredMovies: decoratedFiltered,
+      searchResults: decoratedSearch,
       searchPeopleResults,
-      recommendations,
-      allMovies,
-      topTenMovies,
-      featuredMovies,
-      rows,
+      recommendations: decoratedRecommendations,
+      allMovies: decoratedAllMovies,
+      topTenMovies: decoratedTopTen,
+      featuredMovies: decoratedFeatured,
+      rows: decoratedRows,
       isTransitioning,
       selectedRegion,
       adultMode,

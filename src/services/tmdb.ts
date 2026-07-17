@@ -830,24 +830,7 @@ export const getMediaBasicInfo = async (
   try {
     const data = await fetchFromTMDB(`/${type}/${id}`, {}, TTL.DETAILS);
     if (!data || data.status_code === 34) return null;
-    const movie = normalizeMovie(data, type);
-
-    // Enrich with single availability check
-    try {
-      const apiBase = getApiBase();
-      const res = await fetch(`${apiBase}/api/stream/availability?ids=${id}`);
-      if (res.ok) {
-        const { results } = await res.json();
-        if (results && results.length > 0) {
-          movie.isVerified = results[0].isVerified;
-          movie.isDead = results[0].isDead;
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-
-    return movie;
+    return normalizeMovie(data, type);
   } catch {
     return null;
   }

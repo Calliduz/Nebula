@@ -122,67 +122,6 @@ export const TopTenShelf = memo(
                       />
                       <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
-
-                      {/* Status Badges Overlay */}
-                      <div className="absolute top-2 left-2 hidden md:flex flex-wrap gap-1 z-40 pointer-events-none">
-                        {/* Quality Badge */}
-                        {movie.quality && (
-                          <div
-                            className={`px-1 sm:px-1.5 py-0.5 rounded-md border backdrop-blur-md ${
-                              movie.quality === "CAM"
-                                ? "bg-slate-950/80 border-amber-500/30"
-                                : movie.quality === "TBA"
-                                  ? "bg-slate-950/80 border-red-500/30"
-                                  : "bg-slate-950/80 border-nebula-cyan/30"
-                            }`}
-                          >
-                            <p
-                              className={`text-[7px] sm:text-[8px] font-black uppercase tracking-wider ${
-                                movie.quality === "CAM"
-                                  ? "text-amber-400"
-                                  : movie.quality === "TBA"
-                                    ? "text-red-400"
-                                    : "text-nebula-cyan"
-                              }`}
-                            >
-                              {movie.quality}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Status Indicator */}
-                        {movie.isVerified ? (
-                          <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-emerald-500/30 backdrop-blur-md flex items-center justify-center sm:gap-1.5">
-                            <span className="relative flex h-1.5 w-1.5 shrink-0">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                            </span>
-                            <span className="hidden sm:inline text-[8px] font-black text-emerald-400 uppercase tracking-wider">
-                              Live
-                            </span>
-                          </div>
-                        ) : movie.isDead ? (
-                          <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-rose-500/30 backdrop-blur-md flex items-center justify-center sm:gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-                            <span className="hidden sm:inline text-[8px] font-black text-rose-400 uppercase tracking-wider">
-                              Dead
-                            </span>
-                          </div>
-                        ) : (
-                          movie.quality !== "CAM" &&
-                          movie.quality !== "TBA" && (
-                            <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-white/20 backdrop-blur-md flex items-center justify-center sm:gap-1.5">
-                              <span className="relative flex h-1.5 w-1.5 shrink-0">
-                                <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
-                              </span>
-                              <span className="hidden sm:inline text-[8px] font-black text-white/50 uppercase tracking-wider">
-                                Scan
-                              </span>
-                            </div>
-                          )
-                        )}
-                      </div>
                     </div>
                   </div>
                 ))}

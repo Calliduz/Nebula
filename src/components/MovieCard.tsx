@@ -82,131 +82,12 @@ export const MovieCard = memo<MovieCardProps>(
             loading="lazy"
           />
 
-          <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />
-          <div
-            className={`absolute inset-0 bg-gradient-to-t ${
-              hasProgress
-                ? "from-obsidian via-obsidian/50 to-transparent opacity-95"
-                : "from-obsidian via-transparent to-transparent opacity-0 sm:opacity-90"
-            } pointer-events-none z-10`}
-          />
-
-          {/* Info Overlay (Persistent) */}
-          <div className="absolute top-3 left-3 right-3 z-30 flex justify-between items-start">
-            <div className="hidden md:flex flex-col gap-1.5">
-              {isLandscape && (
-                <div className="px-2 py-0.5 rounded-md bg-nebula-cyan/20 border border-nebula-cyan/30 backdrop-blur-md w-fit">
-                  <p className="text-[8px] font-black text-nebula-cyan uppercase tracking-widest italic">
-                    Series
-                  </p>
-                </div>
-              )}
-
-              {/* Status Badges */}
-              <div className="flex flex-wrap gap-1.5 md:gap-2">
-                {/* Quality Badge */}
-                {movie.quality && (
-                  <div
-                    className={`px-1 md:px-2 py-0.5 rounded-md border backdrop-blur-md w-fit ${
-                      movie.quality === "CAM"
-                        ? "bg-slate-950/80 border-amber-500/30"
-                        : movie.quality === "TBA"
-                          ? "bg-slate-950/80 border-red-500/30"
-                          : "bg-slate-950/80 border-nebula-cyan/30"
-                    }`}
-                  >
-                    <p
-                      className={`text-[7px] md:text-[10px] font-black uppercase tracking-wider ${
-                        movie.quality === "CAM"
-                          ? "text-amber-400"
-                          : movie.quality === "TBA"
-                            ? "text-red-400"
-                            : "text-nebula-cyan"
-                      }`}
-                    >
-                      {movie.quality}
-                    </p>
-                  </div>
-                )}
-
-                {/* Availability Badge */}
-                {movie.isVerified ? (
-                  <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-emerald-500/30 backdrop-blur-md w-fit flex items-center justify-center sm:gap-1">
-                    <span className="relative flex h-1.5 w-1.5 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                    </span>
-                    <span className="hidden sm:inline text-[10px] font-black text-emerald-400 uppercase tracking-wider">
-                      Live
-                    </span>
-                  </div>
-                ) : movie.isDead ? (
-                  <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-rose-500/30 backdrop-blur-md w-fit flex items-center justify-center sm:gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-                    <span className="hidden sm:inline text-[10px] font-black text-rose-400 uppercase tracking-wider">
-                      Dead
-                    </span>
-                  </div>
-                ) : (
-                  movie.quality !== "CAM" &&
-                  movie.quality !== "TBA" && (
-                    <div className="p-1 sm:px-1.5 sm:py-0.5 rounded-md bg-slate-950/80 border border-white/20 backdrop-blur-md w-fit flex items-center justify-center sm:gap-1">
-                      <span className="relative flex h-1.5 w-1.5 shrink-0">
-                        <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40" />
-                      </span>
-                      <span className="hidden sm:inline text-[10px] font-black text-white/55 uppercase tracking-wider">
-                        Scan
-                      </span>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-
-            {onRemove && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove();
-                }}
-                className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-red-500/50 hover:border-red-500/50 transition-all ml-auto"
-              >
-                <span className="text-xs font-black">×</span>
-              </button>
-            )}
-          </div>
-
-          <div className="absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 group-hover/card:bottom-6">
-            <div className="mb-2 hidden md:block">
-              {movie.clearLogo ? (
-                <img
-                  src={movie.clearLogo}
-                  alt={movie.title}
-                  height="40"
-                  className="h-10 w-auto object-contain object-left drop-shadow-2xl transition-transform duration-300 group-hover/card:scale-110 origin-left"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <p className="text-[18px] font-bold leading-tight drop-shadow-lg truncate group-hover/card:text-nebula-cyan transition-colors">
-                  {movie.title}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <p className="hidden sm:block text-[9px] text-white/40 font-extrabold uppercase tracking-[0.2em] px-1.5 py-0.5 rounded bg-white/[0.04] backdrop-blur-sm border border-white/[0.05] w-fit">
-                {movie.genre.split(", ")[0]}
-              </p>
-              <div className="w-1 h-1 rounded-full bg-white/10 opacity-0 group-hover/card:opacity-100 transition-opacity" />
-              <span className="text-[9px] font-bold text-nebula-cyan/0 group-hover/card:text-nebula-cyan/80 uppercase tracking-widest transition-all duration-300 translate-x-[-4px] group-hover/card:translate-x-0">
-                Open Dossier
-              </span>
-            </div>
-          </div>
-
           {/* Progress Bar for Continue Watching — Netflix-style */}
           {hasProgress && (
-            <div className="absolute bottom-0 inset-x-0 z-30 w-full flex flex-col pointer-events-none">
+            <div
+              className="absolute inset-x-0 z-30 w-full flex flex-col pointer-events-none transition-all duration-300"
+              style={{ bottom: movie.hasNewEpisode ? "20px" : "0px" }}
+            >
               {/* Watched badge */}
               {pct >= 95 && (
                 <div className="flex items-center gap-1 mb-2 px-3">
@@ -242,6 +123,13 @@ export const MovieCard = memo<MovieCardProps>(
             </div>
           )}
 
+          {/* New Episode Tag (Sleek integrated full-width bottom banner) */}
+          {movie.hasNewEpisode && (
+            <div className="absolute bottom-0 inset-x-0 bg-nebula-cyan text-obsidian font-black uppercase text-[8px] sm:text-[9px] py-1 text-center tracking-widest select-none z-30 shadow-[0_-2px_10px_rgba(0,229,255,0.25)] border-t border-nebula-cyan/30">
+              New Episode
+            </div>
+          )}
+
           {/* Subtle Glow Sign */}
           <div className="absolute inset-0 opacity-0 group-hover/card:opacity-10 transition-opacity duration-500 bg-nebula-cyan pointer-events-none" />
         </div>
@@ -263,6 +151,7 @@ export const MovieCard = memo<MovieCardProps>(
       prevProps.movie?.quality === nextProps.movie?.quality &&
       prevProps.movie?.isVerified === nextProps.movie?.isVerified &&
       prevProps.movie?.isDead === nextProps.movie?.isDead &&
+      prevProps.movie?.hasNewEpisode === nextProps.movie?.hasNewEpisode &&
       prevProps.movie?.clearLogo === nextProps.movie?.clearLogo &&
       prevProps.movie?.genre === nextProps.movie?.genre &&
       JSON.stringify(prevProps.movie?.progress) ===
