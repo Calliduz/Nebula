@@ -132,6 +132,8 @@ export interface NebulaMovie {
   isVerified?: boolean;
   isDead?: boolean;
   adult?: boolean;
+  progress?: any;
+  hasNewEpisode?: boolean;
 }
 
 import { API_BASE_URL } from "../config";
