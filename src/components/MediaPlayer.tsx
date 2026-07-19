@@ -517,6 +517,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (name.includes("filmu")) return "FilmU";
     if (name.includes("vidnest")) return "Vidnest";
     if (name.includes("vaplayer")) return "Vaplayer";
+    if (name.includes("vidrift")) return "Vidrift";
     return "VidLink";
   }, []);
 
@@ -546,6 +547,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "Vaplayer") {
           fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "Vidrift") {
+          fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else {
@@ -618,6 +623,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             type: v.type || "hls",
             quality: (v as any).quality || "Auto",
           }));
+      } else if (category === "Vidrift") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("vidrift")
+              ? name
+              : `Vidrift (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            quality: (v as any).quality || "Auto",
+          }));
       } else {
         // VidLink
         const results = Array.isArray(data) ? data : data.results || [];
@@ -646,6 +662,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     "VidRock",
     "Vaplayer",
     "Videasy",
+    "Vidrift",
     "Vidnest",
     "FilmU",
     "VidLink",
@@ -1073,6 +1090,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isVaplayer = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("vaplayer"),
           );
+          const isVidrift = processedMirrors.some((m) =>
+            m.source.toLowerCase().startsWith("vidrift"),
+          );
 
           let dataPromise: Promise<any>;
           if (isVideasy) {
@@ -1098,6 +1118,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             } else if (isVaplayer) {
               fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}`;
+              if (season !== undefined) fetchUrl += `&season=${season}`;
+              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            } else if (isVidrift) {
+              fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}`;
               if (season !== undefined) fetchUrl += `&season=${season}`;
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             }
@@ -1167,6 +1191,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       source: name.toLowerCase().startsWith("vaplayer")
                         ? name
                         : `Vaplayer (${name})`,
+                      url: v.url,
+                      type: v.type || "hls",
+                      quality: (v as any).quality || "Auto",
+                    }));
+                } else if (isVidrift) {
+                  updatedMirrors = Object.entries(data)
+                    .filter(([_, v]: any) => v && v.url)
+                    .map(([name, v]: any) => ({
+                      source: name.toLowerCase().startsWith("vidrift")
+                        ? name
+                        : `Vidrift (${name})`,
                       url: v.url,
                       type: v.type || "hls",
                       quality: (v as any).quality || "Auto",
@@ -4885,6 +4920,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         if (s === "vidrock") return "VidRock";
                         if (s === "vidnest") return "VidNest";
                         if (s === "vaplayer") return "VAPlayer";
+                        if (s === "vidrift") return "Vidrift";
                         if (s === "filmu") return "FilmU";
                         if (s === "vidlink") return "VidLink";
                         if (s === "videasy") return "Videasy";
@@ -5320,6 +5356,10 @@ export function InPlayerSourcePicker({
   const [vaplayerLoading, setVaplayerLoading] = useState(true);
   const [vaplayerError, setVaplayerError] = useState("");
 
+  const [vidriftSources, setVidriftSources] = useState<any[]>([]);
+  const [vidriftLoading, setVidriftLoading] = useState(true);
+  const [vidriftError, setVidriftError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -5332,9 +5372,10 @@ export function InPlayerSourcePicker({
         videasyLoading ||
         filmuLoading ||
         vidnestLoading ||
-        vaplayerLoading,
+        vaplayerLoading ||
+        vidriftLoading,
     );
-  }, [loading, videasyLoading, filmuLoading, vidnestLoading, vaplayerLoading]);
+  }, [loading, videasyLoading, filmuLoading, vidnestLoading, vaplayerLoading, vidriftLoading]);
 
   const fetchSources = useCallback(
     (force = false, isBackground = false) => {
@@ -5349,6 +5390,8 @@ export function InPlayerSourcePicker({
         setVidnestError("");
         setVaplayerLoading(true);
         setVaplayerError("");
+        setVidriftLoading(true);
+        setVidriftError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -5495,7 +5538,36 @@ export function InPlayerSourcePicker({
           if (!isBackground) setVaplayerLoading(false);
         });
 
-      return Promise.all([pVidrock, pVideasy, pFilmu, pVidnest, pVaplayer]);
+      // 6. Vidrift Fetch
+      let vidriftUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+      if (season !== undefined) vidriftUrl += `&season=${season}`;
+      if (episode !== undefined) vidriftUrl += `&episode=${episode}`;
+
+      const pVidrift = fetch(vidriftUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Vidrift scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+          setVidriftSources(list);
+          if (!isBackground) setVidriftError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setVidriftError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setVidriftLoading(false);
+        });
+
+      return Promise.all([pVidrock, pVideasy, pFilmu, pVidnest, pVaplayer, pVidrift]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
   );
@@ -5557,6 +5629,13 @@ export function InPlayerSourcePicker({
         : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
     )
     .join("|");
+  const vidriftUrl = vidriftSources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
 
   const getButtonClass = (
     srcName: string,
@@ -5574,6 +5653,8 @@ export function InPlayerSourcePicker({
         return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
       if (srcName === "Vaplayer")
         return "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default";
+      if (srcName === "Vidrift")
+        return "border-fuchsia-500 bg-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.12)] ring-1 ring-fuchsia-500/35 scale-[1.01] cursor-default";
       if (srcName === "FilmU")
         return "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default";
       if (srcName === "VidLink")
@@ -5597,6 +5678,8 @@ export function InPlayerSourcePicker({
         return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
       if (srcName === "Vaplayer")
         return "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "Vidrift")
+        return "border-fuchsia-500/35 bg-fuchsia-500/5 hover:bg-fuchsia-500/10 active:scale-95 cursor-pointer";
       if (srcName === "FilmU")
         return "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer";
       if (srcName === "VidLink")
@@ -5827,6 +5910,77 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase font-medium">
               {videasyError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Vidrift */}
+      <button
+        onClick={() =>
+          (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
+          onSelect(vidriftUrl)
+        }
+        disabled={
+          activeSource === "Vidrift" ||
+          (vidriftLoading && !failedSources.includes("Vidrift"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Vidrift",
+          activeSource || "",
+          vidriftLoading,
+          vidriftSources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 shrink-0">
+              {vidriftLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Tv size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Vidrift
+                </p>
+                {failedSources.includes("Vidrift") && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {vidriftLoading ? "Scanning..." : "Active"}
+              </p>
+            </div>
+          </div>
+          {activeSource === "Vidrift" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {vidriftLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running direct scan...
+            </span>
+          ) : vidriftSources.length > 0 ? (
+            vidriftSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-500/20 text-fuchsia-400/80 bg-fuchsia-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Vidrift[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {vidriftError || "No mirrors"}
             </span>
           )}
         </div>
