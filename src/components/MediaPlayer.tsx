@@ -313,7 +313,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     message: string;
     type: "error" | "info";
   } | null>(null);
-  const [failedMirrors, setFailedMirrors] = useState<Record<number, string>>(
+  const [failedMirrors, setFailedMirrors] = useState<Record<string, string>>(
     {},
   );
   const failedSourcesRef = useRef<Set<string>>(new Set());
@@ -425,7 +425,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     activeMirrorRef.current = index;
     setFailedMirrors((prev) => {
       const next = { ...prev };
-      delete next[index];
+      delete next[m.source];
       return next;
     });
     setStreamUrl(m.url);
@@ -1860,7 +1860,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             reportDeadMirror(failingMirror.url);
           }
           if (nextIdx < mirrorsRef.current.length) {
-            setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "SHORT" }));
+            if (failingMirror) {
+              setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "SHORT" }));
+            }
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             setError("Short/restricted video on all mirrors.");
@@ -2016,7 +2018,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               reportDeadMirror(failingMirror.url);
             }
             if (nextIdx < mirrorsRef.current.length) {
-              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "SHORT" }));
+              if (failingMirror) {
+                setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "SHORT" }));
+              }
               hls.destroy();
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
@@ -2088,10 +2092,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             reportDeadMirror(failingMirror.url);
           }
           if (nextIdx < mirrorsRef.current.length) {
-            setFailedMirrors((prev) => ({
-              ...prev,
-              [failingIdx]: String(statusCode),
-            }));
+            if (failingMirror) {
+              setFailedMirrors((prev) => ({
+                ...prev,
+                [failingMirror.source]: String(statusCode),
+              }));
+            }
             console.log(
               `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
             );
@@ -2120,10 +2126,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             reportDeadMirror(failingMirror.url);
           }
           if (nextIdx < mirrorsRef.current.length) {
-            setFailedMirrors((prev) => ({
-              ...prev,
-              [failingIdx]: statusCode ? String(statusCode) : "LOAD_ERR",
-            }));
+            if (failingMirror) {
+              setFailedMirrors((prev) => ({
+                ...prev,
+                [failingMirror.source]: statusCode ? String(statusCode) : "LOAD_ERR",
+              }));
+            }
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             handleMirrorExhaustion(
@@ -2154,10 +2162,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 reportDeadMirror(failingMirror.url);
               }
               if (nextIdx < mirrorsRef.current.length) {
-                setFailedMirrors((prev) => ({
-                  ...prev,
-                  [failingIdx]: lastFragErrorStatus || "502/404",
-                }));
+                if (failingMirror) {
+                  setFailedMirrors((prev) => ({
+                    ...prev,
+                    [failingMirror.source]: lastFragErrorStatus || "502/404",
+                  }));
+                }
                 selectMirror(nextIdx, mirrorsRef.current);
               } else {
                 handleMirrorExhaustion(
@@ -2191,10 +2201,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               reportDeadMirror(failingMirror.url);
             }
             if (nextIdx < mirrorsRef.current.length) {
-              setFailedMirrors((prev) => ({
-                ...prev,
-                [failingIdx]: "TIMEOUT",
-              }));
+              if (failingMirror) {
+                setFailedMirrors((prev) => ({
+                  ...prev,
+                  [failingMirror.source]: "TIMEOUT",
+                }));
+              }
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
               handleMirrorExhaustion(
@@ -2240,10 +2252,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
               const failingIdx = activeMirrorRef.current;
-              setFailedMirrors((prev) => ({
-                ...prev,
-                [failingIdx]: "502/504",
-              }));
+              const failingMirror = mirrorsRef.current[failingIdx];
+              if (failingMirror) {
+                setFailedMirrors((prev) => ({
+                  ...prev,
+                  [failingMirror.source]: "502/504",
+                }));
+              }
               console.log(
                 `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
               );
@@ -2272,7 +2287,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
               const failingIdx = activeMirrorRef.current;
-              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "DECODE" }));
+              const failingMirror = mirrorsRef.current[failingIdx];
+              if (failingMirror) {
+                setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "DECODE" }));
+              }
               console.log(
                 `[HLS] Media recovery failed. Switching to mirror ${nextIdx}...`,
               );
@@ -2689,10 +2707,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const nextIdx = activeMirrorRef.current + 1;
           if (nextIdx < mirrorsRef.current.length) {
             const failingIdx = activeMirrorRef.current;
-            setFailedMirrors((prev) => ({
-              ...prev,
-              [failingIdx]: `CODE:${err.code}`,
-            }));
+            const failingMirror = mirrorsRef.current[failingIdx];
+            if (failingMirror) {
+              setFailedMirrors((prev) => ({
+                ...prev,
+                [failingMirror.source]: `CODE:${err.code}`,
+              }));
+            }
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             handleMirrorExhaustion(
@@ -2756,7 +2777,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = activeMirrorRef.current + 1;
             if (nextIdx < mirrorsRef.current.length) {
               const failingIdx = activeMirrorRef.current;
-              setFailedMirrors((prev) => ({ ...prev, [failingIdx]: "STUCK" }));
+              const failingMirror = mirrorsRef.current[failingIdx];
+              if (failingMirror) {
+                setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "STUCK" }));
+              }
               selectMirror(nextIdx, mirrorsRef.current);
             }
             stallCount = 0;
@@ -4167,7 +4191,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                     const countryCode =
                                       flagCode === "en" ? "us" : flagCode;
                                     const isSelected = activeMirror === idx;
-                                    const failedReason = failedMirrors[idx];
+                                    const failedReason = failedMirrors[m.source];
                                     return (
                                       <button
                                         key={idx}
