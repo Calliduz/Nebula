@@ -1406,7 +1406,36 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const grouped = groupMirrors(processedMirrors);
           setMirrors(grouped);
           mirrorsRef.current = grouped;
-          selectMirror(0, grouped);
+          
+          let startIndex = 0;
+          try {
+            const preferred = localStorage.getItem("nebula-preferred-source");
+            if (preferred) {
+              let matchIdx = grouped.findIndex((m) => m.source === preferred);
+              if (matchIdx === -1) {
+                const { name: prefServerName } = parseMirrorDetails(preferred);
+                const cleanPrefServer = prefServerName.toLowerCase();
+                if (
+                  cleanPrefServer &&
+                  cleanPrefServer !== "original" &&
+                  cleanPrefServer !== "mirror"
+                ) {
+                  matchIdx = grouped.findIndex((m) => {
+                    const { name: mServerName } = parseMirrorDetails(m.source);
+                    const cleanMServer = mServerName.toLowerCase();
+                    return (
+                      cleanMServer.includes(cleanPrefServer) ||
+                      cleanPrefServer.includes(cleanMServer)
+                    );
+                  });
+                }
+              }
+              if (matchIdx !== -1) {
+                startIndex = matchIdx;
+              }
+            }
+          } catch (e) {}
+          selectMirror(startIndex, grouped);
 
           if (data.qualityTag) setQualityTag(data.qualityTag);
           if (data.resolution) setResolution(data.resolution);
@@ -4437,6 +4466,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       </div>
 
                       {(() => {
+                        const activeM = mirrors[activeMirror];
+                        const activeCategory = activeM
+                          ? parseMirrorDetails(activeM.source).category
+                          : "";
+
                         const groupedByCategory: Record<
                           string,
                           { mirror: any; originalIndex: number }[]
@@ -4445,6 +4479,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           const { category, name } = parseMirrorDetails(
                             m.source,
                           );
+                          if (activeCategory && category !== activeCategory) {
+                            return; // Only show mirrors of the active source category
+                          }
                           if (!groupedByCategory[category]) {
                             groupedByCategory[category] = [];
                           }
