@@ -662,25 +662,39 @@ export function rotateItems<T>(arr: T[], seed?: number): T[] {
 function decorateMovieWithNewEpisode(
   m: NebulaMovie,
   myList: any[],
+  history: any[],
   tvDetailsCache: Record<string, any>,
+  progressData: Record<string, any>,
 ): NebulaMovie {
   if (!m) return m;
   const isTv = m.type === "tv";
   if (!isTv) return m;
 
-  const isFollowed = myList.some((item: any) => {
-    if (typeof item === "object" && item !== null) {
-      return item.id.toString() === m.id.toString() && item.type === "tv";
-    }
-    const str = String(item);
-    if (str.includes("_")) {
-      const parts = str.split("_");
-      return parts[1] === m.id.toString() && parts[0] === "tv";
-    }
-    return false;
-  });
+  const isFollowedOrWatched =
+    myList.some((item: any) => {
+      if (typeof item === "object" && item !== null) {
+        return item.id.toString() === m.id.toString() && item.type === "tv";
+      }
+      const str = String(item);
+      if (str.includes("_")) {
+        const parts = str.split("_");
+        return parts[1] === m.id.toString() && parts[0] === "tv";
+      }
+      return false;
+    }) ||
+    history.some((item: any) => {
+      if (typeof item === "object" && item !== null) {
+        return item.id.toString() === m.id.toString() && item.type === "tv";
+      }
+      const str = String(item);
+      if (str.includes("_")) {
+        const parts = str.split("_");
+        return parts[1] === m.id.toString() && parts[0] === "tv";
+      }
+      return false;
+    });
 
-  if (!isFollowed) return m;
+  if (!isFollowedOrWatched) return m;
 
   const details = tvDetailsCache[m.id.toString()];
   let isNewEpisode = false;
@@ -691,7 +705,20 @@ function decorateMovieWithNewEpisode(
       const now = new Date();
       const diffTime = now.getTime() - airDate.getTime();
       const diffDays = diffTime / (1000 * 60 * 60 * 24);
-      isNewEpisode = diffDays >= 0 && diffDays <= 7;
+      const airedRecently = diffDays >= 0 && diffDays <= 7;
+
+      if (airedRecently) {
+        // Netflix-style check: has the user watched the latest aired episode?
+        const epKey = `${m.id}-S${lastEp.season_number}E${lastEp.episode_number}`;
+        const epProg = progressData[epKey];
+        const epPct =
+          epProg && epProg.duration > 0
+            ? Math.min(100, (epProg.time / epProg.duration) * 100)
+            : 0;
+        const hasWatchedLastEp = (epProg && epProg.watched) || epPct >= 90;
+
+        isNewEpisode = !hasWatchedLastEp;
+      }
     }
   }
 
@@ -3231,7 +3258,9 @@ export function useAppState() {
         const decorated = decorateMovieWithNewEpisode(
           m,
           myList,
+          history,
           tvDetailsCache,
+          progressData,
         );
         if (decorated.progress) return decorated;
 
@@ -3261,7 +3290,7 @@ export function useAppState() {
         };
       });
     },
-    [myList, tvDetailsCache],
+    [myList, history, tvDetailsCache],
   );
 
   const decoratedRows = useMemo(() => {

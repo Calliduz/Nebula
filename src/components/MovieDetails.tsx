@@ -1927,21 +1927,49 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       ? ["Episodes", "Downloads", "Overview", "Trailers & Extras"]
       : ["Overview", "Downloads", "Trailers & Extras"];
 
-  // Dynamically determine if the series has a new episode (aired in the last 7 days) and is followed (isInList is true)
+  // Dynamically determine if the series has a new episode (aired in the last 7 days), is followed/in history, and has not been watched yet
   const hasNewEpisode = (() => {
     if (!movie || movie.type !== "tv") return false;
-    if (movie.hasNewEpisode) return true;
-    if (isInList && tvDetails) {
-      const lastEp = tvDetails.last_episode_to_air;
-      if (lastEp && lastEp.air_date) {
-        const airDate = new Date(lastEp.air_date);
-        const now = new Date();
-        const diffTime = now.getTime() - airDate.getTime();
-        const diffDays = diffTime / (1000 * 60 * 60 * 24);
-        return diffDays >= 0 && diffDays <= 7;
+
+    const lastEp = tvDetails?.last_episode_to_air;
+    if (lastEp && lastEp.air_date) {
+      const airDate = new Date(lastEp.air_date);
+      const now = new Date();
+      const diffTime = now.getTime() - airDate.getTime();
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      const airedRecently = diffDays >= 0 && diffDays <= 7;
+
+      if (airedRecently) {
+        // Read history from localStorage
+        const history = JSON.parse(localStorage.getItem("nebula-history") || "[]");
+        const isInHistory = history.some((item: any) => {
+          if (typeof item === "object" && item !== null) {
+            return item.id.toString() === movie.id.toString() && item.type === "tv";
+          }
+          const str = String(item);
+          if (str.includes("_")) {
+            const parts = str.split("_");
+            return parts[1] === movie.id.toString() && parts[0] === "tv";
+          }
+          return false;
+        });
+
+        if (isInList || isInHistory) {
+          const epProgressData = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+          const epKey = `${movie.id}-S${lastEp.season_number}E${lastEp.episode_number}`;
+          const epProg = epProgressData[epKey];
+          const epPct =
+            epProg && epProg.duration > 0
+              ? Math.min(100, (epProg.time / epProg.duration) * 100)
+              : 0;
+          const hasWatchedLastEp = (epProg && epProg.watched) || epPct >= 90;
+
+          return !hasWatchedLastEp;
+        }
       }
     }
-    return false;
+
+    return !!movie.hasNewEpisode;
   })();
 
   const logoTitle =
