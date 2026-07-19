@@ -99,12 +99,11 @@ export const MovieCard = memo<MovieCardProps>(
           {/* Progress Bar for Continue Watching — Netflix-style */}
           {hasProgress && (
             <div
-              className="absolute inset-x-0 z-30 w-full flex flex-col pointer-events-none transition-all duration-300"
-              style={{ bottom: movie.hasNewEpisode ? "20px" : "0px" }}
+              className="absolute inset-x-0 bottom-0 z-40 w-full flex flex-col pointer-events-none transition-all duration-300"
             >
               {/* Watched badge */}
               {pct >= 95 && (
-                <div className="flex items-center gap-1 mb-2 px-3">
+                <div className="flex items-center gap-1.5 mb-2 mx-2 px-2 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 w-fit">
                   <div className="w-3.5 h-3.5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
                     <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
                       <path
@@ -116,7 +115,7 @@ export const MovieCard = memo<MovieCardProps>(
                       />
                     </svg>
                   </div>
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/50">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/70">
                     Watched
                   </span>
                 </div>

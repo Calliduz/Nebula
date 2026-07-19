@@ -3195,9 +3195,40 @@ export function useAppState() {
 
   const decorateList = useCallback(
     (list: any[]) => {
-      return list.map((m) =>
-        decorateMovieWithNewEpisode(m, myList, tvDetailsCache),
+      if (!list) return [];
+      const progressData = JSON.parse(
+        localStorage.getItem("nebula-progress") || "{}",
       );
+      return list.map((m) => {
+        if (!m) return m;
+        const decorated = decorateMovieWithNewEpisode(m, myList, tvDetailsCache);
+        if (decorated.progress) return decorated;
+
+        const isTv = decorated.type === "tv";
+        let progress = null;
+        if (isTv) {
+          let latestProgress = null;
+          let latestTs = -1;
+          const prefix = `${decorated.id}-S`;
+          for (const [k, v] of Object.entries(progressData)) {
+            if (k.startsWith(prefix) && typeof v === "object" && v !== null) {
+              const ts = (v as any).timestamp ?? 0;
+              if (ts > latestTs) {
+                latestTs = ts;
+                latestProgress = v;
+              }
+            }
+          }
+          progress = latestProgress;
+        } else {
+          progress = progressData[decorated.id.toString()] || null;
+        }
+
+        return {
+          ...decorated,
+          progress,
+        };
+      });
     },
     [myList, tvDetailsCache],
   );

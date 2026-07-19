@@ -297,6 +297,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [fetchingSubtitles, setFetchingSubtitles] = useState(false);
   const [showEpisodeDrawer, setShowEpisodeDrawer] = useState(false);
   const [tvDetails, setTvDetails] = useState<any>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const touchStartDistRef = useRef<number | null>(null);
+  const isPinchActiveRef = useRef(false);
   // Source selection triggered from Next/episode drawer
   const [sourceSelect, setSourceSelect] = useState<{
     season: number;
@@ -907,6 +910,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   useEffect(() => {
     hasReportedSuccess.current = false;
+    setIsZoomed(false);
   }, [movie.id, season, episode]);
 
   useEffect(() => {
@@ -2960,6 +2964,56 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     [handleTap],
   );
 
+  const handlePlayerTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDistRef.current = Math.hypot(dx, dy);
+      isPinchActiveRef.current = true;
+    }
+  }, []);
+
+  const handlePlayerTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2 && touchStartDistRef.current !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const diff = dist - touchStartDistRef.current;
+
+      if (Math.abs(diff) > 40) {
+        if (diff > 0) {
+          setIsZoomed((z) => {
+            if (!z) {
+              showToast("Zoomed to Fill", "info");
+              return true;
+            }
+            return z;
+          });
+        } else {
+          setIsZoomed((z) => {
+            if (z) {
+              showToast("Fit to Screen", "info");
+              return false;
+            }
+            return z;
+          });
+        }
+        touchStartDistRef.current = dist;
+      }
+    }
+  }, [showToast]);
+
+  const handlePlayerTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    touchStartDistRef.current = null;
+    if (isPinchActiveRef.current) {
+      if (e.touches.length === 0) {
+        isPinchActiveRef.current = false;
+      }
+      return;
+    }
+    handleTouchEnd(e);
+  }, [handleTouchEnd]);
+
   useEffect(() => {
     resetHideTimer();
     // Only reset the hide timer for real mouse/pen movement.
@@ -3546,7 +3600,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         <>
           <video
             ref={videoRef}
-            className="w-full h-full object-contain"
+            className={`w-full h-full ${isZoomed ? "object-cover" : "object-contain"} transition-[object-fit] duration-300`}
             playsInline
             crossOrigin="anonymous"
           >
@@ -3592,12 +3646,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           className="absolute inset-0 z-10"
           style={{ cursor: showUi ? "default" : "none" }}
           onClick={handleDesktopClick}
-          onTouchEnd={handleTouchEnd}
+          onTouchStart={handlePlayerTouchStart}
+          onTouchMove={handlePlayerTouchMove}
+          onTouchEnd={handlePlayerTouchEnd}
           onPointerDown={(e) => {
             // Only trigger long-press on primary pointer (finger / left click)
             if (e.button !== undefined && e.button !== 0) return;
+            if (isPinchActiveRef.current) {
+              if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current);
+                longPressTimer.current = null;
+              }
+              return;
+            }
             if (longPressTimer.current) clearTimeout(longPressTimer.current);
             longPressTimer.current = setTimeout(() => {
+              if (isPinchActiveRef.current) return;
               isLongPressing.current = true;
               const v = videoRef.current;
               if (v) v.playbackRate = 2;
@@ -4385,6 +4449,50 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     title="Settings"
                   >
                     <Settings size={16} />
+                  </button>
+
+                  {/* Zoom Fit */}
+                  <button
+                    onClick={() => {
+                      setIsZoomed((z) => {
+                        const next = !z;
+                        showToast(next ? "Zoomed to Fill" : "Fit to Screen", "info");
+                        return next;
+                      });
+                    }}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
+                      isZoomed
+                        ? "bg-nebula-cyan text-obsidian font-black shadow-[0_0_10px_rgba(0,229,255,0.4)]"
+                        : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20"
+                    }`}
+                    title={isZoomed ? "Fit to Screen" : "Zoom to Fill"}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {isZoomed ? (
+                        <>
+                          <rect x="2" y="4" width="20" height="16" rx="2" strokeDasharray="3 3" opacity="0.6" />
+                          <path d="M12 7v10" />
+                          <path d="M9 10l3 3 3-3" />
+                          <path d="M9 14l3-3 3 3" />
+                        </>
+                      ) : (
+                        <>
+                          <rect x="2" y="4" width="20" height="16" rx="2" />
+                          <path d="M12 7v10" />
+                          <path d="M9 10l3-3 3 3" />
+                          <path d="M9 14l3 3 3-3" />
+                        </>
+                      )}
+                    </svg>
                   </button>
                 </>
               )}
