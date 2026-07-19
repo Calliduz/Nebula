@@ -6750,7 +6750,6 @@ export function InPlayerSourcePicker({
           )}
         </div>
       </button>
-    </div>
 
 {/* Peachify */}
       <button

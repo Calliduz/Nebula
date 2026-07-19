@@ -1555,7 +1555,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               )}
             </div>
           </div>
-        </div></div>
+        </div>
       </motion.div>
     </div>
   );
