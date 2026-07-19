@@ -223,7 +223,13 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                 </button>
               )}
             </div>
-            {(allMovies || []).length > 0 && myList.length > 0 ? (
+            {isLoading && myList.length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
+                {[...Array(Math.min(myList.length, 18))].map((_, i) => (
+                  <MovieSkeleton key={`sk-lib-my-${i}`} isGrid={true} />
+                ))}
+              </div>
+            ) : (allMovies || []).length > 0 && myList.length > 0 ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
                 {(allMovies || [])
                   .filter((m) =>
@@ -287,7 +293,13 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                 </button>
               )}
             </div>
-            {(allMovies || []).length > 0 && history.length > 0 ? (
+            {isLoading && history.length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
+                {[...Array(Math.min(history.length, 18))].map((_, i) => (
+                  <MovieSkeleton key={`sk-lib-hist-${i}`} isGrid={true} />
+                ))}
+              </div>
+            ) : (allMovies || []).length > 0 && history.length > 0 ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
                 {history
                   .slice()
