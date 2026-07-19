@@ -177,11 +177,11 @@ export const CATEGORY_PRIORITY = [
   "VidRock",
   "Vaplayer",
   "Vidrift",
-  "Peachify",
   "Videasy",
   "VidLink",
   "Vidnest",
   "FilmU",
+  "Peachify",
 ];
 
 export const getMirrorPriority = (sourceName: string) => {
@@ -767,11 +767,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     "VidRock",
     "Vaplayer",
     "Vidrift",
-    "Peachify",
     "Videasy",
     "VidLink",
     "Vidnest",
     "FilmU",
+    "Peachify",
   ];
 
   const switchToNextSource = useCallback(async () => {
@@ -6270,7 +6270,7 @@ export function InPlayerSourcePicker({
 
   return (
     <div className="flex flex-col gap-2 p-1 overflow-y-auto max-h-[45vh] custom-scrollbar">
-      {/* VidRock */}
+{/* VidRock */}
       <button
         onClick={() =>
           (sources.length > 0 || failedSources.includes("VidRock")) &&
@@ -6342,7 +6342,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Vaplayer */}
+{/* Vaplayer */}
       <button
         onClick={() =>
           (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) &&
@@ -6413,7 +6413,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Vidrift */}
+{/* Vidrift */}
       <button
         onClick={() =>
           (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
@@ -6484,78 +6484,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Peachify */}
-      <button
-        onClick={() =>
-          (peachifySources.length > 0 || failedSources.includes("Peachify")) &&
-          onSelect(peachifyUrl)
-        }
-        disabled={
-          activeSource === "Peachify" ||
-          (peachifyLoading && !failedSources.includes("Peachify"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Peachify",
-          activeSource || "",
-          peachifyLoading,
-          peachifySources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-rose-500/15 flex items-center justify-center text-rose-400 shrink-0">
-              {peachifyLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Zap size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Peachify
-                </p>
-                {failedSources.includes("Peachify") && peachifySources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {peachifyLoading ? "Scanning..." : "Direct Peach"}
-              </p>
-            </div>
-          </div>
-          {activeSource === "Peachify" && (
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {peachifyLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running direct scan...
-            </span>
-          ) : peachifySources.length > 0 ? (
-            peachifySources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/20 text-rose-400/80 bg-rose-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Peachify[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {peachifyError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Videasy */}
+{/* Videasy */}
       <button
         onClick={() =>
           (videasySources.length > 0 || failedSources.includes("Videasy")) &&
@@ -6634,7 +6563,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* VidLink */}
+{/* VidLink */}
       <button
         onClick={() => onSelect()}
         disabled={activeSource === "VidLink"}
@@ -6677,7 +6606,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Vidnest */}
+{/* Vidnest */}
       <button
         onClick={() =>
           (vidnestSources.length > 0 || failedSources.includes("Vidnest")) &&
@@ -6751,7 +6680,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* FilmU */}
+{/* FilmU */}
       <button
         onClick={() =>
           (filmuSources.length > 0 || failedSources.includes("FilmU")) &&
@@ -6817,6 +6746,78 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase font-medium">
               {filmuError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+    </div>
+
+{/* Peachify */}
+      <button
+        onClick={() =>
+          (peachifySources.length > 0 || failedSources.includes("Peachify")) &&
+          onSelect(peachifyUrl)
+        }
+        disabled={
+          activeSource === "Peachify" ||
+          (peachifyLoading && !failedSources.includes("Peachify"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Peachify",
+          activeSource || "",
+          peachifyLoading,
+          peachifySources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-rose-500/15 flex items-center justify-center text-rose-400 shrink-0">
+              {peachifyLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Zap size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Peachify
+                </p>
+                {failedSources.includes("Peachify") && peachifySources.length === 0 && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {peachifyLoading ? "Scanning..." : "Direct Peach"}
+              </p>
+            </div>
+          </div>
+          {activeSource === "Peachify" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {peachifyLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running direct scan...
+            </span>
+          ) : peachifySources.length > 0 ? (
+            peachifySources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/20 text-rose-400/80 bg-rose-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Peachify[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {peachifyError || "No mirrors"}
             </span>
           )}
         </div>
