@@ -166,17 +166,22 @@ export const serverSortOrder = [
   "nova",
   "atlas",
   "orion",
+  "air",
+  "holly",
+  "moviebox",
+  "net",
+  "multi",
 ];
 
 export const CATEGORY_PRIORITY = [
   "VidRock",
-  "Peachify",
   "Vaplayer",
-  "Videasy",
   "Vidrift",
+  "Peachify",
+  "Videasy",
+  "VidLink",
   "Vidnest",
   "FilmU",
-  "VidLink",
 ];
 
 export const getMirrorPriority = (sourceName: string) => {
@@ -760,13 +765,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const SOURCE_PRIORITY = [
     "VidRock",
-    "Peachify",
     "Vaplayer",
-    "Videasy",
     "Vidrift",
+    "Peachify",
+    "Videasy",
+    "VidLink",
     "Vidnest",
     "FilmU",
-    "VidLink",
   ];
 
   const switchToNextSource = useCallback(async () => {
@@ -5868,6 +5873,10 @@ export function InPlayerSourcePicker({
   const [vidriftLoading, setVidriftLoading] = useState(true);
   const [vidriftError, setVidriftError] = useState("");
 
+  const [peachifySources, setPeachifySources] = useState<any[]>([]);
+  const [peachifyLoading, setPeachifyLoading] = useState(true);
+  const [peachifyError, setPeachifyError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -5881,7 +5890,8 @@ export function InPlayerSourcePicker({
         filmuLoading ||
         vidnestLoading ||
         vaplayerLoading ||
-        vidriftLoading,
+        vidriftLoading ||
+        peachifyLoading,
     );
   }, [
     loading,
@@ -5890,6 +5900,7 @@ export function InPlayerSourcePicker({
     vidnestLoading,
     vaplayerLoading,
     vidriftLoading,
+    peachifyLoading,
   ]);
 
   const fetchSources = useCallback(
@@ -5907,6 +5918,8 @@ export function InPlayerSourcePicker({
         setVaplayerError("");
         setVidriftLoading(true);
         setVidriftError("");
+        setPeachifyLoading(true);
+        setPeachifyError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -6082,6 +6095,35 @@ export function InPlayerSourcePicker({
           if (!isBackground) setVidriftLoading(false);
         });
 
+      // 7. Peachify Fetch
+      let peachifyUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+      if (season !== undefined) peachifyUrl += `&season=${season}`;
+      if (episode !== undefined) peachifyUrl += `&episode=${episode}`;
+
+      const pPeachify = fetch(peachifyUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Peachify scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name: name.startsWith("Peachify") ? name : `Peachify (${name})`,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+          setPeachifySources(list);
+          if (!isBackground) setPeachifyError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setPeachifyError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setPeachifyLoading(false);
+        });
+
       return Promise.all([
         pVidrock,
         pVideasy,
@@ -6089,6 +6131,7 @@ export function InPlayerSourcePicker({
         pVidnest,
         pVaplayer,
         pVidrift,
+        pPeachify,
       ]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
@@ -6159,6 +6202,14 @@ export function InPlayerSourcePicker({
     )
     .join("|");
 
+  const peachifyUrl = peachifySources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
+
   const getButtonClass = (
     srcName: string,
     activeName: string,
@@ -6183,6 +6234,8 @@ export function InPlayerSourcePicker({
         return "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default";
       if (srcName === "Videasy")
         return "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default";
+      if (srcName === "Peachify")
+        return "border-rose-500 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.12)] ring-1 ring-rose-500/35 scale-[1.01] cursor-default";
     }
 
     if (isFailed) {
@@ -6208,6 +6261,8 @@ export function InPlayerSourcePicker({
         return "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer";
       if (srcName === "Videasy")
         return "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "Peachify")
+        return "border-rose-500/35 bg-rose-500/5 hover:bg-rose-500/10 active:scale-95 cursor-pointer";
     }
 
     return "border-white/5 bg-white/2 opacity-40 cursor-not-allowed";
@@ -6358,6 +6413,148 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
+      {/* Vidrift */}
+      <button
+        onClick={() =>
+          (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
+          onSelect(vidriftUrl)
+        }
+        disabled={
+          activeSource === "Vidrift" ||
+          (vidriftLoading && !failedSources.includes("Vidrift"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Vidrift",
+          activeSource || "",
+          vidriftLoading,
+          vidriftSources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 shrink-0">
+              {vidriftLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Tv size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Vidrift
+                </p>
+                {failedSources.includes("Vidrift") && vidriftSources.length === 0 && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {vidriftLoading ? "Scanning..." : "Active"}
+              </p>
+            </div>
+          </div>
+          {activeSource === "Vidrift" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {vidriftLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running direct scan...
+            </span>
+          ) : vidriftSources.length > 0 ? (
+            vidriftSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-500/20 text-fuchsia-400/80 bg-fuchsia-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Vidrift[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {vidriftError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Peachify */}
+      <button
+        onClick={() =>
+          (peachifySources.length > 0 || failedSources.includes("Peachify")) &&
+          onSelect(peachifyUrl)
+        }
+        disabled={
+          activeSource === "Peachify" ||
+          (peachifyLoading && !failedSources.includes("Peachify"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Peachify",
+          activeSource || "",
+          peachifyLoading,
+          peachifySources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-rose-500/15 flex items-center justify-center text-rose-400 shrink-0">
+              {peachifyLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Zap size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Peachify
+                </p>
+                {failedSources.includes("Peachify") && peachifySources.length === 0 && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {peachifyLoading ? "Scanning..." : "Direct Peach"}
+              </p>
+            </div>
+          </div>
+          {activeSource === "Peachify" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {peachifyLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running direct scan...
+            </span>
+          ) : peachifySources.length > 0 ? (
+            peachifySources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/20 text-rose-400/80 bg-rose-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Peachify[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {peachifyError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
       {/* Videasy */}
       <button
         onClick={() =>
@@ -6437,74 +6634,46 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Vidrift */}
+      {/* VidLink */}
       <button
-        onClick={() =>
-          (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
-          onSelect(vidriftUrl)
-        }
-        disabled={
-          activeSource === "Vidrift" ||
-          (vidriftLoading && !failedSources.includes("Vidrift"))
-        }
+        onClick={() => onSelect()}
+        disabled={activeSource === "VidLink"}
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Vidrift",
+          "VidLink",
           activeSource || "",
-          vidriftLoading,
-          vidriftSources.length > 0,
+          false,
+          true,
         )}`}
       >
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 shrink-0">
-              {vidriftLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Tv size={13} />
-              )}
+            <div className="w-6.5 h-6.5 rounded-lg bg-white/10 flex items-center justify-center text-white/60 shrink-0">
+              <Search size={13} />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Vidrift
+                  VidLink
                 </p>
-                {failedSources.includes("Vidrift") && vidriftSources.length === 0 && (
+                {failedSources.includes("VidLink") && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
                     FAILED
                   </span>
                 )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {vidriftLoading ? "Scanning..." : "Active"}
+                Standard
               </p>
             </div>
           </div>
-          {activeSource === "Vidrift" && (
-            <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0" />
+          {activeSource === "VidLink" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] shrink-0" />
           )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
-          {vidriftLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running direct scan...
-            </span>
-          ) : vidriftSources.length > 0 ? (
-            vidriftSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-500/20 text-fuchsia-400/80 bg-fuchsia-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Vidrift[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {vidriftError || "No mirrors"}
-            </span>
-          )}
+          <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase tracking-wide">
+            Auto-Failover
+          </span>
         </div>
       </button>
 
@@ -6650,49 +6819,6 @@ export function InPlayerSourcePicker({
               {filmuError || "No mirrors"}
             </span>
           )}
-        </div>
-      </button>
-
-      {/* VidLink */}
-      <button
-        onClick={() => onSelect()}
-        disabled={activeSource === "VidLink"}
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "VidLink",
-          activeSource || "",
-          false,
-          true,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-white/10 flex items-center justify-center text-white/60 shrink-0">
-              <Search size={13} />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  VidLink
-                </p>
-                {failedSources.includes("VidLink") && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                Standard
-              </p>
-            </div>
-          </div>
-          {activeSource === "VidLink" && (
-            <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase tracking-wide">
-            Auto-Failover
-          </span>
         </div>
       </button>
     </div>

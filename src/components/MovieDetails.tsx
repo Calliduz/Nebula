@@ -504,7 +504,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             - md+: 2-column grid for 4 cards (2×2)
             - overflow-y-auto here so the modal header stays fixed while cards scroll */}
         <div className="flex flex-col md:grid md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pb-2">
-          {/* ── VidRock Card ── */}
+{/* ── VidRock Card ── */}
           <div
             onClick={() => {
               if (!loading && sources.length > 0) onSelect(vidrockUrl);
@@ -631,7 +631,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Vaplayer Card ── */}
+{/* ── Vaplayer Card ── */}
           <div
             onClick={() => {
               if (!vaplayerLoading && vaplayerSources.length > 0)
@@ -756,7 +756,253 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Videasy Card ── */}
+{/* ── Vidrift Card ── */}
+          <div
+            onClick={() => {
+              if (!vidriftLoading && vidriftSources.length > 0)
+                onSelect(vidriftUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              vidriftLoading
+                ? "border-fuchsia-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : vidriftSources.length > 0
+                  ? "border-fuchsia-500/35 bg-slate-950/45 hover:border-fuchsia-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  vidriftLoading || vidriftSources.length > 0
+                    ? "bg-fuchsia-500/15 text-fuchsia-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Tv
+                  size={18}
+                  className={vidriftLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Vidrift
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400 uppercase tracking-wider">
+                    FAST MIRRORS
+                  </span>
+                  {vidriftLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-fuchsia-500/20 bg-fuchsia-500/5 text-fuchsia-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vidriftSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-fuchsia-500/20 border border-fuchsia-500/35 text-fuchsia-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Streams high-speed HLS mirrors from fast-edge cloud CDN
+                  endpoints.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {vidriftLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-fuchsia-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-fuchsia-500" />
+                  </span>
+                  Probing Mirrors...
+                </div>
+              ) : vidriftSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Available Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vidriftSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Vidrift\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Vidrift/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName = cleanMirrorName || "HD";
+                      return (
+                        <button
+                          key={src.name}
+                          title={`Play Vidrift (${displayName}) mirror directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...vidriftSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-fuchsia-500/30 text-fuchsia-400 bg-fuchsia-500/10 hover:border-fuchsia-500/65 hover:bg-fuchsia-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                        >
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
+                          {displayName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vidriftError ? "Providers offline" : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+{/* ── Peachify Card ── */}
+          <div
+            onClick={() => {
+              if (!peachifyLoading && peachifySources.length > 0)
+                onSelect(peachifyUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              peachifyLoading
+                ? "border-rose-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : peachifySources.length > 0
+                  ? "border-rose-500/35 bg-slate-950/45 hover:border-rose-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  peachifyLoading || peachifySources.length > 0
+                    ? "bg-rose-500/15 text-rose-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Zap
+                  size={18}
+                  className={peachifyLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Peachify
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 uppercase tracking-wider">
+                    DIRECT PEACH
+                  </span>
+                  {peachifyLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-rose-500/20 bg-rose-500/5 text-rose-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : peachifySources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/35 text-rose-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Decrypted direct stream sources with low-latency parallel
+                  delivery and integrated multi-language subtitles.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {peachifyLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-rose-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
+                  </span>
+                  Probing Nodes...
+                </div>
+              ) : peachifySources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Available Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {peachifySources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Peachify\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Peachify/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName = cleanMirrorName || "HD";
+                      return (
+                        <button
+                          key={src.name}
+                          title={`Play Peachify (${displayName}) directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...peachifySources.filter(
+                                (s) => s.name !== src.name,
+                              ),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 hover:border-rose-500/65 hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                        >
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
+                          {displayName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {peachifyError
+                    ? "Uplink currently offline"
+                    : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+{/* ── Videasy Card ── */}
           <div
             onClick={() => {
               if (!videasyLoading && videasySources.length > 0)
@@ -886,17 +1132,17 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Vidrift Card ── */}
+{/* ── VidLink Card ── */}
           <div
             onClick={() => {
-              if (!vidriftLoading && vidriftSources.length > 0)
-                onSelect(vidriftUrl);
+              if (!vidlinkLoading && vidlinkSources.length > 0)
+                onSelect(vidlinkUrl);
             }}
             className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
-              vidriftLoading
-                ? "border-fuchsia-500/20 bg-slate-950/45 opacity-80 cursor-wait"
-                : vidriftSources.length > 0
-                  ? "border-fuchsia-500/35 bg-slate-950/45 hover:border-fuchsia-500/60 hover:bg-slate-950/65 cursor-pointer"
+              vidlinkLoading
+                ? "border-white/10 bg-slate-950/45 opacity-80 cursor-wait"
+                : vidlinkSources.length > 0
+                  ? "border-white/10 bg-slate-950/45 hover:border-white/30 hover:bg-slate-950/65 cursor-pointer"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
@@ -904,76 +1150,79 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             <div className="flex items-start gap-3">
               <div
                 className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                  vidriftLoading || vidriftSources.length > 0
-                    ? "bg-fuchsia-500/15 text-fuchsia-400"
+                  vidlinkLoading || vidlinkSources.length > 0
+                    ? "bg-white/10 text-white/70"
                     : "bg-white/5 text-white/20"
                 }`}
               >
-                <Tv
+                <Server
                   size={18}
-                  className={vidriftLoading ? "animate-pulse" : ""}
+                  className={vidlinkLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Vidrift
+                    VidLink
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400 uppercase tracking-wider">
-                    FAST MIRRORS
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/50 uppercase tracking-wider">
+                    LEGACY INDEX
                   </span>
-                  {vidriftLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-fuchsia-500/20 bg-fuchsia-500/5 text-fuchsia-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                  {vidlinkLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
-                  ) : vidriftSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-fuchsia-500/20 border border-fuchsia-500/35 text-fuchsia-300 uppercase tracking-wider flex items-center gap-1">
+                  ) : vidlinkSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white/60 uppercase tracking-wider flex items-center gap-1">
                       <Sparkles size={8} />
-                      ACTIVE
+                      ONLINE
                     </span>
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Streams high-speed HLS mirrors from fast-edge cloud CDN
-                  endpoints.
+                  Aggregates comprehensive index mappings across global servers
+                  as a fallback to ensure maximum content availability.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
             <div className="border-t border-white/5 pt-3">
-              {vidriftLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-fuchsia-400/70 font-bold uppercase tracking-wider">
+              {vidlinkLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-white/40 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-fuchsia-500" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/50 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50" />
                   </span>
-                  Probing Mirrors...
+                  Scanning Indexes...
                 </div>
-              ) : vidriftSources.length > 0 ? (
+              ) : vidlinkSources.length > 0 ? (
                 <div className="space-y-1.5">
                   <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
-                    Available Mirrors:
+                    Quality Tiers:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {vidriftSources.map((src) => {
+                    {vidlinkSources.map((src) => {
                       const cleanMirrorName = src.name
-                        .replace(/^Vidrift\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vidrift/i, "")
+                        .replace(/^VidLink\s*\((.*?)\)$/i, "$1")
+                        .replace(/^VidLink/i, "")
                         .trim()
                         .toUpperCase();
-                      const displayName = cleanMirrorName || "HD";
+                      const displayName =
+                        src.quality !== "Auto"
+                          ? src.quality.toUpperCase()
+                          : cleanMirrorName || "HD";
                       return (
                         <button
                           key={src.name}
-                          title={`Play Vidrift (${displayName}) mirror directly`}
+                          title={`Play VidLink (${displayName}) quality directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
                             const reordered = [
                               src,
-                              ...vidriftSources.filter(
+                              ...vidlinkSources.filter(
                                 (s) => s.name !== src.name,
                               ),
                             ];
@@ -986,7 +1235,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-fuchsia-500/30 text-fuchsia-400 bg-fuchsia-500/10 hover:border-fuchsia-500/65 hover:bg-fuchsia-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 hover:border-white/30 hover:bg-white/10 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -1002,13 +1251,15 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : (
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vidriftError ? "Providers offline" : "No mirrors available"}
+                  {vidlinkError
+                    ? "Uplink currently offline"
+                    : "No mirrors available"}
                 </p>
               )}
             </div>
           </div>
 
-          {/* ── Vidnest Card ── */}
+{/* ── Vidnest Card ── */}
           <div
             onClick={() => {
               if (!vidnestLoading && vidnestSources.length > 0)
@@ -1151,7 +1402,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── FilmU Card ── */}
+{/* ── FilmU Card ── */}
           <div
             onClick={() => {
               if (!filmuLoading && filmuSources.length > 0) onSelect(filmuUrl);
@@ -1300,257 +1551,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {filmuError ? "Providers offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── VidLink Card ── */}
-          <div
-            onClick={() => {
-              if (!vidlinkLoading && vidlinkSources.length > 0)
-                onSelect(vidlinkUrl);
-            }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
-              vidlinkLoading
-                ? "border-white/10 bg-slate-950/45 opacity-80 cursor-wait"
-                : vidlinkSources.length > 0
-                  ? "border-white/10 bg-slate-950/45 hover:border-white/30 hover:bg-slate-950/65 cursor-pointer"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                  vidlinkLoading || vidlinkSources.length > 0
-                    ? "bg-white/10 text-white/70"
-                    : "bg-white/5 text-white/20"
-                }`}
-              >
-                <Server
-                  size={18}
-                  className={vidlinkLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    VidLink
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/50 uppercase tracking-wider">
-                    LEGACY INDEX
-                  </span>
-                  {vidlinkLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : vidlinkSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white/60 uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles size={8} />
-                      ONLINE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
-                  Aggregates comprehensive index mappings across global servers
-                  as a fallback to ensure maximum content availability.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
-              {vidlinkLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-white/40 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/50 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50" />
-                  </span>
-                  Scanning Indexes...
-                </div>
-              ) : vidlinkSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
-                    Quality Tiers:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {vidlinkSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^VidLink\s*\((.*?)\)$/i, "$1")
-                        .replace(/^VidLink/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName =
-                        src.quality !== "Auto"
-                          ? src.quality.toUpperCase()
-                          : cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play VidLink (${displayName}) quality directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...vidlinkSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 hover:border-white/30 hover:bg-white/10 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vidlinkError
-                    ? "Uplink currently offline"
-                    : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Peachify Card ── */}
-          <div
-            onClick={() => {
-              if (!peachifyLoading && peachifySources.length > 0)
-                onSelect(peachifyUrl);
-            }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
-              peachifyLoading
-                ? "border-rose-500/20 bg-slate-950/45 opacity-80 cursor-wait"
-                : peachifySources.length > 0
-                  ? "border-rose-500/35 bg-slate-950/45 hover:border-rose-500/60 hover:bg-slate-950/65 cursor-pointer"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                  peachifyLoading || peachifySources.length > 0
-                    ? "bg-rose-500/15 text-rose-400"
-                    : "bg-white/5 text-white/20"
-                }`}
-              >
-                <Zap
-                  size={18}
-                  className={peachifyLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Peachify
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 uppercase tracking-wider">
-                    DIRECT PEACH
-                  </span>
-                  {peachifyLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-rose-500/20 bg-rose-500/5 text-rose-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : peachifySources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/35 text-rose-300 uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
-                  Decrypted direct stream sources with low-latency parallel
-                  delivery and integrated multi-language subtitles.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
-              {peachifyLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-rose-400/70 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
-                  </span>
-                  Probing Nodes...
-                </div>
-              ) : peachifySources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
-                    Available Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {peachifySources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Peachify\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Peachify/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName = cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Peachify (${displayName}) directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...peachifySources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 hover:border-rose-500/65 hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {peachifyError
-                    ? "Uplink currently offline"
-                    : "No mirrors available"}
                 </p>
               )}
             </div>
