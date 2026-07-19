@@ -751,7 +751,14 @@ export function useAppState() {
     });
   };
 
-  const [activeTab, setActiveTab] = useState("home");
+  const { activeTab, viewingCategory } = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      activeTab: params.get("tab") || "home",
+      viewingCategory: params.get("category") || null,
+    };
+  }, [location.search]);
+
   const [feedSeed, setFeedSeed] = useState(() =>
     Math.floor(Date.now() / (1000 * 60 * 60 * 24)),
   );
@@ -759,7 +766,6 @@ export function useAppState() {
   const [isHoveringHero, setIsHoveringHero] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState("All");
-  const [viewingCategory, setViewingCategory] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -2707,12 +2713,16 @@ export function useAppState() {
   }, [isSearchOpen]);
   const wrappedSetSelectedMovie = (movie: any) => {
     if (!movie) {
-      navigate("/");
+      const params = new URLSearchParams(location.search);
+      navigate(`/?${params.toString()}`);
     } else {
       // Save scroll position before navigating to detail page
       saveScrollPosition(location.pathname, viewingCategory);
       (window as any).__isRestoringScroll = true;
-      navigate(`/${movie.type}/${movie.id}`);
+      const params = new URLSearchParams(location.search);
+      if (activeTab) params.set("tab", activeTab);
+      if (viewingCategory) params.set("category", viewingCategory);
+      navigate(`/${movie.type}/${movie.id}?${params.toString()}`);
     }
     setSelectedMovie(movie);
   };
@@ -3129,46 +3139,64 @@ export function useAppState() {
     saveScrollPosition(location.pathname, viewingCategory);
     (window as any).__isRestoringScroll = true;
     setIsTransitioning(true);
-    let target =
-      s !== undefined && e !== undefined
-        ? `/watch/${movie.type}/${movie.id}?season=${s}&episode=${e}`
-        : `/watch/${movie.type}/${movie.id}`;
 
+    const params = new URLSearchParams(location.search);
+    if (activeTab) params.set("tab", activeTab);
+    if (viewingCategory) params.set("category", viewingCategory);
+    if (s !== undefined && e !== undefined) {
+      params.set("season", s.toString());
+      params.set("episode", e.toString());
+    }
     if (source) {
-      target +=
-        (target.includes("?") ? "&" : "?") +
-        `source=${encodeURIComponent(source)}`;
+      params.set("source", source);
     }
 
-    navigate(target);
+    navigate(`/watch/${movie.type}/${movie.id}?${params.toString()}`);
     setTimeout(() => setIsTransitioning(false), 800);
   };
 
   const changeActiveTab = (tab: string) => {
     saveScrollPosition(location.pathname, viewingCategory);
     (window as any).__isRestoringScroll = true;
-    setActiveTab(tab);
+    const params = new URLSearchParams(location.search);
+    params.set("tab", tab);
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
   };
 
   const changeViewingCategory = (category: string | null) => {
     saveScrollPosition(location.pathname, viewingCategory);
     (window as any).__isRestoringScroll = true;
-    setViewingCategory(category);
+    const params = new URLSearchParams(location.search);
+    if (category) {
+      params.set("category", category);
+    } else {
+      params.delete("category");
+    }
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
   };
 
   const handleNavClick = (id: string) => {
     if (id === "search") setIsSearchOpen(true);
     else {
-      changeActiveTab(id);
-      if (id === "movies") changeViewingCategory("Movies");
-      else if (id === "tv") changeViewingCategory("TV Shows");
-      else if (id === "drama") changeViewingCategory("Dramas");
-      else if (id === "library") changeViewingCategory("Library");
-      else changeViewingCategory(null);
+      saveScrollPosition(location.pathname, viewingCategory);
+      (window as any).__isRestoringScroll = true;
+
+      let cat: string | null = null;
+      if (id === "movies") cat = "Movies";
+      else if (id === "tv") cat = "TV Shows";
+      else if (id === "drama") cat = "Dramas";
+      else if (id === "library") cat = "Library";
+
       setSelectedMovie(null);
-      if (location.pathname !== "/") {
-        navigate("/");
+
+      const params = new URLSearchParams(location.search);
+      params.set("tab", id);
+      if (cat) {
+        params.set("category", cat);
+      } else {
+        params.delete("category");
       }
+      navigate(`/?${params.toString()}`);
     }
   };
 

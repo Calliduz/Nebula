@@ -476,7 +476,14 @@ function MovieDetailPageStub({ actions, state, onSelectActor }: any) {
   return (
     <div className="min-h-screen bg-obsidian">
       <React.Suspense
-        fallback={<MovieDetailsSkeleton onClose={() => navigate("/")} />}
+        fallback={
+          <MovieDetailsSkeleton
+            onClose={() => {
+              const params = new URLSearchParams(window.location.search);
+              navigate(`/?${params.toString()}`);
+            }}
+          />
+        }
       >
         <MovieDetails
           key={`page-details-${id}`}
