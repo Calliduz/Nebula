@@ -6062,7 +6062,7 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   VidRock
                 </p>
-                {failedSources.includes("VidRock") && (
+                {failedSources.includes("VidRock") && sources.length === 0 && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
                     FAILED
                   </span>
@@ -6134,7 +6134,7 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Vaplayer
                 </p>
-                {failedSources.includes("Vaplayer") && (
+                {failedSources.includes("Vaplayer") && vaplayerSources.length === 0 && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
                     FAILED
                   </span>
@@ -6205,7 +6205,7 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Videasy
                 </p>
-                {failedSources.includes("Videasy") && (
+                {failedSources.includes("Videasy") && videasySources.length === 0 && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
                     FAILED
                   </span>
@@ -6284,7 +6284,7 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Vidrift
                 </p>
-                {failedSources.includes("Vidrift") && (
+                {failedSources.includes("Vidrift") && vidriftSources.length === 0 && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
                     FAILED
                   </span>
@@ -6355,7 +6355,7 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Vidnest
                 </p>
-                {failedSources.includes("Vidnest") && (
+                {failedSources.includes("Vidnest") && vidnestSources.length === 0 && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
                     FAILED
                   </span>
@@ -6429,7 +6429,7 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   FilmU
                 </p>
-                {failedSources.includes("FilmU") && (
+                {failedSources.includes("FilmU") && filmuSources.length === 0 && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
                     FAILED
                   </span>
