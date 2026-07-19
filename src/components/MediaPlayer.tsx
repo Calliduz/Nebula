@@ -447,6 +447,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setActiveQuality(-1);
     }
   }, []);
+
+  const getNextFallbackMirrorIndex = useCallback(
+    (
+      currentIdx: number,
+      mirrorsList: any[],
+      failedMap: Record<string, string>,
+      newlyFailedSource?: string,
+    ): number => {
+      if (mirrorsList.length <= 1) return -1;
+      for (let i = 1; i < mirrorsList.length; i++) {
+        const candidateIdx = (currentIdx + i) % mirrorsList.length;
+        const candidate = mirrorsList[candidateIdx];
+        if (candidate) {
+          const isFailed =
+            failedMap[candidate.source] !== undefined ||
+            candidate.source === newlyFailedSource;
+          if (!isFailed) {
+            return candidateIdx;
+          }
+        }
+      }
+      return -1;
+    },
+    [],
+  );
   const [vttBlobUrl, setVttBlobUrl] = useState<string | null>(null);
   const vttBlobUrlRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1853,13 +1878,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           console.warn(
             `[PLAYER] mp4 mirror has duration ${video.duration.toFixed(1)}s (≤3s) — skipping.`,
           );
-          const nextIdx = activeMirrorRef.current + 1;
           const failingIdx = activeMirrorRef.current;
           const failingMirror = mirrorsRef.current[failingIdx];
           if (failingMirror?.url) {
             reportDeadMirror(failingMirror.url);
           }
-          if (nextIdx < mirrorsRef.current.length) {
+          const nextIdx = getNextFallbackMirrorIndex(
+            activeMirrorRef.current,
+            mirrorsRef.current,
+            failedMirrors,
+            failingMirror?.source,
+          );
+          if (nextIdx !== -1) {
             if (failingMirror) {
               setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "SHORT" }));
             }
@@ -2011,13 +2041,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             console.warn(
               `[PLAYER] HLS mirror has duration ${video.duration.toFixed(1)}s (≤3s) — skipping.`,
             );
-            const nextIdx = activeMirrorRef.current + 1;
             const failingIdx = activeMirrorRef.current;
             const failingMirror = mirrorsRef.current[failingIdx];
             if (failingMirror?.url) {
               reportDeadMirror(failingMirror.url);
             }
-            if (nextIdx < mirrorsRef.current.length) {
+            const nextIdx = getNextFallbackMirrorIndex(
+              activeMirrorRef.current,
+              mirrorsRef.current,
+              failedMirrors,
+              failingMirror?.source,
+            );
+            if (nextIdx !== -1) {
               if (failingMirror) {
                 setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "SHORT" }));
               }
@@ -2085,13 +2120,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           console.warn(
             `[HLS] Hard network error ${statusCode} on ${d.details}. Switching mirror immediately...`,
           );
-          const nextIdx = activeMirrorRef.current + 1;
           const failingIdx = activeMirrorRef.current;
           const failingMirror = mirrorsRef.current[failingIdx];
           if (failingMirror?.url) {
             reportDeadMirror(failingMirror.url);
           }
-          if (nextIdx < mirrorsRef.current.length) {
+          const nextIdx = getNextFallbackMirrorIndex(
+            activeMirrorRef.current,
+            mirrorsRef.current,
+            failedMirrors,
+            failingMirror?.source,
+          );
+          if (nextIdx !== -1) {
             if (failingMirror) {
               setFailedMirrors((prev) => ({
                 ...prev,
@@ -2119,13 +2159,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           console.warn(
             `[HLS] Fatal load error: ${d.details}. Switching mirror immediately...`,
           );
-          const nextIdx = activeMirrorRef.current + 1;
           const failingIdx = activeMirrorRef.current;
           const failingMirror = mirrorsRef.current[failingIdx];
           if (failingMirror?.url) {
             reportDeadMirror(failingMirror.url);
           }
-          if (nextIdx < mirrorsRef.current.length) {
+          const nextIdx = getNextFallbackMirrorIndex(
+            activeMirrorRef.current,
+            mirrorsRef.current,
+            failedMirrors,
+            failingMirror?.source,
+          );
+          if (nextIdx !== -1) {
             if (failingMirror) {
               setFailedMirrors((prev) => ({
                 ...prev,
@@ -2155,13 +2200,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               console.error(
                 "[HLS] Continuous fragment load errors for 5 seconds. Switching to next mirror...",
               );
-              const nextIdx = activeMirrorRef.current + 1;
               const failingIdx = activeMirrorRef.current;
               const failingMirror = mirrorsRef.current[failingIdx];
               if (failingMirror?.url) {
                 reportDeadMirror(failingMirror.url);
               }
-              if (nextIdx < mirrorsRef.current.length) {
+              const nextIdx = getNextFallbackMirrorIndex(
+                activeMirrorRef.current,
+                mirrorsRef.current,
+                failedMirrors,
+                failingMirror?.source,
+              );
+              if (nextIdx !== -1) {
                 if (failingMirror) {
                   setFailedMirrors((prev) => ({
                     ...prev,
@@ -2194,13 +2244,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             console.error(
               "[HLS] Fragment 0 load failed 3 times. Escalating to fatal mirror switch.",
             );
-            const nextIdx = activeMirrorRef.current + 1;
             const failingIdx = activeMirrorRef.current;
             const failingMirror = mirrorsRef.current[failingIdx];
             if (failingMirror?.url) {
               reportDeadMirror(failingMirror.url);
             }
-            if (nextIdx < mirrorsRef.current.length) {
+            const nextIdx = getNextFallbackMirrorIndex(
+              activeMirrorRef.current,
+              mirrorsRef.current,
+              failedMirrors,
+              failingMirror?.source,
+            );
+            if (nextIdx !== -1) {
               if (failingMirror) {
                 setFailedMirrors((prev) => ({
                   ...prev,
@@ -2249,10 +2304,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             console.error(
               `[HLS] Network retries exhausted. Attempting mirror fallback...`,
             );
-            const nextIdx = activeMirrorRef.current + 1;
-            if (nextIdx < mirrorsRef.current.length) {
-              const failingIdx = activeMirrorRef.current;
-              const failingMirror = mirrorsRef.current[failingIdx];
+            const failingIdx = activeMirrorRef.current;
+            const failingMirror = mirrorsRef.current[failingIdx];
+            const nextIdx = getNextFallbackMirrorIndex(
+              activeMirrorRef.current,
+              mirrorsRef.current,
+              failedMirrors,
+              failingMirror?.source,
+            );
+            if (nextIdx !== -1) {
               if (failingMirror) {
                 setFailedMirrors((prev) => ({
                   ...prev,
@@ -2284,10 +2344,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             hls.recoverMediaError();
           } else {
             // Last resort — try next mirror (use refs for latest state)
-            const nextIdx = activeMirrorRef.current + 1;
-            if (nextIdx < mirrorsRef.current.length) {
-              const failingIdx = activeMirrorRef.current;
-              const failingMirror = mirrorsRef.current[failingIdx];
+            const failingIdx = activeMirrorRef.current;
+            const failingMirror = mirrorsRef.current[failingIdx];
+            const nextIdx = getNextFallbackMirrorIndex(
+              activeMirrorRef.current,
+              mirrorsRef.current,
+              failedMirrors,
+              failingMirror?.source,
+            );
+            if (nextIdx !== -1) {
               if (failingMirror) {
                 setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "DECODE" }));
               }
@@ -2704,10 +2769,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           console.warn(
             `[PLAYER] Video error (code=${err.code}). Attempting mirror fallback...`,
           );
-          const nextIdx = activeMirrorRef.current + 1;
-          if (nextIdx < mirrorsRef.current.length) {
-            const failingIdx = activeMirrorRef.current;
-            const failingMirror = mirrorsRef.current[failingIdx];
+          const failingIdx = activeMirrorRef.current;
+          const failingMirror = mirrorsRef.current[failingIdx];
+          const nextIdx = getNextFallbackMirrorIndex(
+            activeMirrorRef.current,
+            mirrorsRef.current,
+            failedMirrors,
+            failingMirror?.source,
+          );
+          if (nextIdx !== -1) {
             if (failingMirror) {
               setFailedMirrors((prev) => ({
                 ...prev,
@@ -2774,10 +2844,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             console.error(
               "[WATCHDOG] Permanent freeze — switching to next mirror...",
             );
-            const nextIdx = activeMirrorRef.current + 1;
-            if (nextIdx < mirrorsRef.current.length) {
-              const failingIdx = activeMirrorRef.current;
-              const failingMirror = mirrorsRef.current[failingIdx];
+            const failingIdx = activeMirrorRef.current;
+            const failingMirror = mirrorsRef.current[failingIdx];
+            const nextIdx = getNextFallbackMirrorIndex(
+              activeMirrorRef.current,
+              mirrorsRef.current,
+              failedMirrors,
+              failingMirror?.source,
+            );
+            if (nextIdx !== -1) {
               if (failingMirror) {
                 setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "STUCK" }));
               }
