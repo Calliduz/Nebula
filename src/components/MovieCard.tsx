@@ -98,9 +98,7 @@ export const MovieCard = memo<MovieCardProps>(
 
           {/* Progress Bar for Continue Watching — Netflix-style */}
           {hasProgress && (
-            <div
-              className="absolute inset-x-0 bottom-0 z-40 w-full flex flex-col pointer-events-none transition-all duration-300"
-            >
+            <div className="absolute inset-x-0 bottom-0 z-40 w-full flex flex-col pointer-events-none transition-all duration-300">
               {/* Watched badge */}
               {pct >= 95 && (
                 <div className="flex items-center gap-1.5 mb-2 mx-2 px-2 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 w-fit">
@@ -157,7 +155,6 @@ export const MovieCard = memo<MovieCardProps>(
         </div>
       </div>
     );
-
   },
   (prevProps, nextProps) => {
     return (

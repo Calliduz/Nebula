@@ -1,6 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Loader2, X, ArrowRight, ArrowUp, Clock, TrendingUp } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  X,
+  ArrowRight,
+  ArrowUp,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
 import { topSearches } from "../data/constants";
 import { handleImageError } from "../utils/helpers";
 
@@ -111,7 +119,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  const placeholder = useTypewriterPlaceholder(topSearches, isOpen && !searchQuery);
+  const placeholder = useTypewriterPlaceholder(
+    topSearches,
+    isOpen && !searchQuery,
+  );
 
   // Load recent searches when overlay opens
   useEffect(() => {
@@ -150,11 +161,14 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     [setSearchQuery, searchInputRef],
   );
 
-  const handleRemoveRecent = useCallback((term: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    removeRecentSearch(term);
-    setRecentSearches(getRecentSearches());
-  }, []);
+  const handleRemoveRecent = useCallback(
+    (term: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      removeRecentSearch(term);
+      setRecentSearches(getRecentSearches());
+    },
+    [],
+  );
 
   const handleClearAllRecent = useCallback(() => {
     clearAllRecentSearches();
@@ -221,16 +235,23 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             className="fixed inset-0 z-[500] bg-obsidian/95 backdrop-blur-3xl flex flex-col items-center pt-[3vh] sm:pt-[10vh] overflow-y-auto custom-scrollbar"
           >
             <div className="w-full max-w-[1200px] px-4 sm:px-8 pb-32 pb-safe">
-
               {/* ── Search Input Area ───────────────────────────────────────── */}
-              <div className={`relative mb-6 sm:mb-14 flex items-center gap-3 sm:gap-4 search-glow-underline ${isFocused ? "glow-active" : ""}`}>
+              <div
+                className={`relative mb-6 sm:mb-14 flex items-center gap-3 sm:gap-4 search-glow-underline ${isFocused ? "glow-active" : ""}`}
+              >
                 <div className="relative flex-1">
                   {/* Icon */}
                   <div className="absolute left-3 sm:left-8 top-1/2 -translate-y-1/2 flex items-center gap-4 z-10 pointer-events-none">
                     {isLoading ? (
-                      <Loader2 size={20} className="animate-spin text-nebula-cyan sm:w-7 sm:h-7" />
+                      <Loader2
+                        size={20}
+                        className="animate-spin text-nebula-cyan sm:w-7 sm:h-7"
+                      />
                     ) : (
-                      <Search size={20} className="text-nebula-cyan sm:w-7 sm:h-7" />
+                      <Search
+                        size={20}
+                        className="text-nebula-cyan sm:w-7 sm:h-7"
+                      />
                     )}
                   </div>
 
@@ -287,7 +308,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
               <div className="flex flex-col xl:flex-row gap-10 sm:gap-20">
                 {/* ── Main Results Area ─────────────────────────────────────── */}
                 <div className="flex-1 min-w-0">
-
                   {/* Results header */}
                   <div className="flex items-center justify-between mb-6 sm:mb-10">
                     <h3 className="text-[11px] sm:text-[13px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-3">
@@ -306,42 +326,46 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                   </div>
 
                   {/* People results */}
-                  {hasQuery && searchPeopleResults && searchPeopleResults.length > 0 && (
-                    <div className="mb-10">
-                      <h4 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-5 flex items-center gap-3">
-                        <span className="w-4 h-px bg-white/15" />
-                        Actors & Creators
-                      </h4>
-                      <div className="flex gap-5 sm:gap-8 overflow-x-auto pb-3 no-scrollbar touch-pan-x">
-                        {searchPeopleResults.map((actor: any, idx: number) => (
-                          <div
-                            key={`search-actor-${actor.id}-${idx}`}
-                            onClick={() => handleSelectActor(actor.id)}
-                            className="flex flex-col items-center gap-2.5 group cursor-pointer shrink-0"
-                          >
-                            <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full border border-white/10 p-0.5 group-hover:border-nebula-cyan transition-all duration-400 overflow-hidden relative">
-                              <img
-                                src={actor.avatar}
-                                className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                                alt={actor.name}
-                                onError={handleImageError}
-                              />
-                              <div className="absolute inset-0 bg-nebula-cyan/0 group-hover:bg-nebula-cyan/5 transition-colors rounded-full" />
-                            </div>
-                            <div className="text-center w-16 sm:w-22">
-                              <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-nebula-cyan transition-colors line-clamp-1">
-                                {actor.name}
-                              </p>
-                              <p className="text-[9px] font-medium text-dim uppercase tracking-wider mt-0.5 line-clamp-1">
-                                {actor.role}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                  {hasQuery &&
+                    searchPeopleResults &&
+                    searchPeopleResults.length > 0 && (
+                      <div className="mb-10">
+                        <h4 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-5 flex items-center gap-3">
+                          <span className="w-4 h-px bg-white/15" />
+                          Actors & Creators
+                        </h4>
+                        <div className="flex gap-5 sm:gap-8 overflow-x-auto pb-3 no-scrollbar touch-pan-x">
+                          {searchPeopleResults.map(
+                            (actor: any, idx: number) => (
+                              <div
+                                key={`search-actor-${actor.id}-${idx}`}
+                                onClick={() => handleSelectActor(actor.id)}
+                                className="flex flex-col items-center gap-2.5 group cursor-pointer shrink-0"
+                              >
+                                <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full border border-white/10 p-0.5 group-hover:border-nebula-cyan transition-all duration-400 overflow-hidden relative">
+                                  <img
+                                    src={actor.avatar}
+                                    className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                                    alt={actor.name}
+                                    onError={handleImageError}
+                                  />
+                                  <div className="absolute inset-0 bg-nebula-cyan/0 group-hover:bg-nebula-cyan/5 transition-colors rounded-full" />
+                                </div>
+                                <div className="text-center w-16 sm:w-22">
+                                  <p className="text-[10px] sm:text-xs font-bold text-white group-hover:text-nebula-cyan transition-colors line-clamp-1">
+                                    {actor.name}
+                                  </p>
+                                  <p className="text-[9px] font-medium text-dim uppercase tracking-wider mt-0.5 line-clamp-1">
+                                    {actor.role}
+                                  </p>
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                        <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent my-8" />
                       </div>
-                      <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent my-8" />
-                    </div>
-                  )}
+                    )}
 
                   {/* Movie/TV Grid */}
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-4 gap-2 sm:gap-5">
@@ -414,7 +438,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                       <div className="col-span-full py-20 flex flex-col items-center">
                         <div className="relative mb-6">
                           <div className="absolute inset-0 bg-nebula-red/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                          <Search size={56} className="text-white/10 relative z-10" />
+                          <Search
+                            size={56}
+                            className="text-white/10 relative z-10"
+                          />
                         </div>
                         <h4 className="text-xl font-black text-white uppercase tracking-tighter italic mb-2">
                           No Transmission Found
@@ -464,7 +491,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                                       {term}
                                     </span>
                                     <button
-                                      onClick={(e) => handleRemoveRecent(term, e)}
+                                      onClick={(e) =>
+                                        handleRemoveRecent(term, e)
+                                      }
                                       className="text-white/20 hover:text-nebula-red transition-colors ml-0.5"
                                       aria-label={`Remove ${term}`}
                                     >
@@ -493,7 +522,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                                   key={term}
                                   initial={{ opacity: 0, scale: 0.9 }}
                                   animate={{ opacity: 1, scale: 1 }}
-                                  transition={{ delay: i * 0.05, duration: 0.25 }}
+                                  transition={{
+                                    delay: i * 0.05,
+                                    duration: 0.25,
+                                  }}
                                   onClick={() => handleSuggestionClick(term)}
                                   className="px-4 py-2 rounded-full bg-white/[0.04] border border-white/8 text-[11px] font-bold text-white/40 hover:text-nebula-cyan hover:border-nebula-cyan/30 hover:bg-white/[0.07] transition-all uppercase tracking-wider"
                                 >

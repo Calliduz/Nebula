@@ -1891,7 +1891,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           );
           if (nextIdx !== -1) {
             if (failingMirror) {
-              setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "SHORT" }));
+              setFailedMirrors((prev) => ({
+                ...prev,
+                [failingMirror.source]: "SHORT",
+              }));
             }
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
@@ -2054,7 +2057,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             if (nextIdx !== -1) {
               if (failingMirror) {
-                setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "SHORT" }));
+                setFailedMirrors((prev) => ({
+                  ...prev,
+                  [failingMirror.source]: "SHORT",
+                }));
               }
               hls.destroy();
               selectMirror(nextIdx, mirrorsRef.current);
@@ -2174,7 +2180,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             if (failingMirror) {
               setFailedMirrors((prev) => ({
                 ...prev,
-                [failingMirror.source]: statusCode ? String(statusCode) : "LOAD_ERR",
+                [failingMirror.source]: statusCode
+                  ? String(statusCode)
+                  : "LOAD_ERR",
               }));
             }
             selectMirror(nextIdx, mirrorsRef.current);
@@ -2354,7 +2362,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             if (nextIdx !== -1) {
               if (failingMirror) {
-                setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "DECODE" }));
+                setFailedMirrors((prev) => ({
+                  ...prev,
+                  [failingMirror.source]: "DECODE",
+                }));
               }
               console.log(
                 `[HLS] Media recovery failed. Switching to mirror ${nextIdx}...`,
@@ -2854,7 +2865,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             );
             if (nextIdx !== -1) {
               if (failingMirror) {
-                setFailedMirrors((prev) => ({ ...prev, [failingMirror.source]: "STUCK" }));
+                setFailedMirrors((prev) => ({
+                  ...prev,
+                  [failingMirror.source]: "STUCK",
+                }));
               }
               selectMirror(nextIdx, mirrorsRef.current);
             }
@@ -3098,55 +3112,64 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     [handleTap],
   );
 
-  const handlePlayerTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      touchStartDistRef.current = Math.hypot(dx, dy);
-      isPinchActiveRef.current = true;
-    }
-  }, []);
+  const handlePlayerTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        touchStartDistRef.current = Math.hypot(dx, dy);
+        isPinchActiveRef.current = true;
+      }
+    },
+    [],
+  );
 
-  const handlePlayerTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 2 && touchStartDistRef.current !== null) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.hypot(dx, dy);
-      const diff = dist - touchStartDistRef.current;
+  const handlePlayerTouchMove = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      if (e.touches.length === 2 && touchStartDistRef.current !== null) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        const diff = dist - touchStartDistRef.current;
 
-      if (Math.abs(diff) > 40) {
-        if (diff > 0) {
-          setIsZoomed((z) => {
-            if (!z) {
-              showToast("Zoomed to Fill", "info");
-              return true;
-            }
-            return z;
-          });
-        } else {
-          setIsZoomed((z) => {
-            if (z) {
-              showToast("Fit to Screen", "info");
-              return false;
-            }
-            return z;
-          });
+        if (Math.abs(diff) > 40) {
+          if (diff > 0) {
+            setIsZoomed((z) => {
+              if (!z) {
+                showToast("Zoomed to Fill", "info");
+                return true;
+              }
+              return z;
+            });
+          } else {
+            setIsZoomed((z) => {
+              if (z) {
+                showToast("Fit to Screen", "info");
+                return false;
+              }
+              return z;
+            });
+          }
+          touchStartDistRef.current = dist;
         }
-        touchStartDistRef.current = dist;
       }
-    }
-  }, [showToast]);
+    },
+    [showToast],
+  );
 
-  const handlePlayerTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    touchStartDistRef.current = null;
-    if (isPinchActiveRef.current) {
-      if (e.touches.length === 0) {
-        isPinchActiveRef.current = false;
+  const handlePlayerTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      touchStartDistRef.current = null;
+      if (isPinchActiveRef.current) {
+        if (e.touches.length === 0) {
+          isPinchActiveRef.current = false;
+        }
+        return;
       }
-      return;
-    }
-    handleTouchEnd(e);
-  }, [handleTouchEnd]);
+      handleTouchEnd(e);
+    },
+    [handleTouchEnd],
+  );
 
   useEffect(() => {
     resetHideTimer();
@@ -4266,7 +4289,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                     const countryCode =
                                       flagCode === "en" ? "us" : flagCode;
                                     const isSelected = activeMirror === idx;
-                                    const failedReason = failedMirrors[m.source];
+                                    const failedReason =
+                                      failedMirrors[m.source];
                                     return (
                                       <button
                                         key={idx}
@@ -4590,7 +4614,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     onClick={() => {
                       setIsZoomed((z) => {
                         const next = !z;
-                        showToast(next ? "Zoomed to Fill" : "Fit to Screen", "info");
+                        showToast(
+                          next ? "Zoomed to Fill" : "Fit to Screen",
+                          "info",
+                        );
                         return next;
                       });
                     }}
@@ -4613,7 +4640,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     >
                       {isZoomed ? (
                         <>
-                          <rect x="2" y="4" width="20" height="16" rx="2" strokeDasharray="3 3" opacity="0.6" />
+                          <rect
+                            x="2"
+                            y="4"
+                            width="20"
+                            height="16"
+                            rx="2"
+                            strokeDasharray="3 3"
+                            opacity="0.6"
+                          />
                           <path d="M12 7v10" />
                           <path d="M9 10l3 3 3-3" />
                           <path d="M9 14l3-3 3 3" />
@@ -5474,7 +5509,14 @@ export function InPlayerSourcePicker({
         vaplayerLoading ||
         vidriftLoading,
     );
-  }, [loading, videasyLoading, filmuLoading, vidnestLoading, vaplayerLoading, vidriftLoading]);
+  }, [
+    loading,
+    videasyLoading,
+    filmuLoading,
+    vidnestLoading,
+    vaplayerLoading,
+    vidriftLoading,
+  ]);
 
   const fetchSources = useCallback(
     (force = false, isBackground = false) => {
@@ -5666,7 +5708,14 @@ export function InPlayerSourcePicker({
           if (!isBackground) setVidriftLoading(false);
         });
 
-      return Promise.all([pVidrock, pVideasy, pFilmu, pVidnest, pVaplayer, pVidrift]);
+      return Promise.all([
+        pVidrock,
+        pVideasy,
+        pFilmu,
+        pVidnest,
+        pVaplayer,
+        pVidrift,
+      ]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
   );

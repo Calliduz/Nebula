@@ -84,8 +84,10 @@ export const MovieRow: React.FC<MovieRowProps> = ({
   // Determine fade mask based on scroll position
   const getMaskClass = () => {
     if (showLeftArrow && showRightArrow) return "scroll-fade-both";
-    if (showLeftArrow) return "[mask-image:linear-gradient(to_right,transparent_0%,black_8%)]";
-    if (showRightArrow) return "[mask-image:linear-gradient(to_left,transparent_0%,black_8%)]";
+    if (showLeftArrow)
+      return "[mask-image:linear-gradient(to_right,transparent_0%,black_8%)]";
+    if (showRightArrow)
+      return "[mask-image:linear-gradient(to_left,transparent_0%,black_8%)]";
     return "";
   };
 
@@ -101,7 +103,9 @@ export const MovieRow: React.FC<MovieRowProps> = ({
         onClick={onTitleClick}
       >
         <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
-        <h2 className={`text-base sm:text-xl md:text-2xl font-display font-black tracking-tighter uppercase text-white/90 group-hover/title:text-nebula-cyan transition-colors leading-none ${onTitleClick ? "animated-underline" : ""}`}>
+        <h2
+          className={`text-base sm:text-xl md:text-2xl font-display font-black tracking-tighter uppercase text-white/90 group-hover/title:text-nebula-cyan transition-colors leading-none ${onTitleClick ? "animated-underline" : ""}`}
+        >
           {title}
         </h2>
         {onTitleClick && (
@@ -163,7 +167,9 @@ export const MovieRow: React.FC<MovieRowProps> = ({
       </div>
 
       {/* Scroll position indicator */}
-      <div className={`scroll-indicator-track ${isHovered || scrollPct > 0 ? "opacity-100" : ""}`}>
+      <div
+        className={`scroll-indicator-track ${isHovered || scrollPct > 0 ? "opacity-100" : ""}`}
+      >
         <div
           className="scroll-indicator-fill"
           style={{ width: `${Math.max(4, scrollPct)}%` }}

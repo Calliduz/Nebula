@@ -890,7 +890,6 @@ export function useAppState() {
     const featuredMovies = featuredMoviesRef.current;
     const rows = rowsRef.current;
 
-
     if (allMovies.length === 0) return;
     if (syncInProgressRef.current) return;
     syncInProgressRef.current = true;
@@ -1240,7 +1239,6 @@ export function useAppState() {
     syncInProgressRef.current = false;
 
     setRows((prev) => {
-
       if (prev.length === 0) return prev;
       const staticRowsMap = new Map<string, any>();
       prev.forEach((r) => {
@@ -1335,7 +1333,6 @@ export function useAppState() {
   }, [updateGlobalPool]);
 
   const fetchInitialData = async (overrideSeed?: number) => {
-
     // 0. Always clear sessionStorage pagination flags on app boot/refresh
     clearCategoryPageCache();
 
@@ -2054,7 +2051,6 @@ export function useAppState() {
         localStorage.removeItem("nebula-feed-cache");
       }
     } catch (err) {
-
       console.error("Data acquisition failure", err);
     } finally {
       setIsLoading(false);
@@ -2678,7 +2674,10 @@ export function useAppState() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
-      const isTyping = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable;
+      const isTyping =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        (e.target as HTMLElement)?.isContentEditable;
 
       // Ctrl+K / Cmd+K — open search from anywhere
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -3201,7 +3200,11 @@ export function useAppState() {
       );
       return list.map((m) => {
         if (!m) return m;
-        const decorated = decorateMovieWithNewEpisode(m, myList, tvDetailsCache);
+        const decorated = decorateMovieWithNewEpisode(
+          m,
+          myList,
+          tvDetailsCache,
+        );
         if (decorated.progress) return decorated;
 
         const isTv = decorated.type === "tv";

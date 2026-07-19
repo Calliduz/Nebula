@@ -888,7 +888,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Streams high-speed HLS mirrors from fast-edge cloud CDN endpoints.
+                  Streams high-speed HLS mirrors from fast-edge cloud CDN
+                  endpoints.
                 </p>
               </div>
             </div>

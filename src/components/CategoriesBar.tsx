@@ -22,23 +22,23 @@ type CategoryEntry = {
 };
 
 const BASE_CATEGORIES: CategoryEntry[] = [
-  { name: "Action",      key: "Action Packed Missions",   icon: Sword    },
-  { name: "Comedy",      key: "Comedy Gold",               icon: Laugh    },
-  { name: "Sci-Fi",      key: "Sci-Fi Spectacles",         icon: Rocket   },
-  { name: "Horror",      key: "Scary Nights (Horror)",     icon: Skull    },
-  { name: "Anime",       key: "Anime Series",              icon: Sparkles },
-  { name: "Drama",       key: "TV Dramas",                 icon: Drama    },
-  { name: "Thriller",    key: "Mystery & Suspense",        icon: Eye      },
-  { name: "Romance",     key: "Feel-Good Romance",         icon: Heart    },
-  { name: "Documentary", key: "Documentary Collection",    icon: Film     },
-  { name: "Fantasy",     key: "Epic Fantasy Worlds",       icon: Wand     },
+  { name: "Action", key: "Action Packed Missions", icon: Sword },
+  { name: "Comedy", key: "Comedy Gold", icon: Laugh },
+  { name: "Sci-Fi", key: "Sci-Fi Spectacles", icon: Rocket },
+  { name: "Horror", key: "Scary Nights (Horror)", icon: Skull },
+  { name: "Anime", key: "Anime Series", icon: Sparkles },
+  { name: "Drama", key: "TV Dramas", icon: Drama },
+  { name: "Thriller", key: "Mystery & Suspense", icon: Eye },
+  { name: "Romance", key: "Feel-Good Romance", icon: Heart },
+  { name: "Documentary", key: "Documentary Collection", icon: Film },
+  { name: "Fantasy", key: "Epic Fantasy Worlds", icon: Wand },
 ];
 
 const ADULT_CATEGORIES: CategoryEntry[] = [
-  { name: "Rated R",        key: "Rated R Hits",    icon: Flame, adult: true },
-  { name: "Steamy Romance", key: "Steamy Romance",  icon: Heart, adult: true },
+  { name: "Rated R", key: "Rated R Hits", icon: Flame, adult: true },
+  { name: "Steamy Romance", key: "Steamy Romance", icon: Heart, adult: true },
   { name: "Erotic Thrillers", key: "Erotic Thrillers", icon: Zap, adult: true },
-  { name: "Adult Anime",    key: "Adult Anime",     icon: Sparkles, adult: true },
+  { name: "Adult Anime", key: "Adult Anime", icon: Sparkles, adult: true },
 ];
 
 interface CategoriesBarProps {
