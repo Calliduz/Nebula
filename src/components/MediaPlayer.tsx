@@ -160,6 +160,16 @@ export const serverSortOrder = [
   "orion",
 ];
 
+export const CATEGORY_PRIORITY = [
+  "VidRock",
+  "Vaplayer",
+  "Videasy",
+  "Vidrift",
+  "Vidnest",
+  "FilmU",
+  "VidLink",
+];
+
 export const getMirrorPriority = (sourceName: string) => {
   const { category, name } = parseMirrorDetails(sourceName);
   const cleanName = name.toLowerCase();
@@ -178,7 +188,27 @@ export const sortMirrorsList = (list: any[]) => {
   return [...list].sort((a, b) => {
     const prioA = getMirrorPriority(a.source);
     const prioB = getMirrorPriority(b.source);
-    return prioA - prioB;
+    if (prioA !== prioB) {
+      return prioA - prioB;
+    }
+
+    // Tie-breaker: sort by provider category priority (e.g. direct VidRock first)
+    const { category: catA } = parseMirrorDetails(a.source);
+    const { category: catB } = parseMirrorDetails(b.source);
+    const cleanCatA = catA.toLowerCase();
+    const cleanCatB = catB.toLowerCase();
+
+    const catIdxA = CATEGORY_PRIORITY.findIndex((c) =>
+      cleanCatA.startsWith(c.toLowerCase()),
+    );
+    const catIdxB = CATEGORY_PRIORITY.findIndex((c) =>
+      cleanCatB.startsWith(c.toLowerCase()),
+    );
+
+    const catPrioA = catIdxA !== -1 ? catIdxA : 999;
+    const catPrioB = catIdxB !== -1 ? catIdxB : 999;
+
+    return catPrioA - catPrioB;
   });
 };
 
@@ -556,12 +586,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (!mirrorsList || mirrorsList.length === 0) return "VidLink";
     const first = mirrorsList[0];
     const name = (first.source || first.name || "").toLowerCase();
-    if (name.includes("vidrock")) return "VidRock";
-    if (name.includes("videasy")) return "Videasy";
-    if (name.includes("filmu")) return "FilmU";
-    if (name.includes("vidnest")) return "Vidnest";
-    if (name.includes("vaplayer")) return "Vaplayer";
-    if (name.includes("vidrift")) return "Vidrift";
+    if (name.startsWith("vidrock")) return "VidRock";
+    if (name.startsWith("videasy")) return "Videasy";
+    if (name.startsWith("filmu")) return "FilmU";
+    if (name.startsWith("vidnest")) return "Vidnest";
+    if (name.startsWith("vaplayer")) return "Vaplayer";
+    if (name.startsWith("vidrift")) return "Vidrift";
+    if (name.startsWith("vidlink")) return "VidLink";
     return "VidLink";
   }, []);
 
@@ -734,8 +765,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         setLoading(true);
         setError("");
 
-        // Fetch mirrors for the new source
-        const updatedMirrors = await fetchSourceMirrors(nextSource, false);
+        // Fetch mirrors for the new source, with up to 2 retries (waiting 2.5s each) to allow slow backend background scrapers to populate cache
+        let updatedMirrors = await fetchSourceMirrors(nextSource, false);
+        if (!updatedMirrors || updatedMirrors.length === 0) {
+          console.log(`[PLAYER] Source ${nextSource} returned no mirrors. Retrying to allow background scrape to cache...`);
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 2500));
+            updatedMirrors = await fetchSourceMirrors(nextSource, false);
+            if (updatedMirrors && updatedMirrors.length > 0) {
+              console.log(`[PLAYER] Source ${nextSource} mirrors recovered on retry attempt ${attempt}!`);
+              break;
+            }
+          }
+        }
+
         if (updatedMirrors && updatedMirrors.length > 0) {
           // Sync URL params
           const queryParams = new URLSearchParams(window.location.search);
@@ -752,7 +795,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             replace: true,
           });
         } else {
-          // If the new source also has no mirrors, recursively try the next one!
+          // If the new source also has no mirrors after retries, recursively try the next one!
           failedSourcesRef.current.add(nextSource);
           setFailedSourcesList(Array.from(failedSourcesRef.current));
           await switchToNextSource();
@@ -1121,7 +1164,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         try {
           const preferred = localStorage.getItem("nebula-preferred-source");
           if (preferred) {
-            const matchIdx = grouped.findIndex((m) => m.source === preferred);
+            let matchIdx = grouped.findIndex((m) => m.source === preferred);
+            if (matchIdx === -1) {
+              const { name: prefServerName } = parseMirrorDetails(preferred);
+              const cleanPrefServer = prefServerName.toLowerCase();
+              if (
+                cleanPrefServer &&
+                cleanPrefServer !== "original" &&
+                cleanPrefServer !== "mirror"
+              ) {
+                matchIdx = grouped.findIndex((m) => {
+                  const { name: mServerName } = parseMirrorDetails(m.source);
+                  const cleanMServer = mServerName.toLowerCase();
+                  return (
+                    cleanMServer.includes(cleanPrefServer) ||
+                    cleanPrefServer.includes(cleanMServer)
+                  );
+                });
+              }
+            }
             if (matchIdx !== -1) {
               startIndex = matchIdx;
             }
@@ -2660,7 +2721,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 ),
               );
 
-            // 7. Subtitles prefetch
+            // 7. Vidrift prefetch
+            let vidriftPrefetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(vidriftPrefetchUrl)
+              .then((r) => r.json())
+              .then(() =>
+                console.log(
+                  `[PLAYER] Prefetched next episode from Vidrift (S${nextEp.season}E${nextEp.episode})`,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch Vidrift failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
+                ),
+              );
+
+            // 8. Subtitles prefetch
             let subPrefetchUrl = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&season=${nextEp.season}&episode=${nextEp.episode}`;
             fetch(subPrefetchUrl)
               .then((r) => r.json())
