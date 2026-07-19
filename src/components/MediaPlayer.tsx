@@ -305,6 +305,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     season: number;
     episode: number;
   } | null>(null);
+  const [countdownActive, setCountdownActive] = useState(false);
+  const [countdownVal, setCountdownVal] = useState(10);
+  const [isAutoplayCancelled, setIsAutoplayCancelled] = useState(false);
+
+  const countdownActiveRef = useRef(false);
+  useEffect(() => {
+    countdownActiveRef.current = countdownActive;
+  }, [countdownActive]);
+
+  const isAutoplayCancelledRef = useRef(false);
+  useEffect(() => {
+    isAutoplayCancelledRef.current = isAutoplayCancelled;
+  }, [isAutoplayCancelled]);
+
   const [forceRefetchTrigger, setForceRefetchTrigger] = useState(0);
   const [sourcesLoading, setSourcesLoading] = useState(false);
   const [qualityTag, setQualityTag] = useState<string>(""); // CAM | WEBDL | WEBRIP | BLURAY | etc.
@@ -423,6 +437,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (!m) return;
     setActiveMirror(index);
     activeMirrorRef.current = index;
+    if (m.source) {
+      try {
+        localStorage.setItem("nebula-preferred-source", m.source);
+      } catch (e) {}
+    }
     setFailedMirrors((prev) => {
       const next = { ...prev };
       delete next[m.source];
@@ -1034,6 +1053,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setActiveSubtitle(-1);
     hasAutoSelectedSub.current = false;
     subTextCache.current = {}; // Clear subtitle text cache on stream change
+    setCountdownActive(false);
+    setCountdownVal(10);
+    setIsAutoplayCancelled(false);
     // Reset seek refs so the drift guard doesn't suppress the new stream's initial timeupdate
     isLocalSeekingRef.current = false;
     localCurrentTimeRef.current = 0;
@@ -1095,7 +1117,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const grouped = groupMirrors(processedMirrors);
         setMirrors(grouped);
         mirrorsRef.current = grouped;
-        selectMirror(0, grouped);
+        let startIndex = 0;
+        try {
+          const preferred = localStorage.getItem("nebula-preferred-source");
+          if (preferred) {
+            const matchIdx = grouped.findIndex((m) => m.source === preferred);
+            if (matchIdx !== -1) {
+              startIndex = matchIdx;
+            }
+          }
+        } catch (e) {}
+        selectMirror(startIndex, grouped);
         setLoading(false);
 
         // Fetch updated mirrors in the background progressively at 10s, 20s, and 45s to capture slow parallel scrapes
@@ -2484,6 +2516,40 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const cur = video.currentTime;
         setProgress((cur / video.duration) * 100);
 
+        // Autoplay next episode trigger
+        if (
+          movie.type === "tv" &&
+          hasNextRef.current &&
+          !isAutoplayCancelledRef.current &&
+          !countdownActiveRef.current
+        ) {
+          const creditsSegment = skipSegmentsRef.current.find(
+            (s) => s.type === "credits",
+          );
+          const triggerTime = creditsSegment
+            ? creditsSegment.startSec
+            : video.duration - 20;
+
+          if (cur >= triggerTime && cur < video.duration - 1) {
+            setCountdownActive(true);
+            setCountdownVal(10);
+          }
+        }
+
+        // If countdown is active but they seeked backward before triggerTime, hide the popup!
+        if (countdownActiveRef.current) {
+          const creditsSegment = skipSegmentsRef.current.find(
+            (s) => s.type === "credits",
+          );
+          const triggerTime = creditsSegment
+            ? creditsSegment.startSec
+            : video.duration - 20;
+          if (cur < triggerTime) {
+            setCountdownActive(false);
+            setCountdownVal(10);
+          }
+        }
+
         // Prefetch next episode in background if progress > 50%
         if (
           movie.type === "tv" &&
@@ -2967,6 +3033,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   useEffect(() => {
     if (videoRef.current) videoRef.current.volume = isMuted ? 0 : volume / 100;
   }, [volume, isMuted]);
+
+  useEffect(() => {
+    if (!countdownActive) return;
+
+    const interval = setInterval(() => {
+      const video = videoRef.current;
+      if (video && video.paused) {
+        return; // Pause countdown if video is paused
+      }
+
+      setCountdownVal((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setCountdownActive(false);
+          if (handleNextEpisodeRef.current) {
+            handleNextEpisodeRef.current();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [countdownActive]);
 
   const resetHideTimer = useCallback(() => {
     setShowUi(true);
@@ -3483,10 +3574,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const hasNext = !tvDetails || getNextEpisodeDetails() !== null;
 
+  const hasNextRef = useRef(false);
+  useEffect(() => {
+    hasNextRef.current = hasNext;
+  }, [hasNext]);
+
   const handleNextEpisode = () => {
     const nextEp = getNextEpisodeDetails();
     if (nextEp) {
-      setSourceSelect(nextEp);
+      setCountdownActive(false);
+      setCountdownVal(10);
+      setIsAutoplayCancelled(false);
+
+      const queryParams = new URLSearchParams(window.location.search);
+      queryParams.set("season", String(nextEp.season));
+      queryParams.set("episode", String(nextEp.episode));
+      queryParams.delete("source"); // Remove current stream URL source parameter
+      const queryString = queryParams.toString();
+      navigate(
+        `/watch/${movie.type || "movie"}/${movie.id}${queryString ? `?${queryString}` : ""}`,
+      );
     }
   };
 
@@ -5353,6 +5460,89 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 }}
               />
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Next Episode Autoplay Countdown Overlay ── */}
+      <AnimatePresence>
+        {countdownActive && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className={`fixed right-4 sm:right-8 z-[280] pointer-events-auto transition-all duration-300 select-none bg-black/90 backdrop-blur-md border border-white/10 rounded-xl p-5 shadow-[0_10px_40px_rgba(0,0,0,0.9)] w-[280px] sm:w-[320px] flex flex-col gap-4 ${
+              showUi ? "bottom-24 sm:bottom-28" : "bottom-6 sm:bottom-8"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] font-black tracking-widest text-nebula-cyan uppercase italic">
+                  Next Episode starts in
+                </p>
+                {(() => {
+                  const nextEp = getNextEpisodeDetails();
+                  if (nextEp) {
+                    return (
+                      <h4 className="text-xs font-black text-white truncate mt-1">
+                        S{nextEp.season} E{nextEp.episode}
+                      </h4>
+                    );
+                  }
+                  return (
+                    <h4 className="text-xs font-black text-white truncate mt-1">
+                      Loading details...
+                    </h4>
+                  );
+                })()}
+              </div>
+              <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="18"
+                    stroke="rgba(255,255,255,0.1)"
+                    strokeWidth="3"
+                    fill="transparent"
+                  />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="18"
+                    stroke="#00E5FF"
+                    strokeWidth="3"
+                    fill="transparent"
+                    strokeDasharray={2 * Math.PI * 18}
+                    strokeDashoffset={2 * Math.PI * 18 * (1 - countdownVal / 10)}
+                    className="transition-all duration-1000 ease-linear"
+                  />
+                </svg>
+                <span className="absolute text-xs font-black text-white">
+                  {countdownVal}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setCountdownActive(false);
+                  handleNextEpisode();
+                }}
+                className="flex-1 py-2 rounded-lg bg-white text-black font-black uppercase text-[10px] tracking-wider transition-all hover:bg-white/90 active:scale-[0.98] cursor-pointer"
+              >
+                Play Now
+              </button>
+              <button
+                onClick={() => {
+                  setCountdownActive(false);
+                  setIsAutoplayCancelled(true);
+                }}
+                className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/5 font-black uppercase text-[10px] tracking-wider transition-all active:scale-[0.98] cursor-pointer"
+              >
+                Watch Credits
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
