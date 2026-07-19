@@ -92,6 +92,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [vidriftLoading, setVidriftLoading] = useState(true);
   const [vidriftError, setVidriftError] = useState("");
 
+  const [peachifySources, setPeachifySources] = useState<any[]>([]);
+  const [peachifyLoading, setPeachifyLoading] = useState(true);
+  const [peachifyError, setPeachifyError] = useState("");
+
   const isMountedRef = useRef(true);
 
   const loadAllSources = (force = false) => {
@@ -109,6 +113,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     setVaplayerError("");
     setVidriftLoading(true);
     setVidriftError("");
+    setPeachifyLoading(true);
+    setPeachifyError("");
 
     const forceParam = force ? "&force=1" : "";
 
@@ -327,6 +333,37 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (!isMountedRef.current) return;
         setVidriftLoading(false);
       });
+
+    // 8. Peachify Fetch
+    let peachifyFetchUrl = `${API_BASE_URL}/api/peachify?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+    if (season !== undefined) peachifyFetchUrl += `&season=${season}`;
+    if (episode !== undefined) peachifyFetchUrl += `&episode=${episode}`;
+
+    fetch(peachifyFetchUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan Peachify uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!isMountedRef.current) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name,
+            url: value.url,
+            type: value.type || "hls",
+            quality: (value as any).quality || "Auto",
+          }));
+        setPeachifySources(activeSources);
+      })
+      .catch((err) => {
+        if (!isMountedRef.current) return;
+        setPeachifyError(err.message || "Failed to contact Peachify.");
+      })
+      .finally(() => {
+        if (!isMountedRef.current) return;
+        setPeachifyLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -376,6 +413,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     )
     .join("|");
 
+  const peachifyUrl = peachifySources
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
+
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
       {/* Background radial glow */}
@@ -399,7 +442,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             vidlinkLoading ||
             filmuLoading ||
             vidnestLoading ||
-            vaplayerLoading
+            vaplayerLoading ||
+            vidriftLoading ||
+            peachifyLoading
           }
           className="absolute top-4 left-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed z-50 cursor-pointer"
           title="Re-scan all sources for background results"
@@ -412,7 +457,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               vidlinkLoading ||
               filmuLoading ||
               vidnestLoading ||
-              vaplayerLoading
+              vaplayerLoading ||
+              vidriftLoading ||
+              peachifyLoading
                 ? "animate-spin text-nebula-cyan"
                 : ""
             }
@@ -1378,6 +1425,130 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {vidlinkError
+                    ? "Uplink currently offline"
+                    : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Peachify Card ── */}
+          <div
+            onClick={() => {
+              if (!peachifyLoading && peachifySources.length > 0)
+                onSelect(peachifyUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              peachifyLoading
+                ? "border-rose-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : peachifySources.length > 0
+                  ? "border-rose-500/35 bg-slate-950/45 hover:border-rose-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  peachifyLoading || peachifySources.length > 0
+                    ? "bg-rose-500/15 text-rose-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Zap
+                  size={18}
+                  className={peachifyLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Peachify
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 uppercase tracking-wider">
+                    DIRECT PEACH
+                  </span>
+                  {peachifyLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-rose-500/20 bg-rose-500/5 text-rose-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : peachifySources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/35 text-rose-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Decrypted direct stream sources with low-latency parallel
+                  delivery and integrated multi-language subtitles.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {peachifyLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-rose-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
+                  </span>
+                  Probing Nodes...
+                </div>
+              ) : peachifySources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Available Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {peachifySources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Peachify\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Peachify/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName = cleanMirrorName || "HD";
+                      return (
+                        <button
+                          key={src.name}
+                          title={`Play Peachify (${displayName}) directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...peachifySources.filter(
+                                (s) => s.name !== src.name,
+                              ),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 hover:border-rose-500/65 hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                        >
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
+                          {displayName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {peachifyError
                     ? "Uplink currently offline"
                     : "No mirrors available"}
                 </p>

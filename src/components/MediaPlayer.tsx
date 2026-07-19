@@ -140,6 +140,14 @@ export const parseMirrorDetails = (sourceName: string) => {
       ).toUpperCase(),
     };
   }
+  if (cleanSource.startsWith("Peachify")) {
+    return {
+      category: "Peachify",
+      name: (
+        (cleanSource.replace(/^Peachify[\s-]*/i, "").trim() || "Mirror") + suffix
+      ).toUpperCase(),
+    };
+  }
 
   return { category: "VidLink", name: (cleanSource + suffix).toUpperCase() };
 };
@@ -162,6 +170,7 @@ export const serverSortOrder = [
 
 export const CATEGORY_PRIORITY = [
   "VidRock",
+  "Peachify",
   "Vaplayer",
   "Videasy",
   "Vidrift",
@@ -587,6 +596,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const first = mirrorsList[0];
     const name = (first.source || first.name || "").toLowerCase();
     if (name.startsWith("vidrock")) return "VidRock";
+    if (name.startsWith("peachify")) return "Peachify";
     if (name.startsWith("videasy")) return "Videasy";
     if (name.startsWith("filmu")) return "FilmU";
     if (name.startsWith("vidnest")) return "Vidnest";
@@ -626,6 +636,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "Vidrift") {
           fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "Peachify") {
+          fetchUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else {
@@ -709,6 +723,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             type: v.type || "hls",
             quality: (v as any).quality || "Auto",
           }));
+      } else if (category === "Peachify") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("peachify")
+              ? name
+              : `Peachify (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            quality: (v as any).quality || "Auto",
+          }));
       } else {
         // VidLink
         const results = Array.isArray(data) ? data : data.results || [];
@@ -735,6 +760,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const SOURCE_PRIORITY = [
     "VidRock",
+    "Peachify",
     "Vaplayer",
     "Videasy",
     "Vidrift",
@@ -1211,6 +1237,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isVidrift = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("vidrift"),
           );
+          const isPeachify = processedMirrors.some((m) =>
+            m.source.toLowerCase().startsWith("peachify"),
+          );
 
           let dataPromise: Promise<any>;
           if (isVideasy) {
@@ -1240,6 +1269,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             } else if (isVidrift) {
               fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}`;
+              if (season !== undefined) fetchUrl += `&season=${season}`;
+              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            } else if (isPeachify) {
+              fetchUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}`;
               if (season !== undefined) fetchUrl += `&season=${season}`;
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             }
@@ -1323,6 +1356,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       url: v.url,
                       type: v.type || "hls",
                       quality: (v as any).quality || "Auto",
+                    }));
+                } else if (isPeachify) {
+                  updatedMirrors = Object.entries(data)
+                    .filter(([_, v]: any) => v && v.url)
+                    .map(([name, v]: any) => ({
+                      source: name.toLowerCase().startsWith("peachify")
+                        ? name
+                        : `Peachify (${name})`,
+                      url: v.url,
+                      type: v.type || "hls",
+                      quality: (v as any).quality || "Auto",
+                      subtitles: v.subtitles || [],
                     }));
                 }
 
@@ -1860,6 +1905,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   }, [subtitles, preferredLanguageISO, activeSubtitle]);
 
+
   const getProgressKey = useCallback(() => {
     if (movie.type === "tv" && season !== undefined && episode !== undefined) {
       return `${movie.id}-S${season}E${episode}`;
@@ -1900,6 +1946,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           "VidLink",
           "Videasy",
           "VidRock",
+          "Peachify",
           "Custom",
         ];
         const priority = group.filter((s) =>
@@ -1934,7 +1981,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     ? "Videasy"
                     : s.source === "VidRock"
                       ? "VidRock Cache"
-                      : s.source;
+                      : s.source === "Peachify"
+                        ? "Peachify"
+                        : s.source;
             const base =
               lang.startsWith("en") ||
               s.languageName?.toLowerCase().includes("english")
@@ -1962,6 +2011,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     },
     [API],
   );
+
+  useEffect(() => {
+    const activeM = mirrors[activeMirror];
+    if (activeM && activeM.subtitles && activeM.subtitles.length > 0) {
+      setSubtitles((prev) => processSubtitles(activeM.subtitles, prev));
+    }
+  }, [activeMirror, mirrors, processSubtitles]);
 
   // ── Fetch TV Details ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -2765,7 +2821,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 ),
               );
 
-            // 8. Subtitles prefetch
+            // 8. Peachify prefetch
+            let peachifyPrefetchUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
+            fetch(peachifyPrefetchUrl)
+              .then((r) => r.json())
+              .then(() =>
+                console.log(
+                  `[PLAYER] Prefetched next episode from Peachify (S${nextEp.season}E${nextEp.episode})`,
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  `[PLAYER] Prefetch Peachify failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
+                ),
+              );
+
+            // 9. Subtitles prefetch
             let subPrefetchUrl = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&season=${nextEp.season}&episode=${nextEp.episode}`;
             fetch(subPrefetchUrl)
               .then((r) => r.json())
