@@ -149,11 +149,18 @@ export const parseMirrorDetails = (sourceName: string) => {
     };
   }
   if (cleanSource.startsWith("Kuro")) {
+    const isDub =
+      cleanSource.toUpperCase().includes(" DUB") ||
+      cleanSource.toUpperCase().includes("(DUB");
+    const category = isDub ? "Kuro (Dub)" : "Kuro (Sub)";
+    const cleanName = cleanSource
+      .replace(/^Kuro[\s-]*/i, "")
+      .replace(/\s*\(?SUB\)?/i, "")
+      .replace(/\s*\(?DUB\)?/i, "")
+      .trim();
     return {
-      category: "Kuro",
-      name: (
-        (cleanSource.replace(/^Kuro[\s-]*/i, "").trim() || "Mirror") + suffix
-      ).toUpperCase(),
+      category,
+      name: ((cleanName || "Mirror") + suffix).toUpperCase(),
     };
   }
 
@@ -188,9 +195,11 @@ export const CATEGORY_PRIORITY = [
   "Videasy",
   "VidLink",
   "Vidnest",
+  "Kuro (Sub)",
+  "Kuro (Dub)",
+  "Kuro",
   "FilmU",
   "Peachify",
-  "Kuro",
 ];
 
 export const getMirrorPriority = (sourceName: string) => {
@@ -6281,7 +6290,22 @@ export function InPlayerSourcePicker({
     )
     .join("|");
 
-  const kuroUrl = kuroSources
+  const kuroSubSources = kuroSources.filter(
+    (s) => s.name.toUpperCase().includes("SUB") || s.audio === "Japanese Sub",
+  );
+  const kuroDubSources = kuroSources.filter(
+    (s) => s.name.toUpperCase().includes("DUB") || s.audio === "English Dub",
+  );
+
+  const kuroSubUrl = (kuroSubSources.length > 0 ? kuroSubSources : kuroSources)
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
+
+  const kuroDubUrl = (kuroDubSources.length > 0 ? kuroDubSources : kuroSources)
     .map((s) =>
       s.url.includes("#")
         ? s.url
@@ -6315,7 +6339,7 @@ export function InPlayerSourcePicker({
         return "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default";
       if (srcName === "Peachify")
         return "border-rose-500 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.12)] ring-1 ring-rose-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Kuro")
+      if (srcName.startsWith("Kuro"))
         return "border-violet-500 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.12)] ring-1 ring-violet-500/35 scale-[1.01] cursor-default";
     }
 
@@ -6344,7 +6368,7 @@ export function InPlayerSourcePicker({
         return "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer";
       if (srcName === "Peachify")
         return "border-rose-500/35 bg-rose-500/5 hover:bg-rose-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Kuro")
+      if (srcName.startsWith("Kuro"))
         return "border-violet-500/35 bg-violet-500/5 hover:bg-violet-500/10 active:scale-95 cursor-pointer";
     }
 
@@ -6763,21 +6787,21 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* Kuro (Anime Only) */}
+{/* Kuro (Sub - Japanese) */}
       <button
         onClick={() =>
-          (kuroSources.length > 0 || failedSources.includes("Kuro")) &&
-          onSelect(kuroUrl)
+          (kuroSubSources.length > 0 || failedSources.includes("Kuro (Sub)")) &&
+          onSelect(kuroSubUrl)
         }
         disabled={
-          activeSource === "Kuro" ||
-          (kuroLoading && !failedSources.includes("Kuro"))
+          activeSource === "Kuro (Sub)" ||
+          (kuroLoading && !failedSources.includes("Kuro (Sub)"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Kuro",
+          "Kuro (Sub)",
           activeSource || "",
           kuroLoading,
-          kuroSources.length > 0,
+          kuroSubSources.length > 0,
         )}`}
       >
         <div className="flex items-center justify-between w-full">
@@ -6792,46 +6816,112 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Kuro
+                  Kuro (Sub)
                 </p>
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-purple-500/35 bg-purple-500/20 text-purple-300 uppercase tracking-wider shrink-0">
-                  ANIME ONLY
+                  JAPANESE AUDIO
                 </span>
-                {failedSources.includes("Kuro") && kuroSources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {kuroLoading ? "Scanning..." : "Direct Anime"}
+                {kuroLoading ? "Scanning..." : "Subbed Streams"}
               </p>
             </div>
           </div>
-          {activeSource === "Kuro" && (
+          {activeSource === "Kuro (Sub)" && (
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)] shrink-0" />
           )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {kuroLoading ? (
             <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running anime scan...
+              Scanning sub streams...
             </span>
-          ) : kuroSources.length > 0 ? (
-            kuroSources.map((s) => (
+          ) : kuroSubSources.length > 0 ? (
+            kuroSubSources.map((s) => (
               <span
                 key={s.name}
                 className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wide"
               >
                 {s.name
                   .replace(/^Kuro[\s-]*/i, "")
+                  .replace(/\s*\(?SUB\)?/i, "")
                   .trim()
                   .toUpperCase()}
               </span>
             ))
           ) : (
             <span className="text-[8px] text-violet-400 uppercase font-medium">
-              {kuroError || "No anime mirrors"}
+              {kuroError || "No sub mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+{/* Kuro (Dub - English) */}
+      <button
+        onClick={() =>
+          (kuroDubSources.length > 0 || failedSources.includes("Kuro (Dub)")) &&
+          onSelect(kuroDubUrl)
+        }
+        disabled={
+          activeSource === "Kuro (Dub)" ||
+          (kuroLoading && !failedSources.includes("Kuro (Dub)"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Kuro (Dub)",
+          activeSource || "",
+          kuroLoading,
+          kuroDubSources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-pink-500/15 flex items-center justify-center text-pink-400 shrink-0">
+              {kuroLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Zap size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Kuro (Dub)
+                </p>
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-pink-500/35 bg-pink-500/20 text-pink-300 uppercase tracking-wider shrink-0">
+                  ENGLISH DUB
+                </span>
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {kuroLoading ? "Scanning..." : "Dubbed Streams"}
+              </p>
+            </div>
+          </div>
+          {activeSource === "Kuro (Dub)" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {kuroLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Scanning dub streams...
+            </span>
+          ) : kuroDubSources.length > 0 ? (
+            kuroDubSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-pink-500/20 text-pink-400/80 bg-pink-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Kuro[\s-]*/i, "")
+                  .replace(/\s*\(?DUB\)?/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-pink-400 uppercase font-medium">
+              {kuroError || "No dub mirrors"}
             </span>
           )}
         </div>

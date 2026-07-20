@@ -456,7 +456,22 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     )
     .join("|");
 
-  const kuroUrl = kuroSources
+  const kuroSubSources = kuroSources.filter(
+    (src) =>
+      src.name.toUpperCase().includes("SUB") || src.audio === "Japanese Sub",
+  );
+  const kuroDubSources = kuroSources.filter(
+    (src) =>
+      src.name.toUpperCase().includes("DUB") || src.audio === "English Dub",
+  );
+
+  const kuroSubUrl = (kuroSubSources.length > 0 ? kuroSubSources : kuroSources)
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
+
+  const kuroDubUrl = (kuroDubSources.length > 0 ? kuroDubSources : kuroSources)
     .map((src) =>
       src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
     )
@@ -1322,16 +1337,16 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── Kuro Card (Anime Only) ── */}
+{/* ── Kuro (Sub) Card (Japanese Audio) ── */}
           <div
             onClick={() => {
-              if (!kuroLoading && kuroSources.length > 0)
-                onSelect(kuroUrl);
+              if (!kuroLoading && kuroSubSources.length > 0)
+                onSelect(kuroSubUrl);
             }}
             className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
               kuroLoading
                 ? "border-violet-500/20 bg-slate-950/45 opacity-80 cursor-wait"
-                : kuroSources.length > 0
+                : kuroSubSources.length > 0
                   ? "border-violet-500/35 bg-slate-950/45 hover:border-violet-500/60 hover:bg-slate-950/65 cursor-pointer"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
@@ -1340,7 +1355,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             <div className="flex items-start gap-3">
               <div
                 className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                  kuroLoading || kuroSources.length > 0
+                  kuroLoading || kuroSubSources.length > 0
                     ? "bg-violet-500/15 text-violet-400"
                     : "bg-white/5 text-white/20"
                 }`}
@@ -1353,17 +1368,17 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Kuro
+                    Kuro (Sub)
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-500/20 border border-purple-500/35 text-purple-300 uppercase tracking-wider">
-                    ANIME ONLY
+                    JAPANESE AUDIO
                   </span>
                   {kuroLoading ? (
                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
-                  ) : kuroSources.length > 0 ? (
+                  ) : kuroSubSources.length > 0 ? (
                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/35 text-violet-300 uppercase tracking-wider flex items-center gap-1">
                       <Sparkles size={8} />
                       ACTIVE
@@ -1371,7 +1386,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Dedicated high-speed KuroAPI providers specialized for cartoons and anime content with dub and sub streams.
+                  Dedicated high-speed KuroAPI subbed streams with multi-language subtitle tracks.
                 </p>
               </div>
             </div>
@@ -1384,30 +1399,31 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500" />
                   </span>
-                  Probing Anime Nodes...
+                  Probing Sub Nodes...
                 </div>
-              ) : kuroSources.length > 0 ? (
+              ) : kuroSubSources.length > 0 ? (
                 <div className="space-y-1.5">
                   <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
-                    Available Anime Mirrors:
+                    Available Sub Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {kuroSources.map((src) => {
+                    {kuroSubSources.map((src) => {
                       const cleanMirrorName = src.name
                         .replace(/^Kuro\s*\((.*?)\)$/i, "$1")
                         .replace(/^Kuro/i, "")
+                        .replace(/\s*\(?SUB\)?/i, "")
                         .trim()
                         .toUpperCase();
                       const displayName = cleanMirrorName || "HD";
                       return (
                         <button
                           key={src.name}
-                          title={`Play Kuro (${displayName}) directly`}
+                          title={`Play Kuro (${displayName}) sub directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             const reordered = [
                               src,
-                              ...kuroSources.filter(
+                              ...kuroSubSources.filter(
                                 (s) => s.name !== src.name,
                               ),
                             ];
@@ -1437,8 +1453,131 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-violet-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-violet-400 animate-ping" />
                   {kuroError
-                    ? "Uplink currently offline"
-                    : "No anime mirrors available"}
+                    ? "Sub uplink offline"
+                    : "No sub mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+{/* ── Kuro (Dub) Card (English Audio) ── */}
+          <div
+            onClick={() => {
+              if (!kuroLoading && kuroDubSources.length > 0)
+                onSelect(kuroDubUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              kuroLoading
+                ? "border-pink-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : kuroDubSources.length > 0
+                  ? "border-pink-500/35 bg-slate-950/45 hover:border-pink-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  kuroLoading || kuroDubSources.length > 0
+                    ? "bg-pink-500/15 text-pink-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Zap
+                  size={18}
+                  className={kuroLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Kuro (Dub)
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-pink-500/20 border border-pink-500/35 text-pink-300 uppercase tracking-wider">
+                    ENGLISH DUB
+                  </span>
+                  {kuroLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-pink-500/20 bg-pink-500/5 text-pink-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : kuroDubSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-pink-500/20 border border-pink-500/35 text-pink-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Dedicated high-speed KuroAPI dubbed streams with English audio track.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {kuroLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-pink-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-pink-500" />
+                  </span>
+                  Probing Dub Nodes...
+                </div>
+              ) : kuroDubSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Available Dub Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {kuroDubSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Kuro\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Kuro/i, "")
+                        .replace(/\s*\(?DUB\)?/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName = cleanMirrorName || "HD";
+                      return (
+                        <button
+                          key={src.name}
+                          title={`Play Kuro (${displayName}) dub directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const reordered = [
+                              src,
+                              ...kuroDubSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-pink-500/30 text-pink-400 bg-pink-500/10 hover:border-pink-500/65 hover:bg-pink-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                        >
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
+                          {displayName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-pink-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-pink-400 animate-ping" />
+                  {kuroError
+                    ? "Dub uplink offline"
+                    : "No dub mirrors available"}
                 </p>
               )}
             </div>
