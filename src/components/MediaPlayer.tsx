@@ -148,6 +148,14 @@ export const parseMirrorDetails = (sourceName: string) => {
       ).toUpperCase(),
     };
   }
+  if (cleanSource.startsWith("Kuro")) {
+    return {
+      category: "Kuro",
+      name: (
+        (cleanSource.replace(/^Kuro[\s-]*/i, "").trim() || "Mirror") + suffix
+      ).toUpperCase(),
+    };
+  }
 
   return { category: "VidLink", name: (cleanSource + suffix).toUpperCase() };
 };
@@ -182,6 +190,7 @@ export const CATEGORY_PRIORITY = [
   "Vidnest",
   "FilmU",
   "Peachify",
+  "Kuro",
 ];
 
 export const getMirrorPriority = (sourceName: string) => {
@@ -602,6 +611,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const name = (first.source || first.name || "").toLowerCase();
     if (name.startsWith("vidrock")) return "VidRock";
     if (name.startsWith("peachify")) return "Peachify";
+    if (name.startsWith("kuro")) return "Kuro";
     if (name.startsWith("videasy")) return "Videasy";
     if (name.startsWith("filmu")) return "FilmU";
     if (name.startsWith("vidnest")) return "Vidnest";
@@ -645,6 +655,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "Peachify") {
           fetchUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "Kuro") {
+          fetchUrl = `${API}/api/kuro?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else {
@@ -739,6 +753,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             type: v.type || "hls",
             quality: (v as any).quality || "Auto",
           }));
+      } else if (category === "Kuro") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && v.url)
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("kuro")
+              ? name
+              : `Kuro (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            quality: (v as any).quality || "Auto",
+          }));
       } else {
         // VidLink
         const results = Array.isArray(data) ? data : data.results || [];
@@ -772,6 +797,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     "Vidnest",
     "FilmU",
     "Peachify",
+    "Kuro",
   ];
 
   const switchToNextSource = useCallback(async () => {
@@ -1245,6 +1271,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isPeachify = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("peachify"),
           );
+          const isKuro = processedMirrors.some((m) =>
+            m.source.toLowerCase().startsWith("kuro"),
+          );
 
           let dataPromise: Promise<any>;
           if (isVideasy) {
@@ -1278,6 +1307,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             } else if (isPeachify) {
               fetchUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}`;
+              if (season !== undefined) fetchUrl += `&season=${season}`;
+              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            } else if (isKuro) {
+              fetchUrl = `${API}/api/kuro?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}`;
               if (season !== undefined) fetchUrl += `&season=${season}`;
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             }

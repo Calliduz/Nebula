@@ -96,6 +96,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [peachifyLoading, setPeachifyLoading] = useState(true);
   const [peachifyError, setPeachifyError] = useState("");
 
+  const [kuroSources, setKuroSources] = useState<any[]>([]);
+  const [kuroLoading, setKuroLoading] = useState(true);
+  const [kuroError, setKuroError] = useState("");
+
   const isMountedRef = useRef(true);
 
   const loadAllSources = (force = false) => {
@@ -115,6 +119,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     setVidriftError("");
     setPeachifyLoading(true);
     setPeachifyError("");
+    setKuroLoading(true);
+    setKuroError("");
 
     const forceParam = force ? "&force=1" : "";
 
@@ -364,6 +370,37 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (!isMountedRef.current) return;
         setPeachifyLoading(false);
       });
+
+    // 9. Kuro Fetch (Anime Only)
+    let kuroFetchUrl = `${API_BASE_URL}/api/kuro?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
+    if (season !== undefined) kuroFetchUrl += `&season=${season}`;
+    if (episode !== undefined) kuroFetchUrl += `&episode=${episode}`;
+
+    fetch(kuroFetchUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan Kuro uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!isMountedRef.current) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name,
+            url: value.url,
+            type: value.type || "hls",
+            quality: (value as any).quality || "Auto",
+          }));
+        setKuroSources(activeSources);
+      })
+      .catch((err) => {
+        if (!isMountedRef.current) return;
+        setKuroError(err.message || "Failed to contact Kuro.");
+      })
+      .finally(() => {
+        if (!isMountedRef.current) return;
+        setKuroLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -419,6 +456,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     )
     .join("|");
 
+  const kuroUrl = kuroSources
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
+
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
       {/* Background radial glow */}
@@ -459,7 +502,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               vidnestLoading ||
               vaplayerLoading ||
               vidriftLoading ||
-              peachifyLoading
+              peachifyLoading ||
+              kuroLoading
                 ? "animate-spin text-nebula-cyan"
                 : ""
             }
@@ -1551,6 +1595,128 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   {peachifyError
                     ? "Uplink currently offline"
                     : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+{/* ── Kuro Card (Anime Only) ── */}
+          <div
+            onClick={() => {
+              if (!kuroLoading && kuroSources.length > 0)
+                onSelect(kuroUrl);
+            }}
+            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+              kuroLoading
+                ? "border-violet-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                : kuroSources.length > 0
+                  ? "border-violet-500/35 bg-slate-950/45 hover:border-violet-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  kuroLoading || kuroSources.length > 0
+                    ? "bg-violet-500/15 text-violet-400"
+                    : "bg-white/5 text-white/20"
+                }`}
+              >
+                <Zap
+                  size={18}
+                  className={kuroLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                    Kuro
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-500/20 border border-purple-500/35 text-purple-300 uppercase tracking-wider">
+                    ANIME ONLY
+                  </span>
+                  {kuroLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : kuroSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/35 text-violet-300 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Dedicated high-speed KuroAPI providers specialized for cartoons and anime content with dub and sub streams.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/5 pt-3">
+              {kuroLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-violet-400/70 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500" />
+                  </span>
+                  Probing Anime Nodes...
+                </div>
+              ) : kuroSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                    Available Anime Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {kuroSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Kuro\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Kuro/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName = cleanMirrorName || "HD";
+                      return (
+                        <button
+                          key={src.name}
+                          title={`Play Kuro (${displayName}) directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const reordered = [
+                              src,
+                              ...kuroSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-violet-500/30 text-violet-400 bg-violet-500/10 hover:border-violet-500/65 hover:bg-violet-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                        >
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
+                          {displayName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-violet-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-violet-400 animate-ping" />
+                  {kuroError
+                    ? "Uplink currently offline"
+                    : "No anime mirrors available"}
                 </p>
               )}
             </div>
