@@ -5910,6 +5910,10 @@ export function InPlayerSourcePicker({
   const [peachifyLoading, setPeachifyLoading] = useState(true);
   const [peachifyError, setPeachifyError] = useState("");
 
+  const [kuroSources, setKuroSources] = useState<any[]>([]);
+  const [kuroLoading, setKuroLoading] = useState(true);
+  const [kuroError, setKuroError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -5924,7 +5928,8 @@ export function InPlayerSourcePicker({
         vidnestLoading ||
         vaplayerLoading ||
         vidriftLoading ||
-        peachifyLoading,
+        peachifyLoading ||
+        kuroLoading,
     );
   }, [
     loading,
@@ -5934,6 +5939,7 @@ export function InPlayerSourcePicker({
     vaplayerLoading,
     vidriftLoading,
     peachifyLoading,
+    kuroLoading,
   ]);
 
   const fetchSources = useCallback(
@@ -5953,6 +5959,8 @@ export function InPlayerSourcePicker({
         setVidriftError("");
         setPeachifyLoading(true);
         setPeachifyError("");
+        setKuroLoading(true);
+        setKuroError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -6157,6 +6165,35 @@ export function InPlayerSourcePicker({
           if (!isBackground) setPeachifyLoading(false);
         });
 
+      // 8. Kuro Fetch
+      let kuroUrl = `${API}/api/kuro?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
+      if (season !== undefined) kuroUrl += `&season=${season}`;
+      if (episode !== undefined) kuroUrl += `&episode=${episode}`;
+
+      const pKuro = fetch(kuroUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Kuro scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name: name.startsWith("Kuro") ? name : `Kuro (${name})`,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+          setKuroSources(list);
+          if (!isBackground) setKuroError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setKuroError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setKuroLoading(false);
+        });
+
       return Promise.all([
         pVidrock,
         pVideasy,
@@ -6165,6 +6202,7 @@ export function InPlayerSourcePicker({
         pVaplayer,
         pVidrift,
         pPeachify,
+        pKuro,
       ]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
@@ -6243,6 +6281,14 @@ export function InPlayerSourcePicker({
     )
     .join("|");
 
+  const kuroUrl = kuroSources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
+
   const getButtonClass = (
     srcName: string,
     activeName: string,
@@ -6269,6 +6315,8 @@ export function InPlayerSourcePicker({
         return "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default";
       if (srcName === "Peachify")
         return "border-rose-500 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.12)] ring-1 ring-rose-500/35 scale-[1.01] cursor-default";
+      if (srcName === "Kuro")
+        return "border-violet-500 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.12)] ring-1 ring-violet-500/35 scale-[1.01] cursor-default";
     }
 
     if (isFailed) {
@@ -6296,6 +6344,8 @@ export function InPlayerSourcePicker({
         return "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer";
       if (srcName === "Peachify")
         return "border-rose-500/35 bg-rose-500/5 hover:bg-rose-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "Kuro")
+        return "border-violet-500/35 bg-violet-500/5 hover:bg-violet-500/10 active:scale-95 cursor-pointer";
     }
 
     return "border-white/5 bg-white/2 opacity-40 cursor-not-allowed";
@@ -6708,6 +6758,80 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase font-medium">
               {vidnestError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+{/* Kuro (Anime Only) */}
+      <button
+        onClick={() =>
+          (kuroSources.length > 0 || failedSources.includes("Kuro")) &&
+          onSelect(kuroUrl)
+        }
+        disabled={
+          activeSource === "Kuro" ||
+          (kuroLoading && !failedSources.includes("Kuro"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Kuro",
+          activeSource || "",
+          kuroLoading,
+          kuroSources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-400 shrink-0">
+              {kuroLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Zap size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Kuro
+                </p>
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-purple-500/35 bg-purple-500/20 text-purple-300 uppercase tracking-wider shrink-0">
+                  ANIME ONLY
+                </span>
+                {failedSources.includes("Kuro") && kuroSources.length === 0 && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {kuroLoading ? "Scanning..." : "Direct Anime"}
+              </p>
+            </div>
+          </div>
+          {activeSource === "Kuro" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {kuroLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running anime scan...
+            </span>
+          ) : kuroSources.length > 0 ? (
+            kuroSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Kuro[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-violet-400 uppercase font-medium">
+              {kuroError || "No anime mirrors"}
             </span>
           )}
         </div>
