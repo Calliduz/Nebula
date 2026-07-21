@@ -65,7 +65,7 @@ export const MovieCard = memo<MovieCardProps>(
         onClick={() => onSelect?.(movie)}
         style={{ willChange: "transform" }}
       >
-        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 hover:scale-[1.02] transform-gpu shadow-2xl">
+        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 group-hover/card:scale-[1.06] group-hover/card:shadow-[0_12px_48px_rgba(0,0,0,0.85)] transform-gpu shadow-2xl">
           {/* Shimmer placeholder while image loads */}
           {!imgLoaded && !imgError && (
             <div className="absolute inset-0 bg-white/5 shimmer-bg" />
@@ -152,10 +152,10 @@ export const MovieCard = memo<MovieCardProps>(
 
           {/* Hover Preview Drawer (Desktop-only) */}
           <div className="card-hover-drawer">
-            <span className="text-[10px] font-display font-black tracking-tight text-white uppercase truncate mb-0.5 leading-tight">
+            <span className="text-[12px] font-display font-black tracking-tight text-white uppercase truncate mb-0.5 leading-tight">
               {movie.title}
             </span>
-            <div className="flex items-center gap-2 text-[7.5px] font-semibold text-white/50 mb-1 leading-none">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-white/50 mb-1 leading-none">
               {movie.imdb && movie.imdb > 0 && (
                 <span className="text-nebula-cyan font-black">
                   ★ {movie.imdb}
@@ -167,7 +167,7 @@ export const MovieCard = memo<MovieCardProps>(
               </span>
             </div>
             {movie.genre && movie.genre.length > 0 && (
-              <span className="text-[7.5px] text-white/30 truncate leading-none">
+              <span className="text-[9.5px] text-white/30 truncate leading-none">
                 {Array.isArray(movie.genre)
                   ? movie.genre.join(" • ")
                   : movie.genre}

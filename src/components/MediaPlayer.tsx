@@ -2378,6 +2378,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             console.log(
               `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
             );
+            showToast(
+              "Connection lost. Automatically shifting to next best mirror...",
+              "info",
+            );
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             handleMirrorExhaustion(
@@ -2416,6 +2420,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   : "LOAD_ERR",
               }));
             }
+            showToast(
+              "Connection lost. Automatically shifting to next best mirror...",
+              "info",
+            );
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             handleMirrorExhaustion(
@@ -2457,6 +2465,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     [failingMirror.source]: lastFragErrorStatus || "502/404",
                   }));
                 }
+                showToast(
+                  "Connection lost. Automatically shifting to next best mirror...",
+                  "info",
+                );
                 selectMirror(nextIdx, mirrorsRef.current);
               } else {
                 handleMirrorExhaustion(
@@ -2501,6 +2513,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   [failingMirror.source]: "TIMEOUT",
                 }));
               }
+              showToast(
+                "Connection lost. Automatically shifting to next best mirror...",
+                "info",
+              );
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
               handleMirrorExhaustion(
@@ -2561,6 +2577,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               console.log(
                 `[HLS] Switching to mirror ${nextIdx}: ${mirrorsRef.current[nextIdx].source}`,
               );
+              showToast(
+                "Connection lost. Automatically shifting to next best mirror...",
+                "info",
+              );
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
               handleMirrorExhaustion(
@@ -2600,6 +2620,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               }
               console.log(
                 `[HLS] Media recovery failed. Switching to mirror ${nextIdx}...`,
+              );
+              showToast(
+                "Connection lost. Automatically shifting to next best mirror...",
+                "info",
               );
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
@@ -3090,6 +3114,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 [failingMirror.source]: `CODE:${err.code}`,
               }));
             }
+            showToast(
+              "Connection lost. Automatically shifting to next best mirror...",
+              "info",
+            );
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
             handleMirrorExhaustion(
@@ -3165,6 +3193,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   [failingMirror.source]: "STUCK",
                 }));
               }
+              showToast(
+                "Connection lost. Automatically shifting to next best mirror...",
+                "info",
+              );
               selectMirror(nextIdx, mirrorsRef.current);
             }
             stallCount = 0;

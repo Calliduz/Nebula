@@ -385,7 +385,7 @@ input[type="range"].appearance-slider-vertical {
       opacity 0.3s ease;
     opacity: 0;
     z-index: 30;
-    padding: 8px 10px;
+    padding: 12px 14px;
     flex-direction: column;
     justify-content: flex-end;
     pointer-events: none;

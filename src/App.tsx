@@ -183,8 +183,6 @@ export default function App() {
                     <HomeFeed
                       sortBy={state.sortBy}
                       setSortBy={actions.setSortBy}
-                      activeMood={state.activeMood}
-                      setActiveMood={actions.setActiveMood}
                       selectedGenre={state.selectedGenre}
                       setSelectedGenre={actions.setSelectedGenre}
                       setSelectedMovie={actions.setSelectedMovie}

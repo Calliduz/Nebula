@@ -23,8 +23,6 @@ const SectionDivider = ({ label }: { label?: string }) => (
 interface HomeFeedProps {
   sortBy: string;
   setSortBy: (val: string) => void;
-  activeMood: string;
-  setActiveMood: (val: string) => void;
   selectedGenre: string;
   setSelectedGenre: (val: string) => void;
   setSelectedMovie: (movie: any) => void;
@@ -49,8 +47,6 @@ interface HomeFeedProps {
 export const HomeFeed: React.FC<HomeFeedProps> = ({
   sortBy,
   setSortBy,
-  activeMood,
-  setActiveMood,
   selectedGenre,
   setSelectedGenre,
   setSelectedMovie,
@@ -229,8 +225,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       <DiscoveryBar
         sortBy={sortBy}
         setSortBy={setSortBy}
-        activeMood={activeMood}
-        setActiveMood={setActiveMood}
         onRandomize={onRandomize}
         onRefreshFeed={onRefreshFeed}
         adultMode={adultMode}

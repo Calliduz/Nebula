@@ -872,7 +872,6 @@ export function useAppState() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState("Recently Added");
-  const [activeMood, setActiveMood] = useState("All Moods");
   const [selectedRegion, setSelectedRegion] = useState("All");
   const [selectedMovie, setSelectedMovie] = useState<any>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -3150,16 +3149,13 @@ export function useAppState() {
     const filtered = source.filter((m) => {
       const matchesGenre =
         selectedGenre === "All" || m.genre.includes(selectedGenre);
-      const matchesMood =
-        activeMood === "All Moods" ||
-        m.genre.toLowerCase().includes(activeMood.toLowerCase().split(" ")[0]);
       // Regional filter for Dramas
       const mRegion = (m as any).countryId?.toString();
       const matchesRegion =
         selectedRegion === "All" || mRegion === selectedRegion;
 
       if (activeTab === "my-list") return myList.includes(m.id);
-      return matchesGenre && matchesMood && matchesRegion;
+      return matchesGenre && matchesRegion;
     });
 
     if (sortBy === "IMDB Rating") {
@@ -3171,7 +3167,6 @@ export function useAppState() {
     return filtered;
   }, [
     selectedGenre,
-    activeMood,
     activeTab,
     myList,
     sortBy,
@@ -3431,7 +3426,6 @@ export function useAppState() {
       debouncedSearchQuery,
       isLoading,
       sortBy,
-      activeMood,
       selectedMovie,
       scrolled,
       myList,
@@ -3460,7 +3454,6 @@ export function useAppState() {
       setSearchQuery,
       setSelectedMovie: wrappedSetSelectedMovie,
       setSortBy,
-      setActiveMood,
       setSelectedRegion,
       toggleMyList,
       clearHistory,
