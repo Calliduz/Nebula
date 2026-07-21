@@ -33,12 +33,14 @@ export const HeroSkeleton = () => (
       </div>
     </div>
 
-    {/* Thumbnail Skeletons */}
-    <div className="absolute bottom-20 right-12 flex-col gap-4 hidden md:flex">
+    {/* Progress bar skeleton */}
+    <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-30">
       {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
-          className="w-[70px] aspect-[2/3] rounded-lg bg-white/5 border border-white/10 shimmer-bg"
+          className={`h-1 rounded-full bg-white/10 shimmer-bg ${
+            i === 1 ? "w-10 md:w-14" : "w-4 md:w-6"
+          }`}
         />
       ))}
     </div>

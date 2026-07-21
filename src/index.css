@@ -270,6 +270,56 @@
   .click-glow-once {
     animation: click-glow 0.5s ease-out forwards;
   }
+
+  /* ── Hero backdrop stacking — GPU-composited opacity crossfade ───────────── */
+  .hero-backdrop {
+    will-change: opacity;
+    transition: opacity 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── Navbar bottom glow accent (scrolled state) ──────────────────────────── */
+  .nav-glow-border::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 229, 255, 0.25) 30%,
+      rgba(0, 229, 255, 0.5) 50%,
+      rgba(0, 229, 255, 0.25) 70%,
+      transparent 100%
+    );
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .nav-glow-border.nav-scrolled::after {
+    opacity: 1;
+  }
+
+  /* ── Hero progress bar (story-style) ─────────────────────────────────────── */
+  @keyframes hero-progress {
+    from { width: 0%; }
+    to   { width: 100%; }
+  }
+  .hero-progress-fill {
+    animation: hero-progress 10s linear forwards;
+  }
+  .hero-progress-fill-paused {
+    animation-play-state: paused;
+  }
+
+  /* ── Mobile nav active dot indicator ────────────────────────────────────── */
+  .nav-active-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #00e5ff;
+    box-shadow: 0 0 6px rgba(0, 229, 255, 0.8);
+  }
 }
 
 /* Premium Range Input Styling */

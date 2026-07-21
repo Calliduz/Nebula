@@ -163,18 +163,6 @@ export default function App() {
         id="main-scroller"
         className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 pb-24 lg:pb-0 ${state.isSearchOpen ? "blur-2xl scale-[0.98] opacity-50" : ""}`}
       >
-        {/* ── System Banner ── */}
-        {!isWatching && !isDetailPage && (
-          <div className="relative z-[60] mt-[64px] md:mt-[76px] bg-nebula-cyan/5 border-b border-nebula-cyan/10 px-4 py-2.5 flex items-center justify-center gap-3 backdrop-blur-sm">
-            <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shadow-[0_0_10px_#00f3ff]" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/50">
-              <span className="text-nebula-cyan/80">Announcement:</span> Cast
-              Explorer is now available, tap an actor picture in the overview
-              tab to test it out! -- Fixed 4s load issue; Fixed recommendations
-              and Mylist
-            </p>
-          </div>
-        )}
 
         <div className="relative z-40">
           <Routes>
