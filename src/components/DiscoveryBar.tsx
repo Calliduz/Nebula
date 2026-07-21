@@ -113,7 +113,6 @@ export const DiscoveryBar = ({
       )}
 
       <section className="mb-4 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
-
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 w-full md:w-auto">
           <div className="relative flex-1 md:flex-none">
             <button
