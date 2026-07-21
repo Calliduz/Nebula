@@ -163,7 +163,6 @@ export default function App() {
         id="main-scroller"
         className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 pb-24 lg:pb-0 ${state.isSearchOpen ? "blur-2xl scale-[0.98] opacity-50" : ""}`}
       >
-
         <div className="relative z-40">
           <Routes>
             <Route

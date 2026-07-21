@@ -1542,8 +1542,13 @@ export function useAppState() {
         })(),
       ]);
 
-      const trending = hardDedupe([...rawTrendingPage1, ...rawTrendingPage2]).filter(isMoviePopularAndModern);
-      const pinoyDramas = hardDedupe(pinoyRes || []).filter(isMoviePopularAndModern).slice(0, 24);
+      const trending = hardDedupe([
+        ...rawTrendingPage1,
+        ...rawTrendingPage2,
+      ]).filter(isMoviePopularAndModern);
+      const pinoyDramas = hardDedupe(pinoyRes || [])
+        .filter(isMoviePopularAndModern)
+        .slice(0, 24);
 
       // Hydrate basic info for user history & watchlist items from the cached pool in currentPool
       const historyItems = [...history].reverse().slice(0, 10);

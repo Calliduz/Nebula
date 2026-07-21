@@ -40,8 +40,7 @@ export const TopNav = ({
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-8">
             {NAV_ITEMS.filter((n) => n.id !== "search").map((item) => {
-              const isActive =
-                activeTab === item.id && !viewingCategory;
+              const isActive = activeTab === item.id && !viewingCategory;
               return (
                 <button
                   key={item.id}
@@ -50,9 +49,7 @@ export const TopNav = ({
                     else onTabChange(item.id);
                   }}
                   className={`animated-underline relative text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 hover:text-nebula-cyan ${
-                    isActive
-                      ? "text-white"
-                      : "text-white/50"
+                    isActive ? "text-white" : "text-white/50"
                   }`}
                 >
                   {item.label}
@@ -106,8 +103,7 @@ export const TopNav = ({
                 key={`mobile-nav-${item.id}`}
                 onClick={() => {
                   if (item.id === "search") onSearchClick();
-                  else if (item.id === "my-list")
-                    setViewingCategory("My List");
+                  else if (item.id === "my-list") setViewingCategory("My List");
                   else onTabChange(item.id);
                 }}
                 className={`relative flex flex-col items-center gap-1.5 transition-all duration-300 ${

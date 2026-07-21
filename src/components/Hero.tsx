@@ -112,7 +112,11 @@ export const Hero: React.FC<HeroProps> = ({
           {/* Mobile-only portrait poster card */}
           <div className="md:hidden w-40 sm:w-48 aspect-[2/3] rounded-xl overflow-hidden shadow-[0_12px_45px_rgba(0,0,0,0.75)] border border-white/10 shrink-0">
             <img
-              src={activeHero.image || activeHero.fanartBackground || activeHero.backdrop}
+              src={
+                activeHero.image ||
+                activeHero.fanartBackground ||
+                activeHero.backdrop
+              }
               alt={activeHero.title}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
@@ -156,18 +160,20 @@ export const Hero: React.FC<HeroProps> = ({
               >
                 {/* Desktop layout */}
                 <span className="hidden md:block">
-                  {activeHero.title.split(":").map((part: string, i: number) => (
-                    <span
-                      key={`hero-part-${i}`}
-                      className={
-                        i > 0
-                          ? "block text-[0.4em] text-white/40 tracking-normal mt-2"
-                          : "block"
-                      }
-                    >
-                      {part}
-                    </span>
-                  ))}
+                  {activeHero.title
+                    .split(":")
+                    .map((part: string, i: number) => (
+                      <span
+                        key={`hero-part-${i}`}
+                        className={
+                          i > 0
+                            ? "block text-[0.4em] text-white/40 tracking-normal mt-2"
+                            : "block"
+                        }
+                      >
+                        {part}
+                      </span>
+                    ))}
                 </span>
                 {/* Mobile layout */}
                 <span className="md:hidden block leading-none line-clamp-2">

@@ -1064,8 +1064,11 @@ export const enrichMovies = async (
         );
         if (index !== -1) {
           normalized[index].clearLogo = proxyImage(meta.logoUrl);
-          const isBadBg = meta.backgroundUrl && /thumb|banner/i.test(meta.backgroundUrl);
-          normalized[index].fanartBackground = isBadBg ? undefined : proxyImage(meta.backgroundUrl);
+          const isBadBg =
+            meta.backgroundUrl && /thumb|banner/i.test(meta.backgroundUrl);
+          normalized[index].fanartBackground = isBadBg
+            ? undefined
+            : proxyImage(meta.backgroundUrl);
           if (meta.logoUrl) {
             try {
               localStorage.setItem(
