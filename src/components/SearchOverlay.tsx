@@ -118,11 +118,19 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   const [scrolledDown, setScrolledDown] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [activeSearchTab, setActiveSearchTab] = useState<
+    "all" | "media" | "people"
+  >("all");
 
   const placeholder = useTypewriterPlaceholder(
     topSearches,
     isOpen && !searchQuery,
   );
+
+  // Reset search tab when query changes
+  useEffect(() => {
+    setActiveSearchTab("all");
+  }, [searchQuery]);
 
   // Load recent searches when overlay opens
   useEffect(() => {
@@ -220,6 +228,14 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
   const hasQuery = searchQuery.trim().length > 0;
   const showRecent = !hasQuery && recentSearches.length > 0;
+  const hasNoResultsForTab =
+    hasQuery &&
+    !isLoading &&
+    ((activeSearchTab === "all" &&
+      searchResults.length === 0 &&
+      searchPeopleResults.length === 0) ||
+      (activeSearchTab === "media" && searchResults.length === 0) ||
+      (activeSearchTab === "people" && searchPeopleResults.length === 0));
 
   return (
     <>
@@ -308,25 +324,71 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
               <div className="flex flex-col xl:flex-row gap-10 sm:gap-20">
                 {/* ── Main Results Area ─────────────────────────────────────── */}
                 <div className="flex-1 min-w-0">
-                  {/* Results header */}
-                  <div className="flex items-center justify-between mb-6 sm:mb-10">
+                  {/* Results header & tabs */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-4 border-b border-white/[0.04]">
                     <h3 className="text-[11px] sm:text-[13px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-3">
                       <span className="w-6 h-px bg-white/10" />
                       {hasQuery ? (
                         <>
                           Results{" "}
                           <span className="text-nebula-cyan">
-                            ({searchResults.length})
+                            (
+                            {
+                              (activeSearchTab === "people"
+                                ? searchPeopleResults
+                                : activeSearchTab === "media"
+                                  ? searchResults
+                                  : [...searchResults, ...searchPeopleResults]
+                              ).length
+                            }
+                            )
                           </span>
                         </>
                       ) : (
                         "Awaiting Signal"
                       )}
                     </h3>
+
+                    {hasQuery && (
+                      <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] p-1 rounded-xl backdrop-blur-md">
+                        <button
+                          onClick={() => setActiveSearchTab("all")}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                            activeSearchTab === "all"
+                              ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                              : "text-white/40 hover:text-white"
+                          }`}
+                        >
+                          All (
+                          {searchResults.length + searchPeopleResults.length})
+                        </button>
+                        <button
+                          onClick={() => setActiveSearchTab("media")}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                            activeSearchTab === "media"
+                              ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                              : "text-white/40 hover:text-white"
+                          }`}
+                        >
+                          Movies & TV ({searchResults.length})
+                        </button>
+                        <button
+                          onClick={() => setActiveSearchTab("people")}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                            activeSearchTab === "people"
+                              ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                              : "text-white/40 hover:text-white"
+                          }`}
+                        >
+                          Cast ({searchPeopleResults.length})
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* People results */}
                   {hasQuery &&
+                    activeSearchTab !== "media" &&
                     searchPeopleResults &&
                     searchPeopleResults.length > 0 && (
                       <div className="mb-10">
@@ -363,13 +425,17 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                             ),
                           )}
                         </div>
-                        <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent my-8" />
+                        {activeSearchTab === "all" && (
+                          <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent my-8" />
+                        )}
                       </div>
                     )}
 
                   {/* Movie/TV Grid */}
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-4 gap-2 sm:gap-5">
-                    {hasQuery && searchResults.length > 0 ? (
+                    {hasQuery &&
+                    activeSearchTab !== "people" &&
+                    searchResults.length > 0 ? (
                       <>
                         <div className="col-span-full mb-1">
                           <h4 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-3">
@@ -433,7 +499,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                           </motion.div>
                         ))}
                       </>
-                    ) : hasQuery && !isLoading ? (
+                    ) : hasNoResultsForTab ? (
                       /* No results state */
                       <div className="col-span-full py-20 flex flex-col items-center">
                         <div className="relative mb-6">
@@ -446,8 +512,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                         <h4 className="text-xl font-black text-white uppercase tracking-tighter italic mb-2">
                           No Transmission Found
                         </h4>
-                        <p className="text-white/40 text-sm font-medium tracking-wide text-center max-w-xs">
+                        <p className="text-white/40 text-sm font-medium tracking-wide text-center max-w-xs animate-pulse">
                           The Nebula signal could not locate "{searchQuery}"
+                          under this category.
                         </p>
                         <div className="mt-8 flex flex-wrap gap-2 justify-center">
                           {topSearches.slice(0, 5).map((term) => (

@@ -6,8 +6,42 @@ import {
   RefreshCw,
   ShieldAlert,
   X,
+  Compass,
+  Skull,
+  Brain,
+  Zap,
+  Cpu,
 } from "lucide-react";
-import { SORTS } from "../data/constants";
+import { SORTS, MOODS } from "../data/constants";
+
+const MOOD_CONFIG: Record<string, { icon: React.ElementType; color: string }> =
+  {
+    "All Moods": {
+      icon: Compass,
+      color:
+        "text-white/50 group-hover:text-nebula-cyan border-white/10 hover:border-nebula-cyan/30",
+    },
+    "Dark & Gritty": {
+      icon: Skull,
+      color:
+        "text-red-400/50 group-hover:text-red-400 border-red-500/10 hover:border-red-500/30",
+    },
+    "Mind-Bending": {
+      icon: Brain,
+      color:
+        "text-purple-400/50 group-hover:text-purple-400 border-purple-500/10 hover:border-purple-500/30",
+    },
+    "Adrenaline Rush": {
+      icon: Zap,
+      color:
+        "text-amber-400/50 group-hover:text-amber-400 border-amber-500/10 hover:border-amber-500/30",
+    },
+    Cyber: {
+      icon: Cpu,
+      color:
+        "text-nebula-cyan/50 group-hover:text-nebula-cyan border-nebula-cyan/10 hover:border-nebula-cyan/30",
+    },
+  };
 
 // ─── Age Gate Confirmation Dialog ─────────────────────────────────────────────
 const AgeGateDialog: React.FC<{
@@ -69,6 +103,8 @@ const AgeGateDialog: React.FC<{
 export const DiscoveryBar = ({
   sortBy,
   setSortBy,
+  activeMood,
+  setActiveMood,
   onRandomize,
   onRefreshFeed,
   adultMode,
@@ -112,8 +148,36 @@ export const DiscoveryBar = ({
         />
       )}
 
-      <section className="mb-4 sm:mb-8 flex items-center justify-between md:justify-end gap-3 sm:gap-4">
-        {" "}
+      <section className="mb-4 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+        {/* Left Side: Mood Filter Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth">
+          {MOODS.map((mood) => {
+            const config = MOOD_CONFIG[mood] || MOOD_CONFIG["All Moods"];
+            const Icon = config.icon;
+            const isActive = activeMood === mood;
+            return (
+              <button
+                key={mood}
+                onClick={() => setActiveMood(mood)}
+                className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 cursor-pointer ${
+                  isActive
+                    ? mood === "Dark & Gritty"
+                      ? "bg-red-500/10 border-red-400 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.25)]"
+                      : mood === "Mind-Bending"
+                        ? "bg-purple-500/10 border-purple-400 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.25)]"
+                        : mood === "Adrenaline Rush"
+                          ? "bg-amber-500/10 border-amber-400 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
+                          : "bg-nebula-cyan/10 border-nebula-cyan text-nebula-cyan shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                    : `bg-white/[0.02] ${config.color}`
+                }`}
+              >
+                <Icon size={12} className="shrink-0" />
+                <span>{mood}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 w-full md:w-auto">
           <div className="relative flex-1 md:flex-none">
             <button

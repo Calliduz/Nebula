@@ -24,6 +24,7 @@ import {
   Zap,
   SkipForward,
   Cloud,
+  Keyboard,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -144,7 +145,8 @@ export const parseMirrorDetails = (sourceName: string) => {
     return {
       category: "Peachify",
       name: (
-        (cleanSource.replace(/^Peachify[\s-]*/i, "").trim() || "Mirror") + suffix
+        (cleanSource.replace(/^Peachify[\s-]*/i, "").trim() || "Mirror") +
+        suffix
       ).toUpperCase(),
     };
   }
@@ -358,6 +360,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [subtitleOffset, setSubtitleOffset] = useState<number>(0);
   const [fetchingSubtitles, setFetchingSubtitles] = useState(false);
   const [showEpisodeDrawer, setShowEpisodeDrawer] = useState(false);
+  const [showHotkeys, setShowHotkeys] = useState(false);
   const [tvDetails, setTvDetails] = useState<any>(null);
   const [isZoomed, setIsZoomed] = useState(false);
   const touchStartDistRef = useRef<number | null>(null);
@@ -834,12 +837,16 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         // Fetch mirrors for the new source, with up to 2 retries (waiting 2.5s each) to allow slow backend background scrapers to populate cache
         let updatedMirrors = await fetchSourceMirrors(nextSource, false);
         if (!updatedMirrors || updatedMirrors.length === 0) {
-          console.log(`[PLAYER] Source ${nextSource} returned no mirrors. Retrying to allow background scrape to cache...`);
+          console.log(
+            `[PLAYER] Source ${nextSource} returned no mirrors. Retrying to allow background scrape to cache...`,
+          );
           for (let attempt = 1; attempt <= 2; attempt++) {
             await new Promise((resolve) => setTimeout(resolve, 2500));
             updatedMirrors = await fetchSourceMirrors(nextSource, false);
             if (updatedMirrors && updatedMirrors.length > 0) {
-              console.log(`[PLAYER] Source ${nextSource} mirrors recovered on retry attempt ${attempt}!`);
+              console.log(
+                `[PLAYER] Source ${nextSource} mirrors recovered on retry attempt ${attempt}!`,
+              );
               break;
             }
           }
@@ -1498,7 +1505,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const grouped = groupMirrors(processedMirrors);
           setMirrors(grouped);
           mirrorsRef.current = grouped;
-          
+
           let startIndex = 0;
           try {
             const preferred = localStorage.getItem("nebula-preferred-source");
@@ -1951,7 +1958,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       }
     }
   }, [subtitles, preferredLanguageISO, activeSubtitle]);
-
 
   const getProgressKey = useCallback(() => {
     if (movie.type === "tv" && season !== undefined && episode !== undefined) {
@@ -3549,11 +3555,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         case "Escape":
           showSettings ? setShowSettings(false) : onClose();
           break;
+        case "Slash":
+        case "KeySlash":
+          if (e.key === "?" || e.shiftKey) {
+            e.preventDefault();
+            setShowHotkeys((p) => !p);
+          }
+          break;
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose, showSettings, seekBy]);
+  }, [onClose, showSettings, seekBy, setShowHotkeys]);
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -3875,7 +3888,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         )}
       </AnimatePresence>
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-[100] bg-black">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-[100] bg-black transform-gpu">
           {(movie.fanartBackground || movie.backdrop) && (
             <img
               src={movie.fanartBackground || movie.backdrop}
@@ -3896,12 +3909,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 src={movie.clearLogo}
                 alt={movie.title}
                 height="112"
-                className="h-20 md:h-28 w-auto object-contain drop-shadow-2xl animate-pulse"
+                className="h-20 md:h-28 w-auto object-contain drop-shadow-2xl animate-pulse transform-gpu will-change-[opacity,transform]"
                 referrerPolicy="no-referrer"
                 onError={() => setLogoFailed(true)}
               />
             ) : (
-              <h1 className="text-3xl md:text-5xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl">
+              <h1 className="text-3xl md:text-5xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl transform-gpu will-change-[opacity,transform]">
                 {movie.title}
               </h1>
             )}
@@ -5004,6 +5017,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 </>
               )}
               <button
+                onClick={() => {
+                  setShowHotkeys((p) => !p);
+                  setShowSettings(false);
+                  setShowSubtitles(false);
+                  setShowEpisodeDrawer(false);
+                  setShowServersModal(false);
+                }}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
+                  showHotkeys
+                    ? "bg-white text-black"
+                    : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20"
+                }`}
+                title="Keyboard Shortcuts (?)"
+              >
+                <Keyboard size={16} />
+              </button>
+              <button
                 onClick={handleFullscreen}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
                 title="Fullscreen (F)"
@@ -5745,7 +5775,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     strokeWidth="3"
                     fill="transparent"
                     strokeDasharray={2 * Math.PI * 18}
-                    strokeDashoffset={2 * Math.PI * 18 * (1 - countdownVal / 10)}
+                    strokeDashoffset={
+                      2 * Math.PI * 18 * (1 - countdownVal / 10)
+                    }
                     className="transition-all duration-1000 ease-linear"
                   />
                 </svg>
@@ -5865,6 +5897,76 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Keyboard Shortcuts Help Modal ── */}
+      <AnimatePresence>
+        {showHotkeys && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowHotkeys(false)}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1200] flex items-center justify-center p-4 pointer-events-auto"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-[#0a0a0a] border border-white/10 p-6 sm:p-8 rounded-2xl shadow-2xl space-y-6"
+            >
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-nebula-cyan/10 border border-nebula-cyan/30 flex items-center justify-center text-nebula-cyan">
+                    <Keyboard size={16} />
+                  </div>
+                  <h3 className="font-display font-black text-sm uppercase tracking-wider text-white">
+                    Keyboard Shortcuts
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowHotkeys(false)}
+                  className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3.5">
+                {[
+                  { keys: ["Space"], desc: "Play / Pause" },
+                  { keys: ["M"], desc: "Mute / Unmute" },
+                  { keys: ["F"], desc: "Toggle Fullscreen" },
+                  { keys: ["J", "←"], desc: "Seek Backward (10s / 5s)" },
+                  { keys: ["L", "→"], desc: "Seek Forward (10s / 5s)" },
+                  { keys: ["↑", "↓"], desc: "Volume Up / Down" },
+                  { keys: ["?"], desc: "Toggle Shortcuts Menu" },
+                  { keys: ["Esc"], desc: "Close Menus / Exit Player" },
+                ].map((item, idx) => (
+                  <div
+                    key={`hk-${idx}`}
+                    className="flex items-center justify-between text-xs py-0.5"
+                  >
+                    <span className="text-white/60 font-semibold">
+                      {item.desc}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {item.keys.map((k, kidx) => (
+                        <kbd
+                          key={`key-${idx}-${kidx}`}
+                          className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[9px] font-black font-sans tracking-wide uppercase text-nebula-cyan min-w-[24px] text-center"
+                        >
+                          {k}
+                        </kbd>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -6377,7 +6479,7 @@ export function InPlayerSourcePicker({
 
   return (
     <div className="flex flex-col gap-2 p-1 overflow-y-auto max-h-[45vh] custom-scrollbar">
-{/* VidRock */}
+      {/* VidRock */}
       <button
         onClick={() =>
           (sources.length > 0 || failedSources.includes("VidRock")) &&
@@ -6449,7 +6551,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* Vaplayer */}
+      {/* Vaplayer */}
       <button
         onClick={() =>
           (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) &&
@@ -6480,11 +6582,12 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Vaplayer
                 </p>
-                {failedSources.includes("Vaplayer") && vaplayerSources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
+                {failedSources.includes("Vaplayer") &&
+                  vaplayerSources.length === 0 && (
+                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                      FAILED
+                    </span>
+                  )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
                 {vaplayerLoading ? "Scanning..." : "Active"}
@@ -6520,7 +6623,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* Vidrift */}
+      {/* Vidrift */}
       <button
         onClick={() =>
           (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
@@ -6551,11 +6654,12 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Vidrift
                 </p>
-                {failedSources.includes("Vidrift") && vidriftSources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
+                {failedSources.includes("Vidrift") &&
+                  vidriftSources.length === 0 && (
+                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                      FAILED
+                    </span>
+                  )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
                 {vidriftLoading ? "Scanning..." : "Active"}
@@ -6591,7 +6695,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* Videasy */}
+      {/* Videasy */}
       <button
         onClick={() =>
           (videasySources.length > 0 || failedSources.includes("Videasy")) &&
@@ -6622,11 +6726,12 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Videasy
                 </p>
-                {failedSources.includes("Videasy") && videasySources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
+                {failedSources.includes("Videasy") &&
+                  videasySources.length === 0 && (
+                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                      FAILED
+                    </span>
+                  )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
                 {videasyLoading ? "Decrypting..." : "Decrypted"}
@@ -6670,7 +6775,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* VidLink */}
+      {/* VidLink */}
       <button
         onClick={() => onSelect()}
         disabled={activeSource === "VidLink"}
@@ -6713,7 +6818,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* Vidnest */}
+      {/* Vidnest */}
       <button
         onClick={() =>
           (vidnestSources.length > 0 || failedSources.includes("Vidnest")) &&
@@ -6744,11 +6849,12 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Vidnest
                 </p>
-                {failedSources.includes("Vidnest") && vidnestSources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
+                {failedSources.includes("Vidnest") &&
+                  vidnestSources.length === 0 && (
+                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                      FAILED
+                    </span>
+                  )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
                 {vidnestLoading ? "Scanning..." : "Active"}
@@ -6787,7 +6893,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* Kuro (Sub - Japanese) */}
+      {/* Kuro (Sub - Japanese) */}
       <button
         onClick={() =>
           (kuroSubSources.length > 0 || failedSources.includes("Kuro (Sub)")) &&
@@ -6857,7 +6963,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* Kuro (Dub - English) */}
+      {/* Kuro (Dub - English) */}
       <button
         onClick={() =>
           (kuroDubSources.length > 0 || failedSources.includes("Kuro (Dub)")) &&
@@ -6927,7 +7033,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* FilmU */}
+      {/* FilmU */}
       <button
         onClick={() =>
           (filmuSources.length > 0 || failedSources.includes("FilmU")) &&
@@ -6958,11 +7064,12 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   FilmU
                 </p>
-                {failedSources.includes("FilmU") && filmuSources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
+                {failedSources.includes("FilmU") &&
+                  filmuSources.length === 0 && (
+                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                      FAILED
+                    </span>
+                  )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
                 {filmuLoading ? "Scanning..." : "Active"}
@@ -6998,7 +7105,7 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-{/* Peachify */}
+      {/* Peachify */}
       <button
         onClick={() =>
           (peachifySources.length > 0 || failedSources.includes("Peachify")) &&
@@ -7029,11 +7136,12 @@ export function InPlayerSourcePicker({
                 <p className="text-xs font-black text-white uppercase tracking-tight">
                   Peachify
                 </p>
-                {failedSources.includes("Peachify") && peachifySources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
+                {failedSources.includes("Peachify") &&
+                  peachifySources.length === 0 && (
+                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                      FAILED
+                    </span>
+                  )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
                 {peachifyLoading ? "Scanning..." : "Direct Peach"}

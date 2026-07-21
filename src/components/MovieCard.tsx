@@ -141,14 +141,39 @@ export const MovieCard = memo<MovieCardProps>(
             </div>
           )}
 
-          {/* Year — bottom-left, subtle */}
+          {/* Year — bottom-left, subtle (mobile fallback) */}
           {movie.year && !hasProgress && !movie.hasNewEpisode && (
-            <div className="absolute bottom-2 left-2 z-20 pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+            <div className="absolute bottom-2 left-2 z-20 pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hide-on-hover-capable">
               <span className="text-[8px] font-bold text-white/50 bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-sm">
                 {movie.year}
               </span>
             </div>
           )}
+
+          {/* Hover Preview Drawer (Desktop-only) */}
+          <div className="card-hover-drawer">
+            <span className="text-[10px] font-display font-black tracking-tight text-white uppercase truncate mb-0.5 leading-tight">
+              {movie.title}
+            </span>
+            <div className="flex items-center gap-2 text-[7.5px] font-semibold text-white/50 mb-1 leading-none">
+              {movie.imdb && movie.imdb > 0 && (
+                <span className="text-nebula-cyan font-black">
+                  ★ {movie.imdb}
+                </span>
+              )}
+              {movie.year && <span>{movie.year}</span>}
+              <span className="capitalize">
+                {movie.type === "tv" ? "Series" : "Movie"}
+              </span>
+            </div>
+            {movie.genre && movie.genre.length > 0 && (
+              <span className="text-[7.5px] text-white/30 truncate leading-none">
+                {Array.isArray(movie.genre)
+                  ? movie.genre.join(" • ")
+                  : movie.genre}
+              </span>
+            )}
+          </div>
 
           {/* Subtle Glow Sign */}
           <div className="absolute inset-0 opacity-0 group-hover/card:opacity-10 transition-opacity duration-500 bg-nebula-cyan pointer-events-none" />

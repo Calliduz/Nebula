@@ -563,7 +563,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             - md+: 2-column grid for 4 cards (2×2)
             - overflow-y-auto here so the modal header stays fixed while cards scroll */}
         <div className="flex flex-col md:grid md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pb-2">
-{/* ── VidRock Card ── */}
+          {/* ── VidRock Card ── */}
           <div
             onClick={() => {
               if (!loading && sources.length > 0) onSelect(vidrockUrl);
@@ -690,7 +690,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── Vaplayer Card ── */}
+          {/* ── Vaplayer Card ── */}
           <div
             onClick={() => {
               if (!vaplayerLoading && vaplayerSources.length > 0)
@@ -815,7 +815,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── Vidrift Card ── */}
+          {/* ── Vidrift Card ── */}
           <div
             onClick={() => {
               if (!vidriftLoading && vidriftSources.length > 0)
@@ -937,7 +937,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── Videasy Card ── */}
+          {/* ── Videasy Card ── */}
           <div
             onClick={() => {
               if (!videasyLoading && videasySources.length > 0)
@@ -1067,7 +1067,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── VidLink Card ── */}
+          {/* ── VidLink Card ── */}
           <div
             onClick={() => {
               if (!vidlinkLoading && vidlinkSources.length > 0)
@@ -1194,7 +1194,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── Vidnest Card ── */}
+          {/* ── Vidnest Card ── */}
           <div
             onClick={() => {
               if (!vidnestLoading && vidnestSources.length > 0)
@@ -1337,7 +1337,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── Kuro (Sub) Card (Japanese Audio) ── */}
+          {/* ── Kuro (Sub) Card (Japanese Audio) ── */}
           <div
             onClick={() => {
               if (!kuroLoading && kuroSubSources.length > 0)
@@ -1360,10 +1360,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     : "bg-white/5 text-white/20"
                 }`}
               >
-                <Zap
-                  size={18}
-                  className={kuroLoading ? "animate-pulse" : ""}
-                />
+                <Zap size={18} className={kuroLoading ? "animate-pulse" : ""} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
@@ -1386,7 +1383,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Dedicated high-speed KuroAPI subbed streams with multi-language subtitle tracks.
+                  Dedicated high-speed KuroAPI subbed streams with
+                  multi-language subtitle tracks.
                 </p>
               </div>
             </div>
@@ -1460,7 +1458,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── Kuro (Dub) Card (English Audio) ── */}
+          {/* ── Kuro (Dub) Card (English Audio) ── */}
           <div
             onClick={() => {
               if (!kuroLoading && kuroDubSources.length > 0)
@@ -1483,10 +1481,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     : "bg-white/5 text-white/20"
                 }`}
               >
-                <Zap
-                  size={18}
-                  className={kuroLoading ? "animate-pulse" : ""}
-                />
+                <Zap size={18} className={kuroLoading ? "animate-pulse" : ""} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
@@ -1509,7 +1504,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Dedicated high-speed KuroAPI dubbed streams with English audio track.
+                  Dedicated high-speed KuroAPI dubbed streams with English audio
+                  track.
                 </p>
               </div>
             </div>
@@ -1583,7 +1579,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── FilmU Card ── */}
+          {/* ── FilmU Card ── */}
           <div
             onClick={() => {
               if (!filmuLoading && filmuSources.length > 0) onSelect(filmuUrl);
@@ -1737,7 +1733,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-{/* ── Peachify Card ── */}
+          {/* ── Peachify Card ── */}
           <div
             onClick={() => {
               if (!peachifyLoading && peachifySources.length > 0)
@@ -2417,10 +2413,14 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
       if (airedRecently) {
         // Read history from localStorage
-        const history = JSON.parse(localStorage.getItem("nebula-history") || "[]");
+        const history = JSON.parse(
+          localStorage.getItem("nebula-history") || "[]",
+        );
         const isInHistory = history.some((item: any) => {
           if (typeof item === "object" && item !== null) {
-            return item.id.toString() === movie.id.toString() && item.type === "tv";
+            return (
+              item.id.toString() === movie.id.toString() && item.type === "tv"
+            );
           }
           const str = String(item);
           if (str.includes("_")) {
@@ -2431,7 +2431,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         });
 
         if (isInList || isInHistory) {
-          const epProgressData = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+          const epProgressData = JSON.parse(
+            localStorage.getItem("nebula-progress") || "{}",
+          );
           const epKey = `${movie.id}-S${lastEp.season_number}E${lastEp.episode_number}`;
           const epProg = epProgressData[epKey];
           const epPct =
@@ -2484,9 +2486,14 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
           referrerPolicy="no-referrer"
           onError={handleImageError}
         />
+        {/* Ambient Drifting Nebula Glows */}
         <div
-          className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] blur-[150px] opacity-30 rounded-full"
+          className="absolute -top-[30%] -left-[20%] w-[90%] h-[90%] blur-[160px] opacity-[0.22] rounded-full ambient-nebula-glow-1"
           style={{ backgroundColor: accentColor }}
+        />
+        <div
+          className="absolute -top-[15%] -left-[5%] w-[75%] h-[75%] blur-[140px] opacity-[0.18] rounded-full ambient-nebula-glow-2"
+          style={{ backgroundColor: "#00e5ff" }}
         />
       </div>
 
