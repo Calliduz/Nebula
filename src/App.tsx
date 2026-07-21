@@ -210,7 +210,7 @@ export default function App() {
                 ) : (
                   <React.Suspense
                     fallback={
-                      <div className="min-h-screen bg-obsidian pt-12 pl-6 pr-4 sm:px-6 md:px-12 pb-32">
+                      <div className="min-h-screen bg-obsidian pt-24 sm:pt-28 md:pt-32 px-4 sm:px-6 md:px-12 pb-32">
                         <div className="h-10 w-48 bg-white/5 rounded-lg mb-12 shimmer-bg" />
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
                           {[...Array(18)].map((_, i) => (

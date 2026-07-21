@@ -135,28 +135,28 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="min-h-screen pt-12 pl-2 pr-4 sm:px-6 md:px-12 pb-32"
+      className="min-h-screen pt-24 sm:pt-28 md:pt-32 px-4 sm:px-6 md:px-12 pb-32"
     >
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <button
             onClick={() => {
               setActiveTab("home");
               setViewingCategory(null);
             }}
-            className="flex items-center gap-2 text-nebula-cyan hover:text-white transition-colors group self-start"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:border-nebula-cyan/30 text-nebula-cyan hover:text-white transition-all duration-300 group self-start shadow-md backdrop-blur-sm"
           >
             <ArrowLeft
-              size={16}
-              className="group-hover:-translate-x-1 transition-transform"
+              size={13}
+              className="group-hover:-translate-x-0.5 transition-transform duration-300"
             />
-            <span className="text-[10px] font-black tracking-widest uppercase">
-              Back to Command Center
+            <span className="text-[8.5px] font-black tracking-[0.18em] uppercase">
+              Back to Home
             </span>
           </button>
-          <div className="flex items-center gap-4">
-            <span className="w-1.5 h-10 sm:h-12 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
-            <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-black tracking-tighter uppercase leading-none">
+          <div className="flex items-center gap-4 h-12 md:h-16">
+            <span className="w-[3px] self-stretch rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shadow-[0_0_8px_rgba(0,229,255,0.7)] shrink-0" />
+            <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-black tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white/95 to-white/70 bg-clip-text text-transparent">
               {STREAMING_PROVIDERS.some((p) => p.name === viewingCategory)
                 ? `Popular on ${viewingCategory}`
                 : viewingCategory}
@@ -169,10 +169,11 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
             if (!provider) return null;
             return (
               <div
-                className="h-0.5 mt-3 rounded"
+                className="h-[2px] mt-1 rounded-full shadow-[0_0_8px_currentColor]"
                 style={{
                   backgroundImage: `linear-gradient(to right, ${provider.color}, transparent)`,
                   width: "120px",
+                  color: provider.color,
                 }}
               />
             );
@@ -188,19 +189,22 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
 
       {isDrama && setSelectedRegion && (
         <div className="flex flex-wrap gap-3 mb-10 overflow-x-auto pb-4 no-scrollbar">
-          {REGIONS.map((region) => (
-            <button
-              key={region.id}
-              onClick={() => setSelectedRegion(region.id)}
-              className={`px-5 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all ${
-                selectedRegion === region.id
-                  ? "bg-nebula-cyan border-nebula-cyan text-obsidian"
-                  : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              {region.name}
-            </button>
-          ))}
+          {REGIONS.map((region) => {
+            const isSelected = selectedRegion === region.id;
+            return (
+              <button
+                key={region.id}
+                onClick={() => setSelectedRegion(region.id)}
+                className={`px-5 py-2 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${
+                  isSelected
+                    ? "bg-nebula-cyan border-nebula-cyan text-obsidian shadow-[0_0_12px_rgba(0,229,255,0.4)]"
+                    : "bg-white/5 border-white/10 text-white/55 hover:text-white hover:bg-white/10 hover:border-white/20"
+                }`}
+              >
+                {region.name}
+              </button>
+            );
+          })}
         </div>
       )}
 
