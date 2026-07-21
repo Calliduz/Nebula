@@ -80,7 +80,7 @@ export const Hero: React.FC<HeroProps> = ({
           >
             {/* Desktop landscape */}
             <img
-              src={movie.fanartBackground || movie.backdrop || movie.image}
+              src={movie.fanartBackground || movie.backdrop}
               alt={movie.title}
               className="hidden md:block w-full h-full object-cover"
               referrerPolicy="no-referrer"

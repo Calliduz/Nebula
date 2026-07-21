@@ -439,6 +439,57 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     },
     filterFn: (m) => m.genre.includes("Animation") && m.type === "tv",
   },
+  // Studios
+  Disney: {
+    mediaType: "movie",
+    discoverParams: { with_companies: "2", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  "Marvel Studios": {
+    mediaType: "movie",
+    discoverParams: { with_companies: "420", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  "Columbia Pictures": {
+    mediaType: "movie",
+    discoverParams: { with_companies: "5", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  DreamWorks: {
+    mediaType: "movie",
+    discoverParams: { with_companies: "7|521", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  "20th Century Studios": {
+    mediaType: "movie",
+    discoverParams: { with_companies: "25", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  Lionsgate: {
+    mediaType: "movie",
+    discoverParams: { with_companies: "35", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  "Warner Bros.": {
+    mediaType: "movie",
+    discoverParams: { with_companies: "174|6194", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  "Universal Pictures": {
+    mediaType: "movie",
+    discoverParams: { with_companies: "33", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  "Paramount Pictures": {
+    mediaType: "movie",
+    discoverParams: { with_companies: "4", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
+  A24: {
+    mediaType: "movie",
+    discoverParams: { with_companies: "41077", sort_by: "popularity.desc" },
+    filterFn: () => true,
+  },
 };
 
 const hardDedupe = (arr: any[]) => {
@@ -452,6 +503,29 @@ const hardDedupe = (arr: any[]) => {
     }
   }
   return results;
+};
+
+const isMoviePopularAndModern = (m: any) => {
+  if (!m) return false;
+
+  // 1. Exclude TBA quality movies (not yet released), unless it's CAM
+  if (m.quality === "TBA" && m.quality !== "CAM") {
+    return false;
+  }
+
+  // 2. Exclude old movies (older than 2000)
+  if (m.year && m.year < 2000) {
+    return false;
+  }
+
+  // 3. Exclude unpopular/obscure movies
+  const pop = m.popularity || 0;
+  const votes = m.vote_count || 0;
+  if (pop > 0 && pop < 15 && votes < 50) {
+    return false;
+  }
+
+  return true;
 };
 
 // ─── Scroll Restoration Helper ──────────────────────────────────────────────
@@ -1468,8 +1542,8 @@ export function useAppState() {
         })(),
       ]);
 
-      const trending = hardDedupe([...rawTrendingPage1, ...rawTrendingPage2]);
-      const pinoyDramas = hardDedupe(pinoyRes || []).slice(0, 24);
+      const trending = hardDedupe([...rawTrendingPage1, ...rawTrendingPage2]).filter(isMoviePopularAndModern);
+      const pinoyDramas = hardDedupe(pinoyRes || []).filter(isMoviePopularAndModern).slice(0, 24);
 
       // Hydrate basic info for user history & watchlist items from the cached pool in currentPool
       const historyItems = [...history].reverse().slice(0, 10);
@@ -1973,7 +2047,6 @@ export function useAppState() {
         { title: "TV Dramas", genreName: "TV Dramas" },
         { title: "Anime Series", genreName: "Anime Series" },
         { title: "2010s Hits", genreName: "2010s Hits" },
-        { title: "90s Classics", genreName: "90s Classics" },
       ];
 
       const favoriteRows = allGenreRows.filter((r) =>
@@ -2189,27 +2262,35 @@ export function useAppState() {
           }
 
           let deduped = fetchedItems.filter(
-            (m) => m && m.id && !globalShownRef.current.has(m.id.toString()),
+            (m) =>
+              m &&
+              m.id &&
+              isMoviePopularAndModern(m) &&
+              !globalShownRef.current.has(m.id.toString()),
           );
 
-          // Self-healing pagination: If we have less than 30 unique items after deduplication (due to overlaps),
-          // fetch Page 2 to fill the row with fresh, unique titles instead of repeating duplicates.
-          if (
-            deduped.length < 30 &&
-            fetchedItems.length > 0 &&
+          // Self-healing pagination loop: If we have less than 24 unique items,
+          // fetch up to Page 4 to fill the row with fresh, unique, popular titles.
+          let page = 1;
+          while (
+            deduped.length < 24 &&
+            page < 4 &&
             (!config || config.type !== "recommendations")
           ) {
-            const page2Items = await performFetch(2);
-            if (currentSeed === feedSeedRef.current) {
-              const uniquePage2 = page2Items.filter(
-                (m) =>
-                  m &&
-                  m.id &&
-                  !globalShownRef.current.has(m.id.toString()) &&
-                  !deduped.some((d) => d.id === m.id),
-              );
-              deduped = [...deduped, ...uniquePage2];
-            }
+            page += 1;
+            const nextPageItems = await performFetch(page);
+            if (currentSeed !== feedSeedRef.current) break;
+            if (!nextPageItems || nextPageItems.length === 0) break;
+
+            const uniqueNextPage = nextPageItems.filter(
+              (m) =>
+                m &&
+                m.id &&
+                isMoviePopularAndModern(m) &&
+                !globalShownRef.current.has(m.id.toString()) &&
+                !deduped.some((d) => d.id === m.id),
+            );
+            deduped = [...deduped, ...uniqueNextPage];
           }
 
           let finalItems = deduped.slice(0, 36);
@@ -2220,13 +2301,13 @@ export function useAppState() {
               finalItems = [];
             }
           } else {
-            // If other rows are STILL too sparse, fill them back up as a last resort
-            if (finalItems.length < 24 && fetchedItems.length > 0) {
+            // If other rows are STILL too sparse (less than 10 items), fill them back up as an absolute last resort
+            if (finalItems.length < 10 && fetchedItems.length > 0) {
               const extras = fetchedItems
                 .filter(
                   (m) => m && m.id && !finalItems.some((f) => f.id === m.id),
                 )
-                .slice(0, 36 - finalItems.length);
+                .slice(0, 24 - finalItems.length);
               finalItems.push(...extras);
             }
           }
@@ -2408,7 +2489,13 @@ export function useAppState() {
         "Paramount+",
         "Peacock",
       ];
-      if (PROVIDERS.includes(viewingCategory || "")) {
+      const isProviderOrStudio =
+        PROVIDERS.includes(viewingCategory || "") ||
+        (config.discoverParams &&
+          (config.discoverParams.with_companies ||
+            config.discoverParams.with_watch_providers));
+
+      if (isProviderOrStudio) {
         return [];
       }
       return allMovies.filter(config.filterFn);

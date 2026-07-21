@@ -123,6 +123,7 @@ export interface NebulaMovie {
   year: number;
   release_date?: string; // NEW: full date string for filtering
   vote_count?: number; // NEW: for Hidden Gems filter
+  popularity?: number;
   duration?: string;
   imdb?: number;
   type: "movie" | "tv";
@@ -256,6 +257,7 @@ const normalizeMovie = (
   ),
   release_date: item.release_date || item.first_air_date || undefined,
   vote_count: item.vote_count ?? undefined,
+  popularity: item.popularity ?? undefined,
   imdb: item.vote_average
     ? parseFloat(item.vote_average.toFixed(1))
     : undefined,
@@ -1003,7 +1005,8 @@ export const enrichMovies = async (
         const { logoUrl, backgroundUrl, ts } = JSON.parse(cached);
         if (logoUrl && Date.now() - ts < TTL.META) {
           m.clearLogo = proxyImage(logoUrl);
-          m.fanartBackground = proxyImage(backgroundUrl);
+          const isBadBg = backgroundUrl && /thumb|banner/i.test(backgroundUrl);
+          m.fanartBackground = isBadBg ? undefined : proxyImage(backgroundUrl);
         }
       } catch {
         /* stale */
@@ -1061,7 +1064,8 @@ export const enrichMovies = async (
         );
         if (index !== -1) {
           normalized[index].clearLogo = proxyImage(meta.logoUrl);
-          normalized[index].fanartBackground = proxyImage(meta.backgroundUrl);
+          const isBadBg = meta.backgroundUrl && /thumb|banner/i.test(meta.backgroundUrl);
+          normalized[index].fanartBackground = isBadBg ? undefined : proxyImage(meta.backgroundUrl);
           if (meta.logoUrl) {
             try {
               localStorage.setItem(
