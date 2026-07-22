@@ -594,7 +594,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    VidRock
+                    Hyperion
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase tracking-wider">
                     DEFAULT
@@ -651,7 +651,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <button
                           key={src.name}
-                          title={`Play VidRock (${cleanMirrorName}) mirror directly`}
+                          title={`Play Hyperion (${cleanMirrorName}) mirror directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
@@ -721,7 +721,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Vaplayer
+                    Quantum
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 uppercase tracking-wider">
                     GLOBAL MIRRORS
@@ -774,7 +774,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <button
                           key={src.name}
-                          title={`Play Vaplayer (${displayName}) mirror directly`}
+                          title={`Play Quantum (${displayName}) mirror directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
@@ -846,7 +846,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Vidrift
+                    Velocity
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400 uppercase tracking-wider">
                     FAST MIRRORS
@@ -896,7 +896,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <button
                           key={src.name}
-                          title={`Play Vidrift (${displayName}) mirror directly`}
+                          title={`Play Velocity (${displayName}) mirror directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
@@ -968,7 +968,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Videasy
+                    Pulse
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-violet-400 uppercase tracking-wider">
                     WASM DECRYPT
@@ -1017,7 +1017,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <button
                           key={src.name}
-                          title={`Play Videasy (${mirrorName}) mirror directly`}
+                          title={`Play Pulse (${mirrorName}) mirror directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
@@ -1098,10 +1098,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    VidLink
+                    Spectra
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/50 uppercase tracking-wider">
-                    LEGACY INDEX
+                    INDEX NODE
                   </span>
                   {vidlinkLoading ? (
                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider animate-pulse flex items-center gap-1">
@@ -1151,7 +1151,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <button
                           key={src.name}
-                          title={`Play VidLink (${displayName}) quality directly`}
+                          title={`Play Spectra (${displayName}) quality directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
@@ -1225,7 +1225,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Vidnest
+                    Titan
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase tracking-wider">
                     PREMIUM CDN
@@ -1243,8 +1243,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  High-speed HLS & MP4 stream delivery aggregating premium
-                  servers like MovieBox, AllMovies, and HollyMovieHD.
+                  High-speed HLS & MP4 stream delivery aggregating premium servers across Alpha, Beta, and Gamma endpoints.
                 </p>
               </div>
             </div>
@@ -1266,9 +1265,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {vidnestSources.map((src) => {
-                      // Parse name: "Vidnest - HollyMovieHD (Auto)" -> provider: "HollyMovieHD", quality: "Auto"
-                      // "Vidnest (1080p)" -> provider: "MovieBox", quality: "1080p"
-                      let provider = "MovieBox";
+                      let provider = "ALPHA";
                       let quality = src.quality || "Auto";
 
                       const matchWithDash = src.name.match(
@@ -1282,21 +1279,26 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           /^Vidnest\s*\((.*?)\)$/i,
                         );
                         if (matchParen) {
-                          provider = "MovieBox";
+                          provider = "ALPHA";
                           quality = matchParen[1].trim();
                         }
                       }
 
+                      const cleanProvider = provider
+                        .replace(/HollyMovieHD/i, "ALPHA")
+                        .replace(/MovieBox/i, "BETA")
+                        .replace(/AllMovies/i, "GAMMA");
+
                       const displayQuality = quality.toUpperCase();
                       const displayName =
                         displayQuality === "AUTO"
-                          ? provider.toUpperCase()
-                          : `${provider.toUpperCase()} (${displayQuality})`;
+                          ? cleanProvider.toUpperCase()
+                          : `${cleanProvider.toUpperCase()} (${displayQuality})`;
 
                       return (
                         <button
                           key={src.name}
-                          title={`Play Vidnest (${displayName}) directly`}
+                          title={`Play Titan (${displayName}) directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
@@ -1365,7 +1367,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Kuro (Sub)
+                    Zenith (Sub)
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-500/20 border border-purple-500/35 text-purple-300 uppercase tracking-wider">
                     JAPANESE AUDIO
@@ -1383,8 +1385,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Dedicated high-speed KuroAPI subbed streams with
-                  multi-language subtitle tracks.
+                  Dedicated high-speed subbed streams with multi-language subtitle tracks.
                 </p>
               </div>
             </div>
@@ -1416,7 +1417,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <button
                           key={src.name}
-                          title={`Play Kuro (${displayName}) sub directly`}
+                          title={`Play Zenith (${displayName}) sub directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             const reordered = [
@@ -1486,7 +1487,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Kuro (Dub)
+                    Zenith (Dub)
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-pink-500/20 border border-pink-500/35 text-pink-300 uppercase tracking-wider">
                     ENGLISH DUB
@@ -1504,8 +1505,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Dedicated high-speed KuroAPI dubbed streams with English audio
-                  track.
+                  Dedicated high-speed dubbed streams with English audio track.
                 </p>
               </div>
             </div>
@@ -1537,7 +1537,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <button
                           key={src.name}
-                          title={`Play Kuro (${displayName}) dub directly`}
+                          title={`Play Zenith (${displayName}) dub directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             const reordered = [
@@ -1609,7 +1609,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    FilmU
+                    Orbital
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 uppercase tracking-wider">
                     HYBRID CLOUD
@@ -1627,8 +1627,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Aggregates parallel multi-provider CDN streams including
-                  Vortex, Zenith, and Aura mirrors with anime support via Kuro.
+                  Aggregates parallel multi-provider CDN streams including Alpha, Beta, and Gamma mirrors.
                 </p>
               </div>
             </div>
@@ -1657,6 +1656,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               src.name
                                 .replace(/^FilmU[\s-]*/i, "")
                                 .replace(/\s*#\d+$/, "")
+                                .replace(/VORTEX/i, "ALPHA")
+                                .replace(/ZENITH/i, "BETA")
+                                .replace(/AURA/i, "GAMMA")
+                                .replace(/KURO/i, "DELTA")
                                 .trim()
                                 .toUpperCase() || "STREAM",
                           ),
@@ -1665,12 +1668,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (uniqueProviders as string[]).map(
                         (providerName) => {
                           const colorMap: Record<string, string> = {
-                            VORTEX:
+                            ALPHA:
                               "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:border-amber-500/65 hover:bg-amber-500/20",
-                            ZENITH:
+                            BETA:
                               "border-orange-500/30 text-orange-400 bg-orange-500/10 hover:border-orange-500/65 hover:bg-orange-500/20",
-                            AURA: "border-yellow-500/30 text-yellow-400 bg-yellow-500/10 hover:border-yellow-500/65 hover:bg-yellow-500/20",
-                            KURO: "border-red-500/30 text-red-400 bg-red-500/10 hover:border-red-500/65 hover:bg-red-500/20",
+                            GAMMA: "border-yellow-500/30 text-yellow-400 bg-yellow-500/10 hover:border-yellow-500/65 hover:bg-yellow-500/20",
+                            DELTA: "border-red-500/30 text-red-400 bg-red-500/10 hover:border-red-500/65 hover:bg-red-500/20",
                           };
                           const chipClass =
                             Object.entries(colorMap).find(([k]) =>
@@ -1680,13 +1683,17 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           return (
                             <button
                               key={providerName}
-                              title={`Play FilmU (${providerName}) provider directly`}
+                              title={`Play Orbital (${providerName}) provider directly`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const matched = filmuSources.filter((s) => {
                                   const pName = s.name
                                     .replace(/^FilmU[\s-]*/i, "")
                                     .replace(/\s*#\d+$/, "")
+                                    .replace(/VORTEX/i, "ALPHA")
+                                    .replace(/ZENITH/i, "BETA")
+                                    .replace(/AURA/i, "GAMMA")
+                                    .replace(/KURO/i, "DELTA")
                                     .trim()
                                     .toUpperCase();
                                   return pName === providerName;
@@ -1695,6 +1702,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                                   const pName = s.name
                                     .replace(/^FilmU[\s-]*/i, "")
                                     .replace(/\s*#\d+$/, "")
+                                    .replace(/VORTEX/i, "ALPHA")
+                                    .replace(/ZENITH/i, "BETA")
+                                    .replace(/AURA/i, "GAMMA")
+                                    .replace(/KURO/i, "DELTA")
                                     .trim()
                                     .toUpperCase();
                                   return pName !== providerName;
@@ -1764,7 +1775,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   <span className="font-bold text-sm text-white uppercase tracking-tight">
-                    Peachify
+                    Aurora
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 uppercase tracking-wider">
                     DIRECT PEACH

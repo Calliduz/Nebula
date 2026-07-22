@@ -84,6 +84,36 @@ const parseMirrorName = (name: string) => {
   return { base: name, quality: "Original" };
 };
 
+export const SOURCE_ALIASES: Record<string, string> = {
+  VidRock: "Hyperion",
+  Vaplayer: "Quantum",
+  Vidrift: "Velocity",
+  Videasy: "Pulse",
+  VidLink: "Spectra",
+  Vidnest: "Titan",
+  "Kuro (Sub)": "Zenith (Sub)",
+  "Kuro (Dub)": "Zenith (Dub)",
+  Kuro: "Zenith",
+  FilmU: "Orbital",
+  Peachify: "Aurora",
+};
+
+export const getCategoryAlias = (category: string): string => {
+  if (!category) return "";
+  return SOURCE_ALIASES[category] || category;
+};
+
+const cleanSubProviderName = (name: string): string => {
+  return name
+    .replace(/HollyMovieHD/i, "Alpha")
+    .replace(/MovieBox/i, "Beta")
+    .replace(/AllMovies/i, "Gamma")
+    .replace(/Vortex/i, "Alpha")
+    .replace(/Zenith/i, "Beta")
+    .replace(/Aura/i, "Gamma")
+    .replace(/KuroAPI|Kuro/i, "Delta");
+};
+
 export const parseMirrorDetails = (sourceName: string) => {
   // Extract trailing #\d+ if present
   let suffix = "";
@@ -97,15 +127,19 @@ export const parseMirrorDetails = (sourceName: string) => {
   // Now parse cleanSource exactly as before
   const match = cleanSource.match(/^(.*?)\s*\((.*?)\)$/);
   if (match) {
+    const rawCat = match[1].trim();
+    const rawName = match[2].trim();
+    const catAlias = SOURCE_ALIASES[rawCat] || rawCat;
+    const subClean = cleanSubProviderName(rawName);
     return {
-      category: match[1].trim(),
-      name: (match[2].trim() + suffix).toUpperCase(),
+      category: catAlias,
+      name: (subClean + suffix).toUpperCase(),
     };
   }
 
   if (cleanSource.startsWith("VidRock")) {
     return {
-      category: "VidRock",
+      category: "Hyperion",
       name: (
         (cleanSource.replace("VidRock", "").trim() || "Mirror") + suffix
       ).toUpperCase(),
@@ -113,7 +147,7 @@ export const parseMirrorDetails = (sourceName: string) => {
   }
   if (cleanSource.startsWith("Videasy")) {
     return {
-      category: "Videasy",
+      category: "Pulse",
       name: (
         (cleanSource.replace("Videasy", "").trim() || "Mirror") + suffix
       ).toUpperCase(),
@@ -121,40 +155,46 @@ export const parseMirrorDetails = (sourceName: string) => {
   }
   if (cleanSource.startsWith("Vidnest")) {
     const rest = cleanSource.replace(/^Vidnest[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
     return {
-      category: "Vidnest",
-      name: ((rest || "Stream") + suffix).toUpperCase(),
+      category: "Titan",
+      name: ((subClean || "Stream") + suffix).toUpperCase(),
     };
   }
   if (cleanSource.startsWith("Vaplayer")) {
     const rest = cleanSource.replace(/^Vaplayer[\s-]*/i, "").trim();
     return {
-      category: "Vaplayer",
+      category: "Quantum",
+      name: ((rest || "Mirror") + suffix).toUpperCase(),
+    };
+  }
+  if (cleanSource.startsWith("Vidrift")) {
+    const rest = cleanSource.replace(/^Vidrift[\s-]*/i, "").trim();
+    return {
+      category: "Velocity",
       name: ((rest || "Mirror") + suffix).toUpperCase(),
     };
   }
   if (cleanSource.startsWith("FilmU")) {
+    const rest = cleanSource.replace(/^FilmU[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
     return {
-      category: "FilmU",
-      name: (
-        (cleanSource.replace(/^FilmU[\s-]*/i, "").trim() || "Mirror") + suffix
-      ).toUpperCase(),
+      category: "Orbital",
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
   if (cleanSource.startsWith("Peachify")) {
+    const rest = cleanSource.replace(/^Peachify[\s-]*/i, "").trim();
     return {
-      category: "Peachify",
-      name: (
-        (cleanSource.replace(/^Peachify[\s-]*/i, "").trim() || "Mirror") +
-        suffix
-      ).toUpperCase(),
+      category: "Aurora",
+      name: ((rest || "Mirror") + suffix).toUpperCase(),
     };
   }
   if (cleanSource.startsWith("Kuro")) {
     const isDub =
       cleanSource.toUpperCase().includes(" DUB") ||
       cleanSource.toUpperCase().includes("(DUB");
-    const category = isDub ? "Kuro (Dub)" : "Kuro (Sub)";
+    const category = isDub ? "Zenith (Dub)" : "Zenith (Sub)";
     const cleanName = cleanSource
       .replace(/^Kuro[\s-]*/i, "")
       .replace(/\s*\(?SUB\)?/i, "")
@@ -166,7 +206,7 @@ export const parseMirrorDetails = (sourceName: string) => {
     };
   }
 
-  return { category: "VidLink", name: (cleanSource + suffix).toUpperCase() };
+  return { category: "Spectra", name: (cleanSource + suffix).toUpperCase() };
 };
 
 export const serverSortOrder = [
@@ -191,16 +231,27 @@ export const serverSortOrder = [
 ];
 
 export const CATEGORY_PRIORITY = [
+  "Hyperion",
   "VidRock",
+  "Quantum",
   "Vaplayer",
+  "Velocity",
   "Vidrift",
+  "Pulse",
   "Videasy",
+  "Spectra",
   "VidLink",
+  "Titan",
   "Vidnest",
+  "Zenith (Sub)",
   "Kuro (Sub)",
+  "Zenith (Dub)",
   "Kuro (Dub)",
+  "Zenith",
   "Kuro",
+  "Orbital",
   "FilmU",
+  "Aurora",
   "Peachify",
 ];
 
@@ -828,7 +879,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       console.log(
         `[PLAYER] Automatically switching to next available source: ${nextSource}`,
       );
-      showToast(`Current source failed. Switching to ${nextSource}...`, "info");
+      showToast(
+        `Current source failed. Switching to ${getCategoryAlias(nextSource)}...`,
+        "info",
+      );
 
       try {
         setLoading(true);
@@ -1712,7 +1766,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             fetchedSubs.push({
               url: vrSubUrl,
               lang: "en",
-              languageName: "English (VidRock Cache)",
+              languageName: "English (Hyperion Cache)",
               source: "VidRock",
             });
           }
@@ -2033,7 +2087,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   : s.source === "Videasy"
                     ? "Videasy"
                     : s.source === "VidRock"
-                      ? "VidRock Cache"
+                      ? "Hyperion Cache"
                       : s.source === "Peachify"
                         ? "Peachify"
                         : s.source;
@@ -6499,23 +6553,23 @@ export function InPlayerSourcePicker({
     const isActive = activeName === srcName;
 
     if (isActive) {
-      if (srcName === "VidRock")
+      if (srcName === "Hyperion" || srcName === "VidRock")
         return "border-nebula-cyan bg-nebula-cyan/10 shadow-[0_0_15px_rgba(0,229,255,0.12)] ring-1 ring-nebula-cyan/35 scale-[1.01] cursor-default";
-      if (srcName === "Vidnest")
+      if (srcName === "Titan" || srcName === "Vidnest")
         return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Vaplayer")
+      if (srcName === "Quantum" || srcName === "Vaplayer")
         return "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Vidrift")
+      if (srcName === "Velocity" || srcName === "Vidrift")
         return "border-fuchsia-500 bg-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.12)] ring-1 ring-fuchsia-500/35 scale-[1.01] cursor-default";
-      if (srcName === "FilmU")
+      if (srcName === "Orbital" || srcName === "FilmU")
         return "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default";
-      if (srcName === "VidLink")
+      if (srcName === "Spectra" || srcName === "VidLink")
         return "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default";
-      if (srcName === "Videasy")
+      if (srcName === "Pulse" || srcName === "Videasy")
         return "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Peachify")
+      if (srcName === "Aurora" || srcName === "Peachify")
         return "border-rose-500 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.12)] ring-1 ring-rose-500/35 scale-[1.01] cursor-default";
-      if (srcName.startsWith("Kuro"))
+      if (srcName.startsWith("Zenith") || srcName.startsWith("Kuro"))
         return "border-violet-500 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.12)] ring-1 ring-violet-500/35 scale-[1.01] cursor-default";
     }
 
@@ -6528,23 +6582,23 @@ export function InPlayerSourcePicker({
     }
 
     if (hasDataFlag) {
-      if (srcName === "VidRock")
+      if (srcName === "Hyperion" || srcName === "VidRock")
         return "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95 cursor-pointer";
-      if (srcName === "Vidnest")
+      if (srcName === "Titan" || srcName === "Vidnest")
         return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Vaplayer")
+      if (srcName === "Quantum" || srcName === "Vaplayer")
         return "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Vidrift")
+      if (srcName === "Velocity" || srcName === "Vidrift")
         return "border-fuchsia-500/35 bg-fuchsia-500/5 hover:bg-fuchsia-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "FilmU")
+      if (srcName === "Orbital" || srcName === "FilmU")
         return "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "VidLink")
+      if (srcName === "Spectra" || srcName === "VidLink")
         return "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer";
-      if (srcName === "Videasy")
+      if (srcName === "Pulse" || srcName === "Videasy")
         return "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Peachify")
+      if (srcName === "Aurora" || srcName === "Peachify")
         return "border-rose-500/35 bg-rose-500/5 hover:bg-rose-500/10 active:scale-95 cursor-pointer";
-      if (srcName.startsWith("Kuro"))
+      if (srcName.startsWith("Zenith") || srcName.startsWith("Kuro"))
         return "border-violet-500/35 bg-violet-500/5 hover:bg-violet-500/10 active:scale-95 cursor-pointer";
     }
 
@@ -6553,18 +6607,19 @@ export function InPlayerSourcePicker({
 
   return (
     <div className="flex flex-col gap-2 p-1 overflow-y-auto max-h-[45vh] custom-scrollbar">
-      {/* VidRock */}
+      {/* Hyperion (VidRock) */}
       <button
         onClick={() =>
           (sources.length > 0 || failedSources.includes("VidRock")) &&
           onSelect(vidrockUrl)
         }
         disabled={
+          activeSource === "Hyperion" ||
           activeSource === "VidRock" ||
           (loading && !failedSources.includes("VidRock"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "VidRock",
+          "Hyperion",
           activeSource || "",
           loading,
           sources.length > 0,
@@ -6582,7 +6637,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  VidRock
+                  Hyperion
                 </p>
                 {failedSources.includes("VidRock") && sources.length === 0 && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
@@ -6595,7 +6650,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "VidRock" && (
+          {(activeSource === "Hyperion" || activeSource === "VidRock") && (
             <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff] shrink-0" />
           )}
         </div>
@@ -6625,18 +6680,19 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Vaplayer */}
+      {/* Quantum (Vaplayer) */}
       <button
         onClick={() =>
           (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) &&
           onSelect(vaplayerUrl)
         }
         disabled={
+          activeSource === "Quantum" ||
           activeSource === "Vaplayer" ||
           (vaplayerLoading && !failedSources.includes("Vaplayer"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Vaplayer",
+          "Quantum",
           activeSource || "",
           vaplayerLoading,
           vaplayerSources.length > 0,
@@ -6654,7 +6710,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Vaplayer
+                  Quantum
                 </p>
                 {failedSources.includes("Vaplayer") &&
                   vaplayerSources.length === 0 && (
@@ -6668,7 +6724,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "Vaplayer" && (
+          {(activeSource === "Quantum" || activeSource === "Vaplayer") && (
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" />
           )}
         </div>
@@ -6697,18 +6753,19 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Vidrift */}
+      {/* Velocity (Vidrift) */}
       <button
         onClick={() =>
           (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
           onSelect(vidriftUrl)
         }
         disabled={
+          activeSource === "Velocity" ||
           activeSource === "Vidrift" ||
           (vidriftLoading && !failedSources.includes("Vidrift"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Vidrift",
+          "Velocity",
           activeSource || "",
           vidriftLoading,
           vidriftSources.length > 0,
@@ -6726,7 +6783,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Vidrift
+                  Velocity
                 </p>
                 {failedSources.includes("Vidrift") &&
                   vidriftSources.length === 0 && (
@@ -6740,7 +6797,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "Vidrift" && (
+          {(activeSource === "Velocity" || activeSource === "Vidrift") && (
             <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0" />
           )}
         </div>
@@ -6769,18 +6826,19 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Videasy */}
+      {/* Pulse (Videasy) */}
       <button
         onClick={() =>
           (videasySources.length > 0 || failedSources.includes("Videasy")) &&
           onSelect(videasyUrl)
         }
         disabled={
+          activeSource === "Pulse" ||
           activeSource === "Videasy" ||
           (videasyLoading && !failedSources.includes("Videasy"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Videasy",
+          "Pulse",
           activeSource || "",
           videasyLoading,
           videasySources.length > 0,
@@ -6798,7 +6856,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Videasy
+                  Pulse
                 </p>
                 {failedSources.includes("Videasy") &&
                   videasySources.length === 0 && (
@@ -6812,7 +6870,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "Videasy" && (
+          {(activeSource === "Pulse" || activeSource === "Videasy") && (
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] shrink-0" />
           )}
         </div>
@@ -6849,12 +6907,12 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* VidLink */}
+      {/* Spectra (VidLink) */}
       <button
         onClick={() => onSelect()}
-        disabled={activeSource === "VidLink"}
+        disabled={activeSource === "Spectra" || activeSource === "VidLink"}
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "VidLink",
+          "Spectra",
           activeSource || "",
           false,
           true,
@@ -6868,7 +6926,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  VidLink
+                  Spectra
                 </p>
                 {failedSources.includes("VidLink") && (
                   <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
@@ -6881,7 +6939,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "VidLink" && (
+          {(activeSource === "Spectra" || activeSource === "VidLink") && (
             <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] shrink-0" />
           )}
         </div>
@@ -6892,18 +6950,19 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Vidnest */}
+      {/* Titan (Vidnest) */}
       <button
         onClick={() =>
           (vidnestSources.length > 0 || failedSources.includes("Vidnest")) &&
           onSelect(vidnestUrl)
         }
         disabled={
+          activeSource === "Titan" ||
           activeSource === "Vidnest" ||
           (vidnestLoading && !failedSources.includes("Vidnest"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Vidnest",
+          "Titan",
           activeSource || "",
           vidnestLoading,
           vidnestSources.length > 0,
@@ -6921,7 +6980,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Vidnest
+                  Titan
                 </p>
                 {failedSources.includes("Vidnest") &&
                   vidnestSources.length === 0 && (
@@ -6935,7 +6994,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "Vidnest" && (
+          {(activeSource === "Titan" || activeSource === "Vidnest") && (
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0" />
           )}
         </div>
@@ -6955,6 +7014,9 @@ export function InPlayerSourcePicker({
                   .replace(/^Vidnest\s*\(([^)]+)\)$/i, "$1")
                   .replace(/^Vidnest\s*/i, "")
                   .replace(/^\(([^)]+)\)$/, "$1")
+                  .replace(/HollyMovieHD/i, "ALPHA")
+                  .replace(/MovieBox/i, "BETA")
+                  .replace(/AllMovies/i, "GAMMA")
                   .trim()
                   .toUpperCase()}
               </span>
@@ -6967,18 +7029,19 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Kuro (Sub - Japanese) */}
+      {/* Zenith (Sub - Japanese) */}
       <button
         onClick={() =>
           (kuroSubSources.length > 0 || failedSources.includes("Kuro (Sub)")) &&
           onSelect(kuroSubUrl)
         }
         disabled={
+          activeSource === "Zenith (Sub)" ||
           activeSource === "Kuro (Sub)" ||
           (kuroLoading && !failedSources.includes("Kuro (Sub)"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Kuro (Sub)",
+          "Zenith (Sub)",
           activeSource || "",
           kuroLoading,
           kuroSubSources.length > 0,
@@ -6996,7 +7059,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Kuro (Sub)
+                  Zenith (Sub)
                 </p>
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-purple-500/35 bg-purple-500/20 text-purple-300 uppercase tracking-wider shrink-0">
                   JAPANESE AUDIO
@@ -7007,7 +7070,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "Kuro (Sub)" && (
+          {(activeSource === "Zenith (Sub)" || activeSource === "Kuro (Sub)") && (
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)] shrink-0" />
           )}
         </div>
@@ -7037,18 +7100,19 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Kuro (Dub - English) */}
+      {/* Zenith (Dub - English) */}
       <button
         onClick={() =>
           (kuroDubSources.length > 0 || failedSources.includes("Kuro (Dub)")) &&
           onSelect(kuroDubUrl)
         }
         disabled={
+          activeSource === "Zenith (Dub)" ||
           activeSource === "Kuro (Dub)" ||
           (kuroLoading && !failedSources.includes("Kuro (Dub)"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Kuro (Dub)",
+          "Zenith (Dub)",
           activeSource || "",
           kuroLoading,
           kuroDubSources.length > 0,
@@ -7066,7 +7130,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Kuro (Dub)
+                  Zenith (Dub)
                 </p>
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-pink-500/35 bg-pink-500/20 text-pink-300 uppercase tracking-wider shrink-0">
                   ENGLISH DUB
@@ -7077,7 +7141,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "Kuro (Dub)" && (
+          {(activeSource === "Zenith (Dub)" || activeSource === "Kuro (Dub)") && (
             <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)] shrink-0" />
           )}
         </div>
@@ -7107,18 +7171,19 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* FilmU */}
+      {/* Orbital (FilmU) */}
       <button
         onClick={() =>
           (filmuSources.length > 0 || failedSources.includes("FilmU")) &&
           onSelect(filmuUrl)
         }
         disabled={
+          activeSource === "Orbital" ||
           activeSource === "FilmU" ||
           (filmuLoading && !failedSources.includes("FilmU"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "FilmU",
+          "Orbital",
           activeSource || "",
           filmuLoading,
           filmuSources.length > 0,
@@ -7136,7 +7201,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  FilmU
+                  Orbital
                 </p>
                 {failedSources.includes("FilmU") &&
                   filmuSources.length === 0 && (
@@ -7150,7 +7215,7 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {activeSource === "FilmU" && (
+          {(activeSource === "Orbital" || activeSource === "FilmU") && (
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)] shrink-0" />
           )}
         </div>
@@ -7167,6 +7232,10 @@ export function InPlayerSourcePicker({
               >
                 {s.name
                   .replace(/^FilmU[\s-]*/i, "")
+                  .replace(/VORTEX/i, "ALPHA")
+                  .replace(/ZENITH/i, "BETA")
+                  .replace(/AURA/i, "GAMMA")
+                  .replace(/KURO/i, "DELTA")
                   .trim()
                   .toUpperCase()}
               </span>
@@ -7179,18 +7248,19 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Peachify */}
+      {/* Aurora (Peachify) */}
       <button
         onClick={() =>
           (peachifySources.length > 0 || failedSources.includes("Peachify")) &&
           onSelect(peachifyUrl)
         }
         disabled={
+          activeSource === "Aurora" ||
           activeSource === "Peachify" ||
           (peachifyLoading && !failedSources.includes("Peachify"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Peachify",
+          "Aurora",
           activeSource || "",
           peachifyLoading,
           peachifySources.length > 0,
@@ -7208,7 +7278,7 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Peachify
+                  Aurora
                 </p>
                 {failedSources.includes("Peachify") &&
                   peachifySources.length === 0 && (
@@ -7218,12 +7288,12 @@ export function InPlayerSourcePicker({
                   )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {peachifyLoading ? "Scanning..." : "Direct Peach"}
+                {peachifyLoading ? "Scanning..." : "Direct Node"}
               </p>
             </div>
           </div>
-          {activeSource === "Peachify" && (
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)] shrink-0" />
+          {(activeSource === "Aurora" || activeSource === "Peachify") && (
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.8)] shrink-0" />
           )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
