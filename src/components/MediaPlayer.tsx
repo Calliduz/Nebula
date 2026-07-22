@@ -2178,7 +2178,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         abrEwmaDefaultEstimate: 5_000_000,
         abrBandWidthFactor: 0.8,
         abrBandWidthUpFactor: 0.7,
-        capLevelToPlayerSize: true, // Never load quality higher than display size
+        // Fix: Disable capLevelToPlayerSize so selected quality (e.g. 1080p) is not artificially capped by player display size
+        capLevelToPlayerSize: false,
 
         // ── Sync / Stall recovery ────────────────────────────────────────
         maxBufferHole: 0.3,
@@ -2256,10 +2257,36 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       });
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        const validLevels = data.levels
+          .map((l, i) => ({
+            height: l.height,
+            levelId: i,
+            bitrate: l.bitrate || 0,
+          }))
+          .filter((q) => q.height > 0);
+
+        validLevels.sort(
+          (a, b) => b.height - a.height || b.bitrate - a.bitrate,
+        );
+
+        const uniqueQualities: { height: number; levelId: number }[] = [];
+        const seenHeights = new Set<number>();
+        for (const item of validLevels) {
+          if (!seenHeights.has(item.height)) {
+            seenHeights.add(item.height);
+            uniqueQualities.push({
+              height: item.height,
+              levelId: item.levelId,
+            });
+          }
+        }
+
         setQualities(
-          data.levels
-            .map((l, i) => ({ height: l.height, levelId: i }))
-            .reverse(),
+          uniqueQualities.length > 0
+            ? uniqueQualities
+            : data.levels
+                .map((l, i) => ({ height: l.height, levelId: i }))
+                .reverse(),
         );
         video.volume = isMuted ? 0 : volume / 100;
 
@@ -3740,6 +3767,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setStreamUrl(m.qualities[targetId].url);
     } else if (hlsRef.current) {
       hlsRef.current.currentLevel = levelId;
+      if (levelId === -1) {
+        if (
+          hlsRef.current.currentLevel !== -1 &&
+          hlsRef.current.levels[hlsRef.current.currentLevel]
+        ) {
+          setCurrentHeight(
+            hlsRef.current.levels[hlsRef.current.currentLevel].height,
+          );
+        }
+      } else {
+        const selected = qualities.find((q) => q.levelId === levelId);
+        if (selected) {
+          setCurrentHeight(selected.height);
+        }
+      }
     }
   };
 
