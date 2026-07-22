@@ -25,6 +25,8 @@ import {
   SkipForward,
   Cloud,
   Keyboard,
+  PictureInPicture,
+  ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -543,6 +545,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     seconds: number;
   } | null>(null);
 
+  const [centerFeedback, setCenterFeedback] = useState<{
+    visible: boolean;
+    type: "play" | "pause";
+    key: number;
+  } | null>(null);
+
   useEffect(() => {
     if (doubleTapFeedback && doubleTapFeedback.visible) {
       const timer = setTimeout(() => {
@@ -551,6 +559,59 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       return () => clearTimeout(timer);
     }
   }, [doubleTapFeedback?.key]);
+
+  useEffect(() => {
+    if (centerFeedback && centerFeedback.visible) {
+      const timer = setTimeout(() => {
+        setCenterFeedback((p) => (p ? { ...p, visible: false } : null));
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [centerFeedback?.key]);
+
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent,
+      ) ||
+        (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+        window.innerHeight < 550 ||
+        window.innerWidth < 1024,
+    );
+  });
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isTouch =
+        typeof window !== "undefined" &&
+        (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        ) ||
+          (window.matchMedia &&
+            window.matchMedia("(pointer: coarse)").matches) ||
+          window.innerHeight < 550 ||
+          window.innerWidth < 1024);
+      setIsMobileDevice(Boolean(isTouch));
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const handleTogglePiP = useCallback(async () => {
+    try {
+      const video = videoRef.current;
+      if (!video) return;
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (video.requestPictureInPicture) {
+        await video.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.warn("[PLAYER] PiP error:", err);
+    }
+  }, []);
 
   const showToast = useCallback(
     (message: string, type: "error" | "info" = "info") => {
@@ -3713,17 +3774,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       switch (e.code) {
         case "Space":
           e.preventDefault();
-          if (v) {
-            if (v.paused) {
-              v.play().catch((err) => {
-                console.warn("[PLAYER] play() failed or was interrupted:", err);
-                setIsPaused(true);
-                showToast("Playback failed to start.", "error");
-              });
-            } else {
-              v.pause();
-            }
-          }
+          togglePlay();
           break;
         case "KeyM":
           setIsMuted((p) => !p);
@@ -3769,10 +3820,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose, showSettings, seekBy, setShowHotkeys]);
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) {
+    const willPlay = v.paused;
+    if (willPlay) {
       v.play().catch((err) => {
         console.warn("[PLAYER] play() failed or was interrupted:", err);
         setIsPaused(true);
@@ -3781,7 +3833,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     } else {
       v.pause();
     }
-  };
+    setCenterFeedback({
+      visible: true,
+      type: willPlay ? "play" : "pause",
+      key: Date.now(),
+    });
+  }, [showToast]);
 
   const handleSliderMove = useCallback(
     (e: MouseEvent | TouchEvent) => {
@@ -4535,6 +4592,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         </div>
       )}
 
+      {/* Center Play/Pause Touch Indicator */}
+      <AnimatePresence>
+        {centerFeedback && centerFeedback.visible && (
+          <motion.div
+            key={centerFeedback.key}
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1.1 }}
+            exit={{ opacity: 0, scale: 1.3 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 m-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center pointer-events-none z-30 shadow-2xl"
+          >
+            {centerFeedback.type === "play" ? (
+              <Play size={28} className="text-white fill-white ml-1" />
+            ) : (
+              <Pause size={28} className="text-white fill-white" />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div
         className="absolute inset-0 flex flex-col justify-between z-20"
         style={{
@@ -4589,35 +4666,35 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         >
           <button
             onClick={safeClose}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 border border-white/5 shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/10 shrink-0"
             title="Back (Esc)"
           >
-            <X size={18} />
+            <ArrowLeft size={20} />
           </button>
           {!isEmbed && (
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm sm:text-base font-semibold truncate leading-tight flex items-center gap-2">
-                {movie.title}
+              <h2 className="text-base sm:text-lg font-display font-bold truncate leading-tight text-white flex items-center gap-2">
+                <span>{movie.title}</span>
                 {season !== undefined && episode !== undefined && (
-                  <span className="text-nebula-cyan font-display italic text-xs sm:text-sm">
-                    S{season}E{episode}
+                  <span className="bg-white/10 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/10 font-bold shrink-0">
+                    S{season}:E{episode}
                   </span>
                 )}
               </h2>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <p className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest">
-                  {movie.type === "tv" ? "TV Link" : "Movie Link"} —{" "}
-                  {movie.year}
+                <p className="text-white/50 text-[10px] sm:text-xs font-sans tracking-wide">
+                  {movie.type === "tv" ? "TV Series" : "Movie"}
+                  {movie.year ? ` · ${movie.year}` : ""}
                 </p>
                 {qualityTag && qualityTag !== "UNKNOWN" && (
                   <div className="flex items-center gap-1">
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider border ${
                         qualityTag === "CAM" || qualityTag === "TC"
                           ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
                           : qualityTag === "BLURAY"
                             ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
-                            : "bg-nebula-cyan/10 border-nebula-cyan/30 text-nebula-cyan"
+                            : "bg-white/10 border-white/15 text-nebula-cyan"
                       }`}
                     >
                       {qualityTag === "WEBDL"
@@ -4627,7 +4704,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           : qualityTag}
                     </span>
                     {resolution && resolution !== "UNKNOWN" && (
-                      <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-white/50">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider border bg-white/5 border-white/10 text-white/60">
                         {resolution}
                       </span>
                     )}
@@ -4969,20 +5046,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 {/* Hover Tooltip */}
                 {hoverTime !== null && !isDragging && (
                   <div
-                    className="absolute bottom-full mb-3 -translate-x-1/2 px-2.5 py-1.5 bg-black/90 backdrop-blur-md border border-white/20 text-white rounded-lg text-[10px] font-bold pointer-events-none z-50 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+                    className="absolute bottom-full mb-2.5 -translate-x-1/2 px-2.5 py-1 bg-black/90 backdrop-blur-md border border-white/10 text-white rounded-md text-[11px] font-mono font-bold pointer-events-none z-50 shadow-xl"
                     style={{
                       left: `${(hoverTime / (videoRef.current?.duration || 1)) * 100}%`,
                     }}
                   >
                     {formatTime(hoverTime)}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-black/90" />
                   </div>
                 )}
 
                 {/* Drag Tooltip */}
                 {isDragging && (
                   <div
-                    className="absolute bottom-full mb-2 -translate-x-1/2 px-2 py-1 bg-nebula-cyan text-black rounded text-xs font-bold pointer-events-none z-50"
+                    className="absolute bottom-full mb-2.5 -translate-x-1/2 px-2.5 py-1 bg-white text-black rounded-md text-xs font-mono font-bold pointer-events-none z-50 shadow-xl"
                     style={{ left: `${dragProgress}%` }}
                   >
                     {formatTime(
@@ -4992,8 +5068,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 )}
 
                 <div
-                  className="absolute inset-x-0 rounded-full bg-white/20"
-                  style={{ height: "3px" }}
+                  className="absolute inset-x-0 rounded-full bg-white/20 h-[3px] group-hover:h-[5px] transition-all duration-200"
                 >
                   <div
                     className="absolute inset-y-0 left-0 bg-white/30 rounded-full"
@@ -5006,7 +5081,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     }}
                   />
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-lg group-hover:scale-125 transition-transform"
+                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-md group-hover:scale-125 transition-transform"
                     style={{
                       left: `${isDragging ? dragProgress : progress}%`,
                     }}
@@ -5043,33 +5118,33 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           )}
 
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-5">
+            <div className="flex items-center gap-1.5 sm:gap-3">
               {!isEmbed && (
                 <>
                   <button
                     onClick={() => seekBy(-10)}
-                    className="hidden sm:block text-white/70 hover:text-white transition-colors p-1"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-all border border-white/5 shrink-0"
                     title="–10s (J)"
                   >
-                    <RotateCcw size={18} />
+                    <RotateCcw size={16} />
                   </button>
                   <button
                     onClick={togglePlay}
-                    className="text-white hover:text-white/80 transition-colors p-1"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/10 shrink-0"
                     title="Play/Pause (Space)"
                   >
                     {isPaused ? (
-                      <Play size={26} fill="currentColor" />
+                      <Play size={20} fill="currentColor" className="ml-0.5" />
                     ) : (
-                      <Pause size={26} fill="currentColor" />
+                      <Pause size={20} fill="currentColor" />
                     )}
                   </button>
                   <button
                     onClick={() => seekBy(10)}
-                    className="hidden sm:block text-white/70 hover:text-white transition-colors p-1"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-all border border-white/5 shrink-0"
                     title="+10s (L)"
                   >
-                    <RotateCw size={18} />
+                    <RotateCw size={16} />
                   </button>
                 </>
               )}
@@ -5077,78 +5152,50 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <button
                   onClick={handleNextEpisode}
                   disabled={!hasNext}
-                  className={`w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1.5 text-xs font-bold transition-all border ${
+                  className={`w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 text-xs font-semibold transition-all border ${
                     hasNext
-                      ? "bg-white/10 hover:bg-white/20 text-white border-white/5 active:scale-95"
+                      ? "bg-white/10 hover:bg-white/20 text-white border-white/10 active:scale-95"
                       : "bg-white/5 text-white/30 border-transparent opacity-40 cursor-not-allowed"
                   }`}
                   title={hasNext ? "Next Episode" : "No More Episodes"}
                 >
-                  <span className="hidden sm:inline italic">NEXT</span>
-                  <ChevronRight size={16} />
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight size={15} />
                 </button>
               )}
               {!isEmbed && (
                 <>
-                  <div className="hidden sm:flex items-center gap-2 group/vol relative">
-                    <button
-                      onClick={() => {
-                        if (window.innerWidth < 768) {
-                          setShowMobileVolume(!showMobileVolume);
-                        } else {
-                          setIsMuted(!isMuted);
-                        }
-                      }}
-                      className="text-white/70 hover:text-white transition-colors"
-                    >
-                      {isMuted || volume === 0 ? (
-                        <VolumeX size={18} />
-                      ) : (
-                        <Volume2 size={18} />
-                      )}
-                    </button>
-                    <div
-                      className={`${showMobileVolume ? "h-32 opacity-100 translate-y-0" : "h-0 opacity-0 translate-y-4"} transition-all duration-300 overflow-hidden flex flex-col items-center absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-[#111]/90 backdrop-blur-xl p-3 rounded-2xl border border-white/10 z-50 shadow-2xl md:hidden`}
-                    >
-                      <div className="relative h-24 w-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className="absolute bottom-0 inset-x-0 bg-white rounded-full transition-all"
-                          style={{ height: `${isMuted ? 0 : volume}%` }}
-                        />
+                  {!isMobileDevice && (
+                    <div className="hidden lg:flex items-center gap-2 group/vol relative">
+                      <button
+                        onClick={() => setIsMuted(!isMuted)}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-all border border-white/5"
+                        title={isMuted ? "Unmute (M)" : "Mute (M)"}
+                      >
+                        {isMuted || volume === 0 ? (
+                          <VolumeX size={16} />
+                        ) : (
+                          <Volume2 size={16} />
+                        )}
+                      </button>
+
+                      {/* Desktop Volume Slider */}
+                      <div className="hidden lg:flex w-0 group-hover/vol:w-20 transition-all duration-300 overflow-hidden items-center ml-1">
                         <input
                           type="range"
                           min={0}
                           max={100}
-                          orient="vertical"
                           value={isMuted ? 0 : volume}
                           onChange={(e) => {
                             setVolume(+e.target.value);
                             setIsMuted(false);
                           }}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-slider-vertical"
+                          className="w-16 accent-white cursor-pointer h-1 rounded-full appearance-none bg-white/20"
                         />
                       </div>
-                      <span className="text-[10px] text-white/40 mt-2 font-mono">
-                        {isMuted ? 0 : volume}%
-                      </span>
                     </div>
-
-                    {/* Desktop Volume Slider */}
-                    <div className="hidden md:flex w-0 group-hover/vol:w-24 transition-all duration-300 overflow-hidden items-center ml-2">
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={isMuted ? 0 : volume}
-                        onChange={(e) => {
-                          setVolume(+e.target.value);
-                          setIsMuted(false);
-                        }}
-                        className="w-20 accent-white cursor-pointer h-1 rounded-full appearance-none bg-white/20"
-                      />
-                    </div>
-                  </div>
-                  <span className="text-white/50 text-[10px] sm:text-xs tabular-nums">
+                  )}
+                  <span className="text-white/60 text-[11px] sm:text-xs font-mono tabular-nums ml-1">
                     {currentTime} <span className="text-white/20">/</span>{" "}
                     {duration}
                   </span>
@@ -5156,7 +5203,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               )}
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4 relative">
+            <div className="flex items-center gap-2 sm:gap-3 relative">
               {movie.type === "tv" && (
                 <button
                   onClick={() => {
@@ -5201,79 +5248,92 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     <Settings size={16} />
                   </button>
 
-                  {/* Zoom Fit */}
+                  {/* Zoom Fit - Desktop Only */}
+                  {!isMobileDevice && (
+                    <button
+                      onClick={() => {
+                        setIsZoomed((z) => {
+                          const next = !z;
+                          showToast(
+                            next ? "Zoomed to Fill" : "Fit to Screen",
+                            "info",
+                          );
+                          return next;
+                        });
+                      }}
+                      className={`hidden lg:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center transition-all ${
+                        isZoomed
+                          ? "bg-nebula-cyan text-obsidian font-black shadow-[0_0_10px_rgba(0,229,255,0.4)]"
+                          : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20"
+                      }`}
+                      title={isZoomed ? "Fit to Screen" : "Zoom to Fill"}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        {isZoomed ? (
+                          <>
+                            <rect
+                              x="2"
+                              y="4"
+                              width="20"
+                              height="16"
+                              rx="2"
+                              strokeDasharray="3 3"
+                              opacity="0.6"
+                            />
+                            <path d="M12 7v10" />
+                            <path d="M9 10l3 3 3-3" />
+                            <path d="M9 14l3-3 3 3" />
+                          </>
+                        ) : (
+                          <>
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="M12 7v10" />
+                            <path d="M9 10l3-3 3 3" />
+                            <path d="M9 14l3 3 3-3" />
+                          </>
+                        )}
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
+              {!isMobileDevice && (
+                <>
                   <button
                     onClick={() => {
-                      setIsZoomed((z) => {
-                        const next = !z;
-                        showToast(
-                          next ? "Zoomed to Fill" : "Fit to Screen",
-                          "info",
-                        );
-                        return next;
-                      });
+                      setShowHotkeys((p) => !p);
+                      setShowSettings(false);
+                      setShowSubtitles(false);
+                      setShowEpisodeDrawer(false);
+                      setShowServersModal(false);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
-                      isZoomed
-                        ? "bg-nebula-cyan text-obsidian font-black shadow-[0_0_10px_rgba(0,229,255,0.4)]"
+                    className={`hidden lg:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center transition-all ${
+                      showHotkeys
+                        ? "bg-white text-black"
                         : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20"
                     }`}
-                    title={isZoomed ? "Fit to Screen" : "Zoom to Fill"}
+                    title="Keyboard Shortcuts (?)"
                   >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      {isZoomed ? (
-                        <>
-                          <rect
-                            x="2"
-                            y="4"
-                            width="20"
-                            height="16"
-                            rx="2"
-                            strokeDasharray="3 3"
-                            opacity="0.6"
-                          />
-                          <path d="M12 7v10" />
-                          <path d="M9 10l3 3 3-3" />
-                          <path d="M9 14l3-3 3 3" />
-                        </>
-                      ) : (
-                        <>
-                          <rect x="2" y="4" width="20" height="16" rx="2" />
-                          <path d="M12 7v10" />
-                          <path d="M9 10l3-3 3 3" />
-                          <path d="M9 14l3 3 3-3" />
-                        </>
-                      )}
-                    </svg>
+                    <Keyboard size={16} />
+                  </button>
+                  <button
+                    onClick={handleTogglePiP}
+                    className="hidden lg:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
+                    title="Picture-in-Picture"
+                  >
+                    <PictureInPicture size={16} />
                   </button>
                 </>
               )}
-              <button
-                onClick={() => {
-                  setShowHotkeys((p) => !p);
-                  setShowSettings(false);
-                  setShowSubtitles(false);
-                  setShowEpisodeDrawer(false);
-                  setShowServersModal(false);
-                }}
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
-                  showHotkeys
-                    ? "bg-white text-black"
-                    : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20"
-                }`}
-                title="Keyboard Shortcuts (?)"
-              >
-                <Keyboard size={16} />
-              </button>
               <button
                 onClick={handleFullscreen}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
