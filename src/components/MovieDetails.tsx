@@ -528,32 +528,32 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 z-50"
+          className="absolute top-4 right-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/25 hover:bg-white/10 transition-all bg-white/5 z-50 hover:rotate-90 duration-300"
         >
           <X size={20} />
         </button>
 
         {/* Header */}
         <div className="text-center mb-4 sm:mb-6 shrink-0 flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.15em] mb-2 sm:mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-nebula-cyan/30 bg-nebula-cyan/10 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.18em] mb-2 sm:mb-4 shadow-[0_0_15px_rgba(0,229,255,0.15)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shadow-[0_0_8px_#00e5ff]" />
             Provider Selection
           </div>
 
-          <h3 className="text-xl sm:text-3xl font-display font-black text-white uppercase tracking-tight mb-2">
+          <h3 className="text-xl sm:text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-white/70 uppercase tracking-tight mb-2">
             Choose Stream Source
           </h3>
 
-          <p className="text-xs text-white/50 max-w-md mx-auto">
+          <p className="text-xs text-white/60 max-w-md mx-auto font-medium">
             {movie.title}{" "}
             {season !== undefined && `• Season ${season} Episode ${episode}`}
           </p>
 
-          <p className="text-[10px] sm:text-xs text-white/40 max-w-md mx-auto mt-3 text-center flex items-center justify-center gap-1.5 border border-white/5 bg-white/2 py-2 px-4 rounded-2xl select-none">
+          <p className="text-[10px] sm:text-xs text-white/50 max-w-md mx-auto mt-3 text-center flex items-center justify-center gap-1.5 border border-white/10 bg-white/5 py-2 px-4 rounded-2xl select-none backdrop-blur-md">
             <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shrink-0" />
             <span>
               Click a provider to play with <b>auto-failover</b>, or click any{" "}
-              <b>mirror/quality badge</b> directly to play it.
+              <b>mirror badge</b> directly to play it.
             </span>
           </p>
         </div>
@@ -563,55 +563,55 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             - md+: 2-column grid for 4 cards (2×2)
             - overflow-y-auto here so the modal header stays fixed while cards scroll */}
         <div className="flex flex-col md:grid md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pb-2">
-          {/* ── VidRock Card ── */}
+          {/* ── Hyperion (VidRock) Card ── */}
           <div
             onClick={() => {
               if (!loading && sources.length > 0) onSelect(vidrockUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               loading
-                ? "border-nebula-cyan/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-nebula-cyan/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : sources.length > 0
-                  ? "border-nebula-cyan/35 bg-slate-950/45 hover:border-nebula-cyan/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-nebula-cyan/40 bg-gradient-to-br from-nebula-cyan/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(0,229,255,0.08)] hover:border-nebula-cyan/75 hover:shadow-[0_0_35px_rgba(0,229,255,0.22)] hover:from-nebula-cyan/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   loading || sources.length > 0
-                    ? "bg-nebula-cyan/15 text-nebula-cyan"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-nebula-cyan/15 text-nebula-cyan border-nebula-cyan/30 shadow-[0_0_15px_rgba(0,229,255,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Zap
-                  size={18}
+                  size={20}
                   fill={loading || sources.length > 0 ? "currentColor" : "none"}
                   className={loading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-nebula-cyan transition-colors">
                     Hyperion
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan/10 border border-nebula-cyan/20 text-nebula-cyan uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-nebula-cyan/15 border border-nebula-cyan/30 text-nebula-cyan uppercase tracking-wider shadow-[0_0_8px_rgba(0,229,255,0.15)]">
                     DEFAULT
                   </span>
                   {loading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-nebula-cyan/20 bg-nebula-cyan/5 text-nebula-cyan uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-nebula-cyan/30 bg-nebula-cyan/10 text-nebula-cyan uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : sources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-nebula-cyan/20 border border-nebula-cyan/35 text-nebula-cyan uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-nebula-cyan/25 border border-nebula-cyan/40 text-nebula-cyan uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(0,229,255,0.2)]">
                       <Sparkles size={8} />
                       RECOMMENDED
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   Delivers ultra-fast multi-CDN speeds, rich HLS quality, and
                   seamless client-side failover between active mirrors.
                 </p>
@@ -619,9 +619,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {loading ? (
-                <div className="flex items-center gap-2 text-[9px] text-nebula-cyan/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-nebula-cyan/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-nebula-cyan opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-nebula-cyan" />
@@ -630,7 +630,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : sources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Active Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -641,13 +641,13 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                         .trim()
                         .toUpperCase();
                       let color =
-                        "border-nebula-cyan/30 text-nebula-cyan bg-nebula-cyan/10 hover:border-nebula-cyan/65 hover:bg-nebula-cyan/20";
+                        "border-nebula-cyan/35 text-nebula-cyan bg-nebula-cyan/10 hover:border-nebula-cyan/70 hover:bg-nebula-cyan/25 hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]";
                       if (cleanMirrorName === "ATLAS")
                         color =
-                          "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:border-amber-500/65 hover:bg-amber-500/20";
+                          "border-amber-500/35 text-amber-400 bg-amber-500/10 hover:border-amber-500/70 hover:bg-amber-500/25 hover:shadow-[0_0_12px_rgba(245,158,11,0.25)]";
                       if (cleanMirrorName === "ORION")
                         color =
-                          "border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/65 hover:bg-emerald-500/20";
+                          "border-emerald-500/35 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/25 hover:shadow-[0_0_12px_rgba(16,185,129,0.25)]";
                       return (
                         <button
                           key={src.name}
@@ -668,7 +668,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className={`text-[9.5px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${color}`}
+                          className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-wider transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${color}`}
                         >
                           <Play
                             size={8}
@@ -690,55 +690,55 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Vaplayer Card ── */}
+          {/* ── Quantum (Vaplayer) Card ── */}
           <div
             onClick={() => {
               if (!vaplayerLoading && vaplayerSources.length > 0)
                 onSelect(vaplayerUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               vaplayerLoading
-                ? "border-cyan-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-cyan-500/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : vaplayerSources.length > 0
-                  ? "border-cyan-500/35 bg-slate-950/45 hover:border-cyan-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-cyan-400/40 bg-gradient-to-br from-cyan-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(6,182,212,0.08)] hover:border-cyan-400/75 hover:shadow-[0_0_35px_rgba(6,182,212,0.22)] hover:from-cyan-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   vaplayerLoading || vaplayerSources.length > 0
-                    ? "bg-cyan-500/15 text-cyan-400"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Tv
-                  size={18}
+                  size={20}
                   className={vaplayerLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">
                     Quantum
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 uppercase tracking-wider">
                     GLOBAL MIRRORS
                   </span>
                   {vaplayerLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : vaplayerSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/35 text-cyan-300 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
                       <Sparkles size={8} />
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   Aggregates direct HLS stream mirrors from global caching
                   servers with integrated multi-language subtitle tracks.
                 </p>
@@ -746,9 +746,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {vaplayerLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-cyan-400/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-cyan-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
@@ -757,7 +757,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : vaplayerSources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Available Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -793,7 +793,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 hover:border-cyan-500/65 hover:bg-cyan-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-cyan-500/35 text-cyan-300 bg-cyan-500/10 hover:border-cyan-500/70 hover:bg-cyan-500/25 hover:shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -815,55 +815,55 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Vidrift Card ── */}
+          {/* ── Velocity (Vidrift) Card ── */}
           <div
             onClick={() => {
               if (!vidriftLoading && vidriftSources.length > 0)
                 onSelect(vidriftUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               vidriftLoading
-                ? "border-fuchsia-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-fuchsia-500/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : vidriftSources.length > 0
-                  ? "border-fuchsia-500/35 bg-slate-950/45 hover:border-fuchsia-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-fuchsia-500/40 bg-gradient-to-br from-fuchsia-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(217,70,239,0.08)] hover:border-fuchsia-500/75 hover:shadow-[0_0_35px_rgba(217,70,239,0.22)] hover:from-fuchsia-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   vidriftLoading || vidriftSources.length > 0
-                    ? "bg-fuchsia-500/15 text-fuchsia-400"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Tv
-                  size={18}
+                  size={20}
                   className={vidriftLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-fuchsia-400 transition-colors">
                     Velocity
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-300 uppercase tracking-wider">
                     FAST MIRRORS
                   </span>
                   {vidriftLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-fuchsia-500/20 bg-fuchsia-500/5 text-fuchsia-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : vidriftSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-fuchsia-500/20 border border-fuchsia-500/35 text-fuchsia-300 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/40 text-fuchsia-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(217,70,239,0.2)]">
                       <Sparkles size={8} />
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   Streams high-speed HLS mirrors from fast-edge cloud CDN
                   endpoints.
                 </p>
@@ -871,9 +871,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {vidriftLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-fuchsia-400/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-fuchsia-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-fuchsia-500" />
@@ -882,7 +882,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : vidriftSources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Available Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -915,7 +915,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-fuchsia-500/30 text-fuchsia-400 bg-fuchsia-500/10 hover:border-fuchsia-500/65 hover:bg-fuchsia-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-fuchsia-500/35 text-fuchsia-300 bg-fuchsia-500/10 hover:border-fuchsia-500/70 hover:bg-fuchsia-500/25 hover:shadow-[0_0_12px_rgba(217,70,239,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -937,55 +937,55 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Videasy Card ── */}
+          {/* ── Pulse (Videasy) Card ── */}
           <div
             onClick={() => {
               if (!videasyLoading && videasySources.length > 0)
                 onSelect(videasyUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               videasyLoading
-                ? "border-violet-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-violet-500/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : videasySources.length > 0
-                  ? "border-violet-500/35 bg-slate-950/45 hover:border-violet-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(139,92,246,0.08)] hover:border-violet-500/75 hover:shadow-[0_0_35px_rgba(139,92,246,0.22)] hover:from-violet-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   videasyLoading || videasySources.length > 0
-                    ? "bg-violet-500/15 text-violet-400"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-violet-500/15 text-violet-400 border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Tv
-                  size={18}
+                  size={20}
                   className={videasyLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-violet-400 transition-colors">
                     Pulse
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-violet-400 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-300 uppercase tracking-wider">
                     WASM DECRYPT
                   </span>
                   {videasyLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-violet-500/30 bg-violet-500/10 text-violet-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : videasySources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/35 text-violet-300 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-violet-500/25 border border-violet-500/40 text-violet-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(139,92,246,0.2)]">
                       <Sparkles size={8} />
                       DECRYPTED
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   Bypasses player protection layers using WebAssembly decryption
                   to unlock multiple global multi-language audio mirrors.
                 </p>
@@ -993,9 +993,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {videasyLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-violet-400/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-violet-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500" />
@@ -1004,7 +1004,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : videasySources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Active Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1036,7 +1036,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded border border-violet-500/30 text-violet-400 bg-violet-500/10 hover:border-violet-500/65 hover:bg-violet-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-violet-500/35 text-violet-300 bg-violet-500/10 hover:border-violet-500/70 hover:bg-violet-500/25 hover:shadow-[0_0_12px_rgba(139,92,246,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider cursor-pointer"
                         >
                           {src.flag && (
                             <img
@@ -1067,55 +1067,55 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── VidLink Card ── */}
+          {/* ── Spectra (VidLink) Card ── */}
           <div
             onClick={() => {
               if (!vidlinkLoading && vidlinkSources.length > 0)
                 onSelect(vidlinkUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               vidlinkLoading
-                ? "border-white/10 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-white/20 bg-slate-950/60 opacity-80 cursor-wait"
                 : vidlinkSources.length > 0
-                  ? "border-white/10 bg-slate-950/45 hover:border-white/30 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-white/25 bg-gradient-to-br from-white/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(255,255,255,0.05)] hover:border-white/50 hover:shadow-[0_0_35px_rgba(255,255,255,0.18)] hover:from-white/15 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   vidlinkLoading || vidlinkSources.length > 0
-                    ? "bg-white/10 text-white/70"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-white/10 text-white/80 border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Server
-                  size={18}
+                  size={20}
                   className={vidlinkLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-white transition-colors">
                     Spectra
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/50 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-white/10 border border-white/20 text-white/70 uppercase tracking-wider">
                     INDEX NODE
                   </span>
                   {vidlinkLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-white/20 bg-white/5 text-white/50 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : vidlinkSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white/60 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-white/15 border border-white/30 text-white uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(255,255,255,0.15)]">
                       <Sparkles size={8} />
                       ONLINE
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   Aggregates comprehensive index mappings across global servers
                   as a fallback to ensure maximum content availability.
                 </p>
@@ -1123,18 +1123,18 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {vidlinkLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-white/40 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-white/50 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/50 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/60 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/60" />
                   </span>
                   Scanning Indexes...
                 </div>
               ) : vidlinkSources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Quality Tiers:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1170,7 +1170,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-white/15 text-white/70 bg-white/5 hover:border-white/30 hover:bg-white/10 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-white/20 text-white/80 bg-white/10 hover:border-white/40 hover:bg-white/20 hover:shadow-[0_0_12px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -1194,64 +1194,64 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Vidnest Card ── */}
+          {/* ── Titan (Vidnest) Card ── */}
           <div
             onClick={() => {
               if (!vidnestLoading && vidnestSources.length > 0)
                 onSelect(vidnestUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               vidnestLoading
-                ? "border-emerald-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-emerald-500/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : vidnestSources.length > 0
-                  ? "border-emerald-500/35 bg-slate-950/45 hover:border-emerald-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(16,185,129,0.08)] hover:border-emerald-500/75 hover:shadow-[0_0_35px_rgba(16,185,129,0.22)] hover:from-emerald-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   vidnestLoading || vidnestSources.length > 0
-                    ? "bg-emerald-500/15 text-emerald-400"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Zap
-                  size={18}
+                  size={20}
                   className={vidnestLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-emerald-400 transition-colors">
                     Titan
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 uppercase tracking-wider">
                     PREMIUM CDN
                   </span>
                   {vidnestLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : vidnestSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/25 border border-emerald-500/40 text-emerald-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
                       <Sparkles size={8} />
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   High-speed HLS & MP4 stream delivery aggregating premium servers across Alpha, Beta, and Gamma endpoints.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {vidnestLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
@@ -1260,7 +1260,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : vidnestSources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Active Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1317,7 +1317,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/65 hover:bg-emerald-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-emerald-500/35 text-emerald-300 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/25 hover:shadow-[0_0_12px_rgba(16,185,129,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -1339,70 +1339,70 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Kuro (Sub) Card (Japanese Audio) ── */}
+          {/* ── Zenith (Sub) Card (Japanese Audio) ── */}
           <div
             onClick={() => {
               if (!kuroLoading && kuroSubSources.length > 0)
                 onSelect(kuroSubUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               kuroLoading
-                ? "border-violet-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-purple-500/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : kuroSubSources.length > 0
-                  ? "border-violet-500/35 bg-slate-950/45 hover:border-violet-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-purple-500/40 bg-gradient-to-br from-purple-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(168,85,247,0.08)] hover:border-purple-500/75 hover:shadow-[0_0_35px_rgba(168,85,247,0.22)] hover:from-purple-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   kuroLoading || kuroSubSources.length > 0
-                    ? "bg-violet-500/15 text-violet-400"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
-                <Zap size={18} className={kuroLoading ? "animate-pulse" : ""} />
+                <Zap size={20} className={kuroLoading ? "animate-pulse" : ""} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-purple-400 transition-colors">
                     Zenith (Sub)
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-500/20 border border-purple-500/35 text-purple-300 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/35 text-purple-200 uppercase tracking-wider shadow-[0_0_8px_rgba(168,85,247,0.15)]">
                     JAPANESE AUDIO
                   </span>
                   {kuroLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-purple-500/30 bg-purple-500/10 text-purple-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : kuroSubSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/35 text-violet-300 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-purple-500/25 border border-purple-500/40 text-purple-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(168,85,247,0.2)]">
                       <Sparkles size={8} />
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   Dedicated high-speed subbed streams with multi-language subtitle tracks.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {kuroLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-violet-400/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-purple-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500" />
                   </span>
                   Probing Sub Nodes...
                 </div>
               ) : kuroSubSources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Available Sub Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1420,6 +1420,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           title={`Play Zenith (${displayName}) sub directly`}
                           onClick={(e) => {
                             e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
                             const reordered = [
                               src,
                               ...kuroSubSources.filter(
@@ -1435,7 +1436,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-violet-500/30 text-violet-400 bg-violet-500/10 hover:border-violet-500/65 hover:bg-violet-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-purple-500/35 text-purple-300 bg-purple-500/10 hover:border-purple-500/70 hover:bg-purple-500/25 hover:shadow-[0_0_12px_rgba(168,85,247,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -1449,8 +1450,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <p className="text-[10px] text-violet-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-violet-400 animate-ping" />
+                <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-purple-400 animate-ping" />
                   {kuroError
                     ? "Sub uplink offline"
                     : "No sub mirrors available"}
@@ -1459,61 +1460,61 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Kuro (Dub) Card (English Audio) ── */}
+          {/* ── Zenith (Dub) Card (English Audio) ── */}
           <div
             onClick={() => {
               if (!kuroLoading && kuroDubSources.length > 0)
                 onSelect(kuroDubUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               kuroLoading
-                ? "border-pink-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-pink-500/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : kuroDubSources.length > 0
-                  ? "border-pink-500/35 bg-slate-950/45 hover:border-pink-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-pink-500/40 bg-gradient-to-br from-pink-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(236,72,153,0.08)] hover:border-pink-500/75 hover:shadow-[0_0_35px_rgba(236,72,153,0.22)] hover:from-pink-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   kuroLoading || kuroDubSources.length > 0
-                    ? "bg-pink-500/15 text-pink-400"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-pink-500/15 text-pink-400 border-pink-500/30 shadow-[0_0_15px_rgba(236,72,153,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
-                <Zap size={18} className={kuroLoading ? "animate-pulse" : ""} />
+                <Zap size={20} className={kuroLoading ? "animate-pulse" : ""} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-pink-400 transition-colors">
                     Zenith (Dub)
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-pink-500/20 border border-pink-500/35 text-pink-300 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-pink-500/20 border border-pink-500/35 text-pink-200 uppercase tracking-wider shadow-[0_0_8px_rgba(236,72,153,0.15)]">
                     ENGLISH DUB
                   </span>
                   {kuroLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-pink-500/20 bg-pink-500/5 text-pink-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-pink-500/30 bg-pink-500/10 text-pink-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : kuroDubSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-pink-500/20 border border-pink-500/35 text-pink-300 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-pink-500/25 border border-pink-500/40 text-pink-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(236,72,153,0.2)]">
                       <Sparkles size={8} />
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   Dedicated high-speed dubbed streams with English audio track.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {kuroLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-pink-400/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-pink-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-pink-500" />
@@ -1522,7 +1523,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : kuroDubSources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Available Dub Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1540,6 +1541,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           title={`Play Zenith (${displayName}) dub directly`}
                           onClick={(e) => {
                             e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
                             const reordered = [
                               src,
                               ...kuroDubSources.filter(
@@ -1555,7 +1557,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-pink-500/30 text-pink-400 bg-pink-500/10 hover:border-pink-500/65 hover:bg-pink-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-pink-500/35 text-pink-300 bg-pink-500/10 hover:border-pink-500/70 hover:bg-pink-500/25 hover:shadow-[0_0_12px_rgba(236,72,153,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -1579,63 +1581,63 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── FilmU Card ── */}
+          {/* ── Orbital (FilmU) Card ── */}
           <div
             onClick={() => {
               if (!filmuLoading && filmuSources.length > 0) onSelect(filmuUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               filmuLoading
-                ? "border-amber-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-amber-500/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : filmuSources.length > 0
-                  ? "border-amber-500/35 bg-slate-950/45 hover:border-amber-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(245,158,11,0.08)] hover:border-amber-500/75 hover:shadow-[0_0_35px_rgba(245,158,11,0.22)] hover:from-amber-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   filmuLoading || filmuSources.length > 0
-                    ? "bg-amber-500/15 text-amber-400"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Film
-                  size={18}
+                  size={20}
                   className={filmuLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-amber-400 transition-colors">
                     Orbital
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 uppercase tracking-wider">
                     HYBRID CLOUD
                   </span>
                   {filmuLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/5 text-amber-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : filmuSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/35 text-amber-300 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/25 border border-amber-500/40 text-amber-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                       <Sparkles size={8} />
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
-                  Aggregates parallel multi-provider CDN streams including Alpha, Beta, and Gamma mirrors.
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
+                  Aggregates parallel multi-provider CDN streams including Alpha, Beta, and Gamma endpoints.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {filmuLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-amber-400/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-amber-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500" />
@@ -1644,7 +1646,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : filmuSources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Active Providers:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1669,17 +1671,17 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                         (providerName) => {
                           const colorMap: Record<string, string> = {
                             ALPHA:
-                              "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:border-amber-500/65 hover:bg-amber-500/20",
+                              "border-amber-500/35 text-amber-300 bg-amber-500/10 hover:border-amber-500/70 hover:bg-amber-500/25 hover:shadow-[0_0_12px_rgba(245,158,11,0.25)]",
                             BETA:
-                              "border-orange-500/30 text-orange-400 bg-orange-500/10 hover:border-orange-500/65 hover:bg-orange-500/20",
-                            GAMMA: "border-yellow-500/30 text-yellow-400 bg-yellow-500/10 hover:border-yellow-500/65 hover:bg-yellow-500/20",
-                            DELTA: "border-red-500/30 text-red-400 bg-red-500/10 hover:border-red-500/65 hover:bg-red-500/20",
+                              "border-orange-500/35 text-orange-300 bg-orange-500/10 hover:border-orange-500/70 hover:bg-orange-500/25 hover:shadow-[0_0_12px_rgba(249,115,22,0.25)]",
+                            GAMMA: "border-yellow-500/35 text-yellow-300 bg-yellow-500/10 hover:border-yellow-500/70 hover:bg-yellow-500/25 hover:shadow-[0_0_12px_rgba(234,179,8,0.25)]",
+                            DELTA: "border-red-500/35 text-red-300 bg-red-500/10 hover:border-red-500/70 hover:bg-red-500/25 hover:shadow-[0_0_12px_rgba(239,68,68,0.25)]",
                           };
                           const chipClass =
                             Object.entries(colorMap).find(([k]) =>
                               providerName.includes(k),
                             )?.[1] ??
-                            "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:border-amber-500/65 hover:bg-amber-500/20";
+                            "border-amber-500/35 text-amber-300 bg-amber-500/10 hover:border-amber-500/70 hover:bg-amber-500/25 hover:shadow-[0_0_12px_rgba(245,158,11,0.25)]";
                           return (
                             <button
                               key={providerName}
@@ -1720,7 +1722,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                                   .join("|");
                                 onSelect(selectedUrl);
                               }}
-                              className={`text-[9.5px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${chipClass}`}
+                              className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-wider transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${chipClass}`}
                             >
                               <Play
                                 size={8}
@@ -1744,55 +1746,55 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Peachify Card ── */}
+          {/* ── Aurora (Peachify) Card ── */}
           <div
             onClick={() => {
               if (!peachifyLoading && peachifySources.length > 0)
                 onSelect(peachifyUrl);
             }}
-            className={`flex flex-col gap-3 p-5 rounded-2xl border transition-colors duration-200 ${
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               peachifyLoading
-                ? "border-rose-500/20 bg-slate-950/45 opacity-80 cursor-wait"
+                ? "border-rose-500/25 bg-slate-950/60 opacity-80 cursor-wait"
                 : peachifySources.length > 0
-                  ? "border-rose-500/35 bg-slate-950/45 hover:border-rose-500/60 hover:bg-slate-950/65 cursor-pointer"
+                  ? "border-rose-500/40 bg-gradient-to-br from-rose-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(244,63,94,0.08)] hover:border-rose-500/75 hover:shadow-[0_0_35px_rgba(244,63,94,0.22)] hover:from-rose-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
                   peachifyLoading || peachifySources.length > 0
-                    ? "bg-rose-500/15 text-rose-400"
-                    : "bg-white/5 text-white/20"
+                    ? "bg-rose-500/15 text-rose-400 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Zap
-                  size={18}
+                  size={20}
                   className={peachifyLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-bold text-sm text-white uppercase tracking-tight">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-rose-400 transition-colors">
                     Aurora
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 uppercase tracking-wider">
                     DIRECT PEACH
                   </span>
                   {peachifyLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-rose-500/20 bg-rose-500/5 text-rose-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-rose-500/30 bg-rose-500/10 text-rose-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
                   ) : peachifySources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/35 text-rose-300 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-rose-500/25 border border-rose-500/40 text-rose-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.2)]">
                       <Sparkles size={8} />
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
                   Decrypted direct stream sources with low-latency parallel
                   delivery and integrated multi-language subtitles.
                 </p>
@@ -1800,9 +1802,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-3">
+            <div className="border-t border-white/10 pt-3">
               {peachifyLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-rose-400/70 font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[9px] text-rose-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
@@ -1811,7 +1813,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 </div>
               ) : peachifySources.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/35 uppercase font-black tracking-widest">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
                     Available Mirrors:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1825,7 +1827,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       return (
                         <button
                           key={src.name}
-                          title={`Play Peachify (${displayName}) directly`}
+                          title={`Play Aurora (${displayName}) mirror directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
@@ -1844,7 +1846,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 hover:border-rose-500/65 hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-rose-500/35 text-rose-300 bg-rose-500/10 hover:border-rose-500/70 hover:bg-rose-500/25 hover:shadow-[0_0_12px_rgba(244,63,94,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -1860,9 +1862,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : (
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {peachifyError
-                    ? "Uplink currently offline"
-                    : "No mirrors available"}
+                  {peachifyError ? "Providers offline" : "No mirrors available"}
                 </p>
               )}
             </div>
