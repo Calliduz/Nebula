@@ -297,6 +297,39 @@ export const sortMirrorsList = (list: any[]) => {
   });
 };
 
+const getHlsLevelHeight = (l: any, index: number = 0, totalLevels: number = 1): number => {
+  if (l && typeof l.height === "number" && l.height > 0) {
+    return l.height;
+  }
+
+  const resAttr = l?.attrs?.RESOLUTION || l?.resolution;
+  if (typeof resAttr === "string" && resAttr.includes("x")) {
+    const parts = resAttr.split("x");
+    const parsedH = parseInt(parts[1], 10);
+    if (!isNaN(parsedH) && parsedH > 0) return parsedH;
+  }
+
+  const nameAttr = l?.attrs?.NAME || l?.name;
+  if (typeof nameAttr === "string") {
+    const parsedH = parseInt(nameAttr.replace(/\D/g, ""), 10);
+    if (!isNaN(parsedH) && parsedH > 0) return parsedH;
+  }
+
+  const bitrate = l?.bitrate || 0;
+  if (bitrate >= 3_500_000) return 1080;
+  if (bitrate >= 1_800_000) return 720;
+  if (bitrate >= 800_000) return 480;
+  if (bitrate >= 400_000) return 360;
+  if (bitrate > 0) return 240;
+
+  if (totalLevels > 1) {
+    const defaultHeights = [1080, 720, 480, 360, 240];
+    return defaultHeights[Math.min(index, defaultHeights.length - 1)];
+  }
+
+  return 480;
+};
+
 const groupMirrors = (mirrorsList: any[]) => {
   const groups: Record<string, any> = {};
 
@@ -567,6 +600,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setIsEmbed(m.type === "embed");
     lastFragLoadedTime.current = Date.now();
 
+    // Reset: we don't yet know if the URL is a multi-variant master
+    useHlsLevelsForQualityRef.current = false;
+
     if ((m.type === "mp4_grouped" || m.type === "hls_grouped") && m.qualities) {
       setQualities(
         m.qualities.map((q: any, qIdx: number) => ({
@@ -659,6 +695,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const isLocalSeekingRef = useRef(false);
   const localCurrentTimeRef = useRef(0);
   const seekFlagTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // When true: the current mirror was grouped (hls_grouped) but its URL turned out
+  // to be a real multi-variant HLS master → quality switching must use HLS level
+  // switching (hls.currentLevel) instead of URL-swapping between mirror qualities.
+  const useHlsLevelsForQualityRef = useRef<boolean>(false);
 
   const hasReportedSuccess = useRef(false);
   const frag0LoadRetries = useRef(0);
@@ -2311,13 +2351,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       });
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        const totalL = data.levels.length;
         const validLevels = data.levels
           .map((l, i) => ({
-            height: l.height,
+            height: getHlsLevelHeight(l, i, totalL),
             levelId: i,
             bitrate: l.bitrate || 0,
-          }))
-          .filter((q) => q.height > 0);
+          }));
 
         validLevels.sort(
           (a, b) => b.height - a.height || b.bitrate - a.bitrate,
@@ -2335,13 +2375,61 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }
         }
 
-        setQualities(
-          uniqueQualities.length > 0
-            ? uniqueQualities
-            : data.levels
-                .map((l, i) => ({ height: l.height, levelId: i }))
-                .reverse(),
+        const activeM = mirrorsRef.current[activeMirrorRef.current];
+        const isGroupedMirror = Boolean(
+          activeM &&
+          (activeM.type === "hls_grouped" || activeM.type === "mp4_grouped") &&
+          activeM.qualities &&
+          activeM.qualities.length > 0,
         );
+
+        // Detect when a "grouped" mirror's URL is actually a multi-variant HLS
+        // master playlist.  This happens when a source sends a single HLS URL
+        // without a quality suffix in its name: groupMirrors() assigns it a
+        // fake height of 480 and wraps it as hls_grouped.  If the stream
+        // itself exposes > 1 real variant, we must use HLS level-switching
+        // (hls.currentLevel) rather than swapping between mirror quality URLs.
+        const mirrorQualityCount = activeM?.qualities?.length ?? 0;
+        const realLevelCount = uniqueQualities.length;
+        const mirrorIsSingleFakeQuality =
+          isGroupedMirror && mirrorQualityCount <= 1 && realLevelCount > 1;
+
+        if (mirrorIsSingleFakeQuality) {
+          // Real multi-variant master hidden behind a single grouped mirror.
+          // Switch to HLS level-switching mode for this stream.
+          useHlsLevelsForQualityRef.current = true;
+          console.log(
+            `[HLS] Multi-variant master detected behind grouped mirror (${realLevelCount} levels). Using HLS level-switching mode.`,
+          );
+          setQualities(
+            uniqueQualities.length > 0
+              ? uniqueQualities
+              : data.levels.map((l, i) => ({
+                  height: getHlsLevelHeight(l, i, totalL),
+                  levelId: i,
+                })),
+          );
+        } else if (isGroupedMirror) {
+          // Normal grouped mirror: each quality is a separate URL → URL-switching.
+          useHlsLevelsForQualityRef.current = false;
+          setQualities(
+            activeM.qualities.map((q: any, qIdx: number) => ({
+              height: q.height,
+              levelId: qIdx,
+              url: q.url,
+            })),
+          );
+        } else if (data.levels && data.levels.length > 0) {
+          // Standard HLS stream with multi-variant master → HLS level-switching.
+          useHlsLevelsForQualityRef.current = false; // already handled by else-if branch in setQuality
+          setQualities(
+            uniqueQualities.length > 0
+              ? uniqueQualities
+              : data.levels
+                  .map((l, i) => ({ height: getHlsLevelHeight(l, i, totalL), levelId: i }))
+                  .reverse(),
+          );
+        }
         video.volume = isMuted ? 0 : volume / 100;
 
         // ── Short-clip guard (HLS) ─────────────────────────────────────────
@@ -2393,10 +2481,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
         const level = hls.levels[data.level];
         if (level) {
+          const h = getHlsLevelHeight(level, data.level, hls.levels.length);
           console.log(
-            `[HLS] Quality switched to ${level.height}p (level ${data.level})`,
+            `[HLS] Quality switched to ${h}p (level ${data.level})`,
           );
-          setCurrentHeight(level.height);
+          setCurrentHeight(h);
         }
       });
 
@@ -2472,11 +2561,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           return;
         }
 
-        // Switch immediately on fatal manifest load error or fatal level load error to avoid slow retry storms
+        // Switch immediately on fatal manifest load error to avoid slow retry storms
         if (
           d.type === Hls.ErrorTypes.NETWORK_ERROR &&
-          (d.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
-            d.details === Hls.ErrorDetails.LEVEL_LOAD_ERROR)
+          d.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR
         ) {
           console.warn(
             `[HLS] Fatal load error: ${d.details}. Switching mirror immediately...`,
@@ -3807,7 +3895,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const m = mirrors[activeMirror];
     const video = videoRef.current;
 
-    if (video && (m?.type === "mp4_grouped" || m?.type === "hls_grouped")) {
+    // URL-switching mode: grouped mirror with multiple distinct quality URLs.
+    // Skip this path when useHlsLevelsForQualityRef is true — that means the
+    // mirror is nominally grouped but the underlying URL is a multi-variant
+    // master, so we must use HLS level-switching instead.
+    if (
+      video &&
+      (m?.type === "mp4_grouped" || m?.type === "hls_grouped") &&
+      !useHlsLevelsForQualityRef.current
+    ) {
       const key = getProgressKey();
       const saved = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
       saved[key] = {
@@ -3820,18 +3916,35 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setCurrentHeight(m.qualities[targetId].height);
       setStreamUrl(m.qualities[targetId].url);
     } else if (hlsRef.current) {
-      hlsRef.current.currentLevel = levelId;
+      // HLS level-switching mode: applies to both standard HLS streams AND
+      // grouped mirrors whose URL is a real multi-variant master playlist.
+      const hls = hlsRef.current;
+      hls.currentLevel = levelId;
+      hls.nextLevel = levelId;
+      hls.loadLevel = levelId;
+
+      if (video) {
+        try {
+          const flushStart = video.paused
+            ? video.currentTime
+            : video.currentTime + 0.1;
+          hls.flushBuffer(flushStart, Infinity);
+        } catch (e) {
+          console.warn("[HLS] flushBuffer error on quality switch:", e);
+        }
+      }
+
       if (levelId === -1) {
         if (
-          hlsRef.current.currentLevel !== -1 &&
-          hlsRef.current.levels[hlsRef.current.currentLevel]
+          hls.loadLevel !== -1 &&
+          hls.levels[hls.loadLevel]
         ) {
-          setCurrentHeight(
-            hlsRef.current.levels[hlsRef.current.currentLevel].height,
-          );
+          setCurrentHeight(hls.levels[hls.loadLevel].height);
         }
       } else {
-        const selected = qualities.find((q) => q.levelId === levelId);
+        const selected =
+          qualities.find((q) => q.levelId === levelId) ||
+          (hls.levels[levelId] ? { height: hls.levels[levelId].height } : null);
         if (selected) {
           setCurrentHeight(selected.height);
         }
@@ -5703,67 +5816,86 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     </div>
                   </div>
 
-                  {qualities.length > 0 && (
-                    <div className="mb-3">
-                      <div className="flex items-center gap-1.5 px-2 mb-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
-                        <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
-                          Video Quality
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-1 px-1">
-                        <button
-                          onClick={() => setQuality(-1)}
-                          className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
-                            activeQuality === -1
-                              ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
-                              : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="text-xs font-semibold leading-tight">
-                            Auto
+                  {(() => {
+                    const displayQualities =
+                      qualities.length > 0
+                        ? qualities
+                        : hlsRef.current?.levels && hlsRef.current.levels.length > 1
+                          ? hlsRef.current.levels
+                              .map((l, i) => ({ height: l.height, levelId: i }))
+                              .filter((q) => q.height > 0)
+                              .sort((a, b) => b.height - a.height)
+                          : mirrors[activeMirror]?.qualities
+                            ? mirrors[activeMirror].qualities.map((q: any, i: number) => ({
+                                height: q.height,
+                                levelId: i,
+                              }))
+                            : [];
+
+                    if (displayQualities.length === 0) return null;
+
+                    return (
+                      <div className="mb-3">
+                        <div className="flex items-center gap-1.5 px-2 mb-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
+                          <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
+                            Video Quality
                           </span>
-                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                            {activeQuality === -1 && currentHeight && (
-                              <span className="text-[9px] text-white/40 font-normal">
-                                {currentHeight}p
-                              </span>
-                            )}
-                            {activeQuality === -1 ? (
-                              <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
-                            ) : (
-                              <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30" />
-                            )}
-                          </div>
-                        </button>
-                        {qualities.map((q) => {
-                          const isSelected = activeQuality === q.levelId;
-                          return (
-                            <button
-                              key={q.levelId}
-                              onClick={() => setQuality(q.levelId)}
-                              className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
-                                isSelected
-                                  ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
-                                  : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5"
-                              }`}
-                            >
-                              <span className="text-xs font-semibold leading-tight">
-                                {q.height}p
-                              </span>
-                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                {isSelected ? (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
-                                ) : (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30" />
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
+                        </div>
+                        <div className="flex flex-col gap-1 px-1">
+                          <button
+                            onClick={() => setQuality(-1)}
+                            className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
+                              activeQuality === -1
+                                ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5"
+                            }`}
+                          >
+                            <span className="text-xs font-semibold leading-tight">
+                              Auto
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                              {activeQuality === -1 && currentHeight && (
+                                <span className="text-[9px] text-white/40 font-normal">
+                                  {currentHeight}p
+                                </span>
+                              )}
+                              {activeQuality === -1 ? (
+                                <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                              ) : (
+                                <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30" />
+                              )}
+                            </div>
+                          </button>
+                          {displayQualities.map((q) => {
+                            const isSelected = activeQuality === q.levelId;
+                            return (
+                              <button
+                                key={q.levelId}
+                                onClick={() => setQuality(q.levelId)}
+                                className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
+                                  isSelected
+                                    ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                    : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5"
+                                }`}
+                              >
+                                <span className="text-xs font-semibold leading-tight">
+                                  {q.height}p
+                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                  {isSelected ? (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                                  ) : (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Reload Stream — recovers from stuck seek/fast-forward */}
                   <div className="border-t border-white/5 pt-3 mt-1 px-1">
