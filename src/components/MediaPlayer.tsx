@@ -2357,10 +2357,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         // with proper CDN headers. Without this, hls.js can fall back to
         // direct CDN requests that get rate-limited or geo-blocked.
         xhrSetup: (xhr, url) => {
-          // Already proxied (manifest rewriter added /api/proxy/segment)
+          // Already proxied or direct worker/megacloud proxy
           if (
             url.includes("/api/proxy/segment") ||
-            url.includes("/api/proxy/stream")
+            url.includes("/api/proxy/stream") ||
+            url.includes("workers.dev") ||
+            url.includes("animanga.fun/proxy") ||
+            url.includes("tripplestream.online")
           )
             return;
 
