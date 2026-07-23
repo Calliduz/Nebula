@@ -208,10 +208,9 @@ export async function fetchVideasySourcesDirect(
   try {
     console.log("[VIDEASY] Attempting direct browser-side scrape...");
 
-    // 1. Fetch Seed — wingsdatabase.com has open ACAO:* with no origin check,
-    //    speedracelight.com/seed requires Origin: player.videasy.to (browser can't spoof it).
+    // 1. Fetch Seed — speedracelight.com has open ACAO:* on all endpoints.
     const seedRes = await fetch(
-      `https://api.wingsdatabase.com/seed?mediaId=${tmdbId}`,
+      `https://api.speedracelight.com/seed?mediaId=${tmdbId}`,
     );
     if (!seedRes.ok) throw new Error(`Seed endpoint HTTP ${seedRes.status}`);
     const seedData = await seedRes.json();
@@ -228,7 +227,7 @@ export async function fetchVideasySourcesDirect(
 
       try {
         const url = new URL(
-          `https://api.wingsdatabase.com/${prov.path}/sources-with-title`,
+          `https://api.speedracelight.com/${prov.path}/sources-with-title`,
         );
         url.searchParams.append("title", encodeURIComponent(title));
         url.searchParams.append("mediaType", mediaType);
