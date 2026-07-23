@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, memo } from "react";
 import { NebulaMovie } from "../services/tmdb";
 import { handleImageError } from "../utils/helpers";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export const TopTenShelf = memo(
@@ -106,7 +106,7 @@ export const TopTenShelf = memo(
                     onClick={() => onSelect(movie)}
                   >
                     <span
-                      className="absolute left-0 bottom-[-5px] sm:bottom-[-10px] md:bottom-[-15px] lg:bottom-[-20px] text-[75px] sm:text-[120px] md:text-[140px] lg:text-[150px] leading-[0.8] font-display font-black transition-all duration-500 group-hover/card:-translate-x-2 z-20 tracking-tighter"
+                      className="absolute left-0 bottom-[-5px] sm:bottom-[-10px] md:bottom-[-15px] lg:bottom-[-20px] text-[75px] sm:text-[120px] md:text-[140px] lg:text-[150px] leading-[0.8] font-display font-black transition-all duration-500 group-hover/card:-translate-x-2 group-hover/card:text-nebula-cyan/20 z-20 tracking-tighter"
                       style={{
                         color: "#0b0f19",
                         WebkitTextStroke: "2px rgba(255,255,255,0.7)",
@@ -115,14 +115,19 @@ export const TopTenShelf = memo(
                     >
                       {i + 1}
                     </span>
-                    <div className="w-[90px] sm:w-[130px] md:w-[150px] lg:w-[160px] aspect-[2/3] rounded-xl md:rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/50 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.2)] group-hover/card:z-30 z-10 origin-bottom relative">
+                    <div className="w-[90px] sm:w-[130px] md:w-[150px] lg:w-[160px] aspect-[2/3] rounded-xl md:rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/60 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.3)] group-hover/card:z-30 z-10 origin-bottom relative">
                       <img
                         src={movie.image}
-                        className="w-full h-full object-cover opacity-80 group-hover/card:opacity-100 transition-opacity"
+                        className="w-full h-full object-cover opacity-80 group-hover/card:opacity-60 group-hover/card:scale-110 transition-all duration-500"
                         alt={movie.title}
                         referrerPolicy="no-referrer"
                         onError={handleImageError}
                       />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all duration-300 pointer-events-none z-20">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-nebula-cyan/95 text-obsidian flex items-center justify-center shadow-[0_0_25px_rgba(0,229,255,0.75)] transform scale-75 group-hover/card:scale-100 transition-transform duration-300">
+                          <Play size={20} className="fill-obsidian ml-0.5" />
+                        </div>
+                      </div>
                       <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
                     </div>

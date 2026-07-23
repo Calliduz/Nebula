@@ -1,5 +1,6 @@
 import React, { useState, useCallback, memo, useEffect, useRef } from "react";
 import { handleImageError } from "../utils/helpers";
+import { Play, Star } from "lucide-react";
 
 interface MovieCardProps {
   movie: any;
@@ -18,7 +19,6 @@ export const MovieCard = memo<MovieCardProps>(
     snap = false,
     onSelect,
     aspect = "portrait",
-    onRemove,
     isGrid = false,
   }) => {
     const isLandscape = aspect === "landscape";
@@ -65,7 +65,7 @@ export const MovieCard = memo<MovieCardProps>(
         onClick={() => onSelect?.(movie)}
         style={{ willChange: "transform" }}
       >
-        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 group-hover/card:scale-[1.06] group-hover/card:shadow-[0_12px_48px_rgba(0,0,0,0.85)] transform-gpu shadow-2xl">
+        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/5 group-hover/card:border-nebula-cyan/50 cursor-pointer bg-obsidian origin-center transition-all duration-300 group-hover/card:scale-[1.05] group-hover/card:shadow-[0_12px_36px_rgba(0,229,255,0.2),_0_8px_24px_rgba(0,0,0,0.85)] transform-gpu shadow-2xl">
           {/* Shimmer placeholder while image loads */}
           {!imgLoaded && !imgError && (
             <div className="absolute inset-0 bg-white/5 shimmer-bg" />
@@ -75,28 +75,35 @@ export const MovieCard = memo<MovieCardProps>(
             key={movie.image || movie.id}
             src={movie.image || undefined}
             alt={movie.title}
-            className={`w-full h-full object-cover group-hover/card:opacity-70 transition-opacity duration-500 ${imgLoaded ? "opacity-80" : "opacity-0"}`}
+            className={`w-full h-full object-cover group-hover/card:scale-105 group-hover/card:opacity-65 transition-all duration-500 ease-out ${imgLoaded ? "opacity-80" : "opacity-0"}`}
             referrerPolicy="no-referrer"
             onLoad={onImgLoad}
             onError={onImgError}
             loading="lazy"
           />
 
-          {/* Type badge — integrated top-left corner tab */}
+          {/* Sleek Center Play Icon Overlay */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all duration-300 pointer-events-none z-20">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-nebula-cyan/90 text-obsidian flex items-center justify-center shadow-[0_0_20px_rgba(0,229,255,0.6)] transform scale-80 group-hover/card:scale-100 transition-transform duration-300">
+              <Play size={20} className="fill-obsidian ml-0.5" />
+            </div>
+          </div>
+
+          {/* Type badge — top-left corner tab */}
           {movie.type && (
-            <div className="absolute top-0 left-0 z-20 pointer-events-none bg-black/60 backdrop-blur-md text-white/80 text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-br-md sm:rounded-br-lg border-r border-b border-white/5 leading-none">
+            <div className="absolute top-0 left-0 z-20 pointer-events-none bg-black/60 backdrop-blur-md text-white/80 group-hover/card:text-white group-hover/card:bg-black/80 group-hover/card:border-nebula-cyan/30 text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-br-md sm:rounded-br-lg border-r border-b border-white/5 leading-none transition-colors">
               {movie.type === "tv" ? "TV" : "Film"}
             </div>
           )}
 
-          {/* Rating badge — integrated top-right corner tab */}
+          {/* Rating badge — top-right corner tab */}
           {movie.imdb && movie.imdb > 0 && (
-            <div className="absolute top-0 right-0 z-20 pointer-events-none bg-black/60 backdrop-blur-md text-nebula-cyan text-[7px] sm:text-[8px] font-black tracking-wider px-2 py-1 rounded-bl-md sm:rounded-bl-lg border-l border-b border-white/5 leading-none">
+            <div className="absolute top-0 right-0 z-20 pointer-events-none bg-black/60 backdrop-blur-md text-nebula-cyan group-hover/card:bg-black/80 group-hover/card:border-nebula-cyan/30 text-[7px] sm:text-[8px] font-black tracking-wider px-2 py-1 rounded-bl-md sm:rounded-bl-lg border-l border-b border-white/5 leading-none transition-colors">
               ★ {movie.imdb}
             </div>
           )}
 
-          {/* Progress Bar for Continue Watching — Netflix-style */}
+          {/* Progress Bar for Continue Watching */}
           {hasProgress && (
             <div className="absolute inset-x-0 bottom-0 z-40 w-full flex flex-col pointer-events-none transition-all duration-300">
               {/* Watched badge */}
@@ -150,27 +157,25 @@ export const MovieCard = memo<MovieCardProps>(
             </div>
           )}
 
-          {/* Hover Preview Drawer (Desktop-only) */}
+          {/* Minimalist Hover Drawer */}
           <div className="card-hover-drawer">
             <span className="text-[12px] font-display font-black tracking-tight text-white uppercase truncate mb-0.5 leading-tight">
               {movie.title}
             </span>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-white/50 mb-1 leading-none">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-white/60 mb-0.5 leading-none">
               {movie.imdb && movie.imdb > 0 && (
-                <span className="text-nebula-cyan font-black">
-                  ★ {movie.imdb}
+                <span className="text-nebula-cyan font-black flex items-center gap-0.5">
+                  <Star size={9} className="fill-nebula-cyan" /> {movie.imdb}
                 </span>
               )}
-              {movie.year && <span>{movie.year}</span>}
-              <span className="capitalize">
-                {movie.type === "tv" ? "Series" : "Movie"}
+              {movie.year && <span>• {movie.year}</span>}
+              <span className="capitalize text-white/40">
+                • {movie.type === "tv" ? "Series" : "Movie"}
               </span>
             </div>
-            {movie.genre && movie.genre.length > 0 && (
-              <span className="text-[9.5px] text-white/30 truncate leading-none">
-                {Array.isArray(movie.genre)
-                  ? movie.genre.join(" • ")
-                  : movie.genre}
+            {movie.genre && (
+              <span className="text-[9.5px] text-white/35 truncate leading-none">
+                {Array.isArray(movie.genre) ? movie.genre.join(" • ") : movie.genre}
               </span>
             )}
           </div>
