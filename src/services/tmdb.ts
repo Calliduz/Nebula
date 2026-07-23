@@ -823,6 +823,70 @@ export const getRecommendations = async (
 // Keep getSimilarMedia for backward compat — delegates to recommendations now
 export const getSimilarMedia = getRecommendations;
 
+export interface TMDBReview {
+  id: string;
+  author: string;
+  author_details?: {
+    name?: string;
+    username?: string;
+    avatar_path?: string | null;
+    rating?: number | null;
+  };
+  content: string;
+  created_at: string;
+  url?: string;
+}
+
+export const getMediaReviews = async (
+  id: string | number,
+  type: "movie" | "tv" = "movie",
+  page = 1,
+): Promise<{ results: TMDBReview[]; total_pages: number; total_results: number }> => {
+  if (id.toString().startsWith("k")) {
+    return { results: [], total_pages: 0, total_results: 0 };
+  }
+  try {
+    const data = await fetchFromTMDB(
+      `/${type}/${id}/reviews`,
+      { page: page.toString() },
+      TTL.DETAILS,
+    );
+    const results: TMDBReview[] = (data.results || []).map((r: any) => {
+      let avatar = r.author_details?.avatar_path;
+      if (avatar) {
+        if (avatar.startsWith("/https://") || avatar.startsWith("/http://")) {
+          avatar = avatar.substring(1);
+        } else if (!avatar.startsWith("http")) {
+          avatar = `${IMAGE_BASE_URL}${avatar}`;
+        }
+        avatar = proxyImage(avatar);
+      }
+      return {
+        id: r.id,
+        author: r.author || r.author_details?.name || r.author_details?.username || "Anonymous",
+        author_details: {
+          name: r.author_details?.name,
+          username: r.author_details?.username,
+          avatar_path: avatar,
+          rating: r.author_details?.rating ?? null,
+        },
+        content: r.content || "",
+        created_at: r.created_at || new Date().toISOString(),
+        url: r.url,
+      };
+    });
+    return {
+      results,
+      total_pages: data.total_pages || 1,
+      total_results: data.total_results || results.length,
+    };
+  } catch (err) {
+    console.error(`[TMDB] Failed to fetch reviews for ${type} ${id}:`, err);
+    return { results: [], total_pages: 0, total_results: 0 };
+  }
+};
+
+
 export const getMediaBasicInfo = async (
   id: string | number,
   type: "movie" | "tv",

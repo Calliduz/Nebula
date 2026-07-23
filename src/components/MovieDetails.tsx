@@ -46,6 +46,8 @@ import {
   enrichMoviesWithMetadata,
   getTVDetails,
   getTVSeasonEpisodes,
+  getMediaReviews,
+  type TMDBReview,
 } from "../services/tmdb";
 import { MovieDetailsSkeleton } from "./MovieDetailsSkeleton";
 
@@ -563,6 +565,131 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             - md+: 2-column grid for 4 cards (2×2)
             - overflow-y-auto here so the modal header stays fixed while cards scroll */}
         <div className="flex flex-col md:grid md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pb-2">
+          {/* ── Quantum (Vaplayer) Card ── */}
+          <div
+            onClick={() => {
+              if (!vaplayerLoading && vaplayerSources.length > 0)
+                onSelect(vaplayerUrl);
+            }}
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
+              vaplayerLoading
+                ? "border-cyan-500/25 bg-slate-950/60 opacity-80 cursor-wait"
+                : vaplayerSources.length > 0
+                  ? "border-cyan-400/40 bg-gradient-to-br from-cyan-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(6,182,212,0.08)] hover:border-cyan-400/75 hover:shadow-[0_0_35px_rgba(6,182,212,0.22)] hover:from-cyan-500/20 cursor-pointer hover:scale-[1.01]"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
+                  vaplayerLoading || vaplayerSources.length > 0
+                    ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
+                }`}
+              >
+                <Tv
+                  size={20}
+                  className={vaplayerLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">
+                    Quantum
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 uppercase tracking-wider">
+                    GLOBAL MIRRORS
+                  </span>
+                  {vaplayerLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vaplayerSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
+                  Aggregates direct HLS stream mirrors from global caching
+                  servers with integrated multi-language subtitle tracks.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/10 pt-3">
+              {vaplayerLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-cyan-400/80 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
+                  </span>
+                  Probing Mirrors...
+                </div>
+              ) : vaplayerSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
+                    Available Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vaplayerSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Vaplayer\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Vaplayer/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName =
+                        src.quality !== "Auto"
+                          ? src.quality.toUpperCase()
+                          : cleanMirrorName || "HD";
+                      return (
+                        <button
+                          key={src.name}
+                          title={`Play Quantum (${displayName}) mirror directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...vaplayerSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-cyan-500/35 text-cyan-300 bg-cyan-500/10 hover:border-cyan-500/70 hover:bg-cyan-500/25 hover:shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                        >
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
+                          {displayName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vaplayerError ? "Providers offline" : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* ── Hyperion (VidRock) Card ── */}
           <div
             onClick={() => {
@@ -685,131 +812,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {error ? "Uplink currently offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Quantum (Vaplayer) Card ── */}
-          <div
-            onClick={() => {
-              if (!vaplayerLoading && vaplayerSources.length > 0)
-                onSelect(vaplayerUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              vaplayerLoading
-                ? "border-cyan-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : vaplayerSources.length > 0
-                  ? "border-cyan-400/40 bg-gradient-to-br from-cyan-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(6,182,212,0.08)] hover:border-cyan-400/75 hover:shadow-[0_0_35px_rgba(6,182,212,0.22)] hover:from-cyan-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  vaplayerLoading || vaplayerSources.length > 0
-                    ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Tv
-                  size={20}
-                  className={vaplayerLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">
-                    Quantum
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 uppercase tracking-wider">
-                    GLOBAL MIRRORS
-                  </span>
-                  {vaplayerLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : vaplayerSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Aggregates direct HLS stream mirrors from global caching
-                  servers with integrated multi-language subtitle tracks.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {vaplayerLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-cyan-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
-                  </span>
-                  Probing Mirrors...
-                </div>
-              ) : vaplayerSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {vaplayerSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Vaplayer\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vaplayer/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName =
-                        src.quality !== "Auto"
-                          ? src.quality.toUpperCase()
-                          : cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Quantum (${displayName}) mirror directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...vaplayerSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-cyan-500/35 text-cyan-300 bg-cyan-500/10 hover:border-cyan-500/70 hover:bg-cyan-500/25 hover:shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vaplayerError ? "Providers offline" : "No mirrors available"}
                 </p>
               )}
             </div>
@@ -1905,6 +1907,19 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const [activeTab, setActiveTab] = useState(
     initialMovie?.type === "tv" ? "Episodes" : "Overview",
   );
+  const [reviews, setReviews] = useState<TMDBReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
+  const [showAllTrailers, setShowAllTrailers] = useState(false);
+
+  useEffect(() => {
+    if (!movie || !movie.id) return;
+    setReviewsLoading(true);
+    getMediaReviews(movie.id, movie.type || "movie")
+      .then((res) => setReviews(res.results || []))
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false));
+  }, [movie?.id, movie?.type]);
   const [deepDetails, setDeepDetails] = useState<{
     trailers: any[];
     similar: any[];
@@ -2407,8 +2422,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const accentColor = movie.accent || "#00E5FF";
   const TABS =
     movie.type === "tv"
-      ? ["Episodes", "Downloads", "Overview", "Trailers & Extras"]
-      : ["Overview", "Downloads", "Trailers & Extras"];
+      ? ["Episodes", "Downloads", "Overview"]
+      : ["Overview", "Downloads"];
 
   // Dynamically determine if the series has a new episode (aired in the last 7 days), is followed/in history, and has not been watched yet
   const hasNewEpisode = (() => {
@@ -4458,6 +4473,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   className="space-y-12"
                 >
+                  {/* Director's Cut Cast */}
                   <div className="w-full">
                     <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4 sm:mb-6">
                       Director's Cut Cast
@@ -4495,68 +4511,196 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       )}
                     </div>
                   </div>
-                </motion.div>
-              )}
 
-              {activeTab === "Trailers & Extras" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                >
-                  {deepDetails.trailers.length > 0 ? (
-                    deepDetails.trailers.map((video: any, i: number) => (
-                      <div
-                        key={`trailer-${video.youtubeId}-${i}`}
-                        className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-black group cursor-pointer shadow-lg hover:shadow-2xl hover:border-nebula-cyan/30 transition-all duration-300"
-                        onClick={() => setTrailerModalKey(video.youtubeId)}
-                      >
-                        <img
-                          src={
-                            video.thumbnail ||
-                            `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`
-                          }
-                          className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
-                          alt={video.title}
-                          referrerPolicy="no-referrer"
-                          onError={handleImageError}
-                        />
-
-                        {/* Premium Netflix-style Dark Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent z-10 pointer-events-none" />
-
-                        {/* Floating Info Overlay inside card */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4 z-20 flex flex-col justify-end pointer-events-none">
-                          <span className="text-[9px] bg-nebula-cyan/20 border border-nebula-cyan/30 text-nebula-cyan font-bold px-2 py-0.5 rounded w-max mb-1.5 uppercase tracking-wider">
-                            {video.category}
-                          </span>
-                          <h4 className="text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate">
-                            {video.title}
-                          </h4>
-                          {video.views > 0 && (
-                            <p className="text-[9px] text-white/40 font-semibold mt-0.5">
-                              {(video.views / 1_000_000).toFixed(1)}M views
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Centered Play Button overlay on hover */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                          <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-nebula-cyan group-hover:text-obsidian transition-all group-hover:scale-110 shadow-xl opacity-0 group-hover:opacity-100 duration-300">
-                            <Play
-                              size={20}
-                              fill="currentColor"
-                              className="ml-1"
+                  {/* Trailers & Media Clips */}
+                  <div className="w-full">
+                    <div className="flex items-center justify-between mb-4 sm:mb-6">
+                      <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em]">
+                        Trailers & Media Clips
+                      </h3>
+                      {deepDetails.trailers.length > 3 && (
+                        <button
+                          onClick={() => setShowAllTrailers((prev) => !prev)}
+                          className="text-nebula-cyan hover:underline text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all"
+                        >
+                          {showAllTrailers
+                            ? "Show Less"
+                            : `See All (${deepDetails.trailers.length})`}
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {deepDetails.trailers.length > 0 ? (
+                        (showAllTrailers
+                          ? deepDetails.trailers
+                          : deepDetails.trailers.slice(0, 3)
+                        ).map((video: any, i: number) => (
+                          <div
+                            key={`trailer-${video.youtubeId}-${i}`}
+                            className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-black group cursor-pointer shadow-lg hover:shadow-2xl hover:border-nebula-cyan/30 transition-all duration-300"
+                            onClick={() => setTrailerModalKey(video.youtubeId)}
+                          >
+                            <img
+                              src={
+                                video.thumbnail ||
+                                `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`
+                              }
+                              className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
+                              alt={video.title}
+                              referrerPolicy="no-referrer"
+                              onError={handleImageError}
                             />
+
+                            {/* Premium Dark Gradient Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent z-10 pointer-events-none" />
+
+                            {/* Floating Info Overlay */}
+                            <div className="absolute bottom-0 left-0 right-0 p-4 z-20 flex flex-col justify-end pointer-events-none">
+                              <span className="text-[9px] bg-nebula-cyan/20 border border-nebula-cyan/30 text-nebula-cyan font-bold px-2 py-0.5 rounded w-max mb-1.5 uppercase tracking-wider">
+                                {video.category}
+                              </span>
+                              <h4 className="text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate">
+                                {video.title}
+                              </h4>
+                              {video.views > 0 && (
+                                <p className="text-[9px] text-white/40 font-semibold mt-0.5">
+                                  {(video.views / 1_000_000).toFixed(1)}M views
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Centered Play Button overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                              <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-nebula-cyan group-hover:text-obsidian transition-all group-hover:scale-110 shadow-xl opacity-0 group-hover:opacity-100 duration-300">
+                                <Play
+                                  size={20}
+                                  fill="currentColor"
+                                  className="ml-1"
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ))
+                      ) : (
+                        <p className="text-dim text-xs col-span-full py-6 text-center border border-dashed border-white/10 rounded-2xl">
+                          No intercepted trailer signals for this title.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Audience & TMDB User Reviews */}
+                  <div className="w-full">
+                    <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4 sm:mb-6">
+                      Audience Reviews
+                    </h3>
+                    {reviewsLoading ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center gap-3 w-full border border-dashed border-white/10 rounded-2xl">
+                        <Loader2
+                          size={24}
+                          className="animate-spin text-nebula-cyan"
+                        />
+                        <p className="text-xs text-white/40 uppercase tracking-widest font-bold">
+                          Loading User Reviews...
+                        </p>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-dim text-xs col-span-full py-10 text-center border border-dashed border-white/10 rounded-2xl">
-                      No intercepted trailer signals for this mission.
-                    </p>
-                  )}
+                    ) : reviews.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {reviews.map((rev) => {
+                          const isExpanded = expandedReviews[rev.id];
+                          const isLong = rev.content.length > 320;
+                          const displayContent =
+                            isLong && !isExpanded
+                              ? rev.content.substring(0, 320) + "..."
+                              : rev.content;
+                          const rating = rev.author_details?.rating;
+
+                          return (
+                            <div
+                              key={rev.id}
+                              className="bg-white/5 border border-white/10 hover:border-white/20 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between gap-4"
+                            >
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center text-white/40 shrink-0">
+                                      {rev.author_details?.avatar_path ? (
+                                        <img
+                                          src={rev.author_details.avatar_path}
+                                          alt={rev.author}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display =
+                                              "none";
+                                          }}
+                                        />
+                                      ) : (
+                                        <span className="font-bold text-sm uppercase">
+                                          {rev.author.charAt(0)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-sm text-white leading-tight">
+                                        {rev.author}
+                                      </h4>
+                                      {rev.author_details?.username && (
+                                        <p className="text-[10px] text-white/40 font-mono">
+                                          @{rev.author_details.username}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {rating !== null && rating !== undefined && (
+                                    <div className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center gap-1 shrink-0">
+                                      <Star size={12} className="fill-amber-400" />
+                                      <span>{rating}/10</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <p className="text-xs text-white/70 font-light leading-relaxed whitespace-pre-line">
+                                  {displayContent}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-3 border-t border-white/5 text-[10px] text-white/40">
+                                <span>
+                                  {new Date(rev.created_at).toLocaleDateString(
+                                    undefined,
+                                    {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    },
+                                  )}
+                                </span>
+                                {isLong && (
+                                  <button
+                                    onClick={() =>
+                                      setExpandedReviews((prev) => ({
+                                        ...prev,
+                                        [rev.id]: !prev[rev.id],
+                                      }))
+                                    }
+                                    className="text-nebula-cyan hover:underline font-bold uppercase tracking-wider text-[9.5px]"
+                                  >
+                                    {isExpanded ? "Show Less" : "Read Full Review"}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-10 px-4 bg-white/2 border border-dashed border-white/10 rounded-2xl">
+                        <p className="text-xs text-white/40 font-bold uppercase tracking-wider">
+                          No user reviews available from TMDB for this media title.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               )}
             </div>

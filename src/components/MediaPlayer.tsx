@@ -87,8 +87,8 @@ const parseMirrorName = (name: string) => {
 };
 
 export const SOURCE_ALIASES: Record<string, string> = {
-  VidRock: "Hyperion",
   Vaplayer: "Quantum",
+  VidRock: "Hyperion",
   Vidrift: "Velocity",
   Videasy: "Pulse",
   VidLink: "Spectra",
@@ -102,7 +102,22 @@ export const SOURCE_ALIASES: Record<string, string> = {
 
 export const getCategoryAlias = (category: string): string => {
   if (!category) return "";
-  return SOURCE_ALIASES[category] || category;
+  if (SOURCE_ALIASES[category]) return SOURCE_ALIASES[category];
+  const catLower = category.toLowerCase();
+  if (catLower.startsWith("vaplayer")) return "Quantum";
+  if (catLower.startsWith("vidrock")) return "Hyperion";
+  if (catLower.startsWith("vidrift")) return "Velocity";
+  if (catLower.startsWith("videasy")) return "Pulse";
+  if (catLower.startsWith("vidlink")) return "Spectra";
+  if (catLower.startsWith("vidnest")) return "Titan";
+  if (catLower.startsWith("filmu")) return "Orbital";
+  if (catLower.startsWith("peachify")) return "Aurora";
+  if (catLower.startsWith("kuro")) {
+    if (catLower.includes("dub")) return "Zenith (Dub)";
+    if (catLower.includes("sub")) return "Zenith (Sub)";
+    return "Zenith";
+  }
+  return category;
 };
 
 const cleanSubProviderName = (name: string): string => {
@@ -113,7 +128,10 @@ const cleanSubProviderName = (name: string): string => {
     .replace(/Vortex/i, "Alpha")
     .replace(/Zenith/i, "Beta")
     .replace(/Aura/i, "Gamma")
-    .replace(/KuroAPI|Kuro/i, "Delta");
+    .replace(/KuroAPI|Kuro/i, "Delta")
+    .replace(/RiveStream|Rivestream/i, "Epsilon")
+    .replace(/Bingr/i, "Zeta")
+    .replace(/Showbox/i, "Eta");
 };
 
 export const parseMirrorDetails = (sourceName: string) => {
@@ -126,12 +144,12 @@ export const parseMirrorDetails = (sourceName: string) => {
     suffix = ` #${suffixMatch[2]}`;
   }
 
-  // Now parse cleanSource exactly as before
+  // Parse cleanSource
   const match = cleanSource.match(/^(.*?)\s*\((.*?)\)$/);
   if (match) {
     const rawCat = match[1].trim();
     const rawName = match[2].trim();
-    const catAlias = SOURCE_ALIASES[rawCat] || rawCat;
+    const catAlias = getCategoryAlias(rawCat);
     const subClean = cleanSubProviderName(rawName);
     return {
       category: catAlias,
@@ -139,23 +157,31 @@ export const parseMirrorDetails = (sourceName: string) => {
     };
   }
 
-  if (cleanSource.startsWith("VidRock")) {
+  if (cleanSource.toLowerCase().startsWith("vaplayer")) {
+    const rest = cleanSource.replace(/^Vaplayer[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
+    return {
+      category: "Quantum",
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
+    };
+  }
+  if (cleanSource.toLowerCase().startsWith("vidrock")) {
+    const rest = cleanSource.replace(/^VidRock[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
     return {
       category: "Hyperion",
-      name: (
-        (cleanSource.replace("VidRock", "").trim() || "Mirror") + suffix
-      ).toUpperCase(),
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
-  if (cleanSource.startsWith("Videasy")) {
+  if (cleanSource.toLowerCase().startsWith("videasy")) {
+    const rest = cleanSource.replace(/^Videasy[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
     return {
       category: "Pulse",
-      name: (
-        (cleanSource.replace("Videasy", "").trim() || "Mirror") + suffix
-      ).toUpperCase(),
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
-  if (cleanSource.startsWith("Vidnest")) {
+  if (cleanSource.toLowerCase().startsWith("vidnest")) {
     const rest = cleanSource.replace(/^Vidnest[\s-]*/i, "").trim();
     const subClean = cleanSubProviderName(rest);
     return {
@@ -163,21 +189,15 @@ export const parseMirrorDetails = (sourceName: string) => {
       name: ((subClean || "Stream") + suffix).toUpperCase(),
     };
   }
-  if (cleanSource.startsWith("Vaplayer")) {
-    const rest = cleanSource.replace(/^Vaplayer[\s-]*/i, "").trim();
-    return {
-      category: "Quantum",
-      name: ((rest || "Mirror") + suffix).toUpperCase(),
-    };
-  }
-  if (cleanSource.startsWith("Vidrift")) {
+  if (cleanSource.toLowerCase().startsWith("vidrift")) {
     const rest = cleanSource.replace(/^Vidrift[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
     return {
       category: "Velocity",
-      name: ((rest || "Mirror") + suffix).toUpperCase(),
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
-  if (cleanSource.startsWith("FilmU")) {
+  if (cleanSource.toLowerCase().startsWith("filmu")) {
     const rest = cleanSource.replace(/^FilmU[\s-]*/i, "").trim();
     const subClean = cleanSubProviderName(rest);
     return {
@@ -185,14 +205,15 @@ export const parseMirrorDetails = (sourceName: string) => {
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
-  if (cleanSource.startsWith("Peachify")) {
+  if (cleanSource.toLowerCase().startsWith("peachify")) {
     const rest = cleanSource.replace(/^Peachify[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
     return {
       category: "Aurora",
-      name: ((rest || "Mirror") + suffix).toUpperCase(),
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
-  if (cleanSource.startsWith("Kuro")) {
+  if (cleanSource.toLowerCase().startsWith("kuro")) {
     const isDub =
       cleanSource.toUpperCase().includes(" DUB") ||
       cleanSource.toUpperCase().includes("(DUB");
@@ -202,13 +223,14 @@ export const parseMirrorDetails = (sourceName: string) => {
       .replace(/\s*\(?SUB\)?/i, "")
       .replace(/\s*\(?DUB\)?/i, "")
       .trim();
+    const subClean = cleanSubProviderName(cleanName);
     return {
       category,
-      name: ((cleanName || "Mirror") + suffix).toUpperCase(),
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
 
-  return { category: "Spectra", name: (cleanSource + suffix).toUpperCase() };
+  return { category: "Spectra", name: (cleanSubProviderName(cleanSource) + suffix).toUpperCase() };
 };
 
 export const serverSortOrder = [
@@ -233,10 +255,10 @@ export const serverSortOrder = [
 ];
 
 export const CATEGORY_PRIORITY = [
-  "Hyperion",
-  "VidRock",
   "Quantum",
   "Vaplayer",
+  "Hyperion",
+  "VidRock",
   "Velocity",
   "Vidrift",
   "Pulse",
@@ -4377,7 +4399,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   transition={{ duration: 0.3 }}
                   className="text-nebula-cyan/80 text-[10px] uppercase tracking-[0.15em] font-medium pointer-events-none mt-2 px-4 text-center max-w-md select-none"
                 >
-                  Slow connection? Tap the Gear icon (⚙️) to switch servers.
+                  Slow connection? Tap the Source (📺) or Servers (☁️) button in the top bar to switch mirrors.
                 </motion.p>
               )}
             </AnimatePresence>
@@ -4676,14 +4698,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           </button>
           {!isEmbed && (
             <div className="min-w-0 flex-1">
-              <h2 className="text-base sm:text-lg font-display font-bold truncate leading-tight text-white flex items-center gap-2">
-                <span>{movie.title}</span>
-                {season !== undefined && episode !== undefined && (
-                  <span className="bg-white/10 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/10 font-bold shrink-0">
-                    S{season}:E{episode}
-                  </span>
-                )}
-              </h2>
+              {movie.clearLogo && !logoFailed ? (
+                <div className="flex items-center gap-2.5 mb-0.5">
+                  <img
+                    src={movie.clearLogo}
+                    alt={movie.title}
+                    className="h-7 sm:h-9 max-w-[180px] sm:max-w-[260px] w-auto object-contain drop-shadow-md"
+                    referrerPolicy="no-referrer"
+                    onError={() => setLogoFailed(true)}
+                  />
+                  {season !== undefined && episode !== undefined && (
+                    <span className="bg-white/10 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/10 font-bold shrink-0">
+                      S{season}:E{episode}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <h2 className="text-base sm:text-lg font-display font-bold truncate leading-tight text-white flex items-center gap-2">
+                  <span>{movie.title}</span>
+                  {season !== undefined && episode !== undefined && (
+                    <span className="bg-white/10 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/10 font-bold shrink-0">
+                      S{season}:E{episode}
+                    </span>
+                  )}
+                </h2>
+              )}
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <p className="text-white/50 text-[10px] sm:text-xs font-sans tracking-wide">
                   {movie.type === "tv" ? "TV Series" : "Movie"}
@@ -6802,79 +6841,6 @@ export function InPlayerSourcePicker({
 
   return (
     <div className="flex flex-col gap-2 p-1 overflow-y-auto max-h-[45vh] custom-scrollbar">
-      {/* Hyperion (VidRock) */}
-      <button
-        onClick={() =>
-          (sources.length > 0 || failedSources.includes("VidRock")) &&
-          onSelect(vidrockUrl)
-        }
-        disabled={
-          activeSource === "Hyperion" ||
-          activeSource === "VidRock" ||
-          (loading && !failedSources.includes("VidRock"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Hyperion",
-          activeSource || "",
-          loading,
-          sources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan shrink-0">
-              {loading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Info size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Hyperion
-                </p>
-                {failedSources.includes("VidRock") && sources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {loading ? "Scanning..." : "High-Speed"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Hyperion" || activeSource === "VidRock") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {loading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running uplink check...
-            </span>
-          ) : sources.length > 0 ? (
-            sources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^VidRock\s*\((.*?)\)$/i, "$1")
-                  .replace(/^VidRock/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {error || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
       {/* Quantum (Vaplayer) */}
       <button
         onClick={() =>
@@ -6943,6 +6909,79 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase font-medium">
               {vaplayerError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Hyperion (VidRock) */}
+      <button
+        onClick={() =>
+          (sources.length > 0 || failedSources.includes("VidRock")) &&
+          onSelect(vidrockUrl)
+        }
+        disabled={
+          activeSource === "Hyperion" ||
+          activeSource === "VidRock" ||
+          (loading && !failedSources.includes("VidRock"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Hyperion",
+          activeSource || "",
+          loading,
+          sources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan shrink-0">
+              {loading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Info size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Hyperion
+                </p>
+                {failedSources.includes("VidRock") && sources.length === 0 && (
+                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                    FAILED
+                  </span>
+                )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {loading ? "Scanning..." : "High-Speed"}
+              </p>
+            </div>
+          </div>
+          {(activeSource === "Hyperion" || activeSource === "VidRock") && (
+            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {loading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running uplink check...
+            </span>
+          ) : sources.length > 0 ? (
+            sources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^VidRock\s*\((.*?)\)$/i, "$1")
+                  .replace(/^VidRock/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {error || "No mirrors"}
             </span>
           )}
         </div>
