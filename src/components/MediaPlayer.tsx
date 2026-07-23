@@ -230,7 +230,10 @@ export const parseMirrorDetails = (sourceName: string) => {
     };
   }
 
-  return { category: "Spectra", name: (cleanSubProviderName(cleanSource) + suffix).toUpperCase() };
+  return {
+    category: "Spectra",
+    name: (cleanSubProviderName(cleanSource) + suffix).toUpperCase(),
+  };
 };
 
 export const serverSortOrder = [
@@ -321,7 +324,11 @@ export const sortMirrorsList = (list: any[]) => {
   });
 };
 
-const getHlsLevelHeight = (l: any, index: number = 0, totalLevels: number = 1): number => {
+const getHlsLevelHeight = (
+  l: any,
+  index: number = 0,
+  totalLevels: number = 1,
+): number => {
   if (l && typeof l.height === "number" && l.height > 0) {
     return l.height;
   }
@@ -597,9 +604,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent,
       ) ||
-        (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
-        window.innerHeight < 550 ||
-        window.innerWidth < 1024,
+      (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+      window.innerHeight < 550 ||
+      window.innerWidth < 1024,
     );
   });
 
@@ -2438,12 +2445,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         const totalL = data.levels.length;
-        const validLevels = data.levels
-          .map((l, i) => ({
-            height: getHlsLevelHeight(l, i, totalL),
-            levelId: i,
-            bitrate: l.bitrate || 0,
-          }));
+        const validLevels = data.levels.map((l, i) => ({
+          height: getHlsLevelHeight(l, i, totalL),
+          levelId: i,
+          bitrate: l.bitrate || 0,
+        }));
 
         validLevels.sort(
           (a, b) => b.height - a.height || b.bitrate - a.bitrate,
@@ -2512,7 +2518,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             uniqueQualities.length > 0
               ? uniqueQualities
               : data.levels
-                  .map((l, i) => ({ height: getHlsLevelHeight(l, i, totalL), levelId: i }))
+                  .map((l, i) => ({
+                    height: getHlsLevelHeight(l, i, totalL),
+                    levelId: i,
+                  }))
                   .reverse(),
           );
         }
@@ -2568,9 +2577,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const level = hls.levels[data.level];
         if (level) {
           const h = getHlsLevelHeight(level, data.level, hls.levels.length);
-          console.log(
-            `[HLS] Quality switched to ${h}p (level ${data.level})`,
-          );
+          console.log(`[HLS] Quality switched to ${h}p (level ${data.level})`);
           setCurrentHeight(h);
         }
       });
@@ -4017,10 +4024,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       }
 
       if (levelId === -1) {
-        if (
-          hls.loadLevel !== -1 &&
-          hls.levels[hls.loadLevel]
-        ) {
+        if (hls.loadLevel !== -1 && hls.levels[hls.loadLevel]) {
           setCurrentHeight(hls.levels[hls.loadLevel].height);
         }
       } else {
@@ -4399,7 +4403,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   transition={{ duration: 0.3 }}
                   className="text-nebula-cyan/80 text-[10px] uppercase tracking-[0.15em] font-medium pointer-events-none mt-2 px-4 text-center max-w-md select-none"
                 >
-                  Slow connection? Tap the Source (📺) or Servers (☁️) button in the top bar to switch mirrors.
+                  Slow connection? Tap the Source (📺) or Servers (☁️) button in
+                  the top bar to switch mirrors.
                 </motion.p>
               )}
             </AnimatePresence>
@@ -5109,9 +5114,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </div>
                 )}
 
-                <div
-                  className="absolute inset-x-0 rounded-full bg-white/20 h-[3px] group-hover:h-[5px] transition-all duration-200"
-                >
+                <div className="absolute inset-x-0 rounded-full bg-white/20 h-[3px] group-hover:h-[5px] transition-all duration-200">
                   <div
                     className="absolute inset-y-0 left-0 bg-white/30 rounded-full"
                     style={{ width: `${buffered}%` }}
@@ -5922,16 +5925,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     const displayQualities =
                       qualities.length > 0
                         ? qualities
-                        : hlsRef.current?.levels && hlsRef.current.levels.length > 1
+                        : hlsRef.current?.levels &&
+                            hlsRef.current.levels.length > 1
                           ? hlsRef.current.levels
                               .map((l, i) => ({ height: l.height, levelId: i }))
                               .filter((q) => q.height > 0)
                               .sort((a, b) => b.height - a.height)
                           : mirrors[activeMirror]?.qualities
-                            ? mirrors[activeMirror].qualities.map((q: any, i: number) => ({
-                                height: q.height,
-                                levelId: i,
-                              }))
+                            ? mirrors[activeMirror].qualities.map(
+                                (q: any, i: number) => ({
+                                  height: q.height,
+                                  levelId: i,
+                                }),
+                              )
                             : [];
 
                     if (displayQualities.length === 0) return null;
@@ -7304,7 +7310,8 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {(activeSource === "Zenith (Sub)" || activeSource === "Kuro (Sub)") && (
+          {(activeSource === "Zenith (Sub)" ||
+            activeSource === "Kuro (Sub)") && (
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)] shrink-0" />
           )}
         </div>
@@ -7375,7 +7382,8 @@ export function InPlayerSourcePicker({
               </p>
             </div>
           </div>
-          {(activeSource === "Zenith (Dub)" || activeSource === "Kuro (Dub)") && (
+          {(activeSource === "Zenith (Dub)" ||
+            activeSource === "Kuro (Dub)") && (
             <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)] shrink-0" />
           )}
         </div>

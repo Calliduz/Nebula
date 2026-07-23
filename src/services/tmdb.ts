@@ -841,7 +841,11 @@ export const getMediaReviews = async (
   id: string | number,
   type: "movie" | "tv" = "movie",
   page = 1,
-): Promise<{ results: TMDBReview[]; total_pages: number; total_results: number }> => {
+): Promise<{
+  results: TMDBReview[];
+  total_pages: number;
+  total_results: number;
+}> => {
   if (id.toString().startsWith("k")) {
     return { results: [], total_pages: 0, total_results: 0 };
   }
@@ -863,7 +867,11 @@ export const getMediaReviews = async (
       }
       return {
         id: r.id,
-        author: r.author || r.author_details?.name || r.author_details?.username || "Anonymous",
+        author:
+          r.author ||
+          r.author_details?.name ||
+          r.author_details?.username ||
+          "Anonymous",
         author_details: {
           name: r.author_details?.name,
           username: r.author_details?.username,
@@ -885,7 +893,6 @@ export const getMediaReviews = async (
     return { results: [], total_pages: 0, total_results: 0 };
   }
 };
-
 
 export const getMediaBasicInfo = async (
   id: string | number,

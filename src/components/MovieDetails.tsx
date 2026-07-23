@@ -1245,7 +1245,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  High-speed HLS & MP4 stream delivery aggregating premium servers across Alpha, Beta, and Gamma endpoints.
+                  High-speed HLS & MP4 stream delivery aggregating premium
+                  servers across Alpha, Beta, and Gamma endpoints.
                 </p>
               </div>
             </div>
@@ -1387,7 +1388,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Dedicated high-speed subbed streams with multi-language subtitle tracks.
+                  Dedicated high-speed subbed streams with multi-language
+                  subtitle tracks.
                 </p>
               </div>
             </div>
@@ -1631,7 +1633,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Aggregates parallel multi-provider CDN streams including Alpha, Beta, and Gamma endpoints.
+                  Aggregates parallel multi-provider CDN streams including
+                  Alpha, Beta, and Gamma endpoints.
                 </p>
               </div>
             </div>
@@ -1674,10 +1677,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           const colorMap: Record<string, string> = {
                             ALPHA:
                               "border-amber-500/35 text-amber-300 bg-amber-500/10 hover:border-amber-500/70 hover:bg-amber-500/25 hover:shadow-[0_0_12px_rgba(245,158,11,0.25)]",
-                            BETA:
-                              "border-orange-500/35 text-orange-300 bg-orange-500/10 hover:border-orange-500/70 hover:bg-orange-500/25 hover:shadow-[0_0_12px_rgba(249,115,22,0.25)]",
-                            GAMMA: "border-yellow-500/35 text-yellow-300 bg-yellow-500/10 hover:border-yellow-500/70 hover:bg-yellow-500/25 hover:shadow-[0_0_12px_rgba(234,179,8,0.25)]",
-                            DELTA: "border-red-500/35 text-red-300 bg-red-500/10 hover:border-red-500/70 hover:bg-red-500/25 hover:shadow-[0_0_12px_rgba(239,68,68,0.25)]",
+                            BETA: "border-orange-500/35 text-orange-300 bg-orange-500/10 hover:border-orange-500/70 hover:bg-orange-500/25 hover:shadow-[0_0_12px_rgba(249,115,22,0.25)]",
+                            GAMMA:
+                              "border-yellow-500/35 text-yellow-300 bg-yellow-500/10 hover:border-yellow-500/70 hover:bg-yellow-500/25 hover:shadow-[0_0_12px_rgba(234,179,8,0.25)]",
+                            DELTA:
+                              "border-red-500/35 text-red-300 bg-red-500/10 hover:border-red-500/70 hover:bg-red-500/25 hover:shadow-[0_0_12px_rgba(239,68,68,0.25)]",
                           };
                           const chipClass =
                             Object.entries(colorMap).find(([k]) =>
@@ -1909,7 +1913,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   );
   const [reviews, setReviews] = useState<TMDBReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
+  const [expandedReviews, setExpandedReviews] = useState<
+    Record<string, boolean>
+  >({});
   const [showAllTrailers, setShowAllTrailers] = useState(false);
 
   useEffect(() => {
@@ -4653,7 +4659,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   </div>
                                   {rating !== null && rating !== undefined && (
                                     <div className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center gap-1 shrink-0">
-                                      <Star size={12} className="fill-amber-400" />
+                                      <Star
+                                        size={12}
+                                        className="fill-amber-400"
+                                      />
                                       <span>{rating}/10</span>
                                     </div>
                                   )}
@@ -4685,7 +4694,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     }
                                     className="text-nebula-cyan hover:underline font-bold uppercase tracking-wider text-[9.5px]"
                                   >
-                                    {isExpanded ? "Show Less" : "Read Full Review"}
+                                    {isExpanded
+                                      ? "Show Less"
+                                      : "Read Full Review"}
                                   </button>
                                 )}
                               </div>
@@ -4696,7 +4707,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     ) : (
                       <div className="text-center py-10 px-4 bg-white/2 border border-dashed border-white/10 rounded-2xl">
                         <p className="text-xs text-white/40 font-bold uppercase tracking-wider">
-                          No user reviews available from TMDB for this media title.
+                          No user reviews available from TMDB for this media
+                          title.
                         </p>
                       </div>
                     )}

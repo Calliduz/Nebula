@@ -108,7 +108,7 @@ const detectMirrorIsSingleFakeQuality = (
     activeM &&
     (activeM.type === "hls_grouped" || activeM.type === "mp4_grouped") &&
     activeM.qualities &&
-    activeM.qualities.length > 0
+    activeM.qualities.length > 0,
   );
 
   const mirrorQualityCount = activeM?.qualities?.length ?? 0;
@@ -139,7 +139,10 @@ describe("parseMirrorName", () => {
   });
 
   it("returns Original quality for bare source name (no suffix)", () => {
-    expect(parseMirrorName("WKM")).toEqual({ base: "WKM", quality: "Original" });
+    expect(parseMirrorName("WKM")).toEqual({
+      base: "WKM",
+      quality: "Original",
+    });
     expect(parseMirrorName("Hyperion")).toEqual({
       base: "Hyperion",
       quality: "Original",
@@ -154,8 +157,12 @@ describe("getHlsLevelHeight", () => {
   });
 
   it("extracts height from attrs.RESOLUTION", () => {
-    expect(getHlsLevelHeight({ attrs: { RESOLUTION: "1920x1080" } }, 0, 1)).toBe(1080);
-    expect(getHlsLevelHeight({ attrs: { RESOLUTION: "1280x720" } }, 0, 1)).toBe(720);
+    expect(
+      getHlsLevelHeight({ attrs: { RESOLUTION: "1920x1080" } }, 0, 1),
+    ).toBe(1080);
+    expect(getHlsLevelHeight({ attrs: { RESOLUTION: "1280x720" } }, 0, 1)).toBe(
+      720,
+    );
   });
 
   it("extracts height from attrs.NAME", () => {
@@ -220,7 +227,9 @@ describe("detectMirrorIsSingleFakeQuality (MANIFEST_PARSED logic)", () => {
       { height: 720, levelId: 1 },
       { height: 480, levelId: 2 },
     ];
-    expect(detectMirrorIsSingleFakeQuality(activeM, uniqueQualities)).toBe(true);
+    expect(detectMirrorIsSingleFakeQuality(activeM, uniqueQualities)).toBe(
+      true,
+    );
   });
 
   it("returns FALSE when grouped mirror has multiple real quality URLs", () => {
@@ -233,7 +242,9 @@ describe("detectMirrorIsSingleFakeQuality (MANIFEST_PARSED logic)", () => {
       ],
     };
     const uniqueQualities = [{ height: 1080, levelId: 0 }];
-    expect(detectMirrorIsSingleFakeQuality(activeM, uniqueQualities)).toBe(false);
+    expect(detectMirrorIsSingleFakeQuality(activeM, uniqueQualities)).toBe(
+      false,
+    );
   });
 
   it("returns FALSE when mirror is not grouped (standard HLS)", () => {
@@ -242,7 +253,9 @@ describe("detectMirrorIsSingleFakeQuality (MANIFEST_PARSED logic)", () => {
       { height: 1080, levelId: 0 },
       { height: 720, levelId: 1 },
     ];
-    expect(detectMirrorIsSingleFakeQuality(activeM, uniqueQualities)).toBe(false);
+    expect(detectMirrorIsSingleFakeQuality(activeM, uniqueQualities)).toBe(
+      false,
+    );
   });
 
   it("returns FALSE when grouped mirror has 1 quality AND HLS also has 1 real level", () => {
@@ -251,6 +264,8 @@ describe("detectMirrorIsSingleFakeQuality (MANIFEST_PARSED logic)", () => {
       qualities: [{ height: 480, url: "url-single" }],
     };
     const uniqueQualities = [{ height: 480, levelId: 0 }];
-    expect(detectMirrorIsSingleFakeQuality(activeM, uniqueQualities)).toBe(false);
+    expect(detectMirrorIsSingleFakeQuality(activeM, uniqueQualities)).toBe(
+      false,
+    );
   });
 });
