@@ -28,6 +28,10 @@ import {
   Keyboard,
   PictureInPicture,
   ArrowLeft,
+  Check,
+  ChevronDown,
+  Clock,
+  Star,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -37,6 +41,7 @@ import { SubtitleOverlay } from "./SubtitleOverlay";
 import { API_BASE_URL } from "../config";
 import { handleClearLogoError } from "../utils/helpers";
 import { fetchVideasySourcesDirect } from "../services/videasy";
+import { getTVSeasonEpisodes } from "../services/tmdb";
 import {
   type SkipSegment,
   parseIntroDBResponse,
@@ -501,6 +506,43 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [subtitleOffset, setSubtitleOffset] = useState<number>(0);
   const [fetchingSubtitles, setFetchingSubtitles] = useState(false);
   const [showEpisodeDrawer, setShowEpisodeDrawer] = useState(false);
+  const [drawerSeason, setDrawerSeason] = useState<number>(season || 1);
+  const [drawerEpisodes, setDrawerEpisodes] = useState<any[]>([]);
+  const [drawerEpisodesLoading, setDrawerEpisodesLoading] = useState(false);
+  const [drawerSearchQuery, setDrawerSearchQuery] = useState("");
+
+  // Sync drawerSeason when season prop updates or drawer opens
+  useEffect(() => {
+    if (showEpisodeDrawer && season) {
+      setDrawerSeason(season);
+    }
+  }, [showEpisodeDrawer, season]);
+
+  // Fetch season episodes for drawer
+  useEffect(() => {
+    if (!showEpisodeDrawer || movie.type !== "tv") return;
+    let isCancelled = false;
+    setDrawerEpisodesLoading(true);
+    getTVSeasonEpisodes(movie.id, drawerSeason)
+      .then((eps) => {
+        if (!isCancelled) {
+          setDrawerEpisodes(eps || []);
+        }
+      })
+      .catch((err) => {
+        if (!isCancelled) {
+          console.error("Failed to fetch drawer episodes:", err);
+          setDrawerEpisodes([]);
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) setDrawerEpisodesLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [showEpisodeDrawer, movie.id, drawerSeason, movie.type]);
   const [showHotkeys, setShowHotkeys] = useState(false);
   const [tvDetails, setTvDetails] = useState<any>(null);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -6420,81 +6462,289 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowEpisodeDrawer(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] pointer-events-auto"
+              className="fixed inset-0 bg-black/70 backdrop-blur-md z-[250] pointer-events-auto"
             />
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full sm:w-80 bg-obsidian border-l border-white/10 z-[300] shadow-2xl flex flex-col pointer-events-auto"
+              transition={{ type: "spring", damping: 28, stiffness: 220 }}
+              className="fixed top-0 right-0 bottom-0 w-full sm:w-[420px] md:w-[480px] bg-obsidian/95 border-l border-white/10 z-[300] shadow-2xl flex flex-col pointer-events-auto backdrop-blur-xl"
             >
-              <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-white italic">
-                    Episode Relay
-                  </h3>
-                  <p className="text-[10px] text-white/30 uppercase tracking-tighter">
-                    Season {season}
-                  </p>
+              {/* Drawer Header */}
+              <div className="p-4 sm:p-5 border-b border-white/10 bg-black/40 space-y-3.5 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                    <div className="w-8 h-8 rounded-lg bg-nebula-cyan/10 border border-nebula-cyan/30 flex items-center justify-center text-nebula-cyan flex-shrink-0">
+                      <List size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-black uppercase tracking-wider text-white truncate">
+                        {movie?.title || "Episodes"}
+                      </h3>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest font-mono">
+                        Episode Relay
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowEpisodeDrawer(false)}
+                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-all active:scale-95 flex-shrink-0"
+                    title="Close Drawer"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowEpisodeDrawer(false)}
-                  className="w-9 h-9 rounded-full bg-white/5 text-white/40 hover:text-white flex items-center justify-center transition-colors"
-                >
-                  <X size={18} />
-                </button>
+
+                {/* Season Switcher & Search Bar */}
+                <div className="flex items-center gap-2.5">
+                  {/* Season Select Dropdown */}
+                  <div className="relative min-w-[130px] flex-shrink-0">
+                    <select
+                      value={drawerSeason}
+                      onChange={(e) => setDrawerSeason(Number(e.target.value))}
+                      className="w-full appearance-none bg-white/5 hover:bg-white/10 border border-white/15 hover:border-white/30 text-white font-bold text-xs py-2 pl-3 pr-8 rounded-xl transition-all cursor-pointer focus:outline-none focus:border-nebula-cyan/50"
+                    >
+                      {tvDetails?.seasons?.length ? (
+                        tvDetails.seasons
+                          .filter((s: any) => s.season_number > 0)
+                          .map((s: any) => (
+                            <option
+                              key={`s-opt-${s.id || s.season_number}`}
+                              value={s.season_number}
+                              className="bg-obsidian text-white"
+                            >
+                              {s.name || `Season ${s.season_number}`} (
+                              {s.episode_count || 0})
+                            </option>
+                          ))
+                      ) : (
+                        <option value={drawerSeason} className="bg-obsidian text-white">
+                          Season {drawerSeason}
+                        </option>
+                      )}
+                    </select>
+                    <ChevronDown
+                      size={14}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none"
+                    />
+                  </div>
+
+                  {/* Filter Search Input */}
+                  <div className="relative flex-1 min-w-0">
+                    <Search
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search episodes..."
+                      value={drawerSearchQuery}
+                      onChange={(e) => setDrawerSearchQuery(e.target.value)}
+                      className="w-full bg-white/5 hover:bg-white/10 border border-white/15 focus:border-nebula-cyan/50 text-white placeholder-white/30 text-xs py-2 pl-8 pr-7 rounded-xl transition-all outline-none"
+                    />
+                    {drawerSearchQuery && (
+                      <button
+                        onClick={() => setDrawerSearchQuery("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                {/* We map current season episodes if available */}
-                {tvDetails?.seasons?.find(
-                  (s: any) => s.season_number === season,
-                )?.episode_count ? (
-                  Array.from({
-                    length: tvDetails.seasons.find(
-                      (s: any) => s.season_number === season,
-                    ).episode_count,
-                  }).map((_, i) => {
-                    const epNum = i + 1;
-                    return (
-                      <button
-                        key={epNum}
-                        onClick={() => {
-                          setSourceSelect({ season: season!, episode: epNum });
-                          setShowEpisodeDrawer(false);
-                        }}
-                        className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${episode === epNum ? "bg-nebula-cyan/20 border border-nebula-cyan/30" : "hover:bg-white/5 border border-transparent"}`}
-                      >
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-display font-black italic text-xs transition-colors ${episode === epNum ? "bg-nebula-cyan text-obsidian" : "bg-white/10 text-white/40 group-hover:bg-white/20"}`}
+              {/* Episode List Content */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5">
+                {drawerEpisodesLoading ? (
+                  Array.from({ length: 6 }).map((_, idx) => (
+                    <div
+                      key={`ep-skel-${idx}`}
+                      className="w-full bg-white/5 rounded-xl border border-white/5 p-2.5 flex items-center gap-3 animate-pulse"
+                    >
+                      <div className="w-28 sm:w-36 aspect-video bg-white/10 rounded-lg flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 bg-white/10 rounded w-3/4" />
+                        <div className="h-2.5 bg-white/5 rounded w-1/2" />
+                        <div className="h-2 bg-white/5 rounded w-full" />
+                      </div>
+                    </div>
+                  ))
+                ) : (() => {
+                    const baseList =
+                      drawerEpisodes.length > 0
+                        ? drawerEpisodes
+                        : Array.from({
+                            length:
+                              tvDetails?.seasons?.find(
+                                (s: any) => s.season_number === drawerSeason
+                              )?.episode_count || 0,
+                          }).map((_, i) => ({
+                            episode_number: i + 1,
+                            name: `Episode ${i + 1}`,
+                          }));
+
+                    const filtered = baseList.filter((ep: any) => {
+                      if (!drawerSearchQuery.trim()) return true;
+                      const q = drawerSearchQuery.toLowerCase();
+                      const epNumStr = `ep ${ep.episode_number}`.toLowerCase();
+                      const epNumOnly = `${ep.episode_number}`;
+                      const epName = (ep.name || "").toLowerCase();
+                      return (
+                        epName.includes(q) ||
+                        epNumStr.includes(q) ||
+                        epNumOnly === q ||
+                        `e${ep.episode_number}`.toLowerCase().includes(q)
+                      );
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                          <Search size={32} className="text-white/10" />
+                          <p className="text-xs text-white/40 font-bold uppercase tracking-wider">
+                            No episodes found
+                          </p>
+                          <p className="text-[11px] text-white/30 max-w-[200px]">
+                            Try another search query or switch seasons.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((ep: any) => {
+                      const epNum = ep.episode_number;
+                      const epProgressData = JSON.parse(
+                        localStorage.getItem("nebula-progress") || "{}"
+                      );
+                      const epKey = `${movie.id}-S${drawerSeason}E${epNum}`;
+                      const epProg = epProgressData[epKey];
+                      const epPct =
+                        epProg && epProg.duration > 0
+                          ? Math.min(100, (epProg.time / epProg.duration) * 100)
+                          : 0;
+                      const epWatched = (epProg && epProg.watched) || epPct >= 90;
+                      const isCurrentPlaying =
+                        drawerSeason === season && epNum === episode;
+
+                      return (
+                        <button
+                          key={`drawer-ep-${epNum}`}
+                          onClick={() => {
+                            setSourceSelect({ season: drawerSeason, episode: epNum });
+                            setShowEpisodeDrawer(false);
+                          }}
+                          className={`w-full text-left p-2.5 sm:p-3 rounded-xl transition-all duration-200 flex items-start gap-3 group relative overflow-hidden active:scale-[0.99] ${
+                            isCurrentPlaying
+                              ? "bg-nebula-cyan/15 border border-nebula-cyan/40 shadow-[0_0_20px_rgba(46,204,113,0.15)]"
+                              : "bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/20"
+                          }`}
                         >
-                          {epNum}
-                        </div>
-                        <div className="flex-1">
-                          <p
-                            className={`text-sm font-bold ${episode === epNum ? "text-white" : "text-white/60 group-hover:text-white"}`}
-                          >
-                            Episode {epNum}
-                          </p>
-                          <p className="text-[10px] text-white/20 uppercase tracking-widest">
-                            Uplink Stable
-                          </p>
-                        </div>
-                        {episode === epNum && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shadow-[0_0_10px_rgba(46,204,113,0.8)]" />
-                        )}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-                    <Loader2 size={24} className="animate-spin text-white/10" />
-                    <p className="text-xs text-white/20 uppercase tracking-widest">
-                      Hydrating episode list...
-                    </p>
-                  </div>
-                )}
+                          {/* Thumbnail Container */}
+                          <div className="w-28 sm:w-36 aspect-video bg-black/60 rounded-lg overflow-hidden flex-shrink-0 relative border border-white/10 group-hover:border-white/30 transition-colors">
+                            {ep.still_path ? (
+                              <img
+                                src={ep.still_path}
+                                alt={ep.name || `Episode ${epNum}`}
+                                className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                                  epWatched ? "opacity-60" : "opacity-90 group-hover:opacity-100"
+                                }`}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-white/5 text-white/20">
+                                <Play size={22} className="group-hover:text-nebula-cyan transition-colors" />
+                              </div>
+                            )}
+
+                            {/* Play Overlay Icon */}
+                            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="w-8 h-8 rounded-full bg-nebula-cyan text-obsidian flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                                <Play size={14} className="fill-current ml-0.5" />
+                              </div>
+                            </div>
+
+                            {/* Episode Number Badge */}
+                            <div className="absolute top-1.5 left-1.5 bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] font-black text-white font-mono border border-white/10">
+                              E{epNum}
+                            </div>
+
+                            {/* Watched Badge */}
+                            {epWatched && (
+                              <div className="absolute top-1.5 right-1.5 bg-nebula-cyan text-obsidian px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
+                                <Check size={9} strokeWidth={3} />
+                                <span className="hidden sm:inline">Watched</span>
+                              </div>
+                            )}
+
+                            {/* Watch Progress Bar */}
+                            {epPct > 0 && !epWatched && (
+                              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/60">
+                                <div
+                                  className="h-full bg-nebula-cyan shadow-[0_0_8px_rgba(46,204,113,0.8)]"
+                                  style={{ width: `${epPct}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Episode Details */}
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                              {isCurrentPlaying && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-nebula-cyan/20 border border-nebula-cyan/50 text-nebula-cyan text-[9px] font-black uppercase tracking-wider animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan" />
+                                  Now Playing
+                                </span>
+                              )}
+                              <h4
+                                className={`text-xs sm:text-sm font-bold truncate ${
+                                  isCurrentPlaying
+                                    ? "text-nebula-cyan"
+                                    : "text-white group-hover:text-nebula-cyan transition-colors"
+                                }`}
+                              >
+                                {ep.name || `Episode ${epNum}`}
+                              </h4>
+                            </div>
+
+                            {/* Meta Row: air date, runtime, rating */}
+                            <div className="flex items-center gap-2 text-[10px] text-white/40 font-mono mb-1.5 flex-wrap">
+                              {ep.runtime ? (
+                                <span className="flex items-center gap-1">
+                                  <Clock size={10} className="text-white/30" />
+                                  {ep.runtime}m
+                                </span>
+                              ) : null}
+                              {ep.vote_average > 0 ? (
+                                <span className="flex items-center gap-1 text-amber-400/90 font-bold">
+                                  <Star size={10} className="fill-amber-400/90" />
+                                  {ep.vote_average.toFixed(1)}
+                                </span>
+                              ) : null}
+                              {ep.air_date ? (
+                                <span className="text-white/30">
+                                  {ep.air_date.split("-")[0]}
+                                </span>
+                              ) : null}
+                            </div>
+
+                            {/* Overview Synopsis */}
+                            {ep.overview ? (
+                              <p className="text-[11px] text-white/50 group-hover:text-white/70 line-clamp-2 leading-relaxed transition-colors font-normal">
+                                {ep.overview}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] italic text-white/30">
+                                Episode {epNum}
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    });
+                  })()}
               </div>
             </motion.div>
           </>
