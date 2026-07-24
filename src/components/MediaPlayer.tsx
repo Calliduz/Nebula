@@ -237,6 +237,10 @@ export const parseMirrorDetails = (sourceName: string) => {
     };
   }
   if (cleanSource.toLowerCase().startsWith("kuro")) {
+    const isDub =
+      cleanSource.toUpperCase().includes(" DUB") ||
+      cleanSource.toUpperCase().includes("(DUB");
+    const category = isDub ? "Zenith (Dub)" : "Zenith (Sub)";
     const cleanName = cleanSource
       .replace(/^Kuro[\s-]*/i, "")
       .replace(/\s*\(?SUB\)?/i, "")
@@ -244,7 +248,7 @@ export const parseMirrorDetails = (sourceName: string) => {
       .trim();
     const subClean = cleanSubProviderName(cleanName);
     return {
-      category: "Zenith",
+      category,
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
@@ -7498,24 +7502,22 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Zenith (Anime Only) */}
+      {/* Zenith (Sub - Japanese) */}
       <button
         onClick={() =>
-          (kuroSubSources.length > 0 || kuroDubSources.length > 0 || failedSources.includes("Kuro")) &&
-          onSelect(kuroSubSources.length > 0 ? kuroSubUrl : kuroDubUrl)
+          (kuroSubSources.length > 0 || failedSources.includes("Kuro (Sub)")) &&
+          onSelect(kuroSubUrl)
         }
         disabled={
-          activeSource === "Zenith" ||
           activeSource === "Zenith (Sub)" ||
-          activeSource === "Zenith (Dub)" ||
-          activeSource === "Kuro" ||
-          (kuroLoading && !failedSources.includes("Kuro"))
+          activeSource === "Kuro (Sub)" ||
+          (kuroLoading && !failedSources.includes("Kuro (Sub)"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Zenith",
+          "Zenith (Sub)",
           activeSource || "",
           kuroLoading,
-          kuroSubSources.length > 0 || kuroDubSources.length > 0,
+          kuroSubSources.length > 0,
         )}`}
       >
         <div className="flex items-center justify-between w-full">
@@ -7530,31 +7532,29 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Zenith
+                  Zenith (Sub)
                 </p>
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-purple-500/35 bg-purple-500/20 text-purple-300 uppercase tracking-wider shrink-0">
-                  ANIME ONLY
+                  JAPANESE AUDIO
                 </span>
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {kuroLoading ? "Scanning..." : "Anime streams (Sub & Dub via Audio Tracks)"}
+                {kuroLoading ? "Scanning..." : "Subbed Streams"}
               </p>
             </div>
           </div>
-          {(activeSource === "Zenith" ||
-            activeSource === "Zenith (Sub)" ||
-            activeSource === "Zenith (Dub)" ||
-            activeSource === "Kuro") && (
+          {(activeSource === "Zenith (Sub)" ||
+            activeSource === "Kuro (Sub)") && (
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)] shrink-0" />
           )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {kuroLoading ? (
             <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Scanning anime streams...
+              Scanning sub streams...
             </span>
-          ) : kuroSubSources.length > 0 || kuroDubSources.length > 0 ? (
-            [...kuroSubSources, ...kuroDubSources].map((s) => (
+          ) : kuroSubSources.length > 0 ? (
+            kuroSubSources.map((s) => (
               <span
                 key={s.name}
                 className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wide"
@@ -7562,14 +7562,85 @@ export function InPlayerSourcePicker({
                 {s.name
                   .replace(/^Kuro[\s-]*/i, "")
                   .replace(/\s*\(?SUB\)?/i, "")
-                  .replace(/\s*\(?DUB\)?/i, "")
                   .trim()
                   .toUpperCase()}
               </span>
             ))
           ) : (
             <span className="text-[8px] text-violet-400 uppercase font-medium">
-              {kuroError || "No anime mirrors"}
+              {kuroError || "No sub mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Zenith (Dub - English) */}
+      <button
+        onClick={() =>
+          (kuroDubSources.length > 0 || failedSources.includes("Kuro (Dub)")) &&
+          onSelect(kuroDubUrl)
+        }
+        disabled={
+          activeSource === "Zenith (Dub)" ||
+          activeSource === "Kuro (Dub)" ||
+          (kuroLoading && !failedSources.includes("Kuro (Dub)"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Zenith (Dub)",
+          activeSource || "",
+          kuroLoading,
+          kuroDubSources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-pink-500/15 flex items-center justify-center text-pink-400 shrink-0">
+              {kuroLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Zap size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Zenith (Dub)
+                </p>
+                <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-pink-500/35 bg-pink-500/20 text-pink-300 uppercase tracking-wider shrink-0">
+                  ENGLISH DUB
+                </span>
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {kuroLoading ? "Scanning..." : "Dubbed Streams"}
+              </p>
+            </div>
+          </div>
+          {(activeSource === "Zenith (Dub)" ||
+            activeSource === "Kuro (Dub)") && (
+            <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {kuroLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Scanning dub streams...
+            </span>
+          ) : kuroDubSources.length > 0 ? (
+            kuroDubSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-pink-500/20 text-pink-400/80 bg-pink-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Kuro[\s-]*/i, "")
+                  .replace(/\s*\(?DUB\)?/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-pink-400 uppercase font-medium">
+              {kuroError || "No dub mirrors"}
             </span>
           )}
         </div>

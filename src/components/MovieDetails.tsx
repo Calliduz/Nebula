@@ -1561,7 +1561,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-pink-500/35 text-pink-300 bg-pink-500/10 hover:border-pink-500/70 hover:bg-pink-500/25 hover:shadow-[0_0_12px_rgba(236,72,153,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-pink-500/35 text-pink-300 bg-pink-500/10 hover:border-pink-500/70 hover:bg-purple-500/25 hover:shadow-[0_0_12px_rgba(236,72,153,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
