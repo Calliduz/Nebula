@@ -205,9 +205,9 @@ export const MovieCard = memo<MovieCardProps>(
       prevProps.movie?.clearLogo === nextProps.movie?.clearLogo &&
       prevProps.movie?.genre === nextProps.movie?.genre &&
       prevProps.movie?.imdb === nextProps.movie?.imdb &&
-      prevProps.movie?.year === nextProps.movie?.year &&
-      JSON.stringify(prevProps.movie?.progress) ===
-        JSON.stringify(nextProps.movie?.progress)
+      prevProps.movie?.progress?.time === nextProps.movie?.progress?.time &&
+      prevProps.movie?.progress?.duration === nextProps.movie?.progress?.duration &&
+      prevProps.movie?.progress?.watched === nextProps.movie?.progress?.watched
     );
   },
 );

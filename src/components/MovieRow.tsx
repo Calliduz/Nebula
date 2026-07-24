@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
 
 interface MovieRowProps {
   title: string;
@@ -14,31 +13,51 @@ export const MovieRow: React.FC<MovieRowProps> = ({
   onTitleClick,
 }) => {
   const rowRef = useRef<HTMLDivElement>(null);
+  const indicatorFillRef = useRef<HTMLDivElement>(null);
+  const rafId = useRef<number | null>(null);
+
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
-  const [scrollPct, setScrollPct] = useState(0);
 
   // Drag-to-scroll state
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragScrollLeft = useRef(0);
 
-  const updateArrows = useCallback(() => {
-    if (rowRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
-      setShowLeftArrow(scrollLeft > 10);
-      setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 10);
-      const maxScroll = scrollWidth - clientWidth;
-      setScrollPct(maxScroll > 0 ? (scrollLeft / maxScroll) * 100 : 0);
+  const checkScrollPosition = useCallback(() => {
+    if (!rowRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
+    const newShowLeft = scrollLeft > 2;
+    const newShowRight = scrollLeft + clientWidth < scrollWidth - 5;
+
+    setShowLeftArrow((prev) => (prev !== newShowLeft ? newShowLeft : prev));
+    setShowRightArrow((prev) => (prev !== newShowRight ? newShowRight : prev));
+
+    const maxScroll = scrollWidth - clientWidth;
+    const pct = maxScroll > 0 ? (scrollLeft / maxScroll) * 100 : 0;
+    if (indicatorFillRef.current) {
+      indicatorFillRef.current.style.width = `${Math.max(4, pct)}%`;
     }
   }, []);
 
+  const updateArrows = useCallback(() => {
+    if (rafId.current !== null) return;
+    rafId.current = requestAnimationFrame(() => {
+      rafId.current = null;
+      checkScrollPosition();
+    });
+  }, [checkScrollPosition]);
+
   useEffect(() => {
-    updateArrows();
-    window.addEventListener("resize", updateArrows);
-    return () => window.removeEventListener("resize", updateArrows);
-  }, [children, updateArrows]);
+    checkScrollPosition();
+    window.addEventListener("resize", updateArrows, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updateArrows);
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current);
+      }
+    };
+  }, [children, checkScrollPosition, updateArrows]);
 
   const scroll = (direction: "left" | "right") => {
     if (rowRef.current) {
@@ -81,21 +100,10 @@ export const MovieRow: React.FC<MovieRowProps> = ({
     rowRef.current.style.userSelect = "";
   }, []);
 
-  // Determine fade mask based on scroll position
-  const getMaskClass = () => {
-    if (showLeftArrow && showRightArrow) return "scroll-fade-both";
-    if (showLeftArrow)
-      return "[mask-image:linear-gradient(to_right,transparent_0%,black_8%)]";
-    if (showRightArrow)
-      return "[mask-image:linear-gradient(to_left,transparent_0%,black_8%)]";
-    return "";
-  };
-
   return (
     <section
-      className="mb-6 sm:mb-8 md:mb-12 relative group"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="mb-6 sm:mb-8 md:mb-12 relative group/row"
+      onMouseEnter={checkScrollPosition}
     >
       {/* Row title */}
       <div
@@ -118,24 +126,23 @@ export const MovieRow: React.FC<MovieRowProps> = ({
 
       {/* Scroll container */}
       <div className="relative">
-        {/* Left arrow */}
-        <AnimatePresence>
-          {isHovered && showLeftArrow && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => scroll("left")}
-              className="absolute left-[-16px] top-[-16px] bottom-[-16px] z-50 w-20 bg-gradient-to-r from-obsidian via-obsidian/80 to-transparent flex items-center justify-start pl-4 text-white/50 hover:text-nebula-cyan transition-all hidden md:flex"
-            >
-              <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-110 transition-all shadow-2xl">
-                <ChevronLeft size={28} />
-              </div>
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {/* Left arrow button (Instant CSS group-hover overlay) */}
+        <button
+          type="button"
+          onClick={() => scroll("left")}
+          aria-label="Scroll Left"
+          className={`absolute left-[-12px] md:left-[-24px] top-[-16px] bottom-[-16px] z-50 w-16 sm:w-20 bg-gradient-to-r from-obsidian via-obsidian/90 to-transparent flex items-center justify-start pl-3 sm:pl-4 text-white/60 hover:text-nebula-cyan transition-all duration-200 hidden md:flex ${
+            showLeftArrow
+              ? "opacity-0 group-hover/row:opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
+          }`}
+        >
+          <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/15 hover:scale-110 transition-all shadow-2xl">
+            <ChevronLeft size={28} />
+          </div>
+        </button>
 
-        {/* Scrollable row with fade masks */}
+        {/* Scrollable row */}
         <div
           ref={rowRef}
           onScroll={updateArrows}
@@ -143,36 +150,34 @@ export const MovieRow: React.FC<MovieRowProps> = ({
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseLeave}
-          className={`flex gap-2.5 sm:gap-5 overflow-x-auto overflow-y-hidden py-4 -my-4 pr-4 sm:px-0 custom-scrollbar snap-x snap-proximity scroll-smooth select-none ${getMaskClass()}`}
+          className="flex gap-2.5 sm:gap-5 overflow-x-auto overflow-y-hidden py-4 -my-4 pr-4 sm:px-0 custom-scrollbar snap-x snap-proximity scroll-smooth select-none"
         >
           {children}
         </div>
 
-        {/* Right arrow */}
-        <AnimatePresence>
-          {isHovered && showRightArrow && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => scroll("right")}
-              className="absolute right-[-16px] top-[-16px] bottom-[-16px] z-50 w-20 bg-gradient-to-l from-obsidian via-obsidian/80 to-transparent flex items-center justify-end pr-4 text-white/50 hover:text-nebula-cyan transition-all hidden md:flex"
-            >
-              <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-110 transition-all shadow-2xl">
-                <ChevronRight size={28} />
-              </div>
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {/* Right arrow button (Instant CSS group-hover overlay) */}
+        <button
+          type="button"
+          onClick={() => scroll("right")}
+          aria-label="Scroll Right"
+          className={`absolute right-[-12px] md:right-[-24px] top-[-16px] bottom-[-16px] z-50 w-16 sm:w-20 bg-gradient-to-l from-obsidian via-obsidian/90 to-transparent flex items-center justify-end pr-3 sm:pr-4 text-white/60 hover:text-nebula-cyan transition-all duration-200 hidden md:flex ${
+            showRightArrow
+              ? "opacity-0 group-hover/row:opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
+          }`}
+        >
+          <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/15 hover:scale-110 transition-all shadow-2xl">
+            <ChevronRight size={28} />
+          </div>
+        </button>
       </div>
 
-      {/* Scroll position indicator */}
-      <div
-        className={`scroll-indicator-track ${isHovered || scrollPct > 0 ? "opacity-100" : ""}`}
-      >
+      {/* High-performance scroll position indicator */}
+      <div className="scroll-indicator-track opacity-0 group-hover/row:opacity-100 transition-opacity duration-300">
         <div
+          ref={indicatorFillRef}
           className="scroll-indicator-fill"
-          style={{ width: `${Math.max(4, scrollPct)}%` }}
+          style={{ width: "4%" }}
         />
       </div>
     </section>

@@ -1,8 +1,7 @@
-import React, { useRef, useState, useEffect, memo } from "react";
+import React, { useRef, useState, useEffect, useCallback, memo } from "react";
 import { NebulaMovie } from "../services/tmdb";
 import { handleImageError } from "../utils/helpers";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
 
 export const TopTenShelf = memo(
   ({
@@ -18,21 +17,37 @@ export const TopTenShelf = memo(
     const rowRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(true);
-    const [isHovered, setIsHovered] = useState(false);
 
-    const updateArrows = () => {
-      if (rowRef.current) {
-        const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
-        setShowLeftArrow(scrollLeft > 10);
-        setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 10);
-      }
-    };
+    const rafId = useRef<number | null>(null);
+
+    const checkScrollPosition = useCallback(() => {
+      if (!rowRef.current) return;
+      const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
+      const newShowLeft = scrollLeft > 2;
+      const newShowRight = scrollLeft + clientWidth < scrollWidth - 5;
+
+      setShowLeftArrow((prev) => (prev !== newShowLeft ? newShowLeft : prev));
+      setShowRightArrow((prev) => (prev !== newShowRight ? newShowRight : prev));
+    }, []);
+
+    const updateArrows = useCallback(() => {
+      if (rafId.current !== null) return;
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
+        checkScrollPosition();
+      });
+    }, [checkScrollPosition]);
 
     useEffect(() => {
-      updateArrows();
-      window.addEventListener("resize", updateArrows);
-      return () => window.removeEventListener("resize", updateArrows);
-    }, [data]);
+      checkScrollPosition();
+      window.addEventListener("resize", updateArrows, { passive: true });
+      return () => {
+        window.removeEventListener("resize", updateArrows);
+        if (rafId.current !== null) {
+          cancelAnimationFrame(rafId.current);
+        }
+      };
+    }, [data, checkScrollPosition, updateArrows]);
 
     const scroll = (direction: "left" | "right") => {
       if (rowRef.current) {
@@ -45,9 +60,8 @@ export const TopTenShelf = memo(
 
     return (
       <section
-        className="mb-12 relative group"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        className="mb-12 relative group/row"
+        onMouseEnter={checkScrollPosition}
       >
         <div className="flex items-center justify-between mb-6 px-4 sm:px-0">
           <div className="flex items-center gap-3">
@@ -60,21 +74,20 @@ export const TopTenShelf = memo(
         </div>
 
         <div className="relative">
-          <AnimatePresence>
-            {isHovered && showLeftArrow && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => scroll("left")}
-                className="absolute left-[-16px] top-[-16px] bottom-[-16px] z-50 w-24 bg-gradient-to-r from-obsidian via-obsidian/80 to-transparent flex items-center justify-start pl-6 text-white/50 hover:text-nebula-cyan transition-all hidden md:flex"
-              >
-                <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-110 transition-all shadow-2xl">
-                  <ChevronLeft size={32} />
-                </div>
-              </motion.button>
-            )}
-          </AnimatePresence>
+          <button
+            type="button"
+            onClick={() => scroll("left")}
+            aria-label="Scroll Left"
+            className={`absolute left-[-12px] md:left-[-24px] top-[-16px] bottom-[-16px] z-50 w-20 bg-gradient-to-r from-obsidian via-obsidian/90 to-transparent flex items-center justify-start pl-4 text-white/60 hover:text-nebula-cyan transition-all duration-200 hidden md:flex ${
+              showLeftArrow
+                ? "opacity-0 group-hover/row:opacity-100 pointer-events-auto"
+                : "opacity-0 pointer-events-none"
+            }`}
+          >
+            <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/15 hover:scale-110 transition-all shadow-2xl">
+              <ChevronLeft size={32} />
+            </div>
+          </button>
 
           <div
             ref={rowRef}
@@ -135,21 +148,20 @@ export const TopTenShelf = memo(
                 ))}
           </div>
 
-          <AnimatePresence>
-            {isHovered && showRightArrow && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => scroll("right")}
-                className="absolute right-[-16px] top-[-16px] bottom-[-16px] z-50 w-24 bg-gradient-to-l from-obsidian via-obsidian/80 to-transparent flex items-center justify-end pr-6 text-white/50 hover:text-nebula-cyan transition-all hidden md:flex"
-              >
-                <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-110 transition-all shadow-2xl">
-                  <ChevronRight size={32} />
-                </div>
-              </motion.button>
-            )}
-          </AnimatePresence>
+          <button
+            type="button"
+            onClick={() => scroll("right")}
+            aria-label="Scroll Right"
+            className={`absolute right-[-12px] md:right-[-24px] top-[-16px] bottom-[-16px] z-50 w-20 bg-gradient-to-l from-obsidian via-obsidian/90 to-transparent flex items-center justify-end pr-4 text-white/60 hover:text-nebula-cyan transition-all duration-200 hidden md:flex ${
+              showRightArrow
+                ? "opacity-0 group-hover/row:opacity-100 pointer-events-auto"
+                : "opacity-0 pointer-events-none"
+            }`}
+          >
+            <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/15 hover:scale-110 transition-all shadow-2xl">
+              <ChevronRight size={32} />
+            </div>
+          </button>
         </div>
       </section>
     );
