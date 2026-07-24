@@ -801,16 +801,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const getSourceCategory = useCallback((mirrorsList: any[]): string => {
     if (!mirrorsList || mirrorsList.length === 0) return "VidLink";
     const first = mirrorsList[0];
-    const name = (first.source || first.name || "").toLowerCase();
-    if (name.startsWith("vidrock")) return "VidRock";
-    if (name.startsWith("peachify")) return "Peachify";
-    if (name.startsWith("kuro")) return "Kuro";
-    if (name.startsWith("videasy")) return "Videasy";
-    if (name.startsWith("filmu")) return "FilmU";
-    if (name.startsWith("vidnest")) return "Vidnest";
-    if (name.startsWith("vaplayer")) return "Vaplayer";
-    if (name.startsWith("vidrift")) return "Vidrift";
-    if (name.startsWith("vidlink")) return "VidLink";
+    const rawName = (first.source || first.name || "").toLowerCase();
+
+    if (rawName.includes("vidrock") || rawName.includes("hyperion")) return "VidRock";
+    if (rawName.includes("vaplayer") || rawName.includes("quantum")) return "Vaplayer";
+    if (rawName.includes("vidrift") || rawName.includes("velocity")) return "Vidrift";
+    if (rawName.includes("videasy") || rawName.includes("pulse")) return "Videasy";
+    if (rawName.includes("vidlink") || rawName.includes("spectra")) return "VidLink";
+    if (rawName.includes("vidnest") || rawName.includes("titan")) return "Vidnest";
+    if (rawName.includes("filmu") || rawName.includes("orbital")) return "FilmU";
+    if (rawName.includes("peachify") || rawName.includes("aurora")) return "Peachify";
+    if (rawName.includes("kuro") || rawName.includes("zenith")) return "Kuro";
+
     return "VidLink";
   }, []);
 
@@ -867,9 +869,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       }
 
       let updatedMirrors: any[] = [];
+      if (!data || typeof data !== "object") return [];
+
       if (category === "Videasy") {
         updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && v.url)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
             source: name.toLowerCase().startsWith("videasy")
               ? name
@@ -881,7 +885,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }));
       } else if (category === "VidRock") {
         updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && v.url)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
             source: name.toLowerCase().startsWith("vidrock")
               ? name
@@ -893,7 +897,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }));
       } else if (category === "FilmU") {
         updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && v.url)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
             source: name.toLowerCase().startsWith("filmu")
               ? name
@@ -904,7 +908,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }));
       } else if (category === "Vidnest") {
         updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && v.url)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
             source: name.toLowerCase().startsWith("vidnest")
               ? name
@@ -915,7 +919,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }));
       } else if (category === "Vaplayer") {
         updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && v.url)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
             source: name.toLowerCase().startsWith("vaplayer")
               ? name
@@ -926,7 +930,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }));
       } else if (category === "Vidrift") {
         updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && v.url)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
             source: name.toLowerCase().startsWith("vidrift")
               ? name
@@ -937,7 +941,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }));
       } else if (category === "Peachify") {
         updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && v.url)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
             source: name.toLowerCase().startsWith("peachify")
               ? name
@@ -948,7 +952,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           }));
       } else if (category === "Kuro") {
         updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && v.url)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
             source: name.toLowerCase().startsWith("kuro")
               ? name
@@ -960,12 +964,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       } else {
         // VidLink
         const results = Array.isArray(data) ? data : data.results || [];
-        updatedMirrors = results.map((m: any) => ({
-          source: m.source || "VidLink",
-          url: m.url,
-          type: m.type || "hls",
-          quality: m.quality || "Auto",
-        }));
+        updatedMirrors = results
+          .filter((m: any) => m && m.url)
+          .map((m: any) => ({
+            source: m.source || "VidLink",
+            url: m.url,
+            type: m.type || "hls",
+            quality: m.quality || "Auto",
+          }));
       }
 
       return updatedMirrors;
@@ -993,91 +999,117 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     "Kuro",
   ];
 
-  const switchToNextSource = useCallback(async () => {
-    const currentCategory = getSourceCategory(mirrorsRef.current);
-    console.warn(
-      `[PLAYER] Source ${currentCategory} exhausted. Attempting automatic fallback...`,
-    );
-
-    failedSourcesRef.current.add(currentCategory);
-    setFailedSourcesList(Array.from(failedSourcesRef.current));
-
-    const nextSource = SOURCE_PRIORITY.find(
-      (src) => !failedSourcesRef.current.has(src),
-    );
-    if (nextSource) {
-      console.log(
-        `[PLAYER] Automatically switching to next available source: ${nextSource}`,
-      );
-      showToast(
-        `Current source failed. Switching to ${getCategoryAlias(nextSource)}...`,
-        "info",
+  const switchToNextSource = useCallback(
+    async (overrideCategory?: string) => {
+      const currentCategory =
+        overrideCategory || getSourceCategory(mirrorsRef.current);
+      console.warn(
+        `[PLAYER] Source ${currentCategory} exhausted. Attempting automatic fallback...`,
       );
 
-      try {
-        setLoading(true);
-        setError("");
+      failedSourcesRef.current.add(currentCategory);
+      setFailedSourcesList(Array.from(failedSourcesRef.current));
 
-        // Fetch mirrors for the new source, with up to 2 retries (waiting 2.5s each) to allow slow backend background scrapers to populate cache
-        let updatedMirrors = await fetchSourceMirrors(nextSource, false);
-        if (!updatedMirrors || updatedMirrors.length === 0) {
-          console.log(
-            `[PLAYER] Source ${nextSource} returned no mirrors. Retrying to allow background scrape to cache...`,
-          );
-          for (let attempt = 1; attempt <= 2; attempt++) {
-            await new Promise((resolve) => setTimeout(resolve, 2500));
-            updatedMirrors = await fetchSourceMirrors(nextSource, false);
-            if (updatedMirrors && updatedMirrors.length > 0) {
-              console.log(
-                `[PLAYER] Source ${nextSource} mirrors recovered on retry attempt ${attempt}!`,
-              );
-              break;
+      const nextSource = SOURCE_PRIORITY.find(
+        (src) => !failedSourcesRef.current.has(src),
+      );
+      if (nextSource) {
+        console.log(
+          `[PLAYER] Automatically switching to next available source: ${nextSource}`,
+        );
+        showToast(
+          `Current source failed. Switching to ${getCategoryAlias(nextSource)}...`,
+          "info",
+        );
+
+        try {
+          setLoading(true);
+          setError("");
+
+          // Fetch mirrors for the new source, with up to 2 retries (waiting 2.5s each) to allow slow backend background scrapers to populate cache
+          let updatedMirrors = await fetchSourceMirrors(nextSource, false);
+          if (!updatedMirrors || updatedMirrors.length === 0) {
+            console.log(
+              `[PLAYER] Source ${nextSource} returned no mirrors. Retrying to allow background scrape to cache...`,
+            );
+            for (let attempt = 1; attempt <= 2; attempt++) {
+              await new Promise((resolve) => setTimeout(resolve, 2500));
+              updatedMirrors = await fetchSourceMirrors(nextSource, false);
+              if (updatedMirrors && updatedMirrors.length > 0) {
+                console.log(
+                  `[PLAYER] Source ${nextSource} mirrors recovered on retry attempt ${attempt}!`,
+                );
+                break;
+              }
             }
           }
-        }
 
-        if (updatedMirrors && updatedMirrors.length > 0) {
-          // Sync URL params
-          const queryParams = new URLSearchParams(window.location.search);
-          const activeSrcString = updatedMirrors
-            .map((s: any) => {
-              const cleanUrl = s.url
-                .replace(`${API}/api/proxy/stream?url=`, "")
-                .replace(`${API}/api/proxy/segment?url=`, "");
-              return `${cleanUrl}#${s.source}#${s.type}`;
-            })
-            .join("|");
-          queryParams.set("source", activeSrcString);
-          navigate(`${window.location.pathname}?${queryParams.toString()}`, {
-            replace: true,
-          });
-        } else {
-          // If the new source also has no mirrors after retries, recursively try the next one!
+          if (updatedMirrors && updatedMirrors.length > 0) {
+            const processed = updatedMirrors.map((m: any) => {
+              if (m.type === "embed") return m;
+              const isMp4 = m.type === "mp4" || m.url.includes(".mp4");
+              const proxyEndpoint = isMp4
+                ? "/api/proxy/segment"
+                : "/api/proxy/stream";
+              const proxiedUrl = `${API}${proxyEndpoint}?url=${encodeURIComponent(m.url)}`;
+              return { ...m, url: proxiedUrl };
+            });
+
+            const newGrouped = groupMirrors(processed);
+            setMirrors(newGrouped);
+            mirrorsRef.current = newGrouped;
+            setFailedMirrors({});
+            setError("");
+            hasAutoRetriedRef.current = false;
+
+            selectMirror(0, newGrouped);
+            setLoading(false);
+
+            // Sync URL params
+            const queryParams = new URLSearchParams(window.location.search);
+            const activeSrcString = updatedMirrors
+              .map((s: any) => {
+                const cleanUrl = s.url
+                  .replace(`${API}/api/proxy/stream?url=`, "")
+                  .replace(`${API}/api/proxy/segment?url=`, "");
+                return `${cleanUrl}#${s.source}#${s.type}`;
+              })
+              .join("|");
+            queryParams.set("source", activeSrcString);
+            navigate(`${window.location.pathname}?${queryParams.toString()}`, {
+              replace: true,
+            });
+          } else {
+            console.warn(
+              `[PLAYER] Source ${nextSource} is empty after retries. Falling back to next source...`,
+            );
+            failedSourcesRef.current.add(nextSource);
+            setFailedSourcesList(Array.from(failedSourcesRef.current));
+            await switchToNextSource(nextSource);
+          }
+        } catch (err: any) {
+          console.error(
+            `[PLAYER] Failed to switch to source ${nextSource}:`,
+            err,
+          );
           failedSourcesRef.current.add(nextSource);
           setFailedSourcesList(Array.from(failedSourcesRef.current));
-          await switchToNextSource();
+          await switchToNextSource(nextSource);
         }
-      } catch (err: any) {
-        console.error(
-          `[PLAYER] Failed to switch to source ${nextSource}:`,
-          err,
-        );
-        failedSourcesRef.current.add(nextSource);
-        setFailedSourcesList(Array.from(failedSourcesRef.current));
-        await switchToNextSource();
+      } else {
+        console.error("[PLAYER] All sources exhausted.");
+        setError("All available sources failed. Please try again later.");
+        setLoading(false);
       }
-    } else {
-      console.error("[PLAYER] All sources exhausted.");
-      setError("All available sources failed. Please try again later.");
-      setLoading(false);
-    }
-  }, [
-    fetchSourceMirrors,
-    getSourceCategory,
-    selectMirror,
-    navigate,
-    showToast,
-  ]);
+    },
+    [
+      fetchSourceMirrors,
+      getSourceCategory,
+      selectMirror,
+      navigate,
+      showToast,
+    ],
+  );
 
   const reScrapeStream = useCallback(
     async (isAuto = false) => {
@@ -1121,7 +1153,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       } catch (err: any) {
         console.error("[PLAYER] Re-scrape failed:", err);
         if (isAuto) {
-          await switchToNextSource();
+          await switchToNextSource(currentCategory);
         } else {
           setError("Failed to force refresh stream sources.");
           setLoading(false);
@@ -1141,14 +1173,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const handleMirrorExhaustion = useCallback(
     async (errorMessage: string) => {
+      const currentCat = getSourceCategory(mirrorsRef.current);
       if (!hasAutoRetriedRef.current) {
         hasAutoRetriedRef.current = true;
         await reScrapeStream(true);
       } else {
-        await switchToNextSource();
+        await switchToNextSource(currentCat);
       }
     },
-    [reScrapeStream, switchToNextSource],
+    [getSourceCategory, reScrapeStream, switchToNextSource],
   );
 
   const showBufferingWithDelay = useCallback((delay = 600) => {
@@ -2313,7 +2346,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             }
             selectMirror(nextIdx, mirrorsRef.current);
           } else {
-            setError("Short/restricted video on all mirrors.");
+            handleMirrorExhaustion("Short/restricted video on all mirrors.");
           }
         }
       };
@@ -2560,7 +2593,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               hls.destroy();
               selectMirror(nextIdx, mirrorsRef.current);
             } else {
-              setError("Short/restricted video on all mirrors.");
+              handleMirrorExhaustion("Short/restricted video on all mirrors.");
             }
           }
         };
@@ -3460,6 +3493,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 "info",
               );
               selectMirror(nextIdx, mirrorsRef.current);
+            } else {
+              handleMirrorExhaustion(
+                "Playback permanently frozen. All mirrors exhausted.",
+              );
             }
             stallCount = 0;
             recoveryCount = 0;
