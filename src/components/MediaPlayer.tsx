@@ -4273,7 +4273,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 src={movie.clearLogo}
                 alt={movie.title}
                 height="112"
-                className="h-20 md:h-28 w-auto object-contain drop-shadow-2xl animate-pulse transform-gpu will-change-[opacity,transform]"
+                className="h-20 md:h-28 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse transform-gpu will-change-[opacity,transform]"
                 referrerPolicy="no-referrer"
                 onError={() => setLogoFailed(true)}
               />
@@ -4419,7 +4419,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 src={movie.clearLogo}
                 alt="Loading..."
                 height="96"
-                className="h-16 md:h-24 w-auto object-contain drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
+                className="h-16 md:h-24 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
                 referrerPolicy="no-referrer"
                 onError={() => setLogoFailed(true)}
               />
@@ -4745,7 +4745,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   <img
                     src={movie.clearLogo}
                     alt={movie.title}
-                    className="h-7 sm:h-9 max-w-[180px] sm:max-w-[260px] w-auto object-contain drop-shadow-md"
+                    className="h-7 sm:h-9 max-w-[180px] sm:max-w-[260px] w-auto object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] drop-shadow-md"
                     referrerPolicy="no-referrer"
                     onError={() => setLogoFailed(true)}
                   />
