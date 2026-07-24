@@ -156,30 +156,28 @@ export const formatSubtitleSource = (rawSource?: string): string => {
   if (sLower === "opensubtitles") return "OpenSubtitles";
   if (sLower === "custom") return "Custom";
 
-  if (/\(.*\)/.test(s)) return s;
-
-  let baseName = s;
-  if (sLower === "vidrock") baseName = "VidRock";
-  else if (sLower === "vidnest") baseName = "VidNest";
-  else if (sLower === "vaplayer") baseName = "VAPlayer";
-  else if (sLower === "vidrift") baseName = "Vidrift";
-  else if (sLower === "filmu") baseName = "FilmU";
-  else if (sLower === "vidlink") baseName = "VidLink";
-  else if (sLower === "videasy") baseName = "Videasy";
-  else if (sLower === "peachify") baseName = "Peachify";
-  else if (sLower === "kuro") baseName = "Kuro";
-  else if (sLower === "vidvault") baseName = "VidVault";
-
   const alias = getCategoryAlias(s);
-  if (
-    alias &&
-    alias.toLowerCase() !== sLower &&
-    alias.toLowerCase() !== baseName.toLowerCase()
-  ) {
-    return `${baseName} (${alias})`;
+  if (alias && alias.toLowerCase() !== sLower) {
+    return alias;
   }
 
-  return baseName;
+  if (sLower.includes("vidrock")) return "Hyperion";
+  if (sLower.includes("vidnest")) return "Titan";
+  if (sLower.includes("vaplayer")) return "Quantum";
+  if (sLower.includes("vidrift")) return "Velocity";
+  if (sLower.includes("filmu")) return "Orbital";
+  if (sLower.includes("vidlink")) return "Spectra";
+  if (sLower.includes("videasy")) return "Pulse";
+  if (sLower.includes("peachify")) return "Aurora";
+  if (sLower.includes("kuro")) return "Zenith";
+  if (sLower.includes("vidvault")) return "VidVault";
+
+  if (s.includes("(")) {
+    const main = s.split("(")[0].trim();
+    if (main) return main;
+  }
+
+  return s;
 };
 
 const cleanSubProviderName = (name: string): string => {

@@ -126,6 +126,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
     const forceParam = force ? "&force=1" : "";
 
+    // 0. Subtitles Prefetch (fire immediately when scanning sources)
+    let subPrefetchUrl = `${API_BASE_URL}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
+    if (season !== undefined) subPrefetchUrl += `&season=${season}`;
+    if (episode !== undefined) subPrefetchUrl += `&episode=${episode}`;
+    fetch(subPrefetchUrl).catch(() => {});
+
     // 1. VidRock Fetch
     let vidrockFetchUrl = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
     if (season !== undefined) vidrockFetchUrl += `&season=${season}`;
@@ -2286,6 +2292,13 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     triggerPopunder();
     setSelectedEpForModal({ season: s, episode: e });
     setShowSourceModal(true);
+
+    if (movie?.id) {
+      let subPrefetchUrl = `${API_BASE_URL}/api/subtitles?tmdbId=${movie.id}&type=${movie.type || "movie"}&title=${encodeURIComponent(movie.title || "")}`;
+      if (s !== undefined) subPrefetchUrl += `&season=${s}`;
+      if (e !== undefined) subPrefetchUrl += `&episode=${e}`;
+      fetch(subPrefetchUrl).catch(() => {});
+    }
   };
 
   const handleSelectSource = (sourceUrl?: string) => {
