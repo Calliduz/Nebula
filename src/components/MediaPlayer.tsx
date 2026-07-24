@@ -110,24 +110,29 @@ export const SOURCE_ALIASES: Record<string, string> = {
 };
 
 export const getAudioFlagCode = (langStr?: string, defaultFlag?: string): string => {
-  if (defaultFlag) {
-    const df = defaultFlag.toLowerCase();
-    return df === "en" ? "us" : df;
-  }
   const l = (langStr || "").toLowerCase().trim();
-  if (!l || l.includes("original") || l.includes("default")) return "us";
+  if (l.includes("korean") || l.includes("kor") || l === "ko") return "kr";
   if (l.includes("hindi") || l.includes("hin")) return "in";
   if (l.includes("german") || l.includes("deutsch") || l.includes("ger")) return "de";
   if (l.includes("spanish") || l.includes("espanol") || l.includes("spa") || l.includes("mx") || l.includes("lamovie")) return "mx";
   if (l.includes("brazil") || l.includes("portuguese") || l.includes("superflix")) return "br";
-  if (l.includes("japan") || l.includes("japanese") || l.includes("sub")) return "jp";
+  if (l.includes("japan") || l.includes("japanese")) return "jp";
   if (l.includes("french") || l.includes("fre")) return "fr";
   if (l.includes("italian") || l.includes("ita")) return "it";
   if (l.includes("russian") || l.includes("rus")) return "ru";
   if (l.includes("chinese") || l.includes("zh")) return "cn";
-  if (l.includes("korean") || l.includes("kor")) return "kr";
   if (l.includes("tagalog") || l.includes("filipino")) return "ph";
   if (l.includes("dub") || l.includes("english") || l.includes("eng") || l.includes("us")) return "us";
+
+  if (defaultFlag) {
+    const df = defaultFlag.toLowerCase();
+    if (df === "en" || df === "eng") return "us";
+    if (df === "ko" || df === "kor" || df.includes("kor")) return "kr";
+    if (df === "ja" || df === "jpn" || df.includes("japan")) return "jp";
+    if (df === "hi" || df === "hin" || df.includes("hindi")) return "in";
+    return df;
+  }
+
   return "us";
 };
 
@@ -7028,6 +7033,10 @@ export function InPlayerSourcePicker({
   const [kuroLoading, setKuroLoading] = useState(true);
   const [kuroError, setKuroError] = useState("");
 
+  const [hdghartvSources, setHdghartvSources] = useState<any[]>([]);
+  const [hdghartvLoading, setHdghartvLoading] = useState(true);
+  const [hdghartvError, setHdghartvError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -7043,7 +7052,8 @@ export function InPlayerSourcePicker({
         vaplayerLoading ||
         vidriftLoading ||
         peachifyLoading ||
-        kuroLoading,
+        kuroLoading ||
+        hdghartvLoading,
     );
   }, [
     loading,
@@ -7054,6 +7064,7 @@ export function InPlayerSourcePicker({
     vidriftLoading,
     peachifyLoading,
     kuroLoading,
+    hdghartvLoading,
   ]);
 
   const fetchSources = useCallback(
@@ -7075,6 +7086,8 @@ export function InPlayerSourcePicker({
         setPeachifyError("");
         setKuroLoading(true);
         setKuroError("");
+        setHdghartvLoading(true);
+        setHdghartvError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -7308,6 +7321,35 @@ export function InPlayerSourcePicker({
           if (!isBackground) setKuroLoading(false);
         });
 
+      // 9. HDGharTV (Aether) Fetch
+      let hdghartvFetchUrl = `${API}/api/hdghartv?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
+      if (season !== undefined) hdghartvFetchUrl += `&season=${season}`;
+      if (episode !== undefined) hdghartvFetchUrl += `&episode=${episode}`;
+
+      const pHdghartv = fetch(hdghartvFetchUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Aether scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name: name.startsWith("HDGharTV") || name.startsWith("Aether") ? name : `Aether (${name})`,
+              url: v.url,
+              type: v.type || "hls",
+              quality: (v as any).quality || "Auto",
+            }));
+          setHdghartvSources(list);
+          if (!isBackground) setHdghartvError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setHdghartvError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setHdghartvLoading(false);
+        });
+
       return Promise.all([
         pVidrock,
         pVideasy,
@@ -7317,6 +7359,7 @@ export function InPlayerSourcePicker({
         pVidrift,
         pPeachify,
         pKuro,
+        pHdghartv,
       ]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
@@ -7350,6 +7393,13 @@ export function InPlayerSourcePicker({
 
   const vidrockUrl = sources
     .map((s) => (s.url.includes("#") ? s.url : `${s.url}#${s.name}#${s.type}`))
+    .join("|");
+  const hdghartvUrl = hdghartvSources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
     .join("|");
   const videasyUrl = videasySources
     .map((s) =>
@@ -7430,6 +7480,8 @@ export function InPlayerSourcePicker({
     if (isActive) {
       if (srcName === "Hyperion" || srcName === "VidRock")
         return "border-nebula-cyan bg-nebula-cyan/10 shadow-[0_0_15px_rgba(0,229,255,0.12)] ring-1 ring-nebula-cyan/35 scale-[1.01] cursor-default";
+      if (srcName === "Aether" || srcName === "HDGharTV" || srcName === "GharTV")
+        return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
       if (srcName === "Titan" || srcName === "Vidnest")
         return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
       if (srcName === "Quantum" || srcName === "Vaplayer")
@@ -7459,6 +7511,8 @@ export function InPlayerSourcePicker({
     if (hasDataFlag) {
       if (srcName === "Hyperion" || srcName === "VidRock")
         return "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95 cursor-pointer";
+      if (srcName === "Aether" || srcName === "HDGharTV" || srcName === "GharTV")
+        return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
       if (srcName === "Titan" || srcName === "Vidnest")
         return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
       if (srcName === "Quantum" || srcName === "Vaplayer")
@@ -7623,6 +7677,81 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase font-medium">
               {error || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Aether (HDGharTV) */}
+      <button
+        onClick={() =>
+          (hdghartvSources.length > 0 || failedSources.includes("Aether") || failedSources.includes("HDGharTV")) &&
+          onSelect(hdghartvUrl)
+        }
+        disabled={
+          activeSource === "Aether" ||
+          activeSource === "HDGharTV" ||
+          activeSource === "GharTV" ||
+          (hdghartvLoading && !failedSources.includes("Aether") && !failedSources.includes("HDGharTV"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Aether",
+          activeSource || "",
+          hdghartvLoading,
+          hdghartvSources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 shrink-0">
+              {hdghartvLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Tv size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Aether
+                </p>
+                {(failedSources.includes("Aether") || failedSources.includes("HDGharTV")) &&
+                  hdghartvSources.length === 0 && (
+                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                      FAILED
+                    </span>
+                  )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {hdghartvLoading ? "Scanning..." : "Multi-Audio"}
+              </p>
+            </div>
+          </div>
+          {(activeSource === "Aether" || activeSource === "HDGharTV" || activeSource === "GharTV") && (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {hdghartvLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Scanning Aether...
+            </span>
+          ) : hdghartvSources.length > 0 ? (
+            hdghartvSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^(Aether|HDGharTV|GharTV)\s*\((.*?)\)$/i, "$2")
+                  .replace(/^(Aether|HDGharTV|GharTV)/i, "")
+                  .trim()
+                  .toUpperCase() || "HD"}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {hdghartvError || "No mirrors"}
             </span>
           )}
         </div>
