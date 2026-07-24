@@ -102,6 +102,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [kuroLoading, setKuroLoading] = useState(true);
   const [kuroError, setKuroError] = useState("");
 
+  const [hdghartvSources, setHdghartvSources] = useState<any[]>([]);
+  const [hdghartvLoading, setHdghartvLoading] = useState(true);
+  const [hdghartvError, setHdghartvError] = useState("");
+
   const isMountedRef = useRef(true);
 
   const loadAllSources = (force = false) => {
@@ -123,6 +127,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     setPeachifyError("");
     setKuroLoading(true);
     setKuroError("");
+    setHdghartvLoading(true);
+    setHdghartvError("");
 
     const forceParam = force ? "&force=1" : "";
 
@@ -409,6 +415,37 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (!isMountedRef.current) return;
         setKuroLoading(false);
       });
+
+    // 10. HDGharTV Fetch
+    let hdghartvFetchUrl = `${API_BASE_URL}/api/hdghartv?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
+    if (season !== undefined) hdghartvFetchUrl += `&season=${season}`;
+    if (episode !== undefined) hdghartvFetchUrl += `&episode=${episode}`;
+
+    fetch(hdghartvFetchUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan GharTV uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!isMountedRef.current) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name: name.startsWith("HDGharTV") || name.startsWith("GharTV") ? name : `GharTV (${name})`,
+            url: value.url,
+            type: value.type || "hls",
+            quality: (value as any).quality || "Auto",
+          }));
+        setHdghartvSources(activeSources);
+      })
+      .catch((err) => {
+        if (!isMountedRef.current) return;
+        setHdghartvError(err.message || "Failed to contact GharTV.");
+      })
+      .finally(() => {
+        if (!isMountedRef.current) return;
+        setHdghartvLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -421,6 +458,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
   // Construct the serialized pipelines
   const vidrockUrl = sources
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
+  const hdghartvUrl = hdghartvSources
     .map((src) =>
       src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
     )
@@ -818,6 +860,124 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {error ? "Uplink currently offline" : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Aether (HDGharTV) Card ── */}
+          <div
+            onClick={() => {
+              if (!hdghartvLoading && hdghartvSources.length > 0) onSelect(hdghartvUrl);
+            }}
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
+              hdghartvLoading
+                ? "border-emerald-500/25 bg-slate-950/60 opacity-80 cursor-wait"
+                : hdghartvSources.length > 0
+                  ? "border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(16,185,129,0.08)] hover:border-emerald-500/75 hover:shadow-[0_0_35px_rgba(16,185,129,0.22)] hover:from-emerald-500/20 cursor-pointer hover:scale-[1.01]"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
+                  hdghartvLoading || hdghartvSources.length > 0
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
+                }`}
+              >
+                <Tv
+                  size={20}
+                  className={hdghartvLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-emerald-400 transition-colors">
+                    Aether
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 uppercase tracking-wider shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+                    MULTI-AUDIO
+                  </span>
+                  {hdghartvLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : hdghartvSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/25 border border-emerald-500/40 text-emerald-400 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                      <Sparkles size={8} />
+                      ONLINE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
+                  High-speed HD streams (1080p, 720p, 480p) featuring multi-language audio (English & Hindi) and crisp HLS playback.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/10 pt-3">
+              {hdghartvLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                  </span>
+                  Scanning Aether...
+                </div>
+              ) : hdghartvSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
+                    Available Qualities:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {hdghartvSources.map((src) => {
+                      const cleanName = src.name
+                        .replace(/^(Aether|HDGharTV|GharTV)\s*\((.*?)\)$/i, "$2")
+                        .replace(/^(Aether|HDGharTV|GharTV)/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const color =
+                        "border-emerald-500/35 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/25 hover:shadow-[0_0_12px_rgba(16,185,129,0.25)]";
+                      return (
+                        <button
+                          key={src.name}
+                          title={`Play Aether (${cleanName}) mirror directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const reordered = [
+                              src,
+                              ...hdghartvSources.filter((s) => s.name !== src.name),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-wider transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${color}`}
+                        >
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
+                          {cleanName || "HD"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {hdghartvError ? "Uplink offline" : "No mirrors available"}
                 </p>
               )}
             </div>

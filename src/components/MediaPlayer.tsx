@@ -104,6 +104,9 @@ export const SOURCE_ALIASES: Record<string, string> = {
   Kuro: "Zenith",
   FilmU: "Orbital",
   Peachify: "Aurora",
+  HDGharTV: "Aether",
+  GharTV: "Aether",
+  Aether: "Aether",
 };
 
 export const getAudioFlagCode = (langStr?: string, defaultFlag?: string): string => {
@@ -134,6 +137,7 @@ export const getCategoryAlias = (category: string): string => {
   const catLower = category.toLowerCase();
   if (catLower.startsWith("vaplayer")) return "Quantum";
   if (catLower.startsWith("vidrock")) return "Hyperion";
+  if (catLower.startsWith("hdghartv") || catLower.startsWith("ghartv") || catLower.startsWith("aether")) return "Aether";
   if (catLower.startsWith("vidrift")) return "Velocity";
   if (catLower.startsWith("videasy")) return "Pulse";
   if (catLower.startsWith("vidlink")) return "Spectra";
@@ -162,6 +166,7 @@ export const formatSubtitleSource = (rawSource?: string): string => {
   }
 
   if (sLower.includes("vidrock")) return "Hyperion";
+  if (sLower.includes("hdghartv") || sLower.includes("ghartv") || sLower.includes("aether")) return "Aether";
   if (sLower.includes("vidnest")) return "Titan";
   if (sLower.includes("vaplayer")) return "Quantum";
   if (sLower.includes("vidrift")) return "Velocity";
@@ -233,6 +238,14 @@ export const parseMirrorDetails = (sourceName: string) => {
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
+  if (cleanSource.toLowerCase().startsWith("hdghartv") || cleanSource.toLowerCase().startsWith("ghartv") || cleanSource.toLowerCase().startsWith("aether")) {
+    const rest = cleanSource.replace(/^(HDGharTV|GharTV|Aether)[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
+    return {
+      category: "Aether",
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
+    };
+  }
   if (cleanSource.toLowerCase().startsWith("videasy")) {
     const rest = cleanSource.replace(/^Videasy[\s-]*/i, "").trim();
     const subClean = cleanSubProviderName(rest);
@@ -278,43 +291,145 @@ export const parseMirrorDetails = (sourceName: string) => {
       cleanSource.toUpperCase().includes(" DUB") ||
       cleanSource.toUpperCase().includes("(DUB");
     const category = isDub ? "Zenith (Dub)" : "Zenith (Sub)";
-    const cleanName = cleanSource
+    const rest = cleanSource
       .replace(/^Kuro[\s-]*/i, "")
-      .replace(/\s*\(?SUB\)?/i, "")
-      .replace(/\s*\(?DUB\)?/i, "")
+      .replace(/\(Sub\)|\(Dub\)|Sub|Dub/gi, "")
       .trim();
-    const subClean = cleanSubProviderName(cleanName);
+    const subClean = cleanSubProviderName(rest);
     return {
       category,
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
 
+  const alias = getCategoryAlias(cleanSource);
   return {
-    category: "Spectra",
-    name: (cleanSubProviderName(cleanSource) + suffix).toUpperCase(),
+    category: alias || "Other",
+    name: (cleanSource + suffix).toUpperCase(),
   };
 };
 
 export const serverSortOrder = [
-  "neon",
-  "yoru",
-  "cypher",
-  "sage",
-  "breach",
-  "vyse",
-  "killjoy",
-  "fade",
+  "prime",
+  "catflix",
+  "videasy",
+  "allmovies",
+  "moviesapi",
+  "klikxxi",
+  "vsembed",
+  "superstream",
+  "vidlink",
+  "vidplay",
+  "mycloud",
+  "filemoon",
+  "streamtape",
+  "fast",
+  "alpha",
+  "beta",
+  "gamma",
+  "delta",
+  "epsilon",
+  "zeta",
+  "eta",
+  "theta",
+  "iota",
+  "kappa",
+  "lambda",
+  "mu",
+  "nu",
+  "xi",
+  "omicron",
+  "pi",
+  "rho",
+  "sigma",
+  "tau",
+  "upsilon",
+  "phi",
+  "chi",
+  "psi",
+  "omega",
+  "apex",
+  "blaze",
+  "cipher",
+  "drift",
+  "echo",
+  "flux",
+  "pulse",
+  "titan",
+  "vortex",
+  "zenith",
+  "aurora",
+  "breeze",
+  "comet",
+  "dawn",
+  "ember",
+  "frost",
+  "glimmer",
+  "horizon",
+  "iris",
+  "jade",
+  "kronos",
+  "lunar",
+  "mystic",
+  "nexus",
+  "orbit",
+  "prism",
+  "quasar",
+  "radiant",
+  "shadow",
+  "solar",
+  "tempest",
+  "umbra",
+  "velox",
+  "wave",
+  "xenon",
+  "yield",
+  "zephyr",
+  "astra",
+  "bolt",
+  "cosmos",
+  "dusk",
+  "ether",
+  "falcon",
+  "galaxy",
+  "halo",
+  "ignite",
+  "jupiter",
+  "knight",
+  "legend",
+  "matrix",
+  "nebula",
+  "orion",
+  "phoenix",
+  "quantum",
+  "radar",
+  "stellar",
+  "trident",
+  "ultra",
+  "vector",
+  "wild",
+  "xray",
+  "yeti",
+  "zenith",
+  "abyss",
+  "beacon",
+  "climax",
+  "dynamo",
+  "exodus",
+  "fusion",
+  "gravity",
+  "hyper",
+  "infinity",
+  "jolt",
+  "kinetic",
+  "lumos",
+  "magma",
+  "nitro",
   "omen",
   "raze",
   "nova",
   "atlas",
   "orion",
-  "air",
-  "holly",
-  "moviebox",
-  "net",
-  "multi",
 ];
 
 export const CATEGORY_PRIORITY = [
@@ -322,6 +437,9 @@ export const CATEGORY_PRIORITY = [
   "Vaplayer",
   "Hyperion",
   "VidRock",
+  "Aether",
+  "HDGharTV",
+  "GharTV",
   "Velocity",
   "Vidrift",
   "Pulse",
