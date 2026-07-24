@@ -13,6 +13,7 @@ import {
   Gauge,
   Loader2,
   Subtitles,
+  AudioWaveform,
   ChevronLeft,
   ChevronRight,
   List,
@@ -98,6 +99,28 @@ export const SOURCE_ALIASES: Record<string, string> = {
   Kuro: "Zenith",
   FilmU: "Orbital",
   Peachify: "Aurora",
+};
+
+export const getAudioFlagCode = (langStr?: string, defaultFlag?: string): string => {
+  if (defaultFlag) {
+    const df = defaultFlag.toLowerCase();
+    return df === "en" ? "us" : df;
+  }
+  const l = (langStr || "").toLowerCase().trim();
+  if (!l || l.includes("original") || l.includes("default")) return "us";
+  if (l.includes("hindi") || l.includes("hin")) return "in";
+  if (l.includes("german") || l.includes("deutsch") || l.includes("ger")) return "de";
+  if (l.includes("spanish") || l.includes("espanol") || l.includes("spa") || l.includes("mx") || l.includes("lamovie")) return "mx";
+  if (l.includes("brazil") || l.includes("portuguese") || l.includes("superflix")) return "br";
+  if (l.includes("japan") || l.includes("japanese") || l.includes("sub")) return "jp";
+  if (l.includes("french") || l.includes("fre")) return "fr";
+  if (l.includes("italian") || l.includes("ita")) return "it";
+  if (l.includes("russian") || l.includes("rus")) return "ru";
+  if (l.includes("chinese") || l.includes("zh")) return "cn";
+  if (l.includes("korean") || l.includes("kor")) return "kr";
+  if (l.includes("tagalog") || l.includes("filipino")) return "ph";
+  if (l.includes("dub") || l.includes("english") || l.includes("eng") || l.includes("us")) return "us";
+  return "us";
 };
 
 export const getCategoryAlias = (category: string): string => {
@@ -214,10 +237,6 @@ export const parseMirrorDetails = (sourceName: string) => {
     };
   }
   if (cleanSource.toLowerCase().startsWith("kuro")) {
-    const isDub =
-      cleanSource.toUpperCase().includes(" DUB") ||
-      cleanSource.toUpperCase().includes("(DUB");
-    const category = isDub ? "Zenith (Dub)" : "Zenith (Sub)";
     const cleanName = cleanSource
       .replace(/^Kuro[\s-]*/i, "")
       .replace(/\s*\(?SUB\)?/i, "")
@@ -225,7 +244,7 @@ export const parseMirrorDetails = (sourceName: string) => {
       .trim();
     const subClean = cleanSubProviderName(cleanName);
     return {
-      category,
+      category: "Zenith",
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
@@ -460,6 +479,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [showUi, setShowUi] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showServersModal, setShowServersModal] = useState(false);
+  const [showAudioModal, setShowAudioModal] = useState(false);
+  const [hlsAudioTracks, setHlsAudioTracks] = useState<any[]>([]);
+  const [currentHlsAudioTrack, setCurrentHlsAudioTrack] = useState<number>(-1);
   const [showSubStyles, setShowSubStyles] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [streamReloadKey, setStreamReloadKey] = useState(0);
@@ -2612,6 +2634,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const h = getHlsLevelHeight(level, data.level, hls.levels.length);
           console.log(`[HLS] Quality switched to ${h}p (level ${data.level})`);
           setCurrentHeight(h);
+        }
+      });
+
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+        if (data && data.audioTracks) {
+          console.log("[HLS] Audio tracks updated:", data.audioTracks);
+          setHlsAudioTracks(data.audioTracks);
+          setCurrentHlsAudioTrack(hls.audioTrack);
+        }
+      });
+
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (_, data) => {
+        if (data && typeof data.id === "number") {
+          console.log(`[HLS] Audio track switched to index ${data.id}`);
+          setCurrentHlsAudioTrack(data.id);
         }
       });
 
@@ -5025,80 +5062,86 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         });
 
                         return Object.entries(groupedByCategory).map(
-                          ([category, items]) => (
-                            <div key={category} className="mb-2 last:mb-0">
-                              <div className="flex items-center gap-1.5 px-2 mb-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
-                                <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
-                                  {category}
-                                </span>
-                              </div>
-                              <div className="flex flex-col gap-1 px-1">
-                                {items.map(
-                                  ({ mirror: m, originalIndex: idx }) => {
-                                    const flagCode = m.flag
-                                      ? m.flag.toLowerCase()
-                                      : "us";
-                                    const countryCode =
-                                      flagCode === "en" ? "us" : flagCode;
-                                    const isSelected = activeMirror === idx;
-                                    const failedReason =
-                                      failedMirrors[m.source];
-                                    return (
-                                      <button
-                                        key={idx}
-                                        onClick={() => {
-                                          selectMirror(idx, mirrors);
-                                          setShowServersModal(false);
-                                        }}
-                                        className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
-                                          isSelected
-                                            ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
-                                            : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
-                                        }`}
-                                      >
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                          <img
-                                            src={`https://flagcdn.com/w20/${countryCode}.png`}
-                                            alt={flagCode}
-                                            className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
-                                            onError={(e) => {
-                                              e.currentTarget.src =
-                                                "https://flagcdn.com/w20/us.png";
-                                            }}
-                                          />
-                                          <div className="flex flex-col min-w-0">
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                              <span className="truncate text-xs font-semibold leading-tight font-display text-white">
-                                                {m.cleanName}
-                                              </span>
-                                              {failedReason && (
-                                                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 uppercase tracking-wider shrink-0">
-                                                  {failedReason}
+                          ([category, items]) => {
+                            const seenCleanNames = new Set<string>();
+                            const uniqueItems: { mirror: any; originalIndex: number }[] = [];
+                            items.forEach((item) => {
+                              if (!seenCleanNames.has(item.mirror.cleanName)) {
+                                seenCleanNames.add(item.mirror.cleanName);
+                                uniqueItems.push(item);
+                              }
+                            });
+
+                            return (
+                              <div key={category} className="mb-2 last:mb-0">
+                                <div className="flex items-center gap-1.5 px-2 mb-1.5">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
+                                  <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
+                                    {category}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col gap-1 px-1">
+                                  {uniqueItems.map(
+                                    ({ mirror: m, originalIndex: idx }) => {
+                                      const flagCode = m.flag
+                                        ? m.flag.toLowerCase()
+                                        : "us";
+                                      const countryCode =
+                                        flagCode === "en" ? "us" : flagCode;
+                                      const isSelected = activeMirror === idx;
+                                      const failedReason =
+                                        failedMirrors[m.source];
+                                      return (
+                                        <button
+                                          key={idx}
+                                          onClick={() => {
+                                            selectMirror(idx, mirrors);
+                                            setShowServersModal(false);
+                                          }}
+                                          className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
+                                            isSelected
+                                              ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                              : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2.5 min-w-0">
+                                            <img
+                                              src={`https://flagcdn.com/w20/${countryCode}.png`}
+                                              alt={flagCode}
+                                              className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
+                                              onError={(e) => {
+                                                e.currentTarget.src =
+                                                  "https://flagcdn.com/w20/us.png";
+                                              }}
+                                            />
+                                            <div className="flex flex-col min-w-0">
+                                              <div className="flex items-center gap-1.5 min-w-0">
+                                                <span className="truncate text-xs font-semibold leading-tight font-display text-white">
+                                                  {m.cleanName}
                                                 </span>
-                                              )}
+                                                {failedReason && (
+                                                  <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 uppercase tracking-wider shrink-0">
+                                                    {failedReason}
+                                                  </span>
+                                                )}
+                                              </div>
                                             </div>
-                                            {m.audio && (
-                                              <span className="text-[9px] text-white/40 font-normal leading-tight mt-0.5">
-                                                {m.audio}
-                                              </span>
+                                          </div>
+                                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                            {isSelected ? (
+                                              <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                                            ) : (
+                                              <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors" />
                                             )}
                                           </div>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                          {isSelected ? (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
-                                          ) : (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors" />
-                                          )}
-                                        </div>
-                                      </button>
-                                    );
-                                  },
-                                )}
+                                        </button>
+                                      );
+                                    },
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ),
+                            );
+                          },
                         );
                       })()}
                     </div>
@@ -5292,6 +5335,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     setShowEpisodeDrawer(true);
                     setShowSettings(false);
                     setShowSubtitles(false);
+                    setShowAudioModal(false);
                     setShowServersModal(false);
                   }}
                   className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showEpisodeDrawer ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
@@ -5307,6 +5351,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     onClick={() => {
                       setShowSubtitles((p) => !p);
                       setShowSettings(false);
+                      setShowAudioModal(false);
                       setShowServersModal(false);
                       setShowEpisodeDrawer(false);
                     }}
@@ -5316,11 +5361,36 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     <Subtitles size={16} />
                   </button>
 
-                  {/* Settings */}
+                  {/* Audio Tracks Button */}
+                  <button
+                    onClick={() => {
+                      setShowAudioModal((p) => !p);
+                      setShowSubtitles(false);
+                      setShowSettings(false);
+                      setShowServersModal(false);
+                      setShowEpisodeDrawer(false);
+                    }}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showAudioModal ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
+                    title="Audio Tracks"
+                  >
+                    <AudioWaveform size={16} />
+                  </button>
+
+                  {/* Fullscreen */}
+                  <button
+                    onClick={handleFullscreen}
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
+                    title="Fullscreen (F)"
+                  >
+                    <Maximize size={16} />
+                  </button>
+
+                  {/* Settings (far right beside Fullscreen) */}
                   <button
                     onClick={() => {
                       setShowSettings((p) => !p);
                       setShowSubtitles(false);
+                      setShowAudioModal(false);
                       setShowServersModal(false);
                       setShowEpisodeDrawer(false);
                     }}
@@ -5329,100 +5399,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   >
                     <Settings size={16} />
                   </button>
-
-                  {/* Zoom Fit - Desktop Only */}
-                  {!isMobileDevice && (
-                    <button
-                      onClick={() => {
-                        setIsZoomed((z) => {
-                          const next = !z;
-                          showToast(
-                            next ? "Zoomed to Fill" : "Fit to Screen",
-                            "info",
-                          );
-                          return next;
-                        });
-                      }}
-                      className={`hidden lg:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center transition-all ${
-                        isZoomed
-                          ? "bg-nebula-cyan text-obsidian font-black shadow-[0_0_10px_rgba(0,229,255,0.4)]"
-                          : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20"
-                      }`}
-                      title={isZoomed ? "Fit to Screen" : "Zoom to Fill"}
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        {isZoomed ? (
-                          <>
-                            <rect
-                              x="2"
-                              y="4"
-                              width="20"
-                              height="16"
-                              rx="2"
-                              strokeDasharray="3 3"
-                              opacity="0.6"
-                            />
-                            <path d="M12 7v10" />
-                            <path d="M9 10l3 3 3-3" />
-                            <path d="M9 14l3-3 3 3" />
-                          </>
-                        ) : (
-                          <>
-                            <rect x="2" y="4" width="20" height="16" rx="2" />
-                            <path d="M12 7v10" />
-                            <path d="M9 10l3-3 3 3" />
-                            <path d="M9 14l3 3 3-3" />
-                          </>
-                        )}
-                      </svg>
-                    </button>
-                  )}
                 </>
               )}
-              {!isMobileDevice && (
-                <>
-                  <button
-                    onClick={() => {
-                      setShowHotkeys((p) => !p);
-                      setShowSettings(false);
-                      setShowSubtitles(false);
-                      setShowEpisodeDrawer(false);
-                      setShowServersModal(false);
-                    }}
-                    className={`hidden lg:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center transition-all ${
-                      showHotkeys
-                        ? "bg-white text-black"
-                        : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20"
-                    }`}
-                    title="Keyboard Shortcuts (?)"
-                  >
-                    <Keyboard size={16} />
-                  </button>
-                  <button
-                    onClick={handleTogglePiP}
-                    className="hidden lg:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
-                    title="Picture-in-Picture"
-                  >
-                    <PictureInPicture size={16} />
-                  </button>
-                </>
-              )}
-              <button
-                onClick={handleFullscreen}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
-                title="Fullscreen (F)"
-              >
-                <Maximize size={16} />
-              </button>
 
               {/* Subtitles Menu */}
               {showSubtitles && (
@@ -5925,8 +5903,152 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 </div>
               )}
 
+              {/* Audio Tracks Menu */}
+              {showAudioModal && (
+                <div className="absolute bottom-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1.5 p-3.5 animate-in slide-in-from-bottom-2 duration-200 text-left">
+                  <div className="px-2 pb-2 mb-2 border-b border-white/5 flex items-center justify-between">
+                    <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                      <AudioWaveform size={13} className="text-nebula-cyan" />
+                      <span>Audio Tracks</span>
+                    </h3>
+                  </div>
+
+                  <div className="flex flex-col gap-1 px-1">
+                    {(() => {
+                      // 1. Native embedded HLS audio tracks (Case B)
+                      if (hlsAudioTracks.length > 0) {
+                        return hlsAudioTracks.map((track: any, i: number) => {
+                          const trackName = track.name || track.lang || `Track ${i + 1}`;
+                          const flagCode = getAudioFlagCode(trackName, track.lang);
+                          const isSelected =
+                            currentHlsAudioTrack === i ||
+                            (currentHlsAudioTrack === -1 && i === 0);
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                if (hlsRef.current) {
+                                  hlsRef.current.audioTrack = i;
+                                  setCurrentHlsAudioTrack(i);
+                                }
+                                setShowAudioModal(false);
+                              }}
+                              className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-200 flex items-center justify-between group text-xs ${
+                                isSelected
+                                  ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                  : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <img
+                                  src={`https://flagcdn.com/w20/${flagCode}.png`}
+                                  alt={flagCode}
+                                  className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
+                                  onError={(e) => {
+                                    e.currentTarget.src =
+                                      "https://flagcdn.com/w20/us.png";
+                                  }}
+                                />
+                                <span className="truncate font-semibold text-white">
+                                  {trackName}
+                                </span>
+                              </div>
+                              {isSelected && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                              )}
+                            </button>
+                          );
+                        });
+                      }
+
+                      // 2. Mirror-level audio tracks for active provider (Case A fallback)
+                      const activeM = mirrors[activeMirror];
+                      const activeCategory = activeM
+                        ? parseMirrorDetails(activeM.source).category
+                        : "";
+                      const seenAudioKey = new Set<string>();
+                      const availableAudioMirrors: {
+                        mirror: any;
+                        originalIndex: number;
+                      }[] = [];
+
+                      mirrors.forEach((m, i) => {
+                        const { category } = parseMirrorDetails(m.source);
+                        if (activeCategory && category === activeCategory) {
+                          const audioKey = (m.audio || "Original Audio").trim();
+                          if (!seenAudioKey.has(audioKey)) {
+                            seenAudioKey.add(audioKey);
+                            availableAudioMirrors.push({
+                              mirror: m,
+                              originalIndex: i,
+                            });
+                          }
+                        }
+                      });
+
+                      if (
+                        availableAudioMirrors.length <= 1 &&
+                        !availableAudioMirrors[0]?.mirror?.audio
+                      ) {
+                        return (
+                          <div className="px-3 py-2.5 text-xs text-white/50 flex items-center gap-2">
+                            <img
+                              src="https://flagcdn.com/w20/us.png"
+                              alt="us"
+                              className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
+                            />
+                            <span>Original Audio (Default)</span>
+                          </div>
+                        );
+                      }
+
+                      return availableAudioMirrors.map(
+                        ({ mirror: m, originalIndex: idx }) => {
+                          const audioLabel = m.audio || "Original Audio";
+                          const flagCode = getAudioFlagCode(audioLabel, m.flag);
+                          const isSelected = activeMirror === idx;
+
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                selectMirror(idx, mirrors);
+                                setShowAudioModal(false);
+                              }}
+                              className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-200 flex items-center justify-between group text-xs ${
+                                isSelected
+                                  ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                                  : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5 hover:border-white/5"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <img
+                                  src={`https://flagcdn.com/w20/${flagCode}.png`}
+                                  alt={flagCode}
+                                  className="w-4.5 h-3.5 object-cover rounded-[2px] shrink-0 border border-white/10 shadow-sm"
+                                  onError={(e) => {
+                                    e.currentTarget.src =
+                                      "https://flagcdn.com/w20/us.png";
+                                  }}
+                                />
+                                <span className="truncate font-semibold text-white">
+                                  {audioLabel}
+                                </span>
+                              </div>
+                              {isSelected && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff]" />
+                              )}
+                            </button>
+                          );
+                        },
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
               {showSettings && (
-                <div className="absolute bottom-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-60 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1.5 p-3.5 animate-in slide-in-from-bottom-2 duration-200 text-left">
+                <div className="absolute bottom-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1.5 p-3.5 animate-in slide-in-from-bottom-2 duration-200 text-left">
                   <div className="px-2 pb-2 mb-2 border-b border-white/5">
                     <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                       <Settings size={13} className="text-nebula-cyan" />
@@ -6041,6 +6163,76 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       </div>
                     );
                   })()}
+
+                  {/* Aspect Ratio / Zoom */}
+                  {!isMobileDevice && (
+                    <div className="mb-3">
+                      <div className="flex items-center gap-1.5 px-2 mb-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-nebula-cyan/85" />
+                        <span className="text-white/40 text-[8.5px] font-black uppercase tracking-wider">
+                          Aspect Ratio
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setIsZoomed((z) => {
+                            const next = !z;
+                            showToast(
+                              next ? "Zoomed to Fill" : "Fit to Screen",
+                              "info",
+                            );
+                            return next;
+                          });
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl border transition-all duration-200 flex items-center justify-between group ${
+                          isZoomed
+                            ? "text-white bg-white/10 border-white/15 font-bold shadow-lg shadow-black/35"
+                            : "text-white/60 bg-transparent border-transparent hover:text-white hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="text-xs font-semibold">
+                          {isZoomed ? "Zoomed to Fill" : "Fit to Screen"}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-nebula-cyan">
+                          {isZoomed ? "Crop" : "Default"}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Actions: PiP & Keyboard Shortcuts */}
+                  {!isMobileDevice && (
+                    <div className="border-t border-white/5 pt-2 flex flex-col gap-1 px-1">
+                      <button
+                        onClick={() => {
+                          handleTogglePiP();
+                          setShowSettings(false);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl border border-transparent hover:border-white/5 hover:bg-white/5 text-white/70 hover:text-white transition-all flex items-center justify-between text-xs font-semibold group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <PictureInPicture size={14} className="text-white/50 group-hover:text-white transition-colors" />
+                          <span>Picture-in-Picture</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setShowHotkeys((p) => !p);
+                          setShowSettings(false);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl border border-transparent hover:border-white/5 hover:bg-white/5 text-white/70 hover:text-white transition-all flex items-center justify-between text-xs font-semibold group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Keyboard size={14} className="text-white/50 group-hover:text-white transition-colors" />
+                          <span>Keyboard Shortcuts</span>
+                        </div>
+                        <span className="text-[9px] font-mono bg-white/10 px-1.5 py-0.5 rounded text-white/40 font-bold">
+                          ?
+                        </span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Reload Stream — recovers from stuck seek/fast-forward */}
                   <div className="border-t border-white/5 pt-3 mt-1 px-1">
@@ -7306,22 +7498,24 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Zenith (Sub - Japanese) */}
+      {/* Zenith (Anime Only) */}
       <button
         onClick={() =>
-          (kuroSubSources.length > 0 || failedSources.includes("Kuro (Sub)")) &&
-          onSelect(kuroSubUrl)
+          (kuroSubSources.length > 0 || kuroDubSources.length > 0 || failedSources.includes("Kuro")) &&
+          onSelect(kuroSubSources.length > 0 ? kuroSubUrl : kuroDubUrl)
         }
         disabled={
+          activeSource === "Zenith" ||
           activeSource === "Zenith (Sub)" ||
-          activeSource === "Kuro (Sub)" ||
-          (kuroLoading && !failedSources.includes("Kuro (Sub)"))
+          activeSource === "Zenith (Dub)" ||
+          activeSource === "Kuro" ||
+          (kuroLoading && !failedSources.includes("Kuro"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Zenith (Sub)",
+          "Zenith",
           activeSource || "",
           kuroLoading,
-          kuroSubSources.length > 0,
+          kuroSubSources.length > 0 || kuroDubSources.length > 0,
         )}`}
       >
         <div className="flex items-center justify-between w-full">
@@ -7336,29 +7530,31 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Zenith (Sub)
+                  Zenith
                 </p>
                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-purple-500/35 bg-purple-500/20 text-purple-300 uppercase tracking-wider shrink-0">
-                  JAPANESE AUDIO
+                  ANIME ONLY
                 </span>
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {kuroLoading ? "Scanning..." : "Subbed Streams"}
+                {kuroLoading ? "Scanning..." : "Anime streams (Sub & Dub via Audio Tracks)"}
               </p>
             </div>
           </div>
-          {(activeSource === "Zenith (Sub)" ||
-            activeSource === "Kuro (Sub)") && (
+          {(activeSource === "Zenith" ||
+            activeSource === "Zenith (Sub)" ||
+            activeSource === "Zenith (Dub)" ||
+            activeSource === "Kuro") && (
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)] shrink-0" />
           )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {kuroLoading ? (
             <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Scanning sub streams...
+              Scanning anime streams...
             </span>
-          ) : kuroSubSources.length > 0 ? (
-            kuroSubSources.map((s) => (
+          ) : kuroSubSources.length > 0 || kuroDubSources.length > 0 ? (
+            [...kuroSubSources, ...kuroDubSources].map((s) => (
               <span
                 key={s.name}
                 className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wide"
@@ -7366,85 +7562,14 @@ export function InPlayerSourcePicker({
                 {s.name
                   .replace(/^Kuro[\s-]*/i, "")
                   .replace(/\s*\(?SUB\)?/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-violet-400 uppercase font-medium">
-              {kuroError || "No sub mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Zenith (Dub - English) */}
-      <button
-        onClick={() =>
-          (kuroDubSources.length > 0 || failedSources.includes("Kuro (Dub)")) &&
-          onSelect(kuroDubUrl)
-        }
-        disabled={
-          activeSource === "Zenith (Dub)" ||
-          activeSource === "Kuro (Dub)" ||
-          (kuroLoading && !failedSources.includes("Kuro (Dub)"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Zenith (Dub)",
-          activeSource || "",
-          kuroLoading,
-          kuroDubSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-pink-500/15 flex items-center justify-center text-pink-400 shrink-0">
-              {kuroLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Zap size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Zenith (Dub)
-                </p>
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-pink-500/35 bg-pink-500/20 text-pink-300 uppercase tracking-wider shrink-0">
-                  ENGLISH DUB
-                </span>
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {kuroLoading ? "Scanning..." : "Dubbed Streams"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Zenith (Dub)" ||
-            activeSource === "Kuro (Dub)") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {kuroLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Scanning dub streams...
-            </span>
-          ) : kuroDubSources.length > 0 ? (
-            kuroDubSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-pink-500/20 text-pink-400/80 bg-pink-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Kuro[\s-]*/i, "")
                   .replace(/\s*\(?DUB\)?/i, "")
                   .trim()
                   .toUpperCase()}
               </span>
             ))
           ) : (
-            <span className="text-[8px] text-pink-400 uppercase font-medium">
-              {kuroError || "No dub mirrors"}
+            <span className="text-[8px] text-violet-400 uppercase font-medium">
+              {kuroError || "No anime mirrors"}
             </span>
           )}
         </div>
