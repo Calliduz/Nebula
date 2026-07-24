@@ -148,6 +148,40 @@ export const getCategoryAlias = (category: string): string => {
   return category;
 };
 
+export const formatSubtitleSource = (rawSource?: string): string => {
+  if (!rawSource) return "";
+  const s = rawSource.trim();
+  const sLower = s.toLowerCase();
+
+  if (sLower === "opensubtitles") return "OpenSubtitles";
+  if (sLower === "custom") return "Custom";
+
+  if (/\(.*\)/.test(s)) return s;
+
+  let baseName = s;
+  if (sLower === "vidrock") baseName = "VidRock";
+  else if (sLower === "vidnest") baseName = "VidNest";
+  else if (sLower === "vaplayer") baseName = "VAPlayer";
+  else if (sLower === "vidrift") baseName = "Vidrift";
+  else if (sLower === "filmu") baseName = "FilmU";
+  else if (sLower === "vidlink") baseName = "VidLink";
+  else if (sLower === "videasy") baseName = "Videasy";
+  else if (sLower === "peachify") baseName = "Peachify";
+  else if (sLower === "kuro") baseName = "Kuro";
+  else if (sLower === "vidvault") baseName = "VidVault";
+
+  const alias = getCategoryAlias(s);
+  if (
+    alias &&
+    alias.toLowerCase() !== sLower &&
+    alias.toLowerCase() !== baseName.toLowerCase()
+  ) {
+    return `${baseName} (${alias})`;
+  }
+
+  return baseName;
+};
+
 const cleanSubProviderName = (name: string): string => {
   return name
     .replace(/HollyMovieHD/i, "Alpha")
@@ -2251,8 +2285,38 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     return movie.id;
   }, [movie.id, movie.type, season, episode]);
 
+  const isSubFromSelectedSource = useCallback(
+    (sub: any, activeM: any): boolean => {
+      if (!sub || !sub.source || !activeM || !activeM.source) return false;
+      const subSrc = sub.source.toLowerCase().trim();
+      const activeSrc = activeM.source.toLowerCase().trim();
+      const { category: activeCat } = parseMirrorDetails(activeM.source);
+      const activeCatLower = activeCat.toLowerCase().trim();
+
+      if (activeSrc.includes(subSrc) || subSrc.includes(activeSrc)) return true;
+
+      const subAlias = getCategoryAlias(sub.source).toLowerCase().trim();
+      if (
+        subAlias &&
+        (subAlias === activeCatLower || activeSrc.includes(subAlias))
+      )
+        return true;
+
+      for (const [rawKey, aliasVal] of Object.entries(SOURCE_ALIASES)) {
+        if (
+          rawKey.toLowerCase() === subSrc &&
+          aliasVal.toLowerCase() === activeCatLower
+        )
+          return true;
+      }
+
+      return false;
+    },
+    [],
+  );
+
   const processSubtitles = useCallback(
-    (newSubs: any[], existingSubs: any[]) => {
+    (newSubs: any[], existingSubs: any[], activeM?: any) => {
       const combined = [...existingSubs];
       newSubs.forEach((ns) => {
         const normalizedUrl = ns.url.startsWith("/")
@@ -2265,40 +2329,43 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }
       });
 
-      const englishSubs: any[] = [];
-      const otherLangSubs: any[] = [];
+      const currentActiveM = activeM || mirrorsRef.current[activeMirrorRef.current];
 
-      // Group subtitles by language priority
-      combined.forEach((s) => {
+      const getPriorityScore = (s: any) => {
         const isEnglish =
-          (s.lang || "").startsWith("en") ||
+          (s.lang || "").toLowerCase().startsWith("en") ||
           s.languageName?.toLowerCase().includes("english");
-        if (isEnglish) englishSubs.push(s);
-        else otherLangSubs.push(s);
+        const isSelected = isSubFromSelectedSource(s, currentActiveM);
+        const isExternal =
+          !s.source ||
+          s.source.toLowerCase() === "opensubtitles" ||
+          s.source.toLowerCase() === "custom";
+
+        if (isEnglish && isSelected) return 0;       // English sub of selected source -> FIRST paired!
+        if (isEnglish && !isExternal) return 1;     // English sub of other provider source
+        if (isEnglish && isExternal) return 2;      // English sub of external source
+        if (!isEnglish && isSelected) return 3;     // Non-English sub of selected source
+        if (!isEnglish && !isExternal) return 4;    // Non-English sub of other provider source
+        return 5;                                   // Non-English sub of external
+      };
+
+      const sorted = [...combined].sort((a, b) => {
+        const scoreA = getPriorityScore(a);
+        const scoreB = getPriorityScore(b);
+        return scoreA - scoreB;
       });
 
-      const processGroup = (group: any[]) => {
-        // Priority sources get labeled cleanly; others get a count + source badge
-        const prioritySources = [
-          "VidVault",
-          "VidLink",
-          "Videasy",
-          "VidRock",
-          "Peachify",
-          "Custom",
-        ];
-        const priority = group.filter((s) =>
-          prioritySources.includes(s.source),
-        );
-        const external = group.filter(
-          (s) => !prioritySources.includes(s.source),
-        );
+      const processed: any[] = [];
+      const srcCount: Record<string, Record<string, number>> = {};
+      const extCount: Record<string, number> = {};
 
-        const processed: any[] = [];
-        const srcCount: Record<string, Record<string, number>> = {};
-        const extCount: Record<string, number> = {};
+      sorted.forEach((s) => {
+        const isExternal =
+          !s.source ||
+          s.source.toLowerCase() === "opensubtitles" ||
+          s.source.toLowerCase() === "custom";
 
-        priority.forEach((s) => {
+        if (!isExternal) {
           const lang = s.lang || "unk";
           const src = s.source || "Unknown";
           if (!srcCount[src]) srcCount[src] = {};
@@ -2310,18 +2377,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           if (s.source === "Custom") {
             name = s.languageName || "Custom (Uploaded)";
           } else {
-            const srcLabel =
-              s.source === "VidLink"
-                ? "VidLink"
-                : s.source === "VidVault"
-                  ? "VidVault"
-                  : s.source === "Videasy"
-                    ? "Videasy"
-                    : s.source === "VidRock"
-                      ? "Hyperion Cache"
-                      : s.source === "Peachify"
-                        ? "Peachify"
-                        : s.source;
             const base =
               lang.startsWith("en") ||
               s.languageName?.toLowerCase().includes("english")
@@ -2330,9 +2385,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             name = `${base}${suffix}`;
           }
           processed.push({ ...s, languageName: name });
-        });
-
-        external.forEach((s) => {
+        } else {
           const lang = s.lang || "unk";
           const count = extCount[lang] || 0;
           if (count < 3) {
@@ -2340,21 +2393,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const name = `${s.languageName} #${extCount[lang]}`;
             processed.push({ ...s, languageName: name });
           }
-        });
+        }
+      });
 
-        return processed;
-      };
-
-      return [...processGroup(englishSubs), ...processGroup(otherLangSubs)];
+      return processed;
     },
-    [API],
+    [API, isSubFromSelectedSource],
   );
 
   useEffect(() => {
     const activeM = mirrors[activeMirror];
-    if (activeM && activeM.subtitles && activeM.subtitles.length > 0) {
-      setSubtitles((prev) => processSubtitles(activeM.subtitles, prev));
-    }
+    setSubtitles((prev) => processSubtitles(activeM?.subtitles || [], prev, activeM));
   }, [activeMirror, mirrors, processSubtitles]);
 
   // ── Fetch TV Details ──────────────────────────────────────────────────────
@@ -5822,20 +5871,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       const cleanLangName = sub.languageName
                         .replace(/\s*\(External\).*/i, "")
                         .trim();
-                      const cleanSource = (() => {
-                        if (!sub.source) return "";
-                        const s = sub.source.toLowerCase();
-                        if (s === "opensubtitles") return "OpenSubtitles";
-                        if (s === "vidrock") return "VidRock";
-                        if (s === "vidnest") return "VidNest";
-                        if (s === "vaplayer") return "VAPlayer";
-                        if (s === "vidrift") return "Vidrift";
-                        if (s === "filmu") return "FilmU";
-                        if (s === "vidlink") return "VidLink";
-                        if (s === "videasy") return "Videasy";
-                        if (s === "custom") return "Custom";
-                        return sub.source;
-                      })();
+                      const cleanSource = formatSubtitleSource(sub.source);
                       return (
                         <button
                           key={i}
