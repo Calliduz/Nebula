@@ -5376,16 +5376,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     <AudioWaveform size={16} />
                   </button>
 
-                  {/* Fullscreen */}
-                  <button
-                    onClick={handleFullscreen}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
-                    title="Fullscreen (F)"
-                  >
-                    <Maximize size={16} />
-                  </button>
-
-                  {/* Settings (far right beside Fullscreen) */}
+                  {/* Settings */}
                   <button
                     onClick={() => {
                       setShowSettings((p) => !p);
@@ -5398,6 +5389,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     title="Settings"
                   >
                     <Settings size={16} />
+                  </button>
+
+                  {/* Fullscreen (far right) */}
+                  <button
+                    onClick={handleFullscreen}
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
+                    title="Fullscreen (F)"
+                  >
+                    <Maximize size={16} />
                   </button>
                 </>
               )}
