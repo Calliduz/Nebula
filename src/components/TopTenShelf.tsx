@@ -27,7 +27,9 @@ export const TopTenShelf = memo(
       const newShowRight = scrollLeft + clientWidth < scrollWidth - 5;
 
       setShowLeftArrow((prev) => (prev !== newShowLeft ? newShowLeft : prev));
-      setShowRightArrow((prev) => (prev !== newShowRight ? newShowRight : prev));
+      setShowRightArrow((prev) =>
+        prev !== newShowRight ? newShowRight : prev,
+      );
     }, []);
 
     const updateArrows = useCallback(() => {
@@ -138,7 +140,10 @@ export const TopTenShelf = memo(
                       />
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all duration-300 pointer-events-none z-20">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-nebula-cyan/95 text-obsidian flex items-center justify-center shadow-[0_0_25px_rgba(0,229,255,0.75)] transform scale-75 group-hover/card:scale-100 transition-transform duration-300">
-                          <Info size={22} className="stroke-[2.5] text-obsidian" />
+                          <Info
+                            size={22}
+                            className="stroke-[2.5] text-obsidian"
+                          />
                         </div>
                       </div>
                       <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 via-black/10 to-transparent opacity-90 pointer-events-none z-10" />

@@ -14,13 +14,7 @@ interface MovieCardProps {
 }
 
 export const MovieCard = memo<MovieCardProps>(
-  ({
-    movie,
-    snap = false,
-    onSelect,
-    aspect = "portrait",
-    isGrid = false,
-  }) => {
+  ({ movie, snap = false, onSelect, aspect = "portrait", isGrid = false }) => {
     const isLandscape = aspect === "landscape";
     const [imgLoaded, setImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);
@@ -158,7 +152,11 @@ export const MovieCard = memo<MovieCardProps>(
             <div className="flex items-center gap-2 text-xs font-bold text-white/80 mb-1 leading-none">
               {movie.imdb && movie.imdb > 0 && (
                 <span className="text-nebula-cyan font-black flex items-center gap-1">
-                  <Star size={12} className="fill-nebula-cyan text-nebula-cyan" /> {movie.imdb}
+                  <Star
+                    size={12}
+                    className="fill-nebula-cyan text-nebula-cyan"
+                  />{" "}
+                  {movie.imdb}
                 </span>
               )}
               {movie.year && <span>• {movie.year}</span>}
@@ -168,7 +166,9 @@ export const MovieCard = memo<MovieCardProps>(
             </div>
             {movie.genre && (
               <span className="text-[11px] text-white/60 truncate leading-normal font-medium">
-                {Array.isArray(movie.genre) ? movie.genre.join(" • ") : movie.genre}
+                {Array.isArray(movie.genre)
+                  ? movie.genre.join(" • ")
+                  : movie.genre}
               </span>
             )}
           </div>
@@ -199,7 +199,8 @@ export const MovieCard = memo<MovieCardProps>(
       prevProps.movie?.genre === nextProps.movie?.genre &&
       prevProps.movie?.imdb === nextProps.movie?.imdb &&
       prevProps.movie?.progress?.time === nextProps.movie?.progress?.time &&
-      prevProps.movie?.progress?.duration === nextProps.movie?.progress?.duration &&
+      prevProps.movie?.progress?.duration ===
+        nextProps.movie?.progress?.duration &&
       prevProps.movie?.progress?.watched === nextProps.movie?.progress?.watched
     );
   },

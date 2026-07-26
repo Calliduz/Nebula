@@ -431,7 +431,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
-            name: name.startsWith("HDGharTV") || name.startsWith("GharTV") ? name : `GharTV (${name})`,
+            name:
+              name.startsWith("HDGharTV") || name.startsWith("GharTV")
+                ? name
+                : `GharTV (${name})`,
             url: value.url,
             type: value.type || "hls",
             quality: (value as any).quality || "Auto",
@@ -868,7 +871,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           {/* ── Aether (HDGharTV) Card ── */}
           <div
             onClick={() => {
-              if (!hdghartvLoading && hdghartvSources.length > 0) onSelect(hdghartvUrl);
+              if (!hdghartvLoading && hdghartvSources.length > 0)
+                onSelect(hdghartvUrl);
             }}
             className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
               hdghartvLoading
@@ -913,7 +917,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  High-speed HD streams (1080p, 720p, 480p) featuring multi-language audio (English & Hindi) and crisp HLS playback.
+                  High-speed HD streams (1080p, 720p, 480p) featuring
+                  multi-language audio (English & Hindi) and crisp HLS playback.
                 </p>
               </div>
             </div>
@@ -936,7 +941,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   <div className="flex flex-wrap gap-1.5">
                     {hdghartvSources.map((src) => {
                       const cleanName = src.name
-                        .replace(/^(Aether|HDGharTV|GharTV)\s*\((.*?)\)$/i, "$2")
+                        .replace(
+                          /^(Aether|HDGharTV|GharTV)\s*\((.*?)\)$/i,
+                          "$2",
+                        )
                         .replace(/^(Aether|HDGharTV|GharTV)/i, "")
                         .trim()
                         .toUpperCase();
@@ -950,7 +958,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                             e.stopPropagation();
                             const reordered = [
                               src,
-                              ...hdghartvSources.filter((s) => s.name !== src.name),
+                              ...hdghartvSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
                             ];
                             const selectedUrl = reordered
                               .map((s) =>
