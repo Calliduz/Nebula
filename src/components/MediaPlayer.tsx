@@ -7173,6 +7173,10 @@ export function InPlayerSourcePicker({
   const [hdghartvLoading, setHdghartvLoading] = useState(true);
   const [hdghartvError, setHdghartvError] = useState("");
 
+  const [netnaijaSources, setNetnaijaSources] = useState<any[]>([]);
+  const [netnaijaLoading, setNetnaijaLoading] = useState(true);
+  const [netnaijaError, setNetnaijaError] = useState("");
+
   // Keep latest onLoadingChange ref to avoid triggering effect loops
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
@@ -7189,7 +7193,8 @@ export function InPlayerSourcePicker({
         vidriftLoading ||
         peachifyLoading ||
         kuroLoading ||
-        hdghartvLoading,
+        hdghartvLoading ||
+        netnaijaLoading,
     );
   }, [
     loading,
@@ -7201,6 +7206,7 @@ export function InPlayerSourcePicker({
     peachifyLoading,
     kuroLoading,
     hdghartvLoading,
+    netnaijaLoading,
   ]);
 
   const fetchSources = useCallback(
@@ -7224,6 +7230,8 @@ export function InPlayerSourcePicker({
         setKuroError("");
         setHdghartvLoading(true);
         setHdghartvError("");
+        setNetnaijaLoading(true);
+        setNetnaijaError("");
       }
 
       const forceParam = force ? "&force=1" : "";
@@ -7489,6 +7497,38 @@ export function InPlayerSourcePicker({
           if (!isBackground) setHdghartvLoading(false);
         });
 
+      // 10. NetNaija (Vesper) Fetch
+      let netnaijaFetchUrl = `${API}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
+      if (season !== undefined) netnaijaFetchUrl += `&season=${season}`;
+      if (episode !== undefined) netnaijaFetchUrl += `&episode=${episode}`;
+
+      const pNetnaija = fetch(netnaijaFetchUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error("Vesper scan failed");
+          return r.json();
+        })
+        .then((data) => {
+          const list = Object.entries(data)
+            .filter(([, v]: any) => v && v.url)
+            .map(([name, v]: any) => ({
+              name:
+                name.startsWith("Vesper") || name.startsWith("NetNaija")
+                  ? name
+                  : `Vesper (${name})`,
+              url: v.url,
+              type: v.type || "mp4",
+              quality: (v as any).quality || "Auto",
+            }));
+          setNetnaijaSources(list);
+          if (!isBackground) setNetnaijaError("");
+        })
+        .catch((e) => {
+          if (!isBackground) setNetnaijaError(e.message);
+        })
+        .finally(() => {
+          if (!isBackground) setNetnaijaLoading(false);
+        });
+
       return Promise.all([
         pVidrock,
         pVideasy,
@@ -7499,6 +7539,7 @@ export function InPlayerSourcePicker({
         pPeachify,
         pKuro,
         pHdghartv,
+        pNetnaija,
       ]);
     },
     [movie.id, movie.type, season, episode, movie.title, movie.year],
@@ -7576,6 +7617,14 @@ export function InPlayerSourcePicker({
     )
     .join("|");
 
+  const netnaijaUrl = netnaijaSources
+    .map((s) =>
+      s.url.includes("#")
+        ? s.url
+        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
+    )
+    .join("|");
+
   const peachifyUrl = peachifySources
     .map((s) =>
       s.url.includes("#")
@@ -7625,6 +7674,8 @@ export function InPlayerSourcePicker({
         srcName === "GharTV"
       )
         return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
+      if (srcName === "Vesper" || srcName === "NetNaija")
+        return "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default";
       if (srcName === "Titan" || srcName === "Vidnest")
         return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
       if (srcName === "Quantum" || srcName === "Vaplayer")
@@ -7660,6 +7711,8 @@ export function InPlayerSourcePicker({
         srcName === "GharTV"
       )
         return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
+      if (srcName === "Vesper" || srcName === "NetNaija")
+        return "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer";
       if (srcName === "Titan" || srcName === "Vidnest")
         return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
       if (srcName === "Quantum" || srcName === "Vaplayer")
@@ -7911,28 +7964,32 @@ export function InPlayerSourcePicker({
         </div>
       </button>
 
-      {/* Velocity (Vidrift) */}
+      {/* Vesper (NetNaija) */}
       <button
         onClick={() =>
-          (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
-          onSelect(vidriftUrl)
+          (netnaijaSources.length > 0 ||
+            failedSources.includes("Vesper") ||
+            failedSources.includes("NetNaija")) &&
+          onSelect(netnaijaUrl)
         }
         disabled={
-          activeSource === "Velocity" ||
-          activeSource === "Vidrift" ||
-          (vidriftLoading && !failedSources.includes("Vidrift"))
+          activeSource === "Vesper" ||
+          activeSource === "NetNaija" ||
+          (netnaijaLoading &&
+            !failedSources.includes("Vesper") &&
+            !failedSources.includes("NetNaija"))
         }
         className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Velocity",
+          "Vesper",
           activeSource || "",
-          vidriftLoading,
-          vidriftSources.length > 0,
+          netnaijaLoading,
+          netnaijaSources.length > 0,
         )}`}
       >
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 shrink-0">
-              {vidriftLoading ? (
+            <div className="w-6.5 h-6.5 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0">
+              {netnaijaLoading ? (
                 <Loader2 size={13} className="animate-spin" />
               ) : (
                 <Tv size={13} />
@@ -7941,44 +7998,46 @@ export function InPlayerSourcePicker({
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Velocity
+                  Vesper
                 </p>
-                {failedSources.includes("Vidrift") &&
-                  vidriftSources.length === 0 && (
+                {(failedSources.includes("Vesper") ||
+                  failedSources.includes("NetNaija")) &&
+                  netnaijaSources.length === 0 && (
                     <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
                       FAILED
                     </span>
                   )}
               </div>
               <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {vidriftLoading ? "Scanning..." : "Active"}
+                {netnaijaLoading ? "Scanning..." : "Direct Stream"}
               </p>
             </div>
           </div>
-          {(activeSource === "Velocity" || activeSource === "Vidrift") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0" />
+          {(activeSource === "Vesper" || activeSource === "NetNaija") && (
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" />
           )}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
-          {vidriftLoading ? (
+          {netnaijaLoading ? (
             <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running direct scan...
+              Scanning Vesper...
             </span>
-          ) : vidriftSources.length > 0 ? (
-            vidriftSources.map((s) => (
+          ) : netnaijaSources.length > 0 ? (
+            netnaijaSources.map((s) => (
               <span
                 key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-500/20 text-fuchsia-400/80 bg-fuchsia-500/5 uppercase tracking-wide"
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase tracking-wide"
               >
                 {s.name
-                  .replace(/^Vidrift[\s-]*/i, "")
+                  .replace(/^(Vesper|NetNaija)\s*\((.*?)\)$/i, "$2")
+                  .replace(/^(Vesper|NetNaija)/i, "")
                   .trim()
-                  .toUpperCase()}
+                  .toUpperCase() || "HD"}
               </span>
             ))
           ) : (
             <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {vidriftError || "No mirrors"}
+              {netnaijaError || "No mirrors"}
             </span>
           )}
         </div>
@@ -8476,6 +8535,79 @@ export function InPlayerSourcePicker({
           ) : (
             <span className="text-[8px] text-rose-400 uppercase font-medium">
               {peachifyError || "No mirrors"}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Velocity (Vidrift) */}
+      <button
+        onClick={() =>
+          (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
+          onSelect(vidriftUrl)
+        }
+        disabled={
+          activeSource === "Velocity" ||
+          activeSource === "Vidrift" ||
+          (vidriftLoading && !failedSources.includes("Vidrift"))
+        }
+        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
+          "Velocity",
+          activeSource || "",
+          vidriftLoading,
+          vidriftSources.length > 0,
+        )}`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-6.5 h-6.5 rounded-lg bg-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 shrink-0">
+              {vidriftLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Tv size={13} />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-white uppercase tracking-tight">
+                  Velocity
+                </p>
+                {failedSources.includes("Vidrift") &&
+                  vidriftSources.length === 0 && (
+                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                      FAILED
+                    </span>
+                  )}
+              </div>
+              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
+                {vidriftLoading ? "Scanning..." : "Active"}
+              </p>
+            </div>
+          </div>
+          {(activeSource === "Velocity" || activeSource === "Vidrift") && (
+            <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {vidriftLoading ? (
+            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
+              Running direct scan...
+            </span>
+          ) : vidriftSources.length > 0 ? (
+            vidriftSources.map((s) => (
+              <span
+                key={s.name}
+                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-500/20 text-fuchsia-400/80 bg-fuchsia-500/5 uppercase tracking-wide"
+              >
+                {s.name
+                  .replace(/^Vidrift[\s-]*/i, "")
+                  .trim()
+                  .toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="text-[8px] text-rose-400 uppercase font-medium">
+              {vidriftError || "No mirrors"}
             </span>
           )}
         </div>
