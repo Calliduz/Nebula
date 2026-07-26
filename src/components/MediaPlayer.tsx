@@ -207,6 +207,7 @@ export const formatSubtitleSource = (rawSource?: string): string => {
     sLower.includes("aether")
   )
     return "Aether";
+  if (sLower.includes("vesper") || sLower.includes("netnaija")) return "Vesper";
   if (sLower.includes("vidnest")) return "Titan";
   if (sLower.includes("vaplayer")) return "Quantum";
   if (sLower.includes("vidrift")) return "Velocity";
@@ -1242,6 +1243,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             url: v.url,
             type: v.type || "mp4",
             quality: (v as any).quality || "Auto",
+            subtitles: v.subtitles || [],
           }));
       } else if (category === "Peachify") {
         updatedMirrors = Object.entries(data)
@@ -1943,6 +1945,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       url: v.url,
                       type: v.type || "mp4",
                       quality: (v as any).quality || "Auto",
+                      subtitles: v.subtitles || [],
                     }));
                 } else if (isPeachify) {
                   updatedMirrors = Object.entries(data)
