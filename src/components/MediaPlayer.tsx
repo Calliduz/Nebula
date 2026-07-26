@@ -537,13 +537,7 @@ export const getMirrorPriority = (sourceName: string) => {
 
 export const sortMirrorsList = (list: any[]) => {
   return [...list].sort((a, b) => {
-    const prioA = getMirrorPriority(a.source);
-    const prioB = getMirrorPriority(b.source);
-    if (prioA !== prioB) {
-      return prioA - prioB;
-    }
-
-    // Tie-breaker: sort by provider category priority (e.g. direct VidRock first)
+    // Primary: sort by provider category priority (e.g. Quantum/Vaplayer first, Hyperion/VidRock second)
     const { category: catA } = parseMirrorDetails(a.source);
     const { category: catB } = parseMirrorDetails(b.source);
     const cleanCatA = catA.toLowerCase();
@@ -559,7 +553,14 @@ export const sortMirrorsList = (list: any[]) => {
     const catPrioA = catIdxA !== -1 ? catIdxA : 999;
     const catPrioB = catIdxB !== -1 ? catIdxB : 999;
 
-    return catPrioA - catPrioB;
+    if (catPrioA !== catPrioB) {
+      return catPrioA - catPrioB;
+    }
+
+    // Tie-breaker: sort sub-servers by serverSortOrder (e.g. PRIME, ALPHA, BETA)
+    const prioA = getMirrorPriority(a.source);
+    const prioB = getMirrorPriority(b.source);
+    return prioA - prioB;
   });
 };
 
@@ -1295,8 +1296,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   );
 
   const SOURCE_PRIORITY = [
-    "VidRock",
     "Vaplayer",
+    "VidRock",
     "Vidrift",
     "Videasy",
     "VidLink",
