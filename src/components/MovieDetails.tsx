@@ -471,7 +471,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         const activeSources = Object.entries(data)
           .filter(([_, value]: any) => value && value.url)
           .map(([name, value]: any) => ({
-            name: name.startsWith("Vesper") || name.startsWith("NetNaija") ? name : `Vesper (${name})`,
+            name:
+              name.startsWith("Vesper") || name.startsWith("NetNaija")
+                ? name
+                : `Vesper (${name})`,
             url: value.url,
             type: value.type || "mp4",
             quality: (value as any).quality || "Auto",
@@ -1084,7 +1087,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  High-speed direct cloud video streams with multi-resolution MP4 support.
+                  High-speed direct cloud video streams with multi-resolution
+                  MP4 support.
                 </p>
               </div>
             </div>

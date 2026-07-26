@@ -172,7 +172,8 @@ export const getCategoryAlias = (category: string): string => {
     catLower.startsWith("aether")
   )
     return "Aether";
-  if (catLower.startsWith("netnaija") || catLower.startsWith("vesper")) return "Vesper";
+  if (catLower.startsWith("netnaija") || catLower.startsWith("vesper"))
+    return "Vesper";
   if (catLower.startsWith("vidrift")) return "Velocity";
   if (catLower.startsWith("videasy")) return "Pulse";
   if (catLower.startsWith("vidlink")) return "Spectra";
@@ -297,9 +298,7 @@ export const parseMirrorDetails = (sourceName: string) => {
     cleanSource.toLowerCase().startsWith("netnaija") ||
     cleanSource.toLowerCase().startsWith("vesper")
   ) {
-    const rest = cleanSource
-      .replace(/^(NetNaija|Vesper)[\s-]*/i, "")
-      .trim();
+    const rest = cleanSource.replace(/^(NetNaija|Vesper)[\s-]*/i, "").trim();
     const subClean = cleanSubProviderName(rest);
     return {
       category: "Vesper",
@@ -1237,9 +1236,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         updatedMirrors = Object.entries(data)
           .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("vesper") || name.toLowerCase().startsWith("netnaija")
-              ? name
-              : `Vesper (${name})`,
+            source:
+              name.toLowerCase().startsWith("vesper") ||
+              name.toLowerCase().startsWith("netnaija")
+                ? name
+                : `Vesper (${name})`,
             url: v.url,
             type: v.type || "mp4",
             quality: (v as any).quality || "Auto",
@@ -1801,8 +1802,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isVidrift = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("vidrift"),
           );
-          const isNetnaija = processedMirrors.some((m) =>
-            m.source.toLowerCase().startsWith("vesper") || m.source.toLowerCase().startsWith("netnaija"),
+          const isNetnaija = processedMirrors.some(
+            (m) =>
+              m.source.toLowerCase().startsWith("vesper") ||
+              m.source.toLowerCase().startsWith("netnaija"),
           );
           const isPeachify = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("peachify"),
@@ -1939,9 +1942,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   updatedMirrors = Object.entries(data)
                     .filter(([_, v]: any) => v && v.url)
                     .map(([name, v]: any) => ({
-                      source: name.toLowerCase().startsWith("vesper") || name.toLowerCase().startsWith("netnaija")
-                        ? name
-                        : `Vesper (${name})`,
+                      source:
+                        name.toLowerCase().startsWith("vesper") ||
+                        name.toLowerCase().startsWith("netnaija")
+                          ? name
+                          : `Vesper (${name})`,
                       url: v.url,
                       type: v.type || "mp4",
                       quality: (v as any).quality || "Auto",
