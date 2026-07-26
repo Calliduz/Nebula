@@ -248,7 +248,8 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[500] bg-obsidian/95 backdrop-blur-3xl flex flex-col items-center pt-[3vh] sm:pt-[10vh] overflow-y-auto custom-scrollbar"
+            className="fixed inset-0 z-[500] bg-obsidian/95 backdrop-blur-3xl flex flex-col items-center pt-[3vh] sm:pt-[10vh] overflow-y-auto custom-scrollbar transform-gpu"
+            style={{ willChange: "opacity" }}
           >
             <div className="w-full max-w-[1200px] px-4 sm:px-8 pb-32 pb-safe">
               {/* ── Search Input Area ───────────────────────────────────────── */}

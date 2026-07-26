@@ -87,6 +87,20 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
 
   const isDrama = viewingCategory === "Dramas";
 
+  const myListFilteredMovies = React.useMemo(() => {
+    if (!allMovies || !myList) return [];
+    return allMovies.filter((m) =>
+      myList.some((item: any) => {
+        const id = typeof item === "object" && item !== null ? item.id : item;
+        const type =
+          typeof item === "object" && item !== null ? item.type : "movie";
+        return (
+          id.toString() === m.id.toString() && type === (m.type || "movie")
+        );
+      }),
+    );
+  }, [allMovies, myList]);
+
   // Helper to render grid with ads every 20 items
   const renderGridWithAds = () => {
     const rawItems = data.slice(0, visibleCount);
