@@ -33,6 +33,7 @@ export const handleBackdropError = (
 };
 
 export const triggerPopunder = () => {
+  /* DISABLED ADS FOR NOW!
   const lastAdTime = localStorage.getItem("nebula-last-ad-time");
   const now = Date.now();
   const cooldown = 15 * 60 * 1000; // 15-minute cooldown between popunders
@@ -51,4 +52,6 @@ export const triggerPopunder = () => {
       console.warn("Popunder blocked by browser settings:", e);
     }
   }
+  */
+  return;
 };
