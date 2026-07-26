@@ -107,6 +107,8 @@ export const SOURCE_ALIASES: Record<string, string> = {
   HDGharTV: "Aether",
   GharTV: "Aether",
   Aether: "Aether",
+  NetNaija: "Vesper",
+  Vesper: "Vesper",
 };
 
 export const getAudioFlagCode = (
@@ -170,6 +172,7 @@ export const getCategoryAlias = (category: string): string => {
     catLower.startsWith("aether")
   )
     return "Aether";
+  if (catLower.startsWith("netnaija") || catLower.startsWith("vesper")) return "Vesper";
   if (catLower.startsWith("vidrift")) return "Velocity";
   if (catLower.startsWith("videasy")) return "Pulse";
   if (catLower.startsWith("vidlink")) return "Spectra";
@@ -286,6 +289,19 @@ export const parseMirrorDetails = (sourceName: string) => {
     const subClean = cleanSubProviderName(rest);
     return {
       category: "Aether",
+      name: ((subClean || "Mirror") + suffix).toUpperCase(),
+    };
+  }
+  if (
+    cleanSource.toLowerCase().startsWith("netnaija") ||
+    cleanSource.toLowerCase().startsWith("vesper")
+  ) {
+    const rest = cleanSource
+      .replace(/^(NetNaija|Vesper)[\s-]*/i, "")
+      .trim();
+    const subClean = cleanSubProviderName(rest);
+    return {
+      category: "Vesper",
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
@@ -483,8 +499,8 @@ export const CATEGORY_PRIORITY = [
   "Aether",
   "HDGharTV",
   "GharTV",
-  "Velocity",
-  "Vidrift",
+  "Vesper",
+  "NetNaija",
   "Pulse",
   "Videasy",
   "Spectra",
@@ -501,6 +517,8 @@ export const CATEGORY_PRIORITY = [
   "FilmU",
   "Aurora",
   "Peachify",
+  "Velocity",
+  "Vidrift",
 ];
 
 export const getMirrorPriority = (sourceName: string) => {
@@ -1070,6 +1088,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       return "Vaplayer";
     if (rawName.includes("vidrift") || rawName.includes("velocity"))
       return "Vidrift";
+    if (rawName.includes("netnaija") || rawName.includes("vesper"))
+      return "NetNaija";
     if (rawName.includes("videasy") || rawName.includes("pulse"))
       return "Videasy";
     if (rawName.includes("vidlink") || rawName.includes("spectra"))
@@ -1115,6 +1135,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "Vidrift") {
           fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "NetNaija" || category === "Vesper") {
+          fetchUrl = `${API}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "Peachify") {
@@ -1206,6 +1230,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               : `Vidrift (${name})`,
             url: v.url,
             type: v.type || "hls",
+            quality: (v as any).quality || "Auto",
+          }));
+      } else if (category === "NetNaija" || category === "Vesper") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("vesper") || name.toLowerCase().startsWith("netnaija")
+              ? name
+              : `Vesper (${name})`,
+            url: v.url,
+            type: v.type || "mp4",
             quality: (v as any).quality || "Auto",
           }));
       } else if (category === "Peachify") {
@@ -1764,6 +1799,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isVidrift = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("vidrift"),
           );
+          const isNetnaija = processedMirrors.some((m) =>
+            m.source.toLowerCase().startsWith("vesper") || m.source.toLowerCase().startsWith("netnaija"),
+          );
           const isPeachify = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("peachify"),
           );
@@ -1799,6 +1837,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             } else if (isVidrift) {
               fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}`;
+              if (season !== undefined) fetchUrl += `&season=${season}`;
+              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+            } else if (isNetnaija) {
+              fetchUrl = `${API}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}`;
               if (season !== undefined) fetchUrl += `&season=${season}`;
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             } else if (isPeachify) {
@@ -1889,6 +1931,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         : `Vidrift (${name})`,
                       url: v.url,
                       type: v.type || "hls",
+                      quality: (v as any).quality || "Auto",
+                    }));
+                } else if (isNetnaija) {
+                  updatedMirrors = Object.entries(data)
+                    .filter(([_, v]: any) => v && v.url)
+                    .map(([name, v]: any) => ({
+                      source: name.toLowerCase().startsWith("vesper") || name.toLowerCase().startsWith("netnaija")
+                        ? name
+                        : `Vesper (${name})`,
+                      url: v.url,
+                      type: v.type || "mp4",
                       quality: (v as any).quality || "Auto",
                     }));
                 } else if (isPeachify) {

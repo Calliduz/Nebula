@@ -106,6 +106,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [hdghartvLoading, setHdghartvLoading] = useState(true);
   const [hdghartvError, setHdghartvError] = useState("");
 
+  const [netnaijaSources, setNetnaijaSources] = useState<any[]>([]);
+  const [netnaijaLoading, setNetnaijaLoading] = useState(true);
+  const [netnaijaError, setNetnaijaError] = useState("");
+
   const isMountedRef = useRef(true);
 
   const loadAllSources = (force = false) => {
@@ -129,6 +133,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     setKuroError("");
     setHdghartvLoading(true);
     setHdghartvError("");
+    setNetnaijaLoading(true);
+    setNetnaijaError("");
 
     const forceParam = force ? "&force=1" : "";
 
@@ -449,6 +455,37 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (!isMountedRef.current) return;
         setHdghartvLoading(false);
       });
+
+    // 11. Vesper (NetNaija) Fetch
+    let netnaijaFetchUrl = `${API_BASE_URL}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
+    if (season !== undefined) netnaijaFetchUrl += `&season=${season}`;
+    if (episode !== undefined) netnaijaFetchUrl += `&episode=${episode}`;
+
+    fetch(netnaijaFetchUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to scan Vesper uplink");
+        return res.json();
+      })
+      .then((data) => {
+        if (!isMountedRef.current) return;
+        const activeSources = Object.entries(data)
+          .filter(([_, value]: any) => value && value.url)
+          .map(([name, value]: any) => ({
+            name: name.startsWith("Vesper") || name.startsWith("NetNaija") ? name : `Vesper (${name})`,
+            url: value.url,
+            type: value.type || "mp4",
+            quality: (value as any).quality || "Auto",
+          }));
+        setNetnaijaSources(activeSources);
+      })
+      .catch((err) => {
+        if (!isMountedRef.current) return;
+        setNetnaijaError(err.message || "Failed to contact Vesper.");
+      })
+      .finally(() => {
+        if (!isMountedRef.current) return;
+        setNetnaijaLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -466,6 +503,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     )
     .join("|");
   const hdghartvUrl = hdghartvSources
+    .map((src) =>
+      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
+    )
+    .join("|");
+  const netnaijaUrl = netnaijaSources
     .map((src) =>
       src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
     )
@@ -993,17 +1035,17 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* ── Velocity (Vidrift) Card ── */}
+          {/* ── Vesper Card ── */}
           <div
             onClick={() => {
-              if (!vidriftLoading && vidriftSources.length > 0)
-                onSelect(vidriftUrl);
+              if (!netnaijaLoading && netnaijaSources.length > 0)
+                onSelect(netnaijaUrl);
             }}
             className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              vidriftLoading
-                ? "border-fuchsia-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : vidriftSources.length > 0
-                  ? "border-fuchsia-500/40 bg-gradient-to-br from-fuchsia-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(217,70,239,0.08)] hover:border-fuchsia-500/75 hover:shadow-[0_0_35px_rgba(217,70,239,0.22)] hover:from-fuchsia-500/20 cursor-pointer hover:scale-[1.01]"
+              netnaijaLoading
+                ? "border-cyan-500/25 bg-slate-950/60 opacity-80 cursor-wait"
+                : netnaijaSources.length > 0
+                  ? "border-cyan-500/40 bg-gradient-to-br from-cyan-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(6,182,212,0.08)] hover:border-cyan-500/75 hover:shadow-[0_0_35px_rgba(6,182,212,0.22)] hover:from-cyan-500/20 cursor-pointer hover:scale-[1.01]"
                   : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
             }`}
           >
@@ -1011,76 +1053,77 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             <div className="flex items-start gap-3">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  vidriftLoading || vidriftSources.length > 0
-                    ? "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.2)]"
+                  netnaijaLoading || netnaijaSources.length > 0
+                    ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
                     : "bg-white/5 text-white/20 border-white/5"
                 }`}
               >
                 <Tv
                   size={20}
-                  className={vidriftLoading ? "animate-pulse" : ""}
+                  className={netnaijaLoading ? "animate-pulse" : ""}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-fuchsia-400 transition-colors">
-                    Velocity
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">
+                    Vesper
                   </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-300 uppercase tracking-wider">
-                    FAST MIRRORS
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 uppercase tracking-wider">
+                    DIRECT MP4
                   </span>
-                  {vidriftLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                  {netnaijaLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
                       <Loader2 size={8} className="animate-spin" />
                       SCANNING
                     </span>
-                  ) : vidriftSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/40 text-fuchsia-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(217,70,239,0.2)]">
+                  ) : netnaijaSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
                       <Sparkles size={8} />
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
                 <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Streams high-speed HLS mirrors from fast-edge cloud CDN
-                  endpoints.
+                  High-speed direct cloud video streams with multi-resolution MP4 support.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
             <div className="border-t border-white/10 pt-3">
-              {vidriftLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-fuchsia-400/80 font-bold uppercase tracking-wider">
+              {netnaijaLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-cyan-400/80 font-bold uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-fuchsia-500" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
                   </span>
-                  Probing Mirrors...
+                  Probing Uplink...
                 </div>
-              ) : vidriftSources.length > 0 ? (
+              ) : netnaijaSources.length > 0 ? (
                 <div className="space-y-1.5">
                   <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Mirrors:
+                    Available Resolutions:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {vidriftSources.map((src) => {
+                    {netnaijaSources.map((src) => {
                       const cleanMirrorName = src.name
-                        .replace(/^Vidrift\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vidrift/i, "")
+                        .replace(/^Vesper\s*\((.*?)\)$/i, "$1")
+                        .replace(/^NetNaija\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Vesper/i, "")
+                        .replace(/^NetNaija/i, "")
                         .trim()
                         .toUpperCase();
                       const displayName = cleanMirrorName || "HD";
                       return (
                         <button
                           key={src.name}
-                          title={`Play Velocity (${displayName}) mirror directly`}
+                          title={`Play Vesper (${displayName}) mirror directly`}
                           onClick={(e) => {
                             e.stopPropagation();
                             // Move clicked mirror to the front of the failover pipeline
                             const reordered = [
                               src,
-                              ...vidriftSources.filter(
+                              ...netnaijaSources.filter(
                                 (s) => s.name !== src.name,
                               ),
                             ];
@@ -1093,7 +1136,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                               .join("|");
                             onSelect(selectedUrl);
                           }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-fuchsia-500/35 text-fuchsia-300 bg-fuchsia-500/10 hover:border-fuchsia-500/70 hover:bg-fuchsia-500/25 hover:shadow-[0_0_12px_rgba(217,70,239,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-cyan-500/35 text-cyan-300 bg-cyan-500/10 hover:border-cyan-500/70 hover:bg-cyan-500/25 hover:shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <Play
                             size={8}
@@ -1109,7 +1152,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               ) : (
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vidriftError ? "Providers offline" : "No mirrors available"}
+                  {netnaijaError ? "Uplink offline" : "No mirrors available"}
                 </p>
               )}
             </div>
@@ -2045,6 +2088,128 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
                   {peachifyError ? "Providers offline" : "No mirrors available"}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Velocity (Vidrift) Card ── */}
+          <div
+            onClick={() => {
+              if (!vidriftLoading && vidriftSources.length > 0)
+                onSelect(vidriftUrl);
+            }}
+            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
+              vidriftLoading
+                ? "border-fuchsia-500/25 bg-slate-950/60 opacity-80 cursor-wait"
+                : vidriftSources.length > 0
+                  ? "border-fuchsia-500/40 bg-gradient-to-br from-fuchsia-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(217,70,239,0.08)] hover:border-fuchsia-500/75 hover:shadow-[0_0_35px_rgba(217,70,239,0.22)] hover:from-fuchsia-500/20 cursor-pointer hover:scale-[1.01]"
+                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            {/* Header row */}
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
+                  vidriftLoading || vidriftSources.length > 0
+                    ? "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.2)]"
+                    : "bg-white/5 text-white/20 border-white/5"
+                }`}
+              >
+                <Tv
+                  size={20}
+                  className={vidriftLoading ? "animate-pulse" : ""}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-fuchsia-400 transition-colors">
+                    Velocity
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-300 uppercase tracking-wider">
+                    FAST MIRRORS
+                  </span>
+                  {vidriftLoading ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={8} className="animate-spin" />
+                      SCANNING
+                    </span>
+                  ) : vidriftSources.length > 0 ? (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/40 text-fuchsia-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(217,70,239,0.2)]">
+                      <Sparkles size={8} />
+                      ACTIVE
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
+                  Streams high-speed HLS mirrors from fast-edge cloud CDN
+                  endpoints.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/10 pt-3">
+              {vidriftLoading ? (
+                <div className="flex items-center gap-2 text-[9px] text-fuchsia-400/80 font-bold uppercase tracking-wider">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-fuchsia-500" />
+                  </span>
+                  Probing Mirrors...
+                </div>
+              ) : vidriftSources.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
+                    Available Mirrors:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vidriftSources.map((src) => {
+                      const cleanMirrorName = src.name
+                        .replace(/^Vidrift\s*\((.*?)\)$/i, "$1")
+                        .replace(/^Vidrift/i, "")
+                        .trim()
+                        .toUpperCase();
+                      const displayName = cleanMirrorName || "HD";
+                      return (
+                        <button
+                          key={src.name}
+                          title={`Play Velocity (${displayName}) mirror directly`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move clicked mirror to the front of the failover pipeline
+                            const reordered = [
+                              src,
+                              ...vidriftSources.filter(
+                                (s) => s.name !== src.name,
+                              ),
+                            ];
+                            const selectedUrl = reordered
+                              .map((s) =>
+                                s.url.includes("#")
+                                  ? s.url
+                                  : `${s.url}#${s.name}#${s.type}`,
+                              )
+                              .join("|");
+                            onSelect(selectedUrl);
+                          }}
+                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-fuchsia-500/35 text-fuchsia-300 bg-fuchsia-500/10 hover:border-fuchsia-500/70 hover:bg-fuchsia-500/25 hover:shadow-[0_0_12px_rgba(217,70,239,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                        >
+                          <Play
+                            size={8}
+                            fill="currentColor"
+                            className="shrink-0"
+                          />
+                          {displayName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
+                  {vidriftError ? "Providers offline" : "No mirrors available"}
                 </p>
               )}
             </div>
