@@ -5146,7 +5146,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         >
           <button
             onClick={safeClose}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/10 shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/20 hover:border-white/40 shrink-0 shadow-md"
             title="Back (Esc)"
           >
             <ArrowLeft size={20} />
@@ -5163,7 +5163,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     onError={() => setLogoFailed(true)}
                   />
                   {season !== undefined && episode !== undefined && (
-                    <span className="bg-white/10 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/10 font-bold shrink-0">
+                    <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
                       S{season}:E{episode}
                     </span>
                   )}
@@ -5172,14 +5172,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <h2 className="text-base sm:text-lg font-display font-bold truncate leading-tight text-white flex items-center gap-2">
                   <span>{movie.title}</span>
                   {season !== undefined && episode !== undefined && (
-                    <span className="bg-white/10 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/10 font-bold shrink-0">
+                    <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
                       S{season}:E{episode}
                     </span>
                   )}
                 </h2>
               )}
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <p className="text-white/50 text-[10px] sm:text-xs font-sans tracking-wide">
+                <p className="text-white/80 text-[10px] sm:text-xs font-sans font-medium tracking-wide">
                   {movie.type === "tv" ? "TV Series" : "Movie"}
                   {movie.year ? ` · ${movie.year}` : ""}
                 </p>
@@ -5230,10 +5230,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       setShowEpisodeDrawer(false);
                     }
                   }}
-                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border border-white/5 ${
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border ${
                     sourceSelect
-                      ? "bg-white text-black scale-105"
-                      : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20 hover:scale-105"
+                      ? "bg-white text-black border-white scale-105 shadow-md"
+                      : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40 hover:scale-105"
                   }`}
                   title="Sources"
                 >
@@ -5388,10 +5388,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       setShowSubtitles(false);
                       setShowEpisodeDrawer(false);
                     }}
-                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border border-white/5 ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border ${
                       showServersModal
-                        ? "bg-white text-black scale-105"
-                        : "bg-white/10 text-white/50 hover:text-white hover:bg-white/20 hover:scale-105"
+                        ? "bg-white text-black border-white scale-105 shadow-md"
+                        : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40 hover:scale-105"
                     }`}
                     title="Servers & Mirrors"
                   >
@@ -5627,14 +5627,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <>
                   <button
                     onClick={() => seekBy(-10)}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-all border border-white/5 shrink-0"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
                     title="–10s (J)"
                   >
                     <RotateCcw size={16} />
                   </button>
                   <button
                     onClick={togglePlay}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/10 shrink-0"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
                     title="Play/Pause (Space)"
                   >
                     {isPaused ? (
@@ -5645,7 +5645,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </button>
                   <button
                     onClick={() => seekBy(10)}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-all border border-white/5 shrink-0"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
                     title="+10s (L)"
                   >
                     <RotateCw size={16} />
@@ -5656,10 +5656,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <button
                   onClick={handleNextEpisode}
                   disabled={!hasNext}
-                  className={`w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 text-xs font-semibold transition-all border ${
+                  className={`w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 text-xs font-bold transition-all border ${
                     hasNext
-                      ? "bg-white/10 hover:bg-white/20 text-white border-white/10 active:scale-95"
-                      : "bg-white/5 text-white/30 border-transparent opacity-40 cursor-not-allowed"
+                      ? "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40 active:scale-95 shadow-sm"
+                      : "bg-white/5 text-white/30 border-white/10 opacity-40 cursor-not-allowed"
                   }`}
                   title={hasNext ? "Next Episode" : "No More Episodes"}
                 >
@@ -5673,7 +5673,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     <div className="hidden lg:flex items-center gap-2 group/vol relative">
                       <button
                         onClick={() => setIsMuted(!isMuted)}
-                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-all border border-white/5"
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 hover:border-white/40 shadow-sm"
                         title={isMuted ? "Unmute (M)" : "Mute (M)"}
                       >
                         {isMuted || volume === 0 ? (
@@ -5699,8 +5699,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       </div>
                     </div>
                   )}
-                  <span className="text-white/60 text-[11px] sm:text-xs font-mono tabular-nums ml-1">
-                    {currentTime} <span className="text-white/20">/</span>{" "}
+                  <span className="text-white font-bold text-xs sm:text-sm font-mono tabular-nums ml-1 flex items-center gap-1">
+                    {currentTime} <span className="text-white/40 font-normal">/</span>{" "}
                     {duration}
                   </span>
                 </>
@@ -5722,7 +5722,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   className={`h-8 sm:h-9 px-3 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 shrink-0 ${
                     showMoreLikeThis
                       ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.4)]"
-                      : "bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border-white/10"
+                      : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
                   }`}
                   title="More Like This"
                 >
@@ -5751,7 +5751,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     setShowAudioModal(false);
                     setShowServersModal(false);
                   }}
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showEpisodeDrawer ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                    showEpisodeDrawer
+                      ? "bg-white text-black border-white shadow-md"
+                      : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
+                  }`}
                   title="Episodes"
                 >
                   <List size={16} />
@@ -5768,7 +5772,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       setShowServersModal(false);
                       setShowEpisodeDrawer(false);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSubtitles ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                      showSubtitles
+                        ? "bg-white text-black border-white shadow-md"
+                        : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
+                    }`}
                     title="Subtitles"
                   >
                     <Subtitles size={16} />
@@ -5783,7 +5791,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       setShowServersModal(false);
                       setShowEpisodeDrawer(false);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showAudioModal ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                      showAudioModal
+                        ? "bg-white text-black border-white shadow-md"
+                        : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
+                    }`}
                     title="Audio Tracks"
                   >
                     <AudioWaveform size={16} />
@@ -5798,7 +5810,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       setShowServersModal(false);
                       setShowEpisodeDrawer(false);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${showSettings ? "bg-white text-black" : "bg-white/10 text-white/50 hover:text-white"}`}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                      showSettings
+                        ? "bg-white text-black border-white shadow-md"
+                        : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
+                    }`}
                     title="Settings"
                   >
                     <Settings size={16} />
@@ -5807,7 +5823,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   {/* Fullscreen (far right) */}
                   <button
                     onClick={handleFullscreen}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/40 transition-all active:scale-95"
                     title="Fullscreen (F)"
                   >
                     <Maximize size={16} />
