@@ -131,7 +131,10 @@ export const TopTenShelf = memo(
                     >
                       {i + 1}
                     </span>
-                    <div className="w-[90px] sm:w-[130px] md:w-[150px] lg:w-[160px] aspect-[2/3] rounded-xl md:rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/60 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.3)] group-hover/card:z-30 z-10 origin-bottom relative transform-gpu" style={{ willChange: "transform" }}>
+                    <div
+                      className="w-[90px] sm:w-[130px] md:w-[150px] lg:w-[160px] aspect-[2/3] rounded-xl md:rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/60 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.3)] group-hover/card:z-30 z-10 origin-bottom relative transform-gpu"
+                      style={{ willChange: "transform" }}
+                    >
                       <img
                         src={movie.image}
                         className="w-full h-full object-cover opacity-80 group-hover/card:opacity-60 group-hover/card:scale-110 transition-all duration-500"

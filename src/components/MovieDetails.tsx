@@ -287,10 +287,7 @@ function buildInitialScanState(): ScanState {
 }
 
 // Serialize sources into the pipe-delimited URL string the player consumes
-function serializeSources(
-  sources: any[],
-  extra?: (s: any) => string,
-): string {
+function serializeSources(sources: any[], extra?: (s: any) => string): string {
   return sources
     .map((s) => {
       if (s.url.includes("#")) return s.url;
@@ -322,7 +319,8 @@ const AutoPlayBanner = React.memo<{
     <div className="flex items-center gap-2">
       <Loader2 size={11} className="text-nebula-cyan animate-spin shrink-0" />
       <p className="text-[10px] text-nebula-cyan/90 font-semibold">
-        Auto-playing <span className="font-black">{providerName}</span> in {countdown}s
+        Auto-playing <span className="font-black">{providerName}</span> in{" "}
+        {countdown}s
       </p>
     </div>
     <button
@@ -341,7 +339,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   onClose,
   onSelect,
 }) => {
-  const [scan, dispatch] = React.useReducer(scanReducer, undefined, buildInitialScanState);
+  const [scan, dispatch] = React.useReducer(
+    scanReducer,
+    undefined,
+    buildInitialScanState,
+  );
   const [autoPlayId, setAutoPlayId] = React.useState<string | null>(null);
   const [autoPlayCountdown, setAutoPlayCountdown] = React.useState(3);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -375,7 +377,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           let rawSources: any[] = [];
 
           if (p.id === "videasy") {
-            const data = await fetchVideasySourcesDirect(movie, season, episode, API_BASE_URL);
+            const data = await fetchVideasySourcesDirect(
+              movie,
+              season,
+              episode,
+              API_BASE_URL,
+            );
             rawSources = Object.entries(data)
               .filter(([, v]: any) => v && v.url)
               .map(([name, v]: any) => ({
@@ -405,12 +412,16 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
             if (p.id === "kuro_sub") {
               const subSrcs = all.filter(
-                (s) => s.name.toUpperCase().includes("SUB") || s.audio === "Japanese Sub",
+                (s) =>
+                  s.name.toUpperCase().includes("SUB") ||
+                  s.audio === "Japanese Sub",
               );
               rawSources = subSrcs.length > 0 ? subSrcs : all;
             } else if (p.id === "kuro_dub") {
               const dubSrcs = all.filter(
-                (s) => s.name.toUpperCase().includes("DUB") || s.audio === "English Dub",
+                (s) =>
+                  s.name.toUpperCase().includes("DUB") ||
+                  s.audio === "English Dub",
               );
               rawSources = dubSrcs.length > 0 ? dubSrcs : all;
             } else {
@@ -422,7 +433,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
           dispatch({ type: "LOADED", id: p.id, sources: rawSources });
         } catch (e: any) {
           if (!isMountedRef.current) return;
-          dispatch({ type: "ERROR", id: p.id, error: e.message || "Scan failed" });
+          dispatch({
+            type: "ERROR",
+            id: p.id,
+            error: e.message || "Scan failed",
+          });
         }
       });
 
@@ -449,7 +464,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     const preferred = stored
       ? PROVIDERS.find((p) => p.id === stored && scan[p.id]?.sources.length > 0)
       : null;
-    const first = preferred ?? PROVIDERS.find((p) => scan[p.id]?.sources.length > 0 && !scan[p.id]?.loading);
+    const first =
+      preferred ??
+      PROVIDERS.find(
+        (p) => scan[p.id]?.sources.length > 0 && !scan[p.id]?.loading,
+      );
     if (!first) return;
 
     setAutoPlayId(first.id);
@@ -546,12 +565,20 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             </div>
             {/* Rescan */}
             <button
-              onClick={() => { cancelAutoPlay(); runScan(true); }}
+              onClick={() => {
+                cancelAutoPlay();
+                runScan(true);
+              }}
               disabled={isGloballyLoading}
               title="Force re-scan all providers"
               className="w-7 h-7 rounded-lg border border-white/[0.08] flex items-center justify-center text-white/40 hover:text-white hover:border-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <RotateCw size={13} className={isGloballyLoading ? "animate-spin text-nebula-cyan" : ""} />
+              <RotateCw
+                size={13}
+                className={
+                  isGloballyLoading ? "animate-spin text-nebula-cyan" : ""
+                }
+              />
             </button>
             {/* Close */}
             <button
@@ -566,7 +593,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         {/* ── Auto-play banner ── */}
         {autoPlayId !== null && (
           <AutoPlayBanner
-            providerName={PROVIDERS.find((p) => p.id === autoPlayId)?.name || ""}
+            providerName={
+              PROVIDERS.find((p) => p.id === autoPlayId)?.name || ""
+            }
             countdown={autoPlayCountdown}
             onCancel={cancelAutoPlay}
           />
@@ -584,8 +613,13 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             return (
               <div
                 key={p.id}
-                onClick={() => !st.loading && hasData && handleSelectProvider(p)}
-                style={{ animationDelay: `${i * 30}ms`, animation: "rowFadeIn 0.2s ease-out both" }}
+                onClick={() =>
+                  !st.loading && hasData && handleSelectProvider(p)
+                }
+                style={{
+                  animationDelay: `${i * 30}ms`,
+                  animation: "rowFadeIn 0.2s ease-out both",
+                }}
                 className={[
                   "group flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all duration-150 select-none",
                   st.loading
@@ -602,7 +636,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   {st.loading ? (
                     <span className="block w-1.5 h-1.5 rounded-full bg-white/20 animate-pulse" />
                   ) : hasData ? (
-                    <span className={`block w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")} ${isAutoPlay || isActive ? "shadow-[0_0_6px_currentColor]" : ""}`} />
+                    <span
+                      className={`block w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")} ${isAutoPlay || isActive ? "shadow-[0_0_6px_currentColor]" : ""}`}
+                    />
                   ) : (
                     <span className="block w-1.5 h-1.5 rounded-full bg-red-500/50" />
                   )}
@@ -610,10 +646,14 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
                 {/* Name + badge */}
                 <div className="flex items-center gap-1.5 min-w-[100px]">
-                  <span className={`text-xs font-black uppercase tracking-tight ${hasData ? "text-white" : "text-white/30"} group-hover:${p.textClass} transition-colors`}>
+                  <span
+                    className={`text-xs font-black uppercase tracking-tight ${hasData ? "text-white" : "text-white/30"} group-hover:${p.textClass} transition-colors`}
+                  >
                     {p.name}
                   </span>
-                  <span className={`text-[7px] font-black px-1 py-px rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase tracking-wider opacity-70`}>
+                  <span
+                    className={`text-[7px] font-black px-1 py-px rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase tracking-wider opacity-70`}
+                  >
                     {p.badge}
                   </span>
                 </div>
@@ -629,14 +669,28 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                       {st.sources.slice(0, 5).map((src) => {
                         let s = (src.name || "").trim();
                         s = s.replace(/^[-_\s]*\d*[-_\s]*/, "");
-                        s = s.replace(/^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Vidrift|Peachify|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i, "").trim();
+                        s = s
+                          .replace(
+                            /^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Vidrift|Peachify|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i,
+                            "",
+                          )
+                          .trim();
                         const pMatch = s.match(/\(([^)]+)\)/);
-                        if (pMatch && pMatch[1] && pMatch[1].toUpperCase() !== "AUTO") {
+                        if (
+                          pMatch &&
+                          pMatch[1] &&
+                          pMatch[1].toUpperCase() !== "AUTO"
+                        ) {
                           s = pMatch[1];
                         }
-                        s = s.replace(/[()]/g, "").replace(/^[-_\s]+/, "").trim();
-                        const isSub = /\bSUB\b/i.test(s) || /Japanese Sub/i.test(s);
-                        const isDub = /\bDUB\b/i.test(s) || /English Dub/i.test(s);
+                        s = s
+                          .replace(/[()]/g, "")
+                          .replace(/^[-_\s]+/, "")
+                          .trim();
+                        const isSub =
+                          /\bSUB\b/i.test(s) || /Japanese Sub/i.test(s);
+                        const isDub =
+                          /\bDUB\b/i.test(s) || /English Dub/i.test(s);
                         if (isSub) {
                           const num = s.match(/\d+/);
                           s = num ? `SUB ${num[0]}` : "SUB";
@@ -645,7 +699,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           s = num ? `DUB ${num[0]}` : "DUB";
                         }
                         if (!s || s.length < 2) {
-                          s = src.quality && src.quality !== "Auto" ? src.quality : "HD";
+                          s =
+                            src.quality && src.quality !== "Auto"
+                              ? src.quality
+                              : "HD";
                         }
                         const label = s.toUpperCase();
 
@@ -653,7 +710,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                           <button
                             key={src.name}
                             title={`Play ${p.name} — ${label}`}
-                            onClick={(e) => handleSelectMirror(e, p, src, st.sources)}
+                            onClick={(e) =>
+                              handleSelectMirror(e, p, src, st.sources)
+                            }
                             className={`text-[8px] font-bold px-1.5 py-px rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase hover:opacity-100 opacity-70 transition-opacity cursor-pointer`}
                           >
                             {label}
@@ -676,21 +735,42 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                 {/* Right: active dot or auto-play ring */}
                 <div className="shrink-0 w-5 flex items-center justify-center">
                   {isActive && (
-                    <span className={`w-2 h-2 rounded-full ${p.textClass.replace("text-", "bg-")}`} />
+                    <span
+                      className={`w-2 h-2 rounded-full ${p.textClass.replace("text-", "bg-")}`}
+                    />
                   )}
                   {isAutoPlay && !isActive && (
                     <div className="relative w-4 h-4 flex items-center justify-center">
-                      <svg className="absolute inset-0 w-4 h-4 -rotate-90" viewBox="0 0 16 16">
-                        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" className={p.textClass} strokeOpacity="0.2" />
+                      <svg
+                        className="absolute inset-0 w-4 h-4 -rotate-90"
+                        viewBox="0 0 16 16"
+                      >
                         <circle
-                          cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.5"
+                          cx="8"
+                          cy="8"
+                          r="6"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className={p.textClass}
+                          strokeOpacity="0.2"
+                        />
+                        <circle
+                          cx="8"
+                          cy="8"
+                          r="6"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
                           className={p.textClass}
                           strokeDasharray={`${2 * Math.PI * 6}`}
                           strokeDashoffset={`${2 * Math.PI * 6 * (autoPlayCountdown / 3)}`}
                           style={{ transition: "stroke-dashoffset 1s linear" }}
                         />
                       </svg>
-                      <span className={`text-[7px] font-black ${p.textClass}`}>{autoPlayCountdown}</span>
+                      <span className={`text-[7px] font-black ${p.textClass}`}>
+                        {autoPlayCountdown}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -702,7 +782,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         {/* ── Footer hint ── */}
         <div className="px-4 py-2.5 border-t border-white/[0.07] shrink-0">
           <p className="text-[9px] text-white/20 font-medium text-center">
-            Click a provider to play · Click a mirror badge for a specific stream
+            Click a provider to play · Click a mirror badge for a specific
+            stream
           </p>
         </div>
       </div>

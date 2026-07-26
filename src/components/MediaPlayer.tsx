@@ -7621,10 +7621,7 @@ function buildInitialScanState(): ScanState {
   return s;
 }
 
-function serializeSources(
-  sources: any[],
-  extra?: (s: any) => string,
-): string {
+function serializeSources(sources: any[], extra?: (s: any) => string): string {
   return sources
     .map((s) => {
       if (s.url.includes("#")) return s.url;
@@ -7653,7 +7650,11 @@ export function InPlayerSourcePicker({
   failedSources?: string[];
   onSelect: (src?: string) => void;
 }) {
-  const [scan, dispatch] = React.useReducer(scanReducer, undefined, buildInitialScanState);
+  const [scan, dispatch] = React.useReducer(
+    scanReducer,
+    undefined,
+    buildInitialScanState,
+  );
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
     onLoadingChangeRef.current = onLoadingChange;
@@ -7676,7 +7677,12 @@ export function InPlayerSourcePicker({
         try {
           let rawSources: any[] = [];
           if (p.id === "videasy") {
-            const data = await fetchVideasySourcesDirect(movie, season, episode, API_BASE_URL);
+            const data = await fetchVideasySourcesDirect(
+              movie,
+              season,
+              episode,
+              API_BASE_URL,
+            );
             rawSources = Object.entries(data)
               .filter(([, v]: any) => v && v.url)
               .map(([name, v]: any) => ({
@@ -7706,12 +7712,16 @@ export function InPlayerSourcePicker({
 
             if (p.id === "kuro_sub") {
               const subSrcs = all.filter(
-                (s) => s.name.toUpperCase().includes("SUB") || s.audio === "Japanese Sub",
+                (s) =>
+                  s.name.toUpperCase().includes("SUB") ||
+                  s.audio === "Japanese Sub",
               );
               rawSources = subSrcs.length > 0 ? subSrcs : all;
             } else if (p.id === "kuro_dub") {
               const dubSrcs = all.filter(
-                (s) => s.name.toUpperCase().includes("DUB") || s.audio === "English Dub",
+                (s) =>
+                  s.name.toUpperCase().includes("DUB") ||
+                  s.audio === "English Dub",
               );
               rawSources = dubSrcs.length > 0 ? dubSrcs : all;
             } else {
@@ -7720,7 +7730,11 @@ export function InPlayerSourcePicker({
           }
           dispatch({ type: "LOADED", id: p.id, sources: rawSources });
         } catch (e: any) {
-          dispatch({ type: "ERROR", id: p.id, error: e.message || "Scan failed" });
+          dispatch({
+            type: "ERROR",
+            id: p.id,
+            error: e.message || "Scan failed",
+          });
         }
       });
       await Promise.allSettled(tasks);
@@ -7742,8 +7756,10 @@ export function InPlayerSourcePicker({
     <div className="flex flex-col gap-1.5 p-1 overflow-y-auto max-h-[45vh] custom-scrollbar">
       {PROVIDERS.map((p) => {
         const st = scan[p.id] ?? { sources: [], loading: true, error: "" };
-        const isFailed = failedSources.some((fs) =>
-          fs.toLowerCase().includes(p.name.toLowerCase()) || fs.toLowerCase().includes(p.id.toLowerCase())
+        const isFailed = failedSources.some(
+          (fs) =>
+            fs.toLowerCase().includes(p.name.toLowerCase()) ||
+            fs.toLowerCase().includes(p.id.toLowerCase()),
         );
         const isActive =
           activeSource?.toLowerCase().includes(p.name.toLowerCase()) ||
@@ -7778,7 +7794,9 @@ export function InPlayerSourcePicker({
                 {st.loading ? (
                   <span className="block w-1.5 h-1.5 rounded-full bg-white/30 animate-pulse" />
                 ) : hasData ? (
-                  <span className={`block w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")}`} />
+                  <span
+                    className={`block w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")}`}
+                  />
                 ) : (
                   <span className="block w-1.5 h-1.5 rounded-full bg-red-500/60" />
                 )}
@@ -7786,7 +7804,9 @@ export function InPlayerSourcePicker({
               <p className="text-[11px] font-black text-white uppercase tracking-tight whitespace-nowrap">
                 {p.name}
               </p>
-              <span className={`text-[6.5px] font-black px-1 py-0.5 rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase tracking-wider shrink-0 hidden sm:inline-block`}>
+              <span
+                className={`text-[6.5px] font-black px-1 py-0.5 rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase tracking-wider shrink-0 hidden sm:inline-block`}
+              >
                 {p.badge}
               </span>
               {isFailed && !hasData && (
@@ -7807,12 +7827,24 @@ export function InPlayerSourcePicker({
                   {st.sources.slice(0, 3).map((src) => {
                     let s = (src.name || "").trim();
                     s = s.replace(/^[-_\s]*\d*[-_\s]*/, "");
-                    s = s.replace(/^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Vidrift|Peachify|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i, "").trim();
+                    s = s
+                      .replace(
+                        /^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Vidrift|Peachify|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i,
+                        "",
+                      )
+                      .trim();
                     const pMatch = s.match(/\(([^)]+)\)/);
-                    if (pMatch && pMatch[1] && pMatch[1].toUpperCase() !== "AUTO") {
+                    if (
+                      pMatch &&
+                      pMatch[1] &&
+                      pMatch[1].toUpperCase() !== "AUTO"
+                    ) {
                       s = pMatch[1];
                     }
-                    s = s.replace(/[()]/g, "").replace(/^[-_\s]+/, "").trim();
+                    s = s
+                      .replace(/[()]/g, "")
+                      .replace(/^[-_\s]+/, "")
+                      .trim();
                     const isSub = /\bSUB\b/i.test(s) || /Japanese Sub/i.test(s);
                     const isDub = /\bDUB\b/i.test(s) || /English Dub/i.test(s);
                     if (isSub) {
@@ -7823,7 +7855,10 @@ export function InPlayerSourcePicker({
                       s = num ? `DUB ${num[0]}` : "DUB";
                     }
                     if (!s || s.length < 2) {
-                      s = src.quality && src.quality !== "Auto" ? src.quality : "HD";
+                      s =
+                        src.quality && src.quality !== "Auto"
+                          ? src.quality
+                          : "HD";
                     }
                     const label = s.toUpperCase();
 
@@ -7848,7 +7883,9 @@ export function InPlayerSourcePicker({
                 </span>
               )}
               {isActive && (
-                <span className={`w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")} shadow-[0_0_8px_currentColor] shrink-0 ml-0.5`} />
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")} shadow-[0_0_8px_currentColor] shrink-0 ml-0.5`}
+                />
               )}
             </div>
           </button>
