@@ -52,6 +52,259 @@ import {
 } from "../services/tmdb";
 import { MovieDetailsSkeleton } from "./MovieDetailsSkeleton";
 
+// ─── Source Selection Modal (Reimagined) ─────────────────────────────────────
+
+interface ProviderConfig {
+  id: string;
+  name: string;
+  badge: string;
+  // tailwind color token (no opacity suffix) used for dots/badges
+  colorClass: string;
+  borderClass: string;
+  bgClass: string;
+  textClass: string;
+  buildUrl: (params: {
+    tmdbId: string | number;
+    type: string;
+    title: string;
+    year: string | number;
+    releaseDate?: string;
+    season?: number;
+    episode?: number;
+    force: boolean;
+  }) => string | null;
+  serializeExtra?: (src: any) => string;
+}
+
+const PROVIDERS: ProviderConfig[] = [
+  {
+    id: "vaplayer",
+    name: "Quantum",
+    badge: "GLOBAL MIRRORS",
+    colorClass: "cyan",
+    borderClass: "border-cyan-500/40",
+    bgClass: "bg-cyan-500/10",
+    textClass: "text-cyan-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "vidrock",
+    name: "Hyperion",
+    badge: "DEFAULT",
+    colorClass: "nebula-cyan",
+    borderClass: "border-nebula-cyan/40",
+    bgClass: "bg-nebula-cyan/10",
+    textClass: "text-nebula-cyan",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vidrock?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "hdghartv",
+    name: "Aether",
+    badge: "MULTI-AUDIO",
+    colorClass: "emerald",
+    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-500/10",
+    textClass: "text-emerald-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+    serializeExtra: (src) => src.audio || "",
+  },
+  {
+    id: "netnaija",
+    name: "Vesper",
+    badge: "DIRECT MP4",
+    colorClass: "cyan",
+    borderClass: "border-cyan-500/40",
+    bgClass: "bg-cyan-500/10",
+    textClass: "text-cyan-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/netnaija?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "videasy",
+    name: "Pulse",
+    badge: "WASM DECRYPT",
+    colorClass: "violet",
+    borderClass: "border-violet-500/40",
+    bgClass: "bg-violet-500/10",
+    textClass: "text-violet-400",
+    buildUrl: () => null, // handled specially via fetchVideasySourcesDirect
+    serializeExtra: (src) => src.audio || "",
+  },
+  {
+    id: "vidlink",
+    name: "Spectra",
+    badge: "INDEX NODE",
+    colorClass: "slate",
+    borderClass: "border-white/20",
+    bgClass: "bg-white/10",
+    textClass: "text-white/70",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vidlink?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "vidnest",
+    name: "Titan",
+    badge: "DIRECT",
+    colorClass: "emerald",
+    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-500/10",
+    textClass: "text-emerald-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vidnest?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "kuro_sub",
+    name: "Zenith (Sub)",
+    badge: "JPN AUDIO",
+    colorClass: "violet",
+    borderClass: "border-violet-500/40",
+    bgClass: "bg-violet-500/10",
+    textClass: "text-violet-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "kuro_dub",
+    name: "Zenith (Dub)",
+    badge: "ENG DUB",
+    colorClass: "pink",
+    borderClass: "border-pink-500/40",
+    bgClass: "bg-pink-500/10",
+    textClass: "text-pink-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "vidrift",
+    name: "Velocity",
+    badge: "HLS STREAM",
+    colorClass: "fuchsia",
+    borderClass: "border-fuchsia-500/40",
+    bgClass: "bg-fuchsia-500/10",
+    textClass: "text-fuchsia-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vidrift?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "peachify",
+    name: "Aurora",
+    badge: "HLS",
+    colorClass: "rose",
+    borderClass: "border-rose-500/40",
+    bgClass: "bg-rose-500/10",
+    textClass: "text-rose-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/peachify?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+];
+
+type ProviderState = {
+  sources: any[];
+  loading: boolean;
+  error: string;
+};
+
+type ScanState = Record<string, ProviderState>;
+
+type ScanAction =
+  | { type: "RESET" }
+  | { type: "LOADED"; id: string; sources: any[] }
+  | { type: "ERROR"; id: string; error: string };
+
+function scanReducer(state: ScanState, action: ScanAction): ScanState {
+  switch (action.type) {
+    case "RESET": {
+      const fresh: ScanState = {};
+      PROVIDERS.forEach((p) => {
+        fresh[p.id] = { sources: [], loading: true, error: "" };
+      });
+      return fresh;
+    }
+    case "LOADED":
+      return {
+        ...state,
+        [action.id]: { sources: action.sources, loading: false, error: "" },
+      };
+    case "ERROR":
+      return {
+        ...state,
+        [action.id]: { sources: [], loading: false, error: action.error },
+      };
+    default:
+      return state;
+  }
+}
+
+function buildInitialScanState(): ScanState {
+  const s: ScanState = {};
+  PROVIDERS.forEach((p) => {
+    s[p.id] = { sources: [], loading: true, error: "" };
+  });
+  return s;
+}
+
+// Serialize sources into the pipe-delimited URL string the player consumes
+function serializeSources(
+  sources: any[],
+  extra?: (s: any) => string,
+): string {
+  return sources
+    .map((s) => {
+      if (s.url.includes("#")) return s.url;
+      const ex = extra ? extra(s) : "";
+      return `${s.url}#${s.name}#${s.type}${ex ? `#${ex}` : ""}`;
+    })
+    .join("|");
+}
+
+// localStorage key for per-title preferred provider
+function prefKey(tmdbId: string | number, type: string): string {
+  return `nebula-src-pref:${type}:${tmdbId}`;
+}
+
 interface SourceSelectionModalProps {
   movie: any;
   season?: number;
@@ -67,2161 +320,395 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   onClose,
   onSelect,
 }) => {
-  const [sources, setSources] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [videasySources, setVideasySources] = useState<any[]>([]);
-  const [videasyLoading, setVideasyLoading] = useState(true);
-  const [videasyError, setVideasyError] = useState("");
-
-  const [vidlinkSources, setVidlinkSources] = useState<any[]>([]);
-  const [vidlinkLoading, setVidlinkLoading] = useState(true);
-  const [vidlinkError, setVidlinkError] = useState("");
-
-  const [filmuSources, setFilmuSources] = useState<any[]>([]);
-  const [filmuLoading, setFilmuLoading] = useState(true);
-  const [filmuError, setFilmuError] = useState("");
-
-  const [vidnestSources, setVidnestSources] = useState<any[]>([]);
-  const [vidnestLoading, setVidnestLoading] = useState(true);
-  const [vidnestError, setVidnestError] = useState("");
-
-  const [vaplayerSources, setVaplayerSources] = useState<any[]>([]);
-  const [vaplayerLoading, setVaplayerLoading] = useState(true);
-  const [vaplayerError, setVaplayerError] = useState("");
-
-  const [vidriftSources, setVidriftSources] = useState<any[]>([]);
-  const [vidriftLoading, setVidriftLoading] = useState(true);
-  const [vidriftError, setVidriftError] = useState("");
-
-  const [peachifySources, setPeachifySources] = useState<any[]>([]);
-  const [peachifyLoading, setPeachifyLoading] = useState(true);
-  const [peachifyError, setPeachifyError] = useState("");
-
-  const [kuroSources, setKuroSources] = useState<any[]>([]);
-  const [kuroLoading, setKuroLoading] = useState(true);
-  const [kuroError, setKuroError] = useState("");
-
-  const [hdghartvSources, setHdghartvSources] = useState<any[]>([]);
-  const [hdghartvLoading, setHdghartvLoading] = useState(true);
-  const [hdghartvError, setHdghartvError] = useState("");
-
-  const [netnaijaSources, setNetnaijaSources] = useState<any[]>([]);
-  const [netnaijaLoading, setNetnaijaLoading] = useState(true);
-  const [netnaijaError, setNetnaijaError] = useState("");
-
+  const [scan, dispatch] = React.useReducer(scanReducer, undefined, buildInitialScanState);
+  const [autoPlayId, setAutoPlayId] = React.useState<string | null>(null);
+  const [autoPlayCountdown, setAutoPlayCountdown] = React.useState(3);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const isMountedRef = useRef(true);
+  const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadAllSources = (force = false) => {
-    setLoading(true);
-    setError("");
-    setVideasyLoading(true);
-    setVideasyError("");
-    setVidlinkLoading(true);
-    setVidlinkError("");
-    setFilmuLoading(true);
-    setFilmuError("");
-    setVidnestLoading(true);
-    setVidnestError("");
-    setVaplayerLoading(true);
-    setVaplayerError("");
-    setVidriftLoading(true);
-    setVidriftError("");
-    setPeachifyLoading(true);
-    setPeachifyError("");
-    setKuroLoading(true);
-    setKuroError("");
-    setHdghartvLoading(true);
-    setHdghartvError("");
-    setNetnaijaLoading(true);
-    setNetnaijaError("");
+  // ── Fetch orchestration ────────────────────────────────────────────────────
+  const runScan = React.useCallback(
+    async (force = false) => {
+      dispatch({ type: "RESET" });
 
-    const forceParam = force ? "&force=1" : "";
+      const params = {
+        tmdbId: movie.id,
+        type: movie.type,
+        title: movie.title || "",
+        year: movie.year || "",
+        season,
+        episode,
+        force,
+      };
 
-    // 0. Subtitles Prefetch (fire immediately when scanning sources)
-    let subPrefetchUrl = `${API_BASE_URL}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
-    if (season !== undefined) subPrefetchUrl += `&season=${season}`;
-    if (episode !== undefined) subPrefetchUrl += `&episode=${episode}`;
-    fetch(subPrefetchUrl).catch(() => {});
+      // Prefetch subtitles in the background
+      let subUrl = `${API_BASE_URL}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${force ? "&force=1" : ""}`;
+      if (season !== undefined) subUrl += `&season=${season}`;
+      if (episode !== undefined) subUrl += `&episode=${episode}`;
+      fetch(subUrl).catch(() => {});
 
-    // 1. VidRock Fetch
-    let vidrockFetchUrl = `${API_BASE_URL}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-    if (season !== undefined) vidrockFetchUrl += `&season=${season}`;
-    if (episode !== undefined) vidrockFetchUrl += `&episode=${episode}`;
+      // Collect all per-provider fetch promises
+      const tasks = PROVIDERS.map(async (p) => {
+        try {
+          let rawSources: any[] = [];
 
-    fetch(vidrockFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan VidRock uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name: name.startsWith("VidRock") ? name : `VidRock (${name})`,
-            url: value.url,
-            type: value.type || "hls",
-            language: value.language || "English",
-            flag: value.flag || "us",
-          }));
-        setSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setError(err.message || "Failed to contact proxy.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setLoading(false);
+          if (p.id === "videasy") {
+            const data = await fetchVideasySourcesDirect(movie, season, episode, API_BASE_URL);
+            rawSources = Object.entries(data)
+              .filter(([, v]: any) => v && v.url)
+              .map(([name, v]: any) => ({
+                name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
+                url: v.url,
+                type: v.type || "hls",
+                audio: v.audio || "",
+              }));
+          } else {
+            const url = p.buildUrl(params);
+            if (!url) {
+              dispatch({ type: "LOADED", id: p.id, sources: [] });
+              return;
+            }
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`${p.name} scan failed`);
+            const data = await res.json();
+            const all = Object.entries(data)
+              .filter(([, v]: any) => v && v.url)
+              .map(([name, v]: any) => ({
+                name: name.startsWith("Kuro") ? name : (v as any).name || name,
+                url: (v as any).url,
+                type: (v as any).type || "hls",
+                quality: (v as any).quality || "Auto",
+                audio: (v as any).audio || "",
+              }));
+
+            if (p.id === "kuro_sub") {
+              const subSrcs = all.filter(
+                (s) => s.name.toUpperCase().includes("SUB") || s.audio === "Japanese Sub",
+              );
+              rawSources = subSrcs.length > 0 ? subSrcs : all;
+            } else if (p.id === "kuro_dub") {
+              const dubSrcs = all.filter(
+                (s) => s.name.toUpperCase().includes("DUB") || s.audio === "English Dub",
+              );
+              rawSources = dubSrcs.length > 0 ? dubSrcs : all;
+            } else {
+              rawSources = all;
+            }
+          }
+
+          if (!isMountedRef.current) return;
+          dispatch({ type: "LOADED", id: p.id, sources: rawSources });
+        } catch (e: any) {
+          if (!isMountedRef.current) return;
+          dispatch({ type: "ERROR", id: p.id, error: e.message || "Scan failed" });
+        }
       });
 
-    // 2. Videasy Fetch
-    (async () => {
-      try {
-        const data = await fetchVideasySourcesDirect(
-          movie,
-          season,
-          episode,
-          API_BASE_URL,
-        );
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
-            url: value.url,
-            type: value.type || "hls",
-            audio: value.audio || "Original audio",
-            flag: value.flag || "us",
-          }));
-        setVideasySources(activeSources);
-      } catch (err: any) {
-        if (!isMountedRef.current) return;
-        setVideasyError(err.message || "Failed to contact Videasy.");
-      } finally {
-        if (!isMountedRef.current) return;
-        setVideasyLoading(false);
-      }
-    })();
-
-    // 3. VidLink Fetch
-    let vidlinkFetchUrl = `${API_BASE_URL}/api/vidlink?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-    if (season !== undefined) vidlinkFetchUrl += `&season=${season}`;
-    if (episode !== undefined) vidlinkFetchUrl += `&episode=${episode}`;
-
-    fetch(vidlinkFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan VidLink uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name,
-            url: value.url,
-            type: value.type || "hls",
-            quality: (value as any).quality || "Auto",
-          }));
-        setVidlinkSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setVidlinkError(err.message || "Failed to contact VidLink.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setVidlinkLoading(false);
-      });
-
-    // 4. FilmU Fetch
-    let filmuFetchUrl = `${API_BASE_URL}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-    if (season !== undefined) filmuFetchUrl += `&season=${season}`;
-    if (episode !== undefined) filmuFetchUrl += `&episode=${episode}`;
-
-    fetch(filmuFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan FilmU uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name,
-            url: value.url,
-            type: value.type || "hls",
-            quality: (value as any).quality || "Auto",
-          }));
-        setFilmuSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setFilmuError(err.message || "Failed to contact FilmU.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setFilmuLoading(false);
-      });
-
-    // 5. Vidnest Fetch
-    let vidnestFetchUrl = `${API_BASE_URL}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-    if (season !== undefined) vidnestFetchUrl += `&season=${season}`;
-    if (episode !== undefined) vidnestFetchUrl += `&episode=${episode}`;
-
-    fetch(vidnestFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan Vidnest uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name,
-            url: value.url,
-            type: value.type || "mp4",
-            quality: (value as any).quality || "Auto",
-          }));
-        setVidnestSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setVidnestError(err.message || "Failed to contact Vidnest.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setVidnestLoading(false);
-      });
-
-    // 6. Vaplayer Fetch
-    let vaplayerFetchUrl = `${API_BASE_URL}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-    if (season !== undefined) vaplayerFetchUrl += `&season=${season}`;
-    if (episode !== undefined) vaplayerFetchUrl += `&episode=${episode}`;
-
-    fetch(vaplayerFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan Vaplayer uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name,
-            url: value.url,
-            type: value.type || "hls",
-            quality: (value as any).quality || "Auto",
-          }));
-        setVaplayerSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setVaplayerError(err.message || "Failed to contact Vaplayer.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setVaplayerLoading(false);
-      });
-
-    // 7. Vidrift Fetch
-    let vidriftFetchUrl = `${API_BASE_URL}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-    if (season !== undefined) vidriftFetchUrl += `&season=${season}`;
-    if (episode !== undefined) vidriftFetchUrl += `&episode=${episode}`;
-
-    fetch(vidriftFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan Vidrift uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name,
-            url: value.url,
-            type: value.type || "hls",
-            quality: (value as any).quality || "Auto",
-          }));
-        setVidriftSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setVidriftError(err.message || "Failed to contact Vidrift.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setVidriftLoading(false);
-      });
-
-    // 8. Peachify Fetch
-    let peachifyFetchUrl = `${API_BASE_URL}/api/peachify?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-    if (season !== undefined) peachifyFetchUrl += `&season=${season}`;
-    if (episode !== undefined) peachifyFetchUrl += `&episode=${episode}`;
-
-    fetch(peachifyFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan Peachify uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name,
-            url: value.url,
-            type: value.type || "hls",
-            quality: (value as any).quality || "Auto",
-          }));
-        setPeachifySources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setPeachifyError(err.message || "Failed to contact Peachify.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setPeachifyLoading(false);
-      });
-
-    // 9. Kuro Fetch (Anime Only)
-    let kuroFetchUrl = `${API_BASE_URL}/api/kuro?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
-    if (season !== undefined) kuroFetchUrl += `&season=${season}`;
-    if (episode !== undefined) kuroFetchUrl += `&episode=${episode}`;
-
-    fetch(kuroFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan Kuro uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name,
-            url: value.url,
-            type: value.type || "hls",
-            quality: (value as any).quality || "Auto",
-          }));
-        setKuroSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setKuroError(err.message || "Failed to contact Kuro.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setKuroLoading(false);
-      });
-
-    // 10. HDGharTV Fetch
-    let hdghartvFetchUrl = `${API_BASE_URL}/api/hdghartv?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
-    if (season !== undefined) hdghartvFetchUrl += `&season=${season}`;
-    if (episode !== undefined) hdghartvFetchUrl += `&episode=${episode}`;
-
-    fetch(hdghartvFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan GharTV uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name:
-              name.startsWith("HDGharTV") || name.startsWith("GharTV")
-                ? name
-                : `GharTV (${name})`,
-            url: value.url,
-            type: value.type || "hls",
-            quality: (value as any).quality || "Auto",
-            audio: (value as any).audio || "English",
-          }));
-        setHdghartvSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setHdghartvError(err.message || "Failed to contact GharTV.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setHdghartvLoading(false);
-      });
-
-    // 11. Vesper (NetNaija) Fetch
-    let netnaijaFetchUrl = `${API_BASE_URL}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
-    if (season !== undefined) netnaijaFetchUrl += `&season=${season}`;
-    if (episode !== undefined) netnaijaFetchUrl += `&episode=${episode}`;
-
-    fetch(netnaijaFetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to scan Vesper uplink");
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        const activeSources = Object.entries(data)
-          .filter(([_, value]: any) => value && value.url)
-          .map(([name, value]: any) => ({
-            name:
-              name.startsWith("Vesper") || name.startsWith("NetNaija")
-                ? name
-                : `Vesper (${name})`,
-            url: value.url,
-            type: value.type || "mp4",
-            quality: (value as any).quality || "Auto",
-          }));
-        setNetnaijaSources(activeSources);
-      })
-      .catch((err) => {
-        if (!isMountedRef.current) return;
-        setNetnaijaError(err.message || "Failed to contact Vesper.");
-      })
-      .finally(() => {
-        if (!isMountedRef.current) return;
-        setNetnaijaLoading(false);
-      });
-  };
+      await Promise.allSettled(tasks);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [movie.id, movie.type, movie.title, movie.year, season, episode],
+  );
 
   useEffect(() => {
     isMountedRef.current = true;
-    loadAllSources();
+    runScan(false);
     return () => {
       isMountedRef.current = false;
+      if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
     };
-  }, [movie.id, movie.type, season, episode, movie.title, movie.year]);
+  }, [runScan]);
 
-  // Construct the serialized pipelines
-  const vidrockUrl = sources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
-  const hdghartvUrl = hdghartvSources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
-  const netnaijaUrl = netnaijaSources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
-  const videasyUrl = videasySources
-    .map((src) =>
-      src.url.includes("#")
-        ? src.url
-        : `${src.url}#${src.name}#${src.type}#${src.audio || ""}`,
-    )
-    .join("|");
-  const vidlinkUrl = vidlinkSources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
-  const filmuUrl = filmuSources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
-  const vidnestUrl = vidnestSources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
-  const vaplayerUrl = vaplayerSources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
-  const vidriftUrl = vidriftSources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
+  // ── Auto-play: when first provider resolves, start 3-s countdown ────────────
+  useEffect(() => {
+    if (autoPlayId !== null) return; // already chose one
+    const stored = localStorage.getItem(prefKey(movie.id, movie.type));
+    // Find the first ready provider (prefer stored preference)
+    const preferred = stored
+      ? PROVIDERS.find((p) => p.id === stored && scan[p.id]?.sources.length > 0)
+      : null;
+    const first = preferred ?? PROVIDERS.find((p) => scan[p.id]?.sources.length > 0 && !scan[p.id]?.loading);
+    if (!first) return;
 
-  const peachifyUrl = peachifySources
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
+    setAutoPlayId(first.id);
+    setAutoPlayCountdown(3);
+  }, [scan, autoPlayId, movie.id, movie.type]);
 
-  const kuroSubSources = kuroSources.filter(
-    (src) =>
-      src.name.toUpperCase().includes("SUB") || src.audio === "Japanese Sub",
-  );
-  const kuroDubSources = kuroSources.filter(
-    (src) =>
-      src.name.toUpperCase().includes("DUB") || src.audio === "English Dub",
-  );
+  useEffect(() => {
+    if (autoPlayId === null) return;
+    if (autoPlayCountdown <= 0) {
+      // Fire auto-play
+      const p = PROVIDERS.find((pp) => pp.id === autoPlayId);
+      if (p) {
+        const srcs = scan[p.id]?.sources ?? [];
+        if (srcs.length > 0) {
+          localStorage.setItem(prefKey(movie.id, movie.type), p.id);
+          onSelect(serializeSources(srcs, p.serializeExtra));
+        }
+      }
+      return;
+    }
+    const t = setTimeout(() => setAutoPlayCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [autoPlayId, autoPlayCountdown, scan, movie.id, movie.type, onSelect]);
 
-  const kuroSubUrl = (kuroSubSources.length > 0 ? kuroSubSources : kuroSources)
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
+  // Cancel auto-play when user interacts with any row
+  const cancelAutoPlay = () => {
+    setAutoPlayId(null);
+    setAutoPlayCountdown(3);
+  };
 
-  const kuroDubUrl = (kuroDubSources.length > 0 ? kuroDubSources : kuroSources)
-    .map((src) =>
-      src.url.includes("#") ? src.url : `${src.url}#${src.name}#${src.type}`,
-    )
-    .join("|");
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const isGloballyLoading = PROVIDERS.some((p) => scan[p.id]?.loading);
+  const readyCount = PROVIDERS.filter((p) => !scan[p.id]?.loading).length;
 
+  const handleSelectProvider = (p: ProviderConfig) => {
+    const srcs = scan[p.id]?.sources ?? [];
+    if (!srcs.length) return;
+    cancelAutoPlay();
+    localStorage.setItem(prefKey(movie.id, movie.type), p.id);
+    setSelectedId(p.id);
+    onSelect(serializeSources(srcs, p.serializeExtra));
+  };
+
+  const handleSelectMirror = (
+    e: React.MouseEvent,
+    p: ProviderConfig,
+    src: any,
+    allSrcs: any[],
+  ) => {
+    e.stopPropagation();
+    cancelAutoPlay();
+    localStorage.setItem(prefKey(movie.id, movie.type), p.id);
+    setSelectedId(p.id);
+    const reordered = [src, ...allSrcs.filter((s) => s.name !== src.name)];
+    onSelect(serializeSources(reordered, p.serializeExtra));
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-obsidian/95 backdrop-blur-md">
-      {/* Background radial glow */}
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(0,229,255,0.12)_0%,transparent_60%)] pointer-events-none" />
-
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative z-10 w-full max-w-4xl bg-obsidian/85 border border-white/10 rounded-3xl p-5 sm:p-8 backdrop-blur-2xl shadow-[0_50px_100px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
+    <div
+      className="fixed inset-0 z-[3000] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="relative w-full max-w-lg bg-[#0a0a0f] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
+        style={{ animation: "modalSlideIn 0.18s ease-out" }}
       >
-        {/* Glow border element */}
-        <div className="absolute inset-0 border border-white/5 rounded-3xl pointer-events-none" />
-
-        {/* Re-scan/Reload Button (Top-Left Symmetrical) */}
-        <button
-          onClick={() => loadAllSources(true)}
-          disabled={
-            loading ||
-            videasyLoading ||
-            vidlinkLoading ||
-            filmuLoading ||
-            vidnestLoading ||
-            vaplayerLoading ||
-            vidriftLoading ||
-            peachifyLoading
+        <style>{`
+          @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
           }
-          className="absolute top-4 left-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed z-50 cursor-pointer"
-          title="Re-scan all sources for background results"
-        >
-          <RotateCw
-            size={18}
-            className={
-              loading ||
-              videasyLoading ||
-              vidlinkLoading ||
-              filmuLoading ||
-              vidnestLoading ||
-              vaplayerLoading ||
-              vidriftLoading ||
-              peachifyLoading ||
-              kuroLoading
-                ? "animate-spin text-nebula-cyan"
-                : ""
-            }
-          />
-        </button>
+          @keyframes rowFadeIn {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
+          }
+        `}</style>
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/25 hover:bg-white/10 transition-all bg-white/5 z-50 hover:rotate-90 duration-300"
-        >
-          <X size={20} />
-        </button>
-
-        {/* Header */}
-        <div className="text-center mb-4 sm:mb-6 shrink-0 flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-nebula-cyan/30 bg-nebula-cyan/10 text-nebula-cyan text-[10px] font-black uppercase tracking-[0.18em] mb-2 sm:mb-4 shadow-[0_0_15px_rgba(0,229,255,0.15)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shadow-[0_0_8px_#00e5ff]" />
-            Provider Selection
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff] shrink-0" />
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-white/90 leading-none">
+                Source Selection
+              </p>
+              <p className="text-[10px] text-white/35 font-medium mt-0.5 leading-none">
+                {movie.title}
+                {season !== undefined && ` · S${season}E${episode}`}
+              </p>
+            </div>
           </div>
-
-          <h3 className="text-xl sm:text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-white/70 uppercase tracking-tight mb-2">
-            Choose Stream Source
-          </h3>
-
-          <p className="text-xs text-white/60 max-w-md mx-auto font-medium">
-            {movie.title}{" "}
-            {season !== undefined && `• Season ${season} Episode ${episode}`}
-          </p>
-
-          <p className="text-[10px] sm:text-xs text-white/50 max-w-md mx-auto mt-3 text-center flex items-center justify-center gap-1.5 border border-white/10 bg-white/5 py-2 px-4 rounded-2xl select-none backdrop-blur-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan animate-pulse shrink-0" />
-            <span>
-              Click a provider to play with <b>auto-failover</b>, or click any{" "}
-              <b>mirror badge</b> directly to play it.
-            </span>
-          </p>
+          <div className="flex items-center gap-2">
+            {/* Progress bar */}
+            <div className="flex items-center gap-1.5">
+              <div className="w-20 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full bg-nebula-cyan/60 rounded-full transition-all duration-500"
+                  style={{ width: `${(readyCount / PROVIDERS.length) * 100}%` }}
+                />
+              </div>
+              <span className="text-[9px] text-white/30 font-mono tabular-nums">
+                {readyCount}/{PROVIDERS.length}
+              </span>
+            </div>
+            {/* Rescan */}
+            <button
+              onClick={() => { cancelAutoPlay(); runScan(true); }}
+              disabled={isGloballyLoading}
+              title="Force re-scan all providers"
+              className="w-7 h-7 rounded-lg border border-white/[0.08] flex items-center justify-center text-white/40 hover:text-white hover:border-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <RotateCw size={13} className={isGloballyLoading ? "animate-spin text-nebula-cyan" : ""} />
+            </button>
+            {/* Close */}
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg border border-white/[0.08] flex items-center justify-center text-white/40 hover:text-white hover:border-white/20 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
 
-        {/* Cards container:
-            - Mobile: plain flex-col so each card is naturally sized with no grid row conflicts
-            - md+: 2-column grid for 4 cards (2×2)
-            - overflow-y-auto here so the modal header stays fixed while cards scroll */}
-        <div className="flex flex-col md:grid md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pb-2">
-          {/* ── Quantum (Vaplayer) Card ── */}
-          <div
-            onClick={() => {
-              if (!vaplayerLoading && vaplayerSources.length > 0)
-                onSelect(vaplayerUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              vaplayerLoading
-                ? "border-cyan-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : vaplayerSources.length > 0
-                  ? "border-cyan-400/40 bg-gradient-to-br from-cyan-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(6,182,212,0.08)] hover:border-cyan-400/75 hover:shadow-[0_0_35px_rgba(6,182,212,0.22)] hover:from-cyan-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  vaplayerLoading || vaplayerSources.length > 0
-                    ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Tv
-                  size={20}
-                  className={vaplayerLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">
-                    Quantum
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 uppercase tracking-wider">
-                    GLOBAL MIRRORS
-                  </span>
-                  {vaplayerLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : vaplayerSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Aggregates direct HLS stream mirrors from global caching
-                  servers with integrated multi-language subtitle tracks.
-                </p>
-              </div>
+        {/* ── Auto-play banner ── */}
+        {autoPlayId !== null && (
+          <div className="mx-3 mt-2.5 flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-nebula-cyan/20 bg-nebula-cyan/5 shrink-0">
+            <div className="flex items-center gap-2">
+              <Loader2 size={11} className="text-nebula-cyan animate-spin shrink-0" />
+              <p className="text-[10px] text-nebula-cyan/90 font-semibold">
+                Auto-playing{" "}
+                <span className="font-black">
+                  {PROVIDERS.find((p) => p.id === autoPlayId)?.name}
+                </span>{" "}
+                in {autoPlayCountdown}s
+              </p>
             </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {vaplayerLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-cyan-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
-                  </span>
-                  Probing Mirrors...
-                </div>
-              ) : vaplayerSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {vaplayerSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Vaplayer\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vaplayer/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName =
-                        src.quality !== "Auto"
-                          ? src.quality.toUpperCase()
-                          : cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Quantum (${displayName}) mirror directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...vaplayerSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-cyan-500/35 text-cyan-300 bg-cyan-500/10 hover:border-cyan-500/70 hover:bg-cyan-500/25 hover:shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vaplayerError ? "Providers offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
+            <button
+              onClick={cancelAutoPlay}
+              className="text-[9px] font-bold text-white/40 hover:text-white uppercase tracking-wide transition-colors"
+            >
+              Cancel
+            </button>
           </div>
+        )}
 
-          {/* ── Hyperion (VidRock) Card ── */}
-          <div
-            onClick={() => {
-              if (!loading && sources.length > 0) onSelect(vidrockUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              loading
-                ? "border-nebula-cyan/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : sources.length > 0
-                  ? "border-nebula-cyan/40 bg-gradient-to-br from-nebula-cyan/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(0,229,255,0.08)] hover:border-nebula-cyan/75 hover:shadow-[0_0_35px_rgba(0,229,255,0.22)] hover:from-nebula-cyan/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
+        {/* ── Provider list ── */}
+        <div className="overflow-y-auto custom-scrollbar flex-1 px-3 py-2 space-y-1">
+          {PROVIDERS.map((p, i) => {
+            const st = scan[p.id] ?? { sources: [], loading: true, error: "" };
+            const isActive = selectedId === p.id;
+            const isAutoPlay = autoPlayId === p.id;
+            const hasData = st.sources.length > 0;
+            const isReady = !st.loading;
+
+            return (
               <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  loading || sources.length > 0
-                    ? "bg-nebula-cyan/15 text-nebula-cyan border-nebula-cyan/30 shadow-[0_0_15px_rgba(0,229,255,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
+                key={p.id}
+                onClick={() => !st.loading && hasData && handleSelectProvider(p)}
+                style={{ animationDelay: `${i * 30}ms`, animation: "rowFadeIn 0.2s ease-out both" }}
+                className={[
+                  "group flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all duration-150 select-none",
+                  st.loading
+                    ? "border-white/[0.06] bg-white/[0.02] opacity-70 cursor-wait"
+                    : isActive
+                      ? `${p.borderClass} ${p.bgClass} cursor-default`
+                      : hasData
+                        ? `border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] cursor-pointer active:scale-[0.99]`
+                        : "border-white/[0.04] opacity-30 cursor-not-allowed",
+                ].join(" ")}
               >
-                <Zap
-                  size={20}
-                  fill={loading || sources.length > 0 ? "currentColor" : "none"}
-                  className={loading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-nebula-cyan transition-colors">
-                    Hyperion
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-nebula-cyan/15 border border-nebula-cyan/30 text-nebula-cyan uppercase tracking-wider shadow-[0_0_8px_rgba(0,229,255,0.15)]">
-                    DEFAULT
-                  </span>
-                  {loading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-nebula-cyan/30 bg-nebula-cyan/10 text-nebula-cyan uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : sources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-nebula-cyan/25 border border-nebula-cyan/40 text-nebula-cyan uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(0,229,255,0.2)]">
-                      <Sparkles size={8} />
-                      RECOMMENDED
-                    </span>
-                  ) : null}
+                {/* Status indicator */}
+                <div className="shrink-0 w-1.5">
+                  {st.loading ? (
+                    <span className="block w-1.5 h-1.5 rounded-full bg-white/20 animate-pulse" />
+                  ) : hasData ? (
+                    <span className={`block w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")} ${isAutoPlay || isActive ? "shadow-[0_0_6px_currentColor]" : ""}`} />
+                  ) : (
+                    <span className="block w-1.5 h-1.5 rounded-full bg-red-500/50" />
+                  )}
                 </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Delivers ultra-fast multi-CDN speeds, rich HLS quality, and
-                  seamless client-side failover between active mirrors.
-                </p>
-              </div>
-            </div>
 
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {loading ? (
-                <div className="flex items-center gap-2 text-[9px] text-nebula-cyan/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-nebula-cyan opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-nebula-cyan" />
+                {/* Name + badge */}
+                <div className="flex items-center gap-1.5 min-w-[100px]">
+                  <span className={`text-xs font-black uppercase tracking-tight ${hasData ? "text-white" : "text-white/30"} group-hover:${p.textClass} transition-colors`}>
+                    {p.name}
                   </span>
-                  Scanning Uplinks...
+                  <span className={`text-[7px] font-black px-1 py-px rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase tracking-wider opacity-70`}>
+                    {p.badge}
+                  </span>
                 </div>
-              ) : sources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Active Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {sources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^VidRock\s*\((.*?)\)$/i, "$1")
-                        .replace(/^VidRock/i, "")
-                        .trim()
-                        .toUpperCase();
-                      let color =
-                        "border-nebula-cyan/35 text-nebula-cyan bg-nebula-cyan/10 hover:border-nebula-cyan/70 hover:bg-nebula-cyan/25 hover:shadow-[0_0_12px_rgba(0,229,255,0.25)]";
-                      if (cleanMirrorName === "ATLAS")
-                        color =
-                          "border-amber-500/35 text-amber-400 bg-amber-500/10 hover:border-amber-500/70 hover:bg-amber-500/25 hover:shadow-[0_0_12px_rgba(245,158,11,0.25)]";
-                      if (cleanMirrorName === "ORION")
-                        color =
-                          "border-emerald-500/35 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/25 hover:shadow-[0_0_12px_rgba(16,185,129,0.25)]";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Hyperion (${cleanMirrorName}) mirror directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...sources.filter((s) => s.name !== src.name),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-wider transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${color}`}
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {cleanMirrorName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {error ? "Uplink currently offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
 
-          {/* ── Aether (HDGharTV) Card ── */}
-          <div
-            onClick={() => {
-              if (!hdghartvLoading && hdghartvSources.length > 0)
-                onSelect(hdghartvUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              hdghartvLoading
-                ? "border-emerald-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : hdghartvSources.length > 0
-                  ? "border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(16,185,129,0.08)] hover:border-emerald-500/75 hover:shadow-[0_0_35px_rgba(16,185,129,0.22)] hover:from-emerald-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  hdghartvLoading || hdghartvSources.length > 0
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Tv
-                  size={20}
-                  className={hdghartvLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-emerald-400 transition-colors">
-                    Aether
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 uppercase tracking-wider shadow-[0_0_8px_rgba(16,185,129,0.15)]">
-                    MULTI-AUDIO
-                  </span>
-                  {hdghartvLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
+                {/* Mirrors / state */}
+                <div className="flex-1 min-w-0">
+                  {st.loading ? (
+                    <span className="text-[9px] text-white/20 font-medium uppercase tracking-wider animate-pulse">
+                      scanning…
                     </span>
-                  ) : hdghartvSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/25 border border-emerald-500/40 text-emerald-400 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                      <Sparkles size={8} />
-                      ONLINE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  High-speed HD streams (1080p, 720p, 480p) featuring
-                  multi-language audio (English & Hindi) and crisp HLS playback.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {hdghartvLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
-                  </span>
-                  Scanning Aether...
-                </div>
-              ) : hdghartvSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Qualities:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {hdghartvSources.map((src) => {
-                      const cleanName = src.name
-                        .replace(
-                          /^(Aether|HDGharTV|GharTV)\s*\((.*?)\)$/i,
-                          "$2",
-                        )
-                        .replace(/^(Aether|HDGharTV|GharTV)/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const color =
-                        "border-emerald-500/35 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/25 hover:shadow-[0_0_12px_rgba(16,185,129,0.25)]";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Aether (${cleanName}) mirror directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const reordered = [
-                              src,
-                              ...hdghartvSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-wider transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${color}`}
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {cleanName || "HD"}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {hdghartvError ? "Uplink offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Vesper Card ── */}
-          <div
-            onClick={() => {
-              if (!netnaijaLoading && netnaijaSources.length > 0)
-                onSelect(netnaijaUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              netnaijaLoading
-                ? "border-cyan-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : netnaijaSources.length > 0
-                  ? "border-cyan-500/40 bg-gradient-to-br from-cyan-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(6,182,212,0.08)] hover:border-cyan-500/75 hover:shadow-[0_0_35px_rgba(6,182,212,0.22)] hover:from-cyan-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  netnaijaLoading || netnaijaSources.length > 0
-                    ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Tv
-                  size={20}
-                  className={netnaijaLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">
-                    Vesper
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 uppercase tracking-wider">
-                    DIRECT MP4
-                  </span>
-                  {netnaijaLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : netnaijaSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  High-speed direct cloud video streams with multi-resolution
-                  MP4 support.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {netnaijaLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-cyan-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
-                  </span>
-                  Probing Uplink...
-                </div>
-              ) : netnaijaSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Resolutions:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {netnaijaSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Vesper\s*\((.*?)\)$/i, "$1")
-                        .replace(/^NetNaija\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vesper/i, "")
-                        .replace(/^NetNaija/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName = cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Vesper (${displayName}) mirror directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...netnaijaSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-cyan-500/35 text-cyan-300 bg-cyan-500/10 hover:border-cyan-500/70 hover:bg-cyan-500/25 hover:shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {netnaijaError ? "Uplink offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Pulse (Videasy) Card ── */}
-          <div
-            onClick={() => {
-              if (!videasyLoading && videasySources.length > 0)
-                onSelect(videasyUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              videasyLoading
-                ? "border-violet-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : videasySources.length > 0
-                  ? "border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(139,92,246,0.08)] hover:border-violet-500/75 hover:shadow-[0_0_35px_rgba(139,92,246,0.22)] hover:from-violet-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  videasyLoading || videasySources.length > 0
-                    ? "bg-violet-500/15 text-violet-400 border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Tv
-                  size={20}
-                  className={videasyLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-violet-400 transition-colors">
-                    Pulse
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-300 uppercase tracking-wider">
-                    WASM DECRYPT
-                  </span>
-                  {videasyLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-violet-500/30 bg-violet-500/10 text-violet-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : videasySources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-violet-500/25 border border-violet-500/40 text-violet-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(139,92,246,0.2)]">
-                      <Sparkles size={8} />
-                      DECRYPTED
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Bypasses player protection layers using WebAssembly decryption
-                  to unlock multiple global multi-language audio mirrors.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {videasyLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-violet-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500" />
-                  </span>
-                  Decrypting Nodes...
-                </div>
-              ) : videasySources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Active Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {videasySources.map((src) => {
-                      const mirrorName = src.name
-                        .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Videasy/i, "")
-                        .trim()
-                        .toUpperCase();
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Pulse (${mirrorName}) mirror directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...videasySources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}#${s.audio || ""}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="inline-flex items-center gap-1 text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-violet-500/35 text-violet-300 bg-violet-500/10 hover:border-violet-500/70 hover:bg-violet-500/25 hover:shadow-[0_0_12px_rgba(139,92,246,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider cursor-pointer"
-                        >
-                          {src.flag && (
-                            <img
-                              src={`https://flagcdn.com/16x12/${src.flag}.png`}
-                              alt={src.flag}
-                              className="w-3 h-2 object-cover rounded-sm shrink-0"
-                            />
-                          )}
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {mirrorName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {videasyError
-                    ? "Decryption engine offline"
-                    : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Spectra (VidLink) Card ── */}
-          <div
-            onClick={() => {
-              if (!vidlinkLoading && vidlinkSources.length > 0)
-                onSelect(vidlinkUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              vidlinkLoading
-                ? "border-white/20 bg-slate-950/60 opacity-80 cursor-wait"
-                : vidlinkSources.length > 0
-                  ? "border-white/25 bg-gradient-to-br from-white/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(255,255,255,0.05)] hover:border-white/50 hover:shadow-[0_0_35px_rgba(255,255,255,0.18)] hover:from-white/15 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  vidlinkLoading || vidlinkSources.length > 0
-                    ? "bg-white/10 text-white/80 border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Server
-                  size={20}
-                  className={vidlinkLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-white transition-colors">
-                    Spectra
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-white/10 border border-white/20 text-white/70 uppercase tracking-wider">
-                    INDEX NODE
-                  </span>
-                  {vidlinkLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-white/20 bg-white/5 text-white/50 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : vidlinkSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-white/15 border border-white/30 text-white uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(255,255,255,0.15)]">
-                      <Sparkles size={8} />
-                      ONLINE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Aggregates comprehensive index mappings across global servers
-                  as a fallback to ensure maximum content availability.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {vidlinkLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-white/50 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/60 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/60" />
-                  </span>
-                  Scanning Indexes...
-                </div>
-              ) : vidlinkSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Quality Tiers:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {vidlinkSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^VidLink\s*\((.*?)\)$/i, "$1")
-                        .replace(/^VidLink/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName =
-                        src.quality !== "Auto"
-                          ? src.quality.toUpperCase()
-                          : cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Spectra (${displayName}) quality directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...vidlinkSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-white/20 text-white/80 bg-white/10 hover:border-white/40 hover:bg-white/20 hover:shadow-[0_0_12px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vidlinkError
-                    ? "Uplink currently offline"
-                    : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Titan (Vidnest) Card ── */}
-          <div
-            onClick={() => {
-              if (!vidnestLoading && vidnestSources.length > 0)
-                onSelect(vidnestUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              vidnestLoading
-                ? "border-emerald-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : vidnestSources.length > 0
-                  ? "border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(16,185,129,0.08)] hover:border-emerald-500/75 hover:shadow-[0_0_35px_rgba(16,185,129,0.22)] hover:from-emerald-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  vidnestLoading || vidnestSources.length > 0
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Zap
-                  size={20}
-                  className={vidnestLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-emerald-400 transition-colors">
-                    Titan
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 uppercase tracking-wider">
-                    PREMIUM CDN
-                  </span>
-                  {vidnestLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : vidnestSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/25 border border-emerald-500/40 text-emerald-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  High-speed HLS & MP4 stream delivery aggregating premium
-                  servers across Alpha, Beta, and Gamma endpoints.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {vidnestLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                  </span>
-                  Probing Mirrors...
-                </div>
-              ) : vidnestSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Active Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {vidnestSources.map((src) => {
-                      let provider = "ALPHA";
-                      let quality = src.quality || "Auto";
-
-                      const matchWithDash = src.name.match(
-                        /^Vidnest\s*-\s*(.*?)\s*\((.*?)\)$/i,
-                      );
-                      if (matchWithDash) {
-                        provider = matchWithDash[1].trim();
-                        quality = matchWithDash[2].trim();
-                      } else {
-                        const matchParen = src.name.match(
-                          /^Vidnest\s*\((.*?)\)$/i,
-                        );
-                        if (matchParen) {
-                          provider = "ALPHA";
-                          quality = matchParen[1].trim();
+                  ) : hasData ? (
+                    <div className="flex flex-wrap gap-1">
+                      {st.sources.slice(0, 5).map((src) => {
+                        let s = (src.name || "").trim();
+                        s = s.replace(/^[-_\s]*\d*[-_\s]*/, "");
+                        s = s.replace(/^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Vidrift|Peachify|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i, "").trim();
+                        const pMatch = s.match(/\(([^)]+)\)/);
+                        if (pMatch && pMatch[1] && pMatch[1].toUpperCase() !== "AUTO") {
+                          s = pMatch[1];
                         }
-                      }
+                        s = s.replace(/[()]/g, "").replace(/^[-_\s]+/, "").trim();
+                        const isSub = /\bSUB\b/i.test(s) || /Japanese Sub/i.test(s);
+                        const isDub = /\bDUB\b/i.test(s) || /English Dub/i.test(s);
+                        if (isSub) {
+                          const num = s.match(/\d+/);
+                          s = num ? `SUB ${num[0]}` : "SUB";
+                        } else if (isDub) {
+                          const num = s.match(/\d+/);
+                          s = num ? `DUB ${num[0]}` : "DUB";
+                        }
+                        if (!s || s.length < 2) {
+                          s = src.quality && src.quality !== "Auto" ? src.quality : "HD";
+                        }
+                        const label = s.toUpperCase();
 
-                      const cleanProvider = provider
-                        .replace(/HollyMovieHD/i, "ALPHA")
-                        .replace(/MovieBox/i, "BETA")
-                        .replace(/AllMovies/i, "GAMMA");
-
-                      const displayQuality = quality.toUpperCase();
-                      const displayName =
-                        displayQuality === "AUTO"
-                          ? cleanProvider.toUpperCase()
-                          : `${cleanProvider.toUpperCase()} (${displayQuality})`;
-
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Titan (${displayName}) directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...vidnestSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-emerald-500/35 text-emerald-300 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/25 hover:shadow-[0_0_12px_rgba(16,185,129,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vidnestError ? "Providers offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Zenith (Sub) Card (Japanese Audio) ── */}
-          <div
-            onClick={() => {
-              if (!kuroLoading && kuroSubSources.length > 0)
-                onSelect(kuroSubUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              kuroLoading
-                ? "border-purple-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : kuroSubSources.length > 0
-                  ? "border-purple-500/40 bg-gradient-to-br from-purple-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(168,85,247,0.08)] hover:border-purple-500/75 hover:shadow-[0_0_35px_rgba(168,85,247,0.22)] hover:from-purple-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  kuroLoading || kuroSubSources.length > 0
-                    ? "bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Zap size={20} className={kuroLoading ? "animate-pulse" : ""} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-purple-400 transition-colors">
-                    Zenith (Sub)
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/35 text-purple-200 uppercase tracking-wider shadow-[0_0_8px_rgba(168,85,247,0.15)]">
-                    JAPANESE AUDIO
-                  </span>
-                  {kuroLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-purple-500/30 bg-purple-500/10 text-purple-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : kuroSubSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-purple-500/25 border border-purple-500/40 text-purple-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(168,85,247,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
+                        return (
+                          <button
+                            key={src.name}
+                            title={`Play ${p.name} — ${label}`}
+                            onClick={(e) => handleSelectMirror(e, p, src, st.sources)}
+                            className={`text-[8px] font-bold px-1.5 py-px rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase hover:opacity-100 opacity-70 transition-opacity cursor-pointer`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                      {st.sources.length > 5 && (
+                        <span className="text-[8px] text-white/25 font-bold px-1.5 py-px">
+                          +{st.sources.length - 5}
+                        </span>
+                      )}
+                    </div>
+                  ) : isReady ? (
+                    <span className="text-[9px] text-rose-400/60 font-medium uppercase tracking-wide">
+                      {st.error ? "offline" : "no mirrors"}
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Dedicated high-speed subbed streams with multi-language
-                  subtitle tracks.
-                </p>
-              </div>
-            </div>
 
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {kuroLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-purple-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500" />
-                  </span>
-                  Probing Sub Nodes...
+                {/* Right: active dot or auto-play ring */}
+                <div className="shrink-0 w-5 flex items-center justify-center">
+                  {isActive && (
+                    <span className={`w-2 h-2 rounded-full ${p.textClass.replace("text-", "bg-")}`} />
+                  )}
+                  {isAutoPlay && !isActive && (
+                    <div className="relative w-4 h-4 flex items-center justify-center">
+                      <svg className="absolute inset-0 w-4 h-4 -rotate-90" viewBox="0 0 16 16">
+                        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" className={p.textClass} strokeOpacity="0.2" />
+                        <circle
+                          cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.5"
+                          className={p.textClass}
+                          strokeDasharray={`${2 * Math.PI * 6}`}
+                          strokeDashoffset={`${2 * Math.PI * 6 * (autoPlayCountdown / 3)}`}
+                          style={{ transition: "stroke-dashoffset 1s linear" }}
+                        />
+                      </svg>
+                      <span className={`text-[7px] font-black ${p.textClass}`}>{autoPlayCountdown}</span>
+                    </div>
+                  )}
                 </div>
-              ) : kuroSubSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Sub Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {kuroSubSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Kuro\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Kuro/i, "")
-                        .replace(/\s*\(?SUB\)?/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName = cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Zenith (${displayName}) sub directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...kuroSubSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-purple-500/35 text-purple-300 bg-purple-500/10 hover:border-purple-500/70 hover:bg-purple-500/25 hover:shadow-[0_0_12px_rgba(168,85,247,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-purple-400 animate-ping" />
-                  {kuroError
-                    ? "Sub uplink offline"
-                    : "No sub mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Zenith (Dub) Card (English Audio) ── */}
-          <div
-            onClick={() => {
-              if (!kuroLoading && kuroDubSources.length > 0)
-                onSelect(kuroDubUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              kuroLoading
-                ? "border-pink-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : kuroDubSources.length > 0
-                  ? "border-pink-500/40 bg-gradient-to-br from-pink-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(236,72,153,0.08)] hover:border-pink-500/75 hover:shadow-[0_0_35px_rgba(236,72,153,0.22)] hover:from-pink-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  kuroLoading || kuroDubSources.length > 0
-                    ? "bg-pink-500/15 text-pink-400 border-pink-500/30 shadow-[0_0_15px_rgba(236,72,153,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Zap size={20} className={kuroLoading ? "animate-pulse" : ""} />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-pink-400 transition-colors">
-                    Zenith (Dub)
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-pink-500/20 border border-pink-500/35 text-pink-200 uppercase tracking-wider shadow-[0_0_8px_rgba(236,72,153,0.15)]">
-                    ENGLISH DUB
-                  </span>
-                  {kuroLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-pink-500/30 bg-pink-500/10 text-pink-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : kuroDubSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-pink-500/25 border border-pink-500/40 text-pink-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(236,72,153,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Dedicated high-speed dubbed streams with English audio track.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {kuroLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-pink-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-pink-500" />
-                  </span>
-                  Probing Dub Nodes...
-                </div>
-              ) : kuroDubSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Dub Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {kuroDubSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Kuro\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Kuro/i, "")
-                        .replace(/\s*\(?DUB\)?/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName = cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Zenith (${displayName}) dub directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...kuroDubSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-pink-500/35 text-pink-300 bg-pink-500/10 hover:border-pink-500/70 hover:bg-purple-500/25 hover:shadow-[0_0_12px_rgba(236,72,153,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-pink-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-pink-400 animate-ping" />
-                  {kuroError
-                    ? "Dub uplink offline"
-                    : "No dub mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Orbital (FilmU) Card ── */}
-          <div
-            onClick={() => {
-              if (!filmuLoading && filmuSources.length > 0) onSelect(filmuUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              filmuLoading
-                ? "border-amber-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : filmuSources.length > 0
-                  ? "border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(245,158,11,0.08)] hover:border-amber-500/75 hover:shadow-[0_0_35px_rgba(245,158,11,0.22)] hover:from-amber-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  filmuLoading || filmuSources.length > 0
-                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Film
-                  size={20}
-                  className={filmuLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-amber-400 transition-colors">
-                    Orbital
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 uppercase tracking-wider">
-                    HYBRID CLOUD
-                  </span>
-                  {filmuLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : filmuSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/25 border border-amber-500/40 text-amber-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Aggregates parallel multi-provider CDN streams including
-                  Alpha, Beta, and Gamma endpoints.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {filmuLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-amber-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500" />
-                  </span>
-                  Probing Providers...
-                </div>
-              ) : filmuSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Active Providers:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(() => {
-                      const uniqueProviders = Array.from(
-                        new Set(
-                          filmuSources.map(
-                            (src) =>
-                              src.name
-                                .replace(/^FilmU[\s-]*/i, "")
-                                .replace(/\s*#\d+$/, "")
-                                .replace(/VORTEX/i, "ALPHA")
-                                .replace(/ZENITH/i, "BETA")
-                                .replace(/AURA/i, "GAMMA")
-                                .replace(/KURO/i, "DELTA")
-                                .trim()
-                                .toUpperCase() || "STREAM",
-                          ),
-                        ),
-                      );
-                      return (uniqueProviders as string[]).map(
-                        (providerName) => {
-                          const colorMap: Record<string, string> = {
-                            ALPHA:
-                              "border-amber-500/35 text-amber-300 bg-amber-500/10 hover:border-amber-500/70 hover:bg-amber-500/25 hover:shadow-[0_0_12px_rgba(245,158,11,0.25)]",
-                            BETA: "border-orange-500/35 text-orange-300 bg-orange-500/10 hover:border-orange-500/70 hover:bg-orange-500/25 hover:shadow-[0_0_12px_rgba(249,115,22,0.25)]",
-                            GAMMA:
-                              "border-yellow-500/35 text-yellow-300 bg-yellow-500/10 hover:border-yellow-500/70 hover:bg-yellow-500/25 hover:shadow-[0_0_12px_rgba(234,179,8,0.25)]",
-                            DELTA:
-                              "border-red-500/35 text-red-300 bg-red-500/10 hover:border-red-500/70 hover:bg-red-500/25 hover:shadow-[0_0_12px_rgba(239,68,68,0.25)]",
-                          };
-                          const chipClass =
-                            Object.entries(colorMap).find(([k]) =>
-                              providerName.includes(k),
-                            )?.[1] ??
-                            "border-amber-500/35 text-amber-300 bg-amber-500/10 hover:border-amber-500/70 hover:bg-amber-500/25 hover:shadow-[0_0_12px_rgba(245,158,11,0.25)]";
-                          return (
-                            <button
-                              key={providerName}
-                              title={`Play Orbital (${providerName}) provider directly`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const matched = filmuSources.filter((s) => {
-                                  const pName = s.name
-                                    .replace(/^FilmU[\s-]*/i, "")
-                                    .replace(/\s*#\d+$/, "")
-                                    .replace(/VORTEX/i, "ALPHA")
-                                    .replace(/ZENITH/i, "BETA")
-                                    .replace(/AURA/i, "GAMMA")
-                                    .replace(/KURO/i, "DELTA")
-                                    .trim()
-                                    .toUpperCase();
-                                  return pName === providerName;
-                                });
-                                const others = filmuSources.filter((s) => {
-                                  const pName = s.name
-                                    .replace(/^FilmU[\s-]*/i, "")
-                                    .replace(/\s*#\d+$/, "")
-                                    .replace(/VORTEX/i, "ALPHA")
-                                    .replace(/ZENITH/i, "BETA")
-                                    .replace(/AURA/i, "GAMMA")
-                                    .replace(/KURO/i, "DELTA")
-                                    .trim()
-                                    .toUpperCase();
-                                  return pName !== providerName;
-                                });
-                                const reordered = [...matched, ...others];
-                                const selectedUrl = reordered
-                                  .map((s) =>
-                                    s.url.includes("#")
-                                      ? s.url
-                                      : `${s.url}#${s.name}#${s.type}`,
-                                  )
-                                  .join("|");
-                                onSelect(selectedUrl);
-                              }}
-                              className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-wider transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer ${chipClass}`}
-                            >
-                              <Play
-                                size={8}
-                                fill="currentColor"
-                                className="shrink-0"
-                              />
-                              {providerName}
-                            </button>
-                          );
-                        },
-                      );
-                    })()}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {filmuError ? "Providers offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Aurora (Peachify) Card ── */}
-          <div
-            onClick={() => {
-              if (!peachifyLoading && peachifySources.length > 0)
-                onSelect(peachifyUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              peachifyLoading
-                ? "border-rose-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : peachifySources.length > 0
-                  ? "border-rose-500/40 bg-gradient-to-br from-rose-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(244,63,94,0.08)] hover:border-rose-500/75 hover:shadow-[0_0_35px_rgba(244,63,94,0.22)] hover:from-rose-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  peachifyLoading || peachifySources.length > 0
-                    ? "bg-rose-500/15 text-rose-400 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Zap
-                  size={20}
-                  className={peachifyLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-rose-400 transition-colors">
-                    Aurora
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 uppercase tracking-wider">
-                    DIRECT PEACH
-                  </span>
-                  {peachifyLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-rose-500/30 bg-rose-500/10 text-rose-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : peachifySources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-rose-500/25 border border-rose-500/40 text-rose-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Decrypted direct stream sources with low-latency parallel
-                  delivery and integrated multi-language subtitles.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {peachifyLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-rose-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
-                  </span>
-                  Probing Nodes...
-                </div>
-              ) : peachifySources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {peachifySources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Peachify\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Peachify/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName = cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Aurora (${displayName}) mirror directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...peachifySources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-rose-500/35 text-rose-300 bg-rose-500/10 hover:border-rose-500/70 hover:bg-rose-500/25 hover:shadow-[0_0_12px_rgba(244,63,94,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {peachifyError ? "Providers offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Velocity (Vidrift) Card ── */}
-          <div
-            onClick={() => {
-              if (!vidriftLoading && vidriftSources.length > 0)
-                onSelect(vidriftUrl);
-            }}
-            className={`group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-300 ${
-              vidriftLoading
-                ? "border-fuchsia-500/25 bg-slate-950/60 opacity-80 cursor-wait"
-                : vidriftSources.length > 0
-                  ? "border-fuchsia-500/40 bg-gradient-to-br from-fuchsia-500/10 via-slate-950/70 to-slate-950/95 shadow-[0_0_25px_rgba(217,70,239,0.08)] hover:border-fuchsia-500/75 hover:shadow-[0_0_35px_rgba(217,70,239,0.22)] hover:from-fuchsia-500/20 cursor-pointer hover:scale-[1.01]"
-                  : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border transition-transform duration-300 group-hover:scale-110 ${
-                  vidriftLoading || vidriftSources.length > 0
-                    ? "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.2)]"
-                    : "bg-white/5 text-white/20 border-white/5"
-                }`}
-              >
-                <Tv
-                  size={20}
-                  className={vidriftLoading ? "animate-pulse" : ""}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-fuchsia-400 transition-colors">
-                    Velocity
-                  </span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-300 uppercase tracking-wider">
-                    FAST MIRRORS
-                  </span>
-                  {vidriftLoading ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={8} className="animate-spin" />
-                      SCANNING
-                    </span>
-                  ) : vidriftSources.length > 0 ? (
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/40 text-fuchsia-200 uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(217,70,239,0.2)]">
-                      <Sparkles size={8} />
-                      ACTIVE
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-white/55 leading-relaxed font-medium">
-                  Streams high-speed HLS mirrors from fast-edge cloud CDN
-                  endpoints.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/10 pt-3">
-              {vidriftLoading ? (
-                <div className="flex items-center gap-2 text-[9px] text-fuchsia-400/80 font-bold uppercase tracking-wider">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-fuchsia-500" />
-                  </span>
-                  Probing Mirrors...
-                </div>
-              ) : vidriftSources.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-widest">
-                    Available Mirrors:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {vidriftSources.map((src) => {
-                      const cleanMirrorName = src.name
-                        .replace(/^Vidrift\s*\((.*?)\)$/i, "$1")
-                        .replace(/^Vidrift/i, "")
-                        .trim()
-                        .toUpperCase();
-                      const displayName = cleanMirrorName || "HD";
-                      return (
-                        <button
-                          key={src.name}
-                          title={`Play Velocity (${displayName}) mirror directly`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Move clicked mirror to the front of the failover pipeline
-                            const reordered = [
-                              src,
-                              ...vidriftSources.filter(
-                                (s) => s.name !== src.name,
-                              ),
-                            ];
-                            const selectedUrl = reordered
-                              .map((s) =>
-                                s.url.includes("#")
-                                  ? s.url
-                                  : `${s.url}#${s.name}#${s.type}`,
-                              )
-                              .join("|");
-                            onSelect(selectedUrl);
-                          }}
-                          className="text-[9.5px] font-bold px-2.5 py-1 rounded-lg border border-fuchsia-500/35 text-fuchsia-300 bg-fuchsia-500/10 hover:border-fuchsia-500/70 hover:bg-fuchsia-500/25 hover:shadow-[0_0_12px_rgba(217,70,239,0.25)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Play
-                            size={8}
-                            fill="currentColor"
-                            className="shrink-0"
-                          />
-                          {displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping" />
-                  {vidriftError ? "Providers offline" : "No mirrors available"}
-                </p>
-              )}
-            </div>
-          </div>
+            );
+          })}
         </div>
-      </motion.div>
+
+        {/* ── Footer hint ── */}
+        <div className="px-4 py-2.5 border-t border-white/[0.07] shrink-0">
+          <p className="text-[9px] text-white/20 font-medium text-center">
+            Click a provider to play · Click a mirror badge for a specific stream
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

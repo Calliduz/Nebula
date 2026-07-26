@@ -5241,7 +5241,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 </button>
 
                 {sourceSelect && (
-                  <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-80 max-h-[60vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
+                  <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-80 sm:w-96 max-w-[92vw] max-h-[65vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
                     {/* Header */}
                     <div className="px-2.5 pb-2 mb-2 border-b border-white/5 flex items-center justify-between">
                       <div>
@@ -7384,6 +7384,251 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 };
 
 // ── Compact source picker used inside the media player ────────────────────────
+
+interface ProviderConfig {
+  id: string;
+  name: string;
+  badge: string;
+  colorClass: string;
+  borderClass: string;
+  bgClass: string;
+  textClass: string;
+  buildUrl: (params: {
+    tmdbId: string | number;
+    type: string;
+    title: string;
+    year: string | number;
+    releaseDate?: string;
+    season?: number;
+    episode?: number;
+    force: boolean;
+  }) => string | null;
+  serializeExtra?: (src: any) => string;
+}
+
+const PROVIDERS: ProviderConfig[] = [
+  {
+    id: "vaplayer",
+    name: "Quantum",
+    badge: "GLOBAL MIRRORS",
+    colorClass: "cyan",
+    borderClass: "border-cyan-500/40",
+    bgClass: "bg-cyan-500/10",
+    textClass: "text-cyan-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "vidrock",
+    name: "Hyperion",
+    badge: "DEFAULT",
+    colorClass: "nebula-cyan",
+    borderClass: "border-nebula-cyan/40",
+    bgClass: "bg-nebula-cyan/10",
+    textClass: "text-nebula-cyan",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vidrock?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "hdghartv",
+    name: "Aether",
+    badge: "MULTI-AUDIO",
+    colorClass: "emerald",
+    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-500/10",
+    textClass: "text-emerald-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+    serializeExtra: (src) => src.audio || "",
+  },
+  {
+    id: "netnaija",
+    name: "Vesper",
+    badge: "DIRECT MP4",
+    colorClass: "cyan",
+    borderClass: "border-cyan-500/40",
+    bgClass: "bg-cyan-500/10",
+    textClass: "text-cyan-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/netnaija?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "videasy",
+    name: "Pulse",
+    badge: "WASM DECRYPT",
+    colorClass: "violet",
+    borderClass: "border-violet-500/40",
+    bgClass: "bg-violet-500/10",
+    textClass: "text-violet-400",
+    buildUrl: () => null,
+    serializeExtra: (src) => src.audio || "",
+  },
+  {
+    id: "vidlink",
+    name: "Spectra",
+    badge: "INDEX NODE",
+    colorClass: "slate",
+    borderClass: "border-white/20",
+    bgClass: "bg-white/10",
+    textClass: "text-white/70",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vidlink?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "vidnest",
+    name: "Titan",
+    badge: "DIRECT",
+    colorClass: "emerald",
+    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-500/10",
+    textClass: "text-emerald-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vidnest?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "kuro_sub",
+    name: "Zenith (Sub)",
+    badge: "JPN AUDIO",
+    colorClass: "violet",
+    borderClass: "border-violet-500/40",
+    bgClass: "bg-violet-500/10",
+    textClass: "text-violet-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "kuro_dub",
+    name: "Zenith (Dub)",
+    badge: "ENG DUB",
+    colorClass: "pink",
+    borderClass: "border-pink-500/40",
+    bgClass: "bg-pink-500/10",
+    textClass: "text-pink-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "vidrift",
+    name: "Velocity",
+    badge: "HLS STREAM",
+    colorClass: "fuchsia",
+    borderClass: "border-fuchsia-500/40",
+    bgClass: "bg-fuchsia-500/10",
+    textClass: "text-fuchsia-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vidrift?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "peachify",
+    name: "Aurora",
+    badge: "HLS",
+    colorClass: "rose",
+    borderClass: "border-rose-500/40",
+    bgClass: "bg-rose-500/10",
+    textClass: "text-rose-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/peachify?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+];
+
+type ProviderState = {
+  sources: any[];
+  loading: boolean;
+  error: string;
+};
+
+type ScanState = Record<string, ProviderState>;
+
+type ScanAction =
+  | { type: "RESET" }
+  | { type: "LOADED"; id: string; sources: any[] }
+  | { type: "ERROR"; id: string; error: string };
+
+function scanReducer(state: ScanState, action: ScanAction): ScanState {
+  switch (action.type) {
+    case "RESET": {
+      const fresh: ScanState = {};
+      PROVIDERS.forEach((p) => {
+        fresh[p.id] = { sources: [], loading: true, error: "" };
+      });
+      return fresh;
+    }
+    case "LOADED":
+      return {
+        ...state,
+        [action.id]: { sources: action.sources, loading: false, error: "" },
+      };
+    case "ERROR":
+      return {
+        ...state,
+        [action.id]: { sources: [], loading: false, error: action.error },
+      };
+    default:
+      return state;
+  }
+}
+
+function buildInitialScanState(): ScanState {
+  const s: ScanState = {};
+  PROVIDERS.forEach((p) => {
+    s[p.id] = { sources: [], loading: true, error: "" };
+  });
+  return s;
+}
+
+function serializeSources(
+  sources: any[],
+  extra?: (s: any) => string,
+): string {
+  return sources
+    .map((s) => {
+      if (s.url.includes("#")) return s.url;
+      const ex = extra ? extra(s) : "";
+      return `${s.url}#${s.name}#${s.type}${ex ? `#${ex}` : ""}`;
+    })
+    .join("|");
+}
+
 export function InPlayerSourcePicker({
   movie,
   season,
@@ -7403,1482 +7648,207 @@ export function InPlayerSourcePicker({
   failedSources?: string[];
   onSelect: (src?: string) => void;
 }) {
-  const [sources, setSources] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [videasySources, setVideasySources] = useState<any[]>([]);
-  const [videasyLoading, setVideasyLoading] = useState(true);
-  const [videasyError, setVideasyError] = useState("");
-
-  const [filmuSources, setFilmuSources] = useState<any[]>([]);
-  const [filmuLoading, setFilmuLoading] = useState(true);
-  const [filmuError, setFilmuError] = useState("");
-
-  const [vidnestSources, setVidnestSources] = useState<any[]>([]);
-  const [vidnestLoading, setVidnestLoading] = useState(true);
-  const [vidnestError, setVidnestError] = useState("");
-
-  const [vaplayerSources, setVaplayerSources] = useState<any[]>([]);
-  const [vaplayerLoading, setVaplayerLoading] = useState(true);
-  const [vaplayerError, setVaplayerError] = useState("");
-
-  const [vidriftSources, setVidriftSources] = useState<any[]>([]);
-  const [vidriftLoading, setVidriftLoading] = useState(true);
-  const [vidriftError, setVidriftError] = useState("");
-
-  const [peachifySources, setPeachifySources] = useState<any[]>([]);
-  const [peachifyLoading, setPeachifyLoading] = useState(true);
-  const [peachifyError, setPeachifyError] = useState("");
-
-  const [kuroSources, setKuroSources] = useState<any[]>([]);
-  const [kuroLoading, setKuroLoading] = useState(true);
-  const [kuroError, setKuroError] = useState("");
-
-  const [hdghartvSources, setHdghartvSources] = useState<any[]>([]);
-  const [hdghartvLoading, setHdghartvLoading] = useState(true);
-  const [hdghartvError, setHdghartvError] = useState("");
-
-  const [netnaijaSources, setNetnaijaSources] = useState<any[]>([]);
-  const [netnaijaLoading, setNetnaijaLoading] = useState(true);
-  const [netnaijaError, setNetnaijaError] = useState("");
-
-  // Keep latest onLoadingChange ref to avoid triggering effect loops
+  const [scan, dispatch] = React.useReducer(scanReducer, undefined, buildInitialScanState);
   const onLoadingChangeRef = useRef(onLoadingChange);
   useEffect(() => {
     onLoadingChangeRef.current = onLoadingChange;
   }, [onLoadingChange]);
 
-  useEffect(() => {
-    onLoadingChangeRef.current?.(
-      loading ||
-        videasyLoading ||
-        filmuLoading ||
-        vidnestLoading ||
-        vaplayerLoading ||
-        vidriftLoading ||
-        peachifyLoading ||
-        kuroLoading ||
-        hdghartvLoading ||
-        netnaijaLoading,
-    );
-  }, [
-    loading,
-    videasyLoading,
-    filmuLoading,
-    vidnestLoading,
-    vaplayerLoading,
-    vidriftLoading,
-    peachifyLoading,
-    kuroLoading,
-    hdghartvLoading,
-    netnaijaLoading,
-  ]);
+  const runScan = useCallback(
+    async (force = false) => {
+      dispatch({ type: "RESET" });
+      const params = {
+        tmdbId: movie.id,
+        type: movie.type,
+        title: movie.title || "",
+        year: movie.year || "",
+        season,
+        episode,
+        force,
+      };
 
-  const fetchSources = useCallback(
-    (force = false, isBackground = false) => {
-      if (!isBackground) {
-        setLoading(true);
-        setError("");
-        setVideasyLoading(true);
-        setVideasyError("");
-        setFilmuLoading(true);
-        setFilmuError("");
-        setVidnestLoading(true);
-        setVidnestError("");
-        setVaplayerLoading(true);
-        setVaplayerError("");
-        setVidriftLoading(true);
-        setVidriftError("");
-        setPeachifyLoading(true);
-        setPeachifyError("");
-        setKuroLoading(true);
-        setKuroError("");
-        setHdghartvLoading(true);
-        setHdghartvError("");
-        setNetnaijaLoading(true);
-        setNetnaijaError("");
-      }
+      const tasks = PROVIDERS.map(async (p) => {
+        try {
+          let rawSources: any[] = [];
+          if (p.id === "videasy") {
+            const data = await fetchVideasySourcesDirect(movie, season, episode, API_BASE_URL);
+            rawSources = Object.entries(data)
+              .filter(([, v]: any) => v && v.url)
+              .map(([name, v]: any) => ({
+                name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
+                url: v.url,
+                type: v.type || "hls",
+                audio: v.audio || "",
+              }));
+          } else {
+            const url = p.buildUrl(params);
+            if (!url) {
+              dispatch({ type: "LOADED", id: p.id, sources: [] });
+              return;
+            }
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`${p.name} scan failed`);
+            const data = await res.json();
+            const all = Object.entries(data)
+              .filter(([, v]: any) => v && v.url)
+              .map(([name, v]: any) => ({
+                name: name.startsWith("Kuro") ? name : (v as any).name || name,
+                url: (v as any).url,
+                type: (v as any).type || "hls",
+                quality: (v as any).quality || "Auto",
+                audio: (v as any).audio || "",
+              }));
 
-      const forceParam = force ? "&force=1" : "";
-
-      // 1. VidRock Fetch
-      let vidrockUrl = `${API}/api/vidrock?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-      if (season !== undefined) vidrockUrl += `&season=${season}`;
-      if (episode !== undefined) vidrockUrl += `&episode=${episode}`;
-
-      const pVidrock = fetch(vidrockUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Uplink scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name: name.startsWith("VidRock") ? name : `VidRock (${name})`,
-              url: v.url,
-              type: v.type || "hls",
-            }));
-          setSources(list);
-          if (!isBackground) setError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setLoading(false);
-        });
-
-      // 2. Videasy Fetch
-      const pVideasy = (async () => {
-        const data = await fetchVideasySourcesDirect(
-          movie,
-          season,
-          episode,
-          API,
-        );
-
-        const list = Object.entries(data)
-          .filter(([, v]: any) => v && v.url)
-          .map(([name, v]: any) => ({
-            name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
-            url: v.url,
-            type: v.type || "hls",
-            audio: v.audio || "",
-          }));
-        setVideasySources(list);
-        if (!isBackground) setVideasyError("");
-      })()
-        .catch((e) => {
-          if (!isBackground) setVideasyError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setVideasyLoading(false);
-        });
-
-      // 3. FilmU Fetch
-      let filmuUrl = `${API}/api/filmu?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}${forceParam}`;
-      if (season !== undefined) filmuUrl += `&season=${season}`;
-      if (episode !== undefined) filmuUrl += `&episode=${episode}`;
-
-      const pFilmu = fetch(filmuUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("FilmU scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name,
-              url: v.url,
-              type: v.type || "hls",
-              quality: (v as any).quality || "Auto",
-            }));
-          setFilmuSources(list);
-          if (!isBackground) setFilmuError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setFilmuError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setFilmuLoading(false);
-        });
-
-      // 4. Vidnest Fetch
-      let vidnestUrl = `${API}/api/vidnest?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-      if (season !== undefined) vidnestUrl += `&season=${season}`;
-      if (episode !== undefined) vidnestUrl += `&episode=${episode}`;
-
-      const pVidnest = fetch(vidnestUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Vidnest scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name,
-              url: v.url,
-              type: v.type || "mp4",
-              quality: (v as any).quality || "Auto",
-            }));
-          setVidnestSources(list);
-          if (!isBackground) setVidnestError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setVidnestError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setVidnestLoading(false);
-        });
-
-      // 5. Vaplayer Fetch
-      let vaplayerUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-      if (season !== undefined) vaplayerUrl += `&season=${season}`;
-      if (episode !== undefined) vaplayerUrl += `&episode=${episode}`;
-
-      const pVaplayer = fetch(vaplayerUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Vaplayer scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name,
-              url: v.url,
-              type: v.type || "hls",
-              quality: (v as any).quality || "Auto",
-            }));
-          setVaplayerSources(list);
-          if (!isBackground) setVaplayerError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setVaplayerError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setVaplayerLoading(false);
-        });
-
-      // 6. Vidrift Fetch
-      let vidriftUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-      if (season !== undefined) vidriftUrl += `&season=${season}`;
-      if (episode !== undefined) vidriftUrl += `&episode=${episode}`;
-
-      const pVidrift = fetch(vidriftUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Vidrift scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name,
-              url: v.url,
-              type: v.type || "hls",
-              quality: (v as any).quality || "Auto",
-            }));
-          setVidriftSources(list);
-          if (!isBackground) setVidriftError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setVidriftError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setVidriftLoading(false);
-        });
-
-      // 7. Peachify Fetch
-      let peachifyUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-      if (season !== undefined) peachifyUrl += `&season=${season}`;
-      if (episode !== undefined) peachifyUrl += `&episode=${episode}`;
-
-      const pPeachify = fetch(peachifyUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Peachify scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name: name.startsWith("Peachify") ? name : `Peachify (${name})`,
-              url: v.url,
-              type: v.type || "hls",
-              quality: (v as any).quality || "Auto",
-            }));
-          setPeachifySources(list);
-          if (!isBackground) setPeachifyError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setPeachifyError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setPeachifyLoading(false);
-        });
-
-      // 8. Kuro Fetch
-      let kuroUrl = `${API}/api/kuro?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
-      if (season !== undefined) kuroUrl += `&season=${season}`;
-      if (episode !== undefined) kuroUrl += `&episode=${episode}`;
-
-      const pKuro = fetch(kuroUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Kuro scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name: name.startsWith("Kuro") ? name : `Kuro (${name})`,
-              url: v.url,
-              type: v.type || "hls",
-              quality: (v as any).quality || "Auto",
-            }));
-          setKuroSources(list);
-          if (!isBackground) setKuroError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setKuroError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setKuroLoading(false);
-        });
-
-      // 9. HDGharTV (Aether) Fetch
-      let hdghartvFetchUrl = `${API}/api/hdghartv?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
-      if (season !== undefined) hdghartvFetchUrl += `&season=${season}`;
-      if (episode !== undefined) hdghartvFetchUrl += `&episode=${episode}`;
-
-      const pHdghartv = fetch(hdghartvFetchUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Aether scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name:
-                name.startsWith("HDGharTV") || name.startsWith("Aether")
-                  ? name
-                  : `Aether (${name})`,
-              url: v.url,
-              type: v.type || "hls",
-              quality: (v as any).quality || "Auto",
-              audio: (v as any).audio || "English",
-            }));
-          setHdghartvSources(list);
-          if (!isBackground) setHdghartvError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setHdghartvError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setHdghartvLoading(false);
-        });
-
-      // 10. NetNaija (Vesper) Fetch
-      let netnaijaFetchUrl = `${API}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
-      if (season !== undefined) netnaijaFetchUrl += `&season=${season}`;
-      if (episode !== undefined) netnaijaFetchUrl += `&episode=${episode}`;
-
-      const pNetnaija = fetch(netnaijaFetchUrl)
-        .then((r) => {
-          if (!r.ok) throw new Error("Vesper scan failed");
-          return r.json();
-        })
-        .then((data) => {
-          const list = Object.entries(data)
-            .filter(([, v]: any) => v && v.url)
-            .map(([name, v]: any) => ({
-              name:
-                name.startsWith("Vesper") || name.startsWith("NetNaija")
-                  ? name
-                  : `Vesper (${name})`,
-              url: v.url,
-              type: v.type || "mp4",
-              quality: (v as any).quality || "Auto",
-            }));
-          setNetnaijaSources(list);
-          if (!isBackground) setNetnaijaError("");
-        })
-        .catch((e) => {
-          if (!isBackground) setNetnaijaError(e.message);
-        })
-        .finally(() => {
-          if (!isBackground) setNetnaijaLoading(false);
-        });
-
-      return Promise.all([
-        pVidrock,
-        pVideasy,
-        pFilmu,
-        pVidnest,
-        pVaplayer,
-        pVidrift,
-        pPeachify,
-        pKuro,
-        pHdghartv,
-        pNetnaija,
-      ]);
+            if (p.id === "kuro_sub") {
+              const subSrcs = all.filter(
+                (s) => s.name.toUpperCase().includes("SUB") || s.audio === "Japanese Sub",
+              );
+              rawSources = subSrcs.length > 0 ? subSrcs : all;
+            } else if (p.id === "kuro_dub") {
+              const dubSrcs = all.filter(
+                (s) => s.name.toUpperCase().includes("DUB") || s.audio === "English Dub",
+              );
+              rawSources = dubSrcs.length > 0 ? dubSrcs : all;
+            } else {
+              rawSources = all;
+            }
+          }
+          dispatch({ type: "LOADED", id: p.id, sources: rawSources });
+        } catch (e: any) {
+          dispatch({ type: "ERROR", id: p.id, error: e.message || "Scan failed" });
+        }
+      });
+      await Promise.allSettled(tasks);
     },
-    [movie.id, movie.type, season, episode, movie.title, movie.year],
+    [movie.id, movie.type, movie.title, movie.year, season, episode],
   );
 
   useEffect(() => {
-    let cancelled = false;
-
     const force = forceRefetchTrigger > 0;
+    runScan(force);
+  }, [runScan, forceRefetchTrigger]);
 
-    const runFetch = async (isForce: boolean, isBg: boolean) => {
-      if (cancelled) return;
-      await fetchSources(isForce, isBg);
-    };
-
-    runFetch(force, false);
-
-    // Progressive background sync at 10s, 20s, and 45s
-    const syncIntervals = [10000, 20000, 45000];
-    const timers = syncIntervals.map((delay) =>
-      setTimeout(() => {
-        runFetch(false, true);
-      }, delay),
-    );
-
-    return () => {
-      cancelled = true;
-      timers.forEach(clearTimeout);
-    };
-  }, [fetchSources, forceRefetchTrigger, season, episode]);
-
-  const vidrockUrl = sources
-    .map((s) => (s.url.includes("#") ? s.url : `${s.url}#${s.name}#${s.type}`))
-    .join("|");
-  const hdghartvUrl = hdghartvSources
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-  const videasyUrl = videasySources
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.audio || ""}`,
-    )
-    .join("|");
-  const filmuUrl = filmuSources
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-  const vidnestUrl = vidnestSources
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-  const vaplayerUrl = vaplayerSources
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-  const vidriftUrl = vidriftSources
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-
-  const netnaijaUrl = netnaijaSources
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-
-  const peachifyUrl = peachifySources
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-
-  const kuroSubSources = kuroSources.filter(
-    (s) => s.name.toUpperCase().includes("SUB") || s.audio === "Japanese Sub",
-  );
-  const kuroDubSources = kuroSources.filter(
-    (s) => s.name.toUpperCase().includes("DUB") || s.audio === "English Dub",
-  );
-
-  const kuroSubUrl = (kuroSubSources.length > 0 ? kuroSubSources : kuroSources)
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-
-  const kuroDubUrl = (kuroDubSources.length > 0 ? kuroDubSources : kuroSources)
-    .map((s) =>
-      s.url.includes("#")
-        ? s.url
-        : `${s.url}#${s.name}#${s.type}#${s.quality || "Auto"}`,
-    )
-    .join("|");
-
-  const getButtonClass = (
-    srcName: string,
-    activeName: string,
-    loadingFlag: boolean,
-    hasDataFlag: boolean,
-  ) => {
-    const isFailed = failedSources.includes(srcName);
-    const isActive = activeName === srcName;
-
-    if (isActive) {
-      if (srcName === "Hyperion" || srcName === "VidRock")
-        return "border-nebula-cyan bg-nebula-cyan/10 shadow-[0_0_15px_rgba(0,229,255,0.12)] ring-1 ring-nebula-cyan/35 scale-[1.01] cursor-default";
-      if (
-        srcName === "Aether" ||
-        srcName === "HDGharTV" ||
-        srcName === "GharTV"
-      )
-        return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Vesper" || srcName === "NetNaija")
-        return "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Titan" || srcName === "Vidnest")
-        return "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Quantum" || srcName === "Vaplayer")
-        return "border-cyan-500 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Velocity" || srcName === "Vidrift")
-        return "border-fuchsia-500 bg-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.12)] ring-1 ring-fuchsia-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Orbital" || srcName === "FilmU")
-        return "border-amber-500 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.12)] ring-1 ring-amber-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Spectra" || srcName === "VidLink")
-        return "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.12)] ring-1 ring-white/35 scale-[1.01] cursor-default";
-      if (srcName === "Pulse" || srcName === "Videasy")
-        return "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.12)] ring-1 ring-indigo-500/35 scale-[1.01] cursor-default";
-      if (srcName === "Aurora" || srcName === "Peachify")
-        return "border-rose-500 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.12)] ring-1 ring-rose-500/35 scale-[1.01] cursor-default";
-      if (srcName.startsWith("Zenith") || srcName.startsWith("Kuro"))
-        return "border-violet-500 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.12)] ring-1 ring-violet-500/35 scale-[1.01] cursor-default";
-    }
-
-    if (isFailed) {
-      return "border-red-500/40 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.08)] cursor-pointer active:scale-95";
-    }
-
-    if (loadingFlag) {
-      return "border-white/5 bg-white/2 opacity-60 cursor-wait";
-    }
-
-    if (hasDataFlag) {
-      if (srcName === "Hyperion" || srcName === "VidRock")
-        return "border-nebula-cyan/30 bg-nebula-cyan/5 hover:bg-nebula-cyan/10 active:scale-95 cursor-pointer";
-      if (
-        srcName === "Aether" ||
-        srcName === "HDGharTV" ||
-        srcName === "GharTV"
-      )
-        return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Vesper" || srcName === "NetNaija")
-        return "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Titan" || srcName === "Vidnest")
-        return "border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Quantum" || srcName === "Vaplayer")
-        return "border-cyan-500/35 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Velocity" || srcName === "Vidrift")
-        return "border-fuchsia-500/35 bg-fuchsia-500/5 hover:bg-fuchsia-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Orbital" || srcName === "FilmU")
-        return "border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Spectra" || srcName === "VidLink")
-        return "border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 cursor-pointer";
-      if (srcName === "Pulse" || srcName === "Videasy")
-        return "border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95 cursor-pointer";
-      if (srcName === "Aurora" || srcName === "Peachify")
-        return "border-rose-500/35 bg-rose-500/5 hover:bg-rose-500/10 active:scale-95 cursor-pointer";
-      if (srcName.startsWith("Zenith") || srcName.startsWith("Kuro"))
-        return "border-violet-500/35 bg-violet-500/5 hover:bg-violet-500/10 active:scale-95 cursor-pointer";
-    }
-
-    return "border-white/5 bg-white/2 opacity-40 cursor-not-allowed";
-  };
+  const isAnyLoading = PROVIDERS.some((p) => scan[p.id]?.loading);
+  useEffect(() => {
+    onLoadingChangeRef.current?.(isAnyLoading);
+  }, [isAnyLoading]);
 
   return (
-    <div className="flex flex-col gap-2 p-1 overflow-y-auto max-h-[45vh] custom-scrollbar">
-      {/* Quantum (Vaplayer) */}
-      <button
-        onClick={() =>
-          (vaplayerSources.length > 0 || failedSources.includes("Vaplayer")) &&
-          onSelect(vaplayerUrl)
-        }
-        disabled={
-          activeSource === "Quantum" ||
-          activeSource === "Vaplayer" ||
-          (vaplayerLoading && !failedSources.includes("Vaplayer"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Quantum",
-          activeSource || "",
-          vaplayerLoading,
-          vaplayerSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0">
-              {vaplayerLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Tv size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Quantum
-                </p>
-                {failedSources.includes("Vaplayer") &&
-                  vaplayerSources.length === 0 && (
-                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                      FAILED
-                    </span>
-                  )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {vaplayerLoading ? "Scanning..." : "Active"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Quantum" || activeSource === "Vaplayer") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {vaplayerLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running direct scan...
-            </span>
-          ) : vaplayerSources.length > 0 ? (
-            vaplayerSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Vaplayer[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {vaplayerError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
+    <div className="flex flex-col gap-1.5 p-1 overflow-y-auto max-h-[45vh] custom-scrollbar">
+      {PROVIDERS.map((p) => {
+        const st = scan[p.id] ?? { sources: [], loading: true, error: "" };
+        const isFailed = failedSources.some((fs) =>
+          fs.toLowerCase().includes(p.name.toLowerCase()) || fs.toLowerCase().includes(p.id.toLowerCase())
+        );
+        const isActive =
+          activeSource?.toLowerCase().includes(p.name.toLowerCase()) ||
+          activeSource?.toLowerCase().includes(p.id.toLowerCase());
+        const hasData = st.sources.length > 0;
 
-      {/* Hyperion (VidRock) */}
-      <button
-        onClick={() =>
-          (sources.length > 0 || failedSources.includes("VidRock")) &&
-          onSelect(vidrockUrl)
-        }
-        disabled={
-          activeSource === "Hyperion" ||
-          activeSource === "VidRock" ||
-          (loading && !failedSources.includes("VidRock"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Hyperion",
-          activeSource || "",
-          loading,
-          sources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-nebula-cyan/15 flex items-center justify-center text-nebula-cyan shrink-0">
-              {loading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Info size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Hyperion
-                </p>
-                {failedSources.includes("VidRock") && sources.length === 0 && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
+        return (
+          <button
+            key={p.id}
+            onClick={() => {
+              if (hasData || isFailed) {
+                onSelect(serializeSources(st.sources, p.serializeExtra));
+              }
+            }}
+            disabled={isActive || (st.loading && !isFailed)}
+            className={[
+              "w-full flex items-center justify-between gap-2 p-2.5 rounded-xl border text-left transition-all select-none",
+              isActive
+                ? `${p.borderClass} ${p.bgClass} scale-[1.01] cursor-default`
+                : isFailed
+                  ? "border-red-500/40 bg-red-500/5 hover:bg-red-500/10 cursor-pointer active:scale-95"
+                  : st.loading
+                    ? "border-white/5 bg-white/2 opacity-60 cursor-wait"
+                    : hasData
+                      ? "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10 cursor-pointer active:scale-95"
+                      : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed",
+            ].join(" ")}
+          >
+            {/* Left side: dot + provider name + badge */}
+            <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+              <div className="shrink-0 w-1.5 h-1.5 rounded-full">
+                {st.loading ? (
+                  <span className="block w-1.5 h-1.5 rounded-full bg-white/30 animate-pulse" />
+                ) : hasData ? (
+                  <span className={`block w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")}`} />
+                ) : (
+                  <span className="block w-1.5 h-1.5 rounded-full bg-red-500/60" />
                 )}
               </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {loading ? "Scanning..." : "High-Speed"}
+              <p className="text-[11px] font-black text-white uppercase tracking-tight whitespace-nowrap">
+                {p.name}
               </p>
-            </div>
-          </div>
-          {(activeSource === "Hyperion" || activeSource === "VidRock") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-nebula-cyan shadow-[0_0_8px_#00e5ff] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {loading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running uplink check...
-            </span>
-          ) : sources.length > 0 ? (
-            sources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-nebula-cyan/20 text-nebula-cyan/80 bg-nebula-cyan/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^VidRock\s*\((.*?)\)$/i, "$1")
-                  .replace(/^VidRock/i, "")
-                  .trim()
-                  .toUpperCase()}
+              <span className={`text-[6.5px] font-black px-1 py-0.5 rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase tracking-wider shrink-0 hidden sm:inline-block`}>
+                {p.badge}
               </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {error || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Aether (HDGharTV) */}
-      <button
-        onClick={() =>
-          (hdghartvSources.length > 0 ||
-            failedSources.includes("Aether") ||
-            failedSources.includes("HDGharTV")) &&
-          onSelect(hdghartvUrl)
-        }
-        disabled={
-          activeSource === "Aether" ||
-          activeSource === "HDGharTV" ||
-          activeSource === "GharTV" ||
-          (hdghartvLoading &&
-            !failedSources.includes("Aether") &&
-            !failedSources.includes("HDGharTV"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Aether",
-          activeSource || "",
-          hdghartvLoading,
-          hdghartvSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 shrink-0">
-              {hdghartvLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Tv size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Aether
-                </p>
-                {(failedSources.includes("Aether") ||
-                  failedSources.includes("HDGharTV")) &&
-                  hdghartvSources.length === 0 && (
-                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                      FAILED
-                    </span>
-                  )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {hdghartvLoading ? "Scanning..." : "Multi-Audio"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Aether" ||
-            activeSource === "HDGharTV" ||
-            activeSource === "GharTV") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {hdghartvLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Scanning Aether...
-            </span>
-          ) : hdghartvSources.length > 0 ? (
-            hdghartvSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^(Aether|HDGharTV|GharTV)\s*\((.*?)\)$/i, "$2")
-                  .replace(/^(Aether|HDGharTV|GharTV)/i, "")
-                  .trim()
-                  .toUpperCase() || "HD"}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {hdghartvError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Vesper (NetNaija) */}
-      <button
-        onClick={() =>
-          (netnaijaSources.length > 0 ||
-            failedSources.includes("Vesper") ||
-            failedSources.includes("NetNaija")) &&
-          onSelect(netnaijaUrl)
-        }
-        disabled={
-          activeSource === "Vesper" ||
-          activeSource === "NetNaija" ||
-          (netnaijaLoading &&
-            !failedSources.includes("Vesper") &&
-            !failedSources.includes("NetNaija"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Vesper",
-          activeSource || "",
-          netnaijaLoading,
-          netnaijaSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0">
-              {netnaijaLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Tv size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Vesper
-                </p>
-                {(failedSources.includes("Vesper") ||
-                  failedSources.includes("NetNaija")) &&
-                  netnaijaSources.length === 0 && (
-                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                      FAILED
-                    </span>
-                  )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {netnaijaLoading ? "Scanning..." : "Direct Stream"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Vesper" || activeSource === "NetNaija") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {netnaijaLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Scanning Vesper...
-            </span>
-          ) : netnaijaSources.length > 0 ? (
-            netnaijaSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/20 text-cyan-400/80 bg-cyan-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^(Vesper|NetNaija)\s*\((.*?)\)$/i, "$2")
-                  .replace(/^(Vesper|NetNaija)/i, "")
-                  .trim()
-                  .toUpperCase() || "HD"}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {netnaijaError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Pulse (Videasy) */}
-      <button
-        onClick={() =>
-          (videasySources.length > 0 || failedSources.includes("Videasy")) &&
-          onSelect(videasyUrl)
-        }
-        disabled={
-          activeSource === "Pulse" ||
-          activeSource === "Videasy" ||
-          (videasyLoading && !failedSources.includes("Videasy"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Pulse",
-          activeSource || "",
-          videasyLoading,
-          videasySources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400 shrink-0">
-              {videasyLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Tv size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Pulse
-                </p>
-                {failedSources.includes("Videasy") &&
-                  videasySources.length === 0 && (
-                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                      FAILED
-                    </span>
-                  )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {videasyLoading ? "Decrypting..." : "Decrypted"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Pulse" || activeSource === "Videasy") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {videasyLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running decrypt scan...
-            </span>
-          ) : videasySources.length > 0 ? (
-            <>
-              {videasySources.slice(0, 3).map((s) => (
-                <span
-                  key={s.name}
-                  className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/20 text-indigo-400/80 bg-indigo-500/5 uppercase tracking-wide"
-                >
-                  {s.name
-                    .replace(/^Videasy\s*\((.*?)\)$/i, "$1")
-                    .replace(/^Videasy/i, "")
-                    .trim()
-                    .toUpperCase()}
-                </span>
-              ))}
-              {videasySources.length > 3 && (
-                <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/10 text-white/40 bg-white/5 uppercase tracking-wide">
-                  +{videasySources.length - 3}
+              {isFailed && !hasData && (
+                <span className="text-[6.5px] font-bold px-1 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
+                  FAILED
                 </span>
               )}
-            </>
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {videasyError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
+            </div>
 
-      {/* Spectra (VidLink) */}
-      <button
-        onClick={() => onSelect()}
-        disabled={activeSource === "Spectra" || activeSource === "VidLink"}
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Spectra",
-          activeSource || "",
-          false,
-          true,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-white/10 flex items-center justify-center text-white/60 shrink-0">
-              <Search size={13} />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Spectra
-                </p>
-                {failedSources.includes("VidLink") && (
-                  <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                    FAILED
-                  </span>
-                )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                Standard
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Spectra" || activeSource === "VidLink") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          <span className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-white/15 text-white/50 bg-white/5 uppercase tracking-wide">
-            Auto-Failover
-          </span>
-        </div>
-      </button>
-
-      {/* Titan (Vidnest) */}
-      <button
-        onClick={() =>
-          (vidnestSources.length > 0 || failedSources.includes("Vidnest")) &&
-          onSelect(vidnestUrl)
-        }
-        disabled={
-          activeSource === "Titan" ||
-          activeSource === "Vidnest" ||
-          (vidnestLoading && !failedSources.includes("Vidnest"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Titan",
-          activeSource || "",
-          vidnestLoading,
-          vidnestSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 shrink-0">
-              {vidnestLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Zap size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Titan
-                </p>
-                {failedSources.includes("Vidnest") &&
-                  vidnestSources.length === 0 && (
-                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                      FAILED
-                    </span>
-                  )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {vidnestLoading ? "Scanning..." : "Active"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Titan" || activeSource === "Vidnest") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {vidnestLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running uplink check...
-            </span>
-          ) : vidnestSources.length > 0 ? (
-            vidnestSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/20 text-emerald-400/80 bg-emerald-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Vidnest\s*-\s*/i, "")
-                  .replace(/^Vidnest\s*\(([^)]+)\)$/i, "$1")
-                  .replace(/^Vidnest\s*/i, "")
-                  .replace(/^\(([^)]+)\)$/, "$1")
-                  .replace(/HollyMovieHD/i, "ALPHA")
-                  .replace(/MovieBox/i, "BETA")
-                  .replace(/AllMovies/i, "GAMMA")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {vidnestError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Zenith (Sub - Japanese) */}
-      <button
-        onClick={() =>
-          (kuroSubSources.length > 0 || failedSources.includes("Kuro (Sub)")) &&
-          onSelect(kuroSubUrl)
-        }
-        disabled={
-          activeSource === "Zenith (Sub)" ||
-          activeSource === "Kuro (Sub)" ||
-          (kuroLoading && !failedSources.includes("Kuro (Sub)"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Zenith (Sub)",
-          activeSource || "",
-          kuroLoading,
-          kuroSubSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-400 shrink-0">
-              {kuroLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Zap size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Zenith (Sub)
-                </p>
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-purple-500/35 bg-purple-500/20 text-purple-300 uppercase tracking-wider shrink-0">
-                  JAPANESE AUDIO
+            {/* Right side: mirrors / status indicator */}
+            <div className="flex items-center gap-1 shrink-0 ml-auto">
+              {st.loading ? (
+                <span className="text-[8px] text-white/30 uppercase tracking-widest animate-pulse font-medium">
+                  scanning…
                 </span>
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {kuroLoading ? "Scanning..." : "Subbed Streams"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Zenith (Sub)" ||
-            activeSource === "Kuro (Sub)") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {kuroLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Scanning sub streams...
-            </span>
-          ) : kuroSubSources.length > 0 ? (
-            kuroSubSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 text-violet-400/80 bg-violet-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Kuro[\s-]*/i, "")
-                  .replace(/\s*\(?SUB\)?/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-violet-400 uppercase font-medium">
-              {kuroError || "No sub mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
+              ) : hasData ? (
+                <div className="flex flex-wrap items-center gap-1 justify-end">
+                  {st.sources.slice(0, 3).map((src) => {
+                    let s = (src.name || "").trim();
+                    s = s.replace(/^[-_\s]*\d*[-_\s]*/, "");
+                    s = s.replace(/^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Vidrift|Peachify|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i, "").trim();
+                    const pMatch = s.match(/\(([^)]+)\)/);
+                    if (pMatch && pMatch[1] && pMatch[1].toUpperCase() !== "AUTO") {
+                      s = pMatch[1];
+                    }
+                    s = s.replace(/[()]/g, "").replace(/^[-_\s]+/, "").trim();
+                    const isSub = /\bSUB\b/i.test(s) || /Japanese Sub/i.test(s);
+                    const isDub = /\bDUB\b/i.test(s) || /English Dub/i.test(s);
+                    if (isSub) {
+                      const num = s.match(/\d+/);
+                      s = num ? `SUB ${num[0]}` : "SUB";
+                    } else if (isDub) {
+                      const num = s.match(/\d+/);
+                      s = num ? `DUB ${num[0]}` : "DUB";
+                    }
+                    if (!s || s.length < 2) {
+                      s = src.quality && src.quality !== "Auto" ? src.quality : "HD";
+                    }
+                    const label = s.toUpperCase();
 
-      {/* Zenith (Dub - English) */}
-      <button
-        onClick={() =>
-          (kuroDubSources.length > 0 || failedSources.includes("Kuro (Dub)")) &&
-          onSelect(kuroDubUrl)
-        }
-        disabled={
-          activeSource === "Zenith (Dub)" ||
-          activeSource === "Kuro (Dub)" ||
-          (kuroLoading && !failedSources.includes("Kuro (Dub)"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Zenith (Dub)",
-          activeSource || "",
-          kuroLoading,
-          kuroDubSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-pink-500/15 flex items-center justify-center text-pink-400 shrink-0">
-              {kuroLoading ? (
-                <Loader2 size={13} className="animate-spin" />
+                    return (
+                      <span
+                        key={src.name}
+                        className={`text-[7px] font-bold px-1.5 py-0.5 rounded border ${p.borderClass} ${p.bgClass} ${p.textClass} uppercase tracking-wide whitespace-nowrap`}
+                      >
+                        {label}
+                      </span>
+                    );
+                  })}
+                  {st.sources.length > 3 && (
+                    <span className="text-[7px] font-bold px-1 py-0.5 rounded border border-white/10 text-white/40 bg-white/5">
+                      +{st.sources.length - 3}
+                    </span>
+                  )}
+                </div>
               ) : (
-                <Zap size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Zenith (Dub)
-                </p>
-                <span className="text-[7px] font-black px-1.5 py-0.5 rounded border border-pink-500/35 bg-pink-500/20 text-pink-300 uppercase tracking-wider shrink-0">
-                  ENGLISH DUB
+                <span className="text-[8px] text-rose-400 uppercase font-medium">
+                  {st.error ? "offline" : "no mirrors"}
                 </span>
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {kuroLoading ? "Scanning..." : "Dubbed Streams"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Zenith (Dub)" ||
-            activeSource === "Kuro (Dub)") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {kuroLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Scanning dub streams...
-            </span>
-          ) : kuroDubSources.length > 0 ? (
-            kuroDubSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-pink-500/20 text-pink-400/80 bg-pink-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Kuro[\s-]*/i, "")
-                  .replace(/\s*\(?DUB\)?/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-pink-400 uppercase font-medium">
-              {kuroError || "No dub mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Orbital (FilmU) */}
-      <button
-        onClick={() =>
-          (filmuSources.length > 0 || failedSources.includes("FilmU")) &&
-          onSelect(filmuUrl)
-        }
-        disabled={
-          activeSource === "Orbital" ||
-          activeSource === "FilmU" ||
-          (filmuLoading && !failedSources.includes("FilmU"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Orbital",
-          activeSource || "",
-          filmuLoading,
-          filmuSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400 shrink-0">
-              {filmuLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Info size={13} />
+              )}
+              {isActive && (
+                <span className={`w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")} shadow-[0_0_8px_currentColor] shrink-0 ml-0.5`} />
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Orbital
-                </p>
-                {failedSources.includes("FilmU") &&
-                  filmuSources.length === 0 && (
-                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                      FAILED
-                    </span>
-                  )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {filmuLoading ? "Scanning..." : "Active"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Orbital" || activeSource === "FilmU") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {filmuLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running uplink check...
-            </span>
-          ) : filmuSources.length > 0 ? (
-            filmuSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20 text-amber-400/80 bg-amber-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^FilmU[\s-]*/i, "")
-                  .replace(/VORTEX/i, "ALPHA")
-                  .replace(/ZENITH/i, "BETA")
-                  .replace(/AURA/i, "GAMMA")
-                  .replace(/KURO/i, "DELTA")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {filmuError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Aurora (Peachify) */}
-      <button
-        onClick={() =>
-          (peachifySources.length > 0 || failedSources.includes("Peachify")) &&
-          onSelect(peachifyUrl)
-        }
-        disabled={
-          activeSource === "Aurora" ||
-          activeSource === "Peachify" ||
-          (peachifyLoading && !failedSources.includes("Peachify"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Aurora",
-          activeSource || "",
-          peachifyLoading,
-          peachifySources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-rose-500/15 flex items-center justify-center text-rose-400 shrink-0">
-              {peachifyLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Zap size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Aurora
-                </p>
-                {failedSources.includes("Peachify") &&
-                  peachifySources.length === 0 && (
-                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                      FAILED
-                    </span>
-                  )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {peachifyLoading ? "Scanning..." : "Direct Node"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Aurora" || activeSource === "Peachify") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {peachifyLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running direct scan...
-            </span>
-          ) : peachifySources.length > 0 ? (
-            peachifySources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-rose-500/20 text-rose-400/80 bg-rose-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Peachify[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {peachifyError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Velocity (Vidrift) */}
-      <button
-        onClick={() =>
-          (vidriftSources.length > 0 || failedSources.includes("Vidrift")) &&
-          onSelect(vidriftUrl)
-        }
-        disabled={
-          activeSource === "Velocity" ||
-          activeSource === "Vidrift" ||
-          (vidriftLoading && !failedSources.includes("Vidrift"))
-        }
-        className={`w-full flex flex-col gap-1.5 p-3 rounded-xl border text-left transition-all ${getButtonClass(
-          "Velocity",
-          activeSource || "",
-          vidriftLoading,
-          vidriftSources.length > 0,
-        )}`}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 shrink-0">
-              {vidriftLoading ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Tv size={13} />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white uppercase tracking-tight">
-                  Velocity
-                </p>
-                {failedSources.includes("Vidrift") &&
-                  vidriftSources.length === 0 && (
-                    <span className="text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider shrink-0">
-                      FAILED
-                    </span>
-                  )}
-              </div>
-              <p className="text-[8px] text-white/40 uppercase font-semibold mt-0.5">
-                {vidriftLoading ? "Scanning..." : "Active"}
-              </p>
-            </div>
-          </div>
-          {(activeSource === "Velocity" || activeSource === "Vidrift") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {vidriftLoading ? (
-            <span className="text-[8px] text-white/20 uppercase tracking-widest animate-pulse font-medium">
-              Running direct scan...
-            </span>
-          ) : vidriftSources.length > 0 ? (
-            vidriftSources.map((s) => (
-              <span
-                key={s.name}
-                className="text-[7.5px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-500/20 text-fuchsia-400/80 bg-fuchsia-500/5 uppercase tracking-wide"
-              >
-                {s.name
-                  .replace(/^Vidrift[\s-]*/i, "")
-                  .trim()
-                  .toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[8px] text-rose-400 uppercase font-medium">
-              {vidriftError || "No mirrors"}
-            </span>
-          )}
-        </div>
-      </button>
+          </button>
+        );
+      })}
     </div>
   );
 }
