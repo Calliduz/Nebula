@@ -444,6 +444,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
             url: value.url,
             type: value.type || "hls",
             quality: (value as any).quality || "Auto",
+            audio: (value as any).audio || "English",
           }));
         setHdghartvSources(activeSources);
       })

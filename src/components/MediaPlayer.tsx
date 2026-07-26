@@ -2958,10 +2958,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       });
 
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
-        if (data && data.audioTracks) {
+        if (data && data.audioTracks && data.audioTracks.length > 0) {
           console.log("[HLS] Audio tracks updated:", data.audioTracks);
           setHlsAudioTracks(data.audioTracks);
-          setCurrentHlsAudioTrack(hls.audioTrack);
+
+          // Find English track if available to set as default
+          const englishIndex = data.audioTracks.findIndex((track: any) => {
+            const name = (track.name || "").toLowerCase();
+            const lang = (track.lang || "").toLowerCase();
+            return (
+              lang === "en" ||
+              lang === "eng" ||
+              name.includes("english") ||
+              name.includes("eng")
+            );
+          });
+
+          if (englishIndex !== -1) {
+            console.log(
+              `[HLS] Setting default audio track to English (index ${englishIndex})`,
+            );
+            hls.audioTrack = englishIndex;
+            setCurrentHlsAudioTrack(englishIndex);
+          } else {
+            setCurrentHlsAudioTrack(hls.audioTrack);
+          }
         }
       });
 
@@ -7494,6 +7515,7 @@ export function InPlayerSourcePicker({
               url: v.url,
               type: v.type || "hls",
               quality: (v as any).quality || "Auto",
+              audio: (v as any).audio || "English",
             }));
           setHdghartvSources(list);
           if (!isBackground) setHdghartvError("");
