@@ -37,6 +37,7 @@ import {
   handleImageError,
   handleClearLogoError,
   triggerPopunder,
+  formatSeasonName,
 } from "../utils/helpers";
 import { fetchVideasySourcesDirect } from "../services/videasy";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -3521,7 +3522,14 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                             onClick={() => setShowSeasonDropdown((p) => !p)}
                             className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 shadow-md"
                           >
-                            <span>Season {activeSeason}</span>
+                            <span>
+                              {formatSeasonName(
+                                tvDetails.seasons.find(
+                                  (s: any) => s.season_number === activeSeason,
+                                ),
+                                activeSeason,
+                              )}
+                            </span>
                             <ChevronDown
                               size={14}
                               className={`transition-transform duration-200 ${showSeasonDropdown ? "rotate-180" : ""}`}
@@ -3547,7 +3555,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                         : "text-white/60 hover:text-white hover:bg-white/5"
                                     }`}
                                   >
-                                    <span>Season {s.season_number}</span>
+                                    <span>{formatSeasonName(s)}</span>
                                     {activeSeason === s.season_number && (
                                       <span className="w-1 h-1 rounded-full bg-nebula-cyan shadow-[0_0_6px_#00e5ff]" />
                                     )}
@@ -3566,7 +3574,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 onClick={() => setActiveSeason(s.season_number)}
                                 className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeSeason === s.season_number ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-white"}`}
                               >
-                                Season {s.season_number}
+                                {formatSeasonName(s)}
                               </button>
                             ))}
                         </div>
@@ -3702,6 +3710,26 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   ? `Episode ${ep.episode_number}`
                                   : ep.name}
                               </h4>
+
+                              {(ep.vote_average > 0 || ep.air_date) && (
+                                <div className="flex items-center gap-2 text-[11px] font-mono mb-1.5 text-white/50 flex-wrap">
+                                  {ep.vote_average > 0 && (
+                                    <span className="flex items-center gap-1 text-amber-400 font-bold">
+                                      <Star
+                                        size={11}
+                                        className="fill-amber-400 text-amber-400"
+                                      />
+                                      {ep.vote_average.toFixed(1)}
+                                    </span>
+                                  )}
+                                  {ep.air_date && (
+                                    <span className="text-white/40">
+                                      {ep.air_date.split("-")[0]}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
                               <p className="text-xs text-dim line-clamp-2 mt-auto">
                                 {ep.overview || "No description available."}
                               </p>

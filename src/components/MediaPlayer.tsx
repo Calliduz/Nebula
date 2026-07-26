@@ -30,8 +30,11 @@ import {
   ArrowLeft,
   Check,
   ChevronDown,
+  ChevronUp,
   Clock,
   Star,
+  Sparkles,
+  Film,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -39,9 +42,13 @@ import { useSubtitleManager } from "../hooks/useSubtitleManager";
 import { SubtitleOverlay } from "./SubtitleOverlay";
 
 import { API_BASE_URL } from "../config";
-import { handleClearLogoError } from "../utils/helpers";
+import {
+  handleImageError,
+  handleClearLogoError,
+  formatSeasonName,
+} from "../utils/helpers";
 import { fetchVideasySourcesDirect } from "../services/videasy";
-import { getTVSeasonEpisodes } from "../services/tmdb";
+import { getTVSeasonEpisodes, getMediaDetails } from "../services/tmdb";
 import {
   type SkipSegment,
   parseIntroDBResponse,
@@ -664,6 +671,33 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [subtitles, setSubtitles] = useState<any[]>([]);
   const [logoFailed, setLogoFailed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
+  const [similarTitles, setSimilarTitles] = useState<any[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+
+  // Fetch similar titles for "More Like This" modal
+  useEffect(() => {
+    if (!movie?.id) return;
+    let isCancelled = false;
+    setSimilarLoading(true);
+    getMediaDetails(movie.id, movie.type || "movie")
+      .then((res) => {
+        if (!isCancelled) {
+          setSimilarTitles(res?.similar || []);
+        }
+      })
+      .catch((err) => {
+        if (!isCancelled) console.error("Failed to fetch similar titles:", err);
+      })
+      .finally(() => {
+        if (!isCancelled) setSimilarLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [movie?.id, movie?.type]);
 
   useEffect(() => {
     setLogoFailed(false);
@@ -5539,7 +5573,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </div>
                 )}
 
-                <div className="absolute inset-x-0 rounded-full bg-white/20 h-[3px] group-hover:h-[5px] transition-all duration-200">
+                <div className="absolute inset-x-0 rounded-full bg-white/20 h-[5px] sm:h-[6px] group-hover:h-[8px] transition-all duration-200">
                   <div
                     className="absolute inset-y-0 left-0 bg-white/30 rounded-full"
                     style={{ width: `${buffered}%` }}
@@ -5551,7 +5585,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     }}
                   />
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -ml-1.5 shadow-md group-hover:scale-125 transition-transform"
+                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full -ml-2 shadow-md group-hover:scale-125 transition-transform"
                     style={{
                       left: `${isDragging ? dragProgress : progress}%`,
                     }}
@@ -5674,6 +5708,40 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 relative">
+              {/* More Like This Button */}
+              {!isEmbed && (
+                <button
+                  onClick={() => {
+                    setShowMoreLikeThis((prev) => !prev);
+                    setShowSettings(false);
+                    setShowSubtitles(false);
+                    setShowAudioModal(false);
+                    setShowServersModal(false);
+                    setShowEpisodeDrawer(false);
+                  }}
+                  className={`h-8 sm:h-9 px-3 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 shrink-0 ${
+                    showMoreLikeThis
+                      ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+                      : "bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border-white/10"
+                  }`}
+                  title="More Like This"
+                >
+                  <Sparkles
+                    size={14}
+                    className={
+                      showMoreLikeThis ? "text-black" : "text-nebula-cyan"
+                    }
+                  />
+                  <span className="hidden sm:inline font-semibold">
+                    More Like This
+                  </span>
+                  <ChevronUp
+                    size={14}
+                    className={`transition-transform duration-200 ${showMoreLikeThis ? "rotate-180" : ""}`}
+                  />
+                </button>
+              )}
+
               {movie.type === "tv" && (
                 <button
                   onClick={() => {
@@ -6810,8 +6878,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                               value={s.season_number}
                               className="bg-obsidian text-white"
                             >
-                              {s.name || `Season ${s.season_number}`} (
-                              {s.episode_count || 0})
+                              {formatSeasonName(s)}
                             </option>
                           ))
                       ) : (
@@ -7068,6 +7135,144 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         );
                       });
                     })()}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── More Like This Overlay Drawer/Modal ──────────────── */}
+      <AnimatePresence>
+        {showMoreLikeThis && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowMoreLikeThis(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1050] pointer-events-auto"
+            />
+            {/* Modal Sheet */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 250 }}
+              className="fixed inset-x-0 bottom-0 z-[1100] max-h-[85vh] bg-[#0c0c0e]/95 backdrop-blur-2xl border-t border-white/10 rounded-t-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden pointer-events-auto"
+            >
+              {/* Header */}
+              <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between bg-black/40 flex-shrink-0">
+                <div className="flex items-baseline gap-2 sm:gap-3 min-w-0 pr-4">
+                  <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                    More Like This
+                  </h2>
+                  <span className="text-xs sm:text-sm font-semibold text-white/40 truncate">
+                    {movie?.title || ""}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowMoreLikeThis(false)}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/15 text-white/50 hover:text-white flex items-center justify-center transition-all active:scale-95 flex-shrink-0 cursor-pointer"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Grid Content */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6">
+                {similarLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+                    <Loader2
+                      size={32}
+                      className="animate-spin text-nebula-cyan"
+                    />
+                    <p className="text-xs text-white/40 font-bold uppercase tracking-wider">
+                      Finding recommendations...
+                    </p>
+                  </div>
+                ) : similarTitles.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-4.5">
+                    {similarTitles.map((m: any, idx: number) => {
+                      const rating = m.imdb || m.vote_average;
+                      const year =
+                        m.year ||
+                        (m.release_date ? m.release_date.split("-")[0] : null);
+                      const typeLabel = m.type === "tv" ? "TV" : "MOVIE";
+
+                      return (
+                        <div
+                          key={`mlt-${m.id}-${idx}`}
+                          onClick={() => {
+                            setShowMoreLikeThis(false);
+                            navigate(`/watch/${m.type || "movie"}/${m.id}`);
+                          }}
+                          className="group relative cursor-pointer flex flex-col active:scale-95 transition-transform"
+                        >
+                          {/* Poster Thumbnail */}
+                          <div className="aspect-[2/3] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300">
+                            <img
+                              src={m.image}
+                              alt={m.title}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-85 group-hover:opacity-100"
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              onError={handleImageError}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-40 group-hover:opacity-20 transition-opacity" />
+
+                            {/* Rating Badge (Bottom-left of poster thumbnail) */}
+                            {rating && rating > 0 && (
+                              <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold text-amber-400 flex items-center gap-1 border border-white/15 shadow-md pointer-events-none">
+                                <Star
+                                  size={10}
+                                  className="fill-amber-400 text-amber-400"
+                                />
+                                <span>
+                                  {typeof rating === "number"
+                                    ? rating.toFixed(1)
+                                    : rating}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Hover Play Button */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-nebula-cyan text-obsidian flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-105 transition-all">
+                                <Play
+                                  size={16}
+                                  className="fill-current ml-0.5"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Title & Meta below poster */}
+                          <div className="mt-2 px-0.5 min-w-0">
+                            <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate leading-tight">
+                              {m.title}
+                            </h4>
+                            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono text-white/40 mt-0.5">
+                              {year && <span>{year}</span>}
+                              {year && <span>•</span>}
+                              <span className="uppercase font-bold tracking-wider">
+                                {typeLabel}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                    <Film size={32} className="text-white/20" />
+                    <p className="text-xs text-white/40 font-bold uppercase tracking-wider">
+                      No related titles found
+                    </p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </>

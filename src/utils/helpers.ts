@@ -55,3 +55,29 @@ export const triggerPopunder = () => {
   */
   return;
 };
+
+/**
+ * Format season name for display:
+ * - Specific/custom name if present (e.g. "Thousand-Year Blood War"), otherwise "Season X"
+ * - Appends episode count in parens if present and > 0 (e.g. "Bleach (366)" or "Season 1 (24)")
+ */
+export const formatSeasonName = (
+  season: any,
+  fallbackSeasonNumber?: number,
+): string => {
+  if (!season && fallbackSeasonNumber !== undefined) {
+    return `Season ${fallbackSeasonNumber}`;
+  }
+  if (!season) return "";
+
+  const sNumber = season.season_number ?? fallbackSeasonNumber ?? 1;
+  const rawName = (season.name || "").trim();
+  const isGeneric = !rawName || /^season\s+\d+$/i.test(rawName);
+  const baseName = isGeneric ? `Season ${sNumber}` : rawName;
+
+  const epCount = season.episode_count;
+  if (epCount !== undefined && epCount !== null && epCount > 0) {
+    return `${baseName} (${epCount})`;
+  }
+  return baseName;
+};
