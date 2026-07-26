@@ -5700,7 +5700,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     </div>
                   )}
                   <span className="text-white font-bold text-xs sm:text-sm font-mono tabular-nums ml-1 flex items-center gap-1">
-                    {currentTime} <span className="text-white/40 font-normal">/</span>{" "}
+                    {currentTime}{" "}
+                    <span className="text-white/40 font-normal">/</span>{" "}
                     {duration}
                   </span>
                 </>
