@@ -7158,13 +7158,26 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 250 }}
-              className="fixed inset-x-0 bottom-0 z-[1100] max-h-[85vh] bg-[#0c0c0e]/95 backdrop-blur-2xl border-t border-white/10 rounded-t-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden pointer-events-auto"
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.7 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 300) {
+                  setShowMoreLikeThis(false);
+                }
+              }}
+              className="fixed inset-x-0 top-0 sm:top-4 bottom-0 z-[1100] bg-[#0c0c0e]/95 backdrop-blur-2xl border-t border-white/10 sm:rounded-t-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden pointer-events-auto touch-pan-y"
             >
+              {/* Drag Handle Bar */}
+              <div className="w-full flex items-center justify-center pt-2.5 pb-1 bg-black/40 cursor-grab active:cursor-grabbing border-b border-white/5">
+                <div className="w-12 h-1.5 bg-white/25 hover:bg-white/40 rounded-full transition-colors" />
+              </div>
+
               {/* Header */}
-              <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between bg-black/40 flex-shrink-0">
+              <div className="p-3.5 sm:p-5 border-b border-white/10 flex items-center justify-between bg-black/40 flex-shrink-0">
                 <div className="flex items-baseline gap-2 sm:gap-3 min-w-0 pr-4">
-                  <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                  <h2 className="text-base sm:text-2xl font-black text-white tracking-tight">
                     More Like This
                   </h2>
                   <span className="text-xs sm:text-sm font-semibold text-white/40 truncate">
