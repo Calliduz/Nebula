@@ -7193,13 +7193,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     </p>
                   </div>
                 ) : similarTitles.length > 0 ? (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-4.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4.5">
                     {similarTitles.map((m: any, idx: number) => {
                       const rating = m.imdb || m.vote_average;
                       const year =
                         m.year ||
                         (m.release_date ? m.release_date.split("-")[0] : null);
                       const typeLabel = m.type === "tv" ? "TV" : "MOVIE";
+                      const posterSrc = m.backdrop || m.image;
 
                       return (
                         <div
@@ -7210,10 +7211,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           }}
                           className="group relative cursor-pointer flex flex-col active:scale-95 transition-transform"
                         >
-                          {/* Poster Thumbnail */}
-                          <div className="aspect-[2/3] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300">
+                          {/* 16:9 Landscape Poster / Fanart Thumbnail */}
+                          <div className="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300">
                             <img
-                              src={m.image}
+                              src={posterSrc}
                               alt={m.title}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-85 group-hover:opacity-100"
                               loading="lazy"
@@ -7222,11 +7223,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-40 group-hover:opacity-20 transition-opacity" />
 
-                            {/* Rating Badge (Bottom-left of poster thumbnail) */}
+                            {/* Rating Badge (Bottom-left of thumbnail, matching screenshot) */}
                             {rating && rating > 0 && (
-                              <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold text-amber-400 flex items-center gap-1 border border-white/15 shadow-md pointer-events-none">
+                              <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-bold text-amber-400 flex items-center gap-1 border border-white/15 shadow-md pointer-events-none">
                                 <Star
-                                  size={10}
+                                  size={11}
                                   className="fill-amber-400 text-amber-400"
                                 />
                                 <span>
@@ -7248,7 +7249,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                             </div>
                           </div>
 
-                          {/* Title & Meta below poster */}
+                          {/* Title & Metadata below 16:9 landscape poster */}
                           <div className="mt-2 px-0.5 min-w-0">
                             <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate leading-tight">
                               {m.title}
