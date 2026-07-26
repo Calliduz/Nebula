@@ -313,6 +313,27 @@ interface SourceSelectionModalProps {
   onSelect: (sourceUrl?: string) => void;
 }
 
+const AutoPlayBanner = React.memo<{
+  providerName: string;
+  countdown: number;
+  onCancel: () => void;
+}>(({ providerName, countdown, onCancel }) => (
+  <div className="mx-3 mt-2.5 flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-nebula-cyan/20 bg-nebula-cyan/5 shrink-0">
+    <div className="flex items-center gap-2">
+      <Loader2 size={11} className="text-nebula-cyan animate-spin shrink-0" />
+      <p className="text-[10px] text-nebula-cyan/90 font-semibold">
+        Auto-playing <span className="font-black">{providerName}</span> in {countdown}s
+      </p>
+    </div>
+    <button
+      onClick={onCancel}
+      className="text-[9px] font-bold text-white/40 hover:text-white uppercase tracking-wide transition-colors"
+    >
+      Cancel
+    </button>
+  </div>
+));
+
 export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   movie,
   season,
@@ -454,10 +475,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   }, [autoPlayId, autoPlayCountdown, scan, movie.id, movie.type, onSelect]);
 
   // Cancel auto-play when user interacts with any row
-  const cancelAutoPlay = () => {
+  const cancelAutoPlay = React.useCallback(() => {
     setAutoPlayId(null);
     setAutoPlayCountdown(3);
-  };
+  }, []);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const isGloballyLoading = PROVIDERS.some((p) => scan[p.id]?.loading);
@@ -489,24 +510,13 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div
-      className="fixed inset-0 z-[3000] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[3000] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm transform-gpu"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="relative w-full max-w-lg bg-[#0a0a0f] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
+        className="relative w-full max-w-lg bg-[#0a0a0f] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden transform-gpu"
         style={{ animation: "modalSlideIn 0.18s ease-out" }}
       >
-        <style>{`
-          @keyframes modalSlideIn {
-            from { opacity: 0; transform: translateY(10px) scale(0.98); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-          }
-          @keyframes rowFadeIn {
-            from { opacity: 0; transform: translateX(-6px); }
-            to   { opacity: 1; transform: translateX(0); }
-          }
-        `}</style>
-
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] shrink-0">
           <div className="flex items-center gap-2.5">
@@ -555,24 +565,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
         {/* ── Auto-play banner ── */}
         {autoPlayId !== null && (
-          <div className="mx-3 mt-2.5 flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-nebula-cyan/20 bg-nebula-cyan/5 shrink-0">
-            <div className="flex items-center gap-2">
-              <Loader2 size={11} className="text-nebula-cyan animate-spin shrink-0" />
-              <p className="text-[10px] text-nebula-cyan/90 font-semibold">
-                Auto-playing{" "}
-                <span className="font-black">
-                  {PROVIDERS.find((p) => p.id === autoPlayId)?.name}
-                </span>{" "}
-                in {autoPlayCountdown}s
-              </p>
-            </div>
-            <button
-              onClick={cancelAutoPlay}
-              className="text-[9px] font-bold text-white/40 hover:text-white uppercase tracking-wide transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
+          <AutoPlayBanner
+            providerName={PROVIDERS.find((p) => p.id === autoPlayId)?.name || ""}
+            countdown={autoPlayCountdown}
+            onCancel={cancelAutoPlay}
+          />
         )}
 
         {/* ── Provider list ── */}

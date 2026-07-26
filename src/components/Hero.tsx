@@ -76,7 +76,8 @@ export const Hero: React.FC<HeroProps> = ({
         return (
           <div
             key={`backdrop-${movie.id || i}`}
-            className={`hero-backdrop absolute inset-0 z-0 ${isActive ? "opacity-100" : "opacity-0"}`}
+            className={`hero-backdrop absolute inset-0 z-0 transition-opacity duration-700 ease-out transform-gpu ${isActive ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            style={{ willChange: "opacity" }}
           >
             {/* Desktop landscape */}
             <img
@@ -92,7 +93,7 @@ export const Hero: React.FC<HeroProps> = ({
             <img
               src={movie.image || movie.fanartBackground || movie.backdrop}
               alt={movie.title}
-              className="block md:hidden absolute inset-0 w-full h-full object-cover opacity-20 blur-xl"
+              className="block md:hidden absolute inset-0 w-full h-full object-cover opacity-20 blur-xl transform-gpu"
               referrerPolicy="no-referrer"
               loading={isActive ? "eager" : "lazy"}
               decoding="async"

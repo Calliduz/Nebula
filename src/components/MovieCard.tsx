@@ -181,9 +181,9 @@ export const MovieCard = memo<MovieCardProps>(
   },
   (prevProps, nextProps) => {
     return (
-      prevProps.onSelect === nextProps.onSelect &&
-      prevProps.onRemove === nextProps.onRemove &&
-      prevProps.onToggleList === nextProps.onToggleList &&
+      Boolean(prevProps.onSelect) === Boolean(nextProps.onSelect) &&
+      Boolean(prevProps.onRemove) === Boolean(nextProps.onRemove) &&
+      Boolean(prevProps.onToggleList) === Boolean(nextProps.onToggleList) &&
       prevProps.aspect === nextProps.aspect &&
       prevProps.isGrid === nextProps.isGrid &&
       prevProps.snap === nextProps.snap &&

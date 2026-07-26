@@ -99,6 +99,59 @@ const parseMirrorName = (name: string) => {
   return { base: name, quality: "Original" };
 };
 
+const PlayerStyles = React.memo(() => (
+  <style>{`
+    @keyframes stream-progress {
+      0%   { width: 0%; opacity: 1; }
+      70%  { width: 85%; opacity: 1; }
+      90%  { width: 90%; opacity: 0.7; }
+      100% { width: 90%; opacity: 0.7; }
+    }
+    @media (max-height: 480px) {
+      .error-overlay {
+        padding: 1rem !important;
+      }
+      .error-box {
+        max-width: 440px !important;
+      }
+      .error-icon-box {
+        width: 2.75rem !important;
+        height: 2.75rem !important;
+        margin-bottom: 0.5rem !important;
+      }
+      .error-icon-box svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+      .error-title {
+        font-size: 1.1rem !important;
+        margin-bottom: 0.25rem !important;
+      }
+      .error-msg-tag {
+        margin-bottom: 0.5rem !important;
+        font-size: 8px !important;
+        padding: 0.25rem 0.5rem !important;
+      }
+      .error-desc {
+        margin-bottom: 0.75rem !important;
+        font-size: 11px !important;
+        line-height: 1rem !important;
+        max-width: 24rem !important;
+      }
+      .error-buttons-grid {
+        margin-top: 0.25rem !important;
+        gap: 0.5rem !important;
+        max-width: 400px !important;
+      }
+      .error-buttons-grid button {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 8px !important;
+        min-height: 32px !important;
+      }
+    }
+  `}</style>
+));
+
 export const SOURCE_ALIASES: Record<string, string> = {
   Vaplayer: "Quantum",
   VidRock: "Hyperion",
@@ -4715,56 +4768,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               Cancel
             </button>
           </div>
-          <style>{`
-            @keyframes stream-progress {
-              0%   { width: 0%; opacity: 1; }
-              70%  { width: 85%; opacity: 1; }
-              90%  { width: 90%; opacity: 0.7; }
-              100% { width: 90%; opacity: 0.7; }
-            }
-            @media (max-height: 480px) {
-              .error-overlay {
-                padding: 1rem !important;
-              }
-              .error-box {
-                max-width: 440px !important;
-              }
-              .error-icon-box {
-                width: 2.75rem !important;
-                height: 2.75rem !important;
-                margin-bottom: 0.5rem !important;
-              }
-              .error-icon-box svg {
-                width: 1.25rem !important;
-                height: 1.25rem !important;
-              }
-              .error-title {
-                font-size: 1.1rem !important;
-                margin-bottom: 0.25rem !important;
-              }
-              .error-msg-tag {
-                margin-bottom: 0.5rem !important;
-                font-size: 8px !important;
-                padding: 0.25rem 0.5rem !important;
-              }
-              .error-desc {
-                margin-bottom: 0.75rem !important;
-                font-size: 11px !important;
-                line-height: 1rem !important;
-                max-width: 24rem !important;
-              }
-              .error-buttons-grid {
-                margin-top: 0.25rem !important;
-                gap: 0.5rem !important;
-                max-width: 400px !important;
-              }
-              .error-buttons-grid button {
-                padding: 0.5rem 0.75rem !important;
-                font-size: 8px !important;
-                min-height: 32px !important;
-              }
-            }
-          `}</style>
+          <PlayerStyles />
         </div>
       )}
 
@@ -5093,10 +5097,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       </AnimatePresence>
 
       <div
-        className="absolute inset-0 flex flex-col justify-between z-20"
+        className="absolute inset-0 flex flex-col justify-between z-20 transform-gpu"
         style={{
           opacity: showUi ? 1 : 0,
-          transition: "opacity 0.25s",
+          transition: "opacity 0.25s ease-out",
+          willChange: "opacity",
           pointerEvents: showUi ? "auto" : "none",
         }}
         // Tap on empty space (not the bars) → toggle UI visibility
