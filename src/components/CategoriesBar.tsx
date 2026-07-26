@@ -207,7 +207,7 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
                 <button
                   key={cat.key}
                   onClick={() => handleCategoryClick(cat)}
-                  className={`group relative flex items-center justify-center gap-1.5 rounded-xl px-3 py-3 bg-white/[0.03] border transition-all duration-300 font-sans text-[10px] font-black uppercase tracking-[0.1em] text-white/50 hover:text-white overflow-hidden ${
+                  className={`group relative flex items-center justify-center gap-1.5 rounded-xl px-3 py-3 bg-white/[0.03] border transition-all duration-300 font-sans text-[10px] font-black uppercase tracking-[0.1em] text-white/50 hover:text-white overflow-hidden transform-gpu ${
                     cat.adult
                       ? "border-red-500/20 hover:border-red-400/40"
                       : "border-white/[0.06] hover:border-nebula-cyan/30"

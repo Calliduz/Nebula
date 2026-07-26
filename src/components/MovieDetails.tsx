@@ -776,9 +776,13 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
   useEffect(() => {
     if (showSeasonDropdown && seasonButtonRef.current) {
-      const rect = seasonButtonRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      setDropUpSeasonDropdown(spaceBelow < 280);
+      const handle = requestAnimationFrame(() => {
+        if (!seasonButtonRef.current) return;
+        const rect = seasonButtonRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        setDropUpSeasonDropdown(spaceBelow < 280);
+      });
+      return () => cancelAnimationFrame(handle);
     }
   }, [showSeasonDropdown]);
 
