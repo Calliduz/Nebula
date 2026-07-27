@@ -207,6 +207,24 @@ export const getAudioFlagCode = (
   if (l.includes("chinese") || l.includes("zh")) return "cn";
   if (l.includes("tagalog") || l.includes("filipino")) return "ph";
   if (
+    l.includes("yoruba") ||
+    l.includes("hausa") ||
+    l.includes("igbo") ||
+    l.includes("nigeria")
+  )
+    return "ng";
+  if (
+    l.includes("indonesia") ||
+    l.includes("indonesian") ||
+    l.includes("indo")
+  )
+    return "id";
+  if (l.includes("malay") || l.includes("malaysia")) return "my";
+  if (l.includes("arabic") || l.includes("ara")) return "sa";
+  if (l.includes("vietnamese") || l.includes("vie")) return "vn";
+  if (l.includes("thai")) return "th";
+  if (l.includes("turkish") || l.includes("tur")) return "tr";
+  if (
     l.includes("dub") ||
     l.includes("english") ||
     l.includes("eng") ||
@@ -681,12 +699,14 @@ const groupMirrors = (mirrorsList: any[]) => {
     }
 
     const { base, quality } = parseMirrorName(m.source);
+    const audioLabel = m.audio && m.audio !== "English" ? ` (${m.audio})` : "";
+    const groupSource = `${base}${audioLabel}`;
     const groupKey = `${base}_${m.audio || ""}`;
     const height = parseInt(quality.replace(/\D/g, ""), 10) || 480;
 
     if (!groups[groupKey]) {
       groups[groupKey] = {
-        source: base,
+        source: groupSource,
         url: m.url,
         type: m.type === "hls" ? "hls_grouped" : "mp4_grouped",
         audio: m.audio,
