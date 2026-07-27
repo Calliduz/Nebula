@@ -7222,18 +7222,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 350 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0, bottom: 0.5 }}
-              onDragEnd={(_, info) => {
-                if (info.offset.y > 100 || info.velocity.y > 300) {
-                  setShowMoreLikeThis(false);
-                }
-              }}
-              className="fixed inset-x-0 top-0 sm:top-4 bottom-0 z-[1100] bg-[#0c0c0e]/98 border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto touch-pan-y transform-gpu"
+              className="fixed inset-x-0 top-0 sm:top-4 bottom-0 z-[1100] bg-[#0c0c0e]/98 border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto transform-gpu"
             >
               {/* Drag Handle Bar */}
-              <div className="w-full flex items-center justify-center pt-2.5 pb-1 bg-black/40 cursor-grab active:cursor-grabbing border-b border-white/5">
+              <div
+                onClick={() => setShowMoreLikeThis(false)}
+                className="w-full flex items-center justify-center pt-2.5 pb-1 bg-black/40 cursor-pointer border-b border-white/5"
+                title="Close"
+              >
                 <div className="w-12 h-1.5 bg-white/25 hover:bg-white/40 rounded-full transition-colors" />
               </div>
 
@@ -7257,7 +7253,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </div>
 
               {/* Grid Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pt-4 sm:pt-6">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pt-3 sm:pt-6">
                 {similarLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
                     <Loader2
@@ -7269,14 +7265,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     </p>
                   </div>
                 ) : similarTitles.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4.5">
                     {similarTitles.slice(0, 18).map((m: any, idx: number) => {
                       const rating = m.imdb || m.vote_average;
                       const year =
                         m.year ||
                         (m.release_date ? m.release_date.split("-")[0] : null);
                       const typeLabel = m.type === "tv" ? "TV" : "MOVIE";
-                      const posterSrc = m.image || m.poster || m.backdrop;
+                      const posterSrc = m.backdrop || m.image;
 
                       return (
                         <div
@@ -7287,40 +7283,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           }}
                           className="group relative cursor-pointer flex flex-col active:scale-95 transition-transform"
                         >
-                          {/* 2:3 Standard Vertical Poster Artwork */}
-                          <div className="aspect-[2/3] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300 transform-gpu">
-                            {posterSrc ? (
-                              <img
-                                src={posterSrc}
-                                alt={m.title}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-90 group-hover:opacity-100"
-                                loading="lazy"
-                                decoding="async"
-                                referrerPolicy="no-referrer"
-                                onError={handleImageError}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-white/5 text-white/30 gap-2">
-                                <Film size={24} />
-                                <span className="text-[10px] font-bold uppercase truncate max-w-full">
-                                  {m.title}
-                                </span>
-                              </div>
-                            )}
-
+                          {/* 16:9 Landscape Poster / Fanart Thumbnail */}
+                          <div className="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300 transform-gpu">
+                            <img
+                              src={posterSrc}
+                              alt={m.title}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-85 group-hover:opacity-100"
+                              loading="lazy"
+                              decoding="async"
+                              referrerPolicy="no-referrer"
+                              onError={handleImageError}
+                            />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-40 group-hover:opacity-20 transition-opacity" />
 
-                            {/* Type badge — top-left corner */}
-                            <div className="absolute top-0 left-0 z-20 pointer-events-none bg-black/70 backdrop-blur-md text-white/90 text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-br-md sm:rounded-br-lg border-r border-b border-white/10 leading-none">
-                              {typeLabel}
-                            </div>
-
-                            {/* Rating Badge — top-right corner */}
+                            {/* Rating Badge */}
                             {rating && rating > 0 && (
-                              <div className="absolute top-0 right-0 z-20 pointer-events-none bg-black/70 backdrop-blur-md text-nebula-cyan text-[8px] sm:text-[9px] font-black tracking-wider px-2 py-1 rounded-bl-md sm:rounded-bl-lg border-l border-b border-white/10 leading-none flex items-center gap-1">
+                              <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-bold text-amber-400 flex items-center gap-1 border border-white/15 shadow-md pointer-events-none">
                                 <Star
-                                  size={9}
-                                  className="fill-nebula-cyan text-nebula-cyan"
+                                  size={11}
+                                  className="fill-amber-400 text-amber-400"
                                 />
                                 <span>
                                   {typeof rating === "number"
