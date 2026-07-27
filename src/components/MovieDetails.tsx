@@ -1094,6 +1094,33 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     setLogoFailed(false);
   }, [movie?.id]);
 
+  const handleRefetchDirect = (force = false) => {
+    if (!movie?.id || !movie?.type) return;
+    setDirectLoading(true);
+    setDirectError("");
+    const forceParam = force ? "&force=1" : "";
+    const titleVal = movie.title || movie.name || "";
+    const titleParam = titleVal ? `&title=${encodeURIComponent(titleVal)}` : "";
+    fetch(
+      `${API_BASE_URL}/api/download/direct?tmdbId=${movie.id}&type=${movie.type}${titleParam}${forceParam}`,
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load direct downloads");
+        return res.json();
+      })
+      .then((data) => {
+        setDirectData(data);
+      })
+      .catch((err) => {
+        setDirectError(
+          err.message || "Failed to retrieve direct downloads.",
+        );
+      })
+      .finally(() => {
+        setDirectLoading(false);
+      });
+  };
+
   useEffect(() => {
     if (activeTab === "Downloads" && movie?.id) {
       if (!torrentData && !torrentLoading) {
@@ -1118,26 +1145,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       }
 
       if (!directData && !directLoading) {
-        setDirectLoading(true);
-        setDirectError("");
-        fetch(
-          `${API_BASE_URL}/api/download/direct?tmdbId=${movie.id}&type=${movie.type}`,
-        )
-          .then((res) => {
-            if (!res.ok) throw new Error("Failed to load direct downloads");
-            return res.json();
-          })
-          .then((data) => {
-            setDirectData(data);
-          })
-          .catch((err) => {
-            setDirectError(
-              err.message || "Failed to retrieve direct downloads.",
-            );
-          })
-          .finally(() => {
-            setDirectLoading(false);
-          });
+        handleRefetchDirect(false);
       }
     }
   }, [
@@ -2551,9 +2559,23 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     Direct Stream • No torrent client needed
                                   </span>
                                 </div>
-                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-300">
-                                  Direct
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleRefetchDirect(true)}
+                                    disabled={directLoading}
+                                    className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-violet-500/15 hover:bg-violet-500/30 border border-violet-500/30 text-violet-300 transition-all disabled:opacity-50"
+                                    title="Refetch direct download links"
+                                  >
+                                    <RotateCw
+                                      size={12}
+                                      className={directLoading ? "animate-spin" : ""}
+                                    />
+                                    <span>{directLoading ? "Refetching..." : "Refetch"}</span>
+                                  </button>
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-300">
+                                    Direct
+                                  </span>
+                                </div>
                               </div>
 
                               <div className="divide-y divide-white/5 bg-black/10 rounded-xl overflow-hidden border border-white/5">
