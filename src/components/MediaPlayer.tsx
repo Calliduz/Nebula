@@ -730,13 +730,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
-  const [similarTitles, setSimilarTitles] = useState<any[]>([]);
+  const [similarTitles, setSimilarTitles] = useState<any[]>(
+    () => movie?.similar || movie?.similarTitles || [],
+  );
   const [similarLoading, setSimilarLoading] = useState(false);
 
-  // Fetch similar titles on demand when "More Like This" modal opens
+  // Sync similarTitles if movie prop changes or receives pre-fetched recommendations
+  useEffect(() => {
+    if (movie?.similar?.length) {
+      setSimilarTitles(movie.similar);
+    } else if (movie?.similarTitles?.length) {
+      setSimilarTitles(movie.similarTitles);
+    }
+  }, [movie?.similar, movie?.similarTitles]);
+
+  // Fetch similar titles on demand when "More Like This" modal opens (cached in TMDB service)
   useEffect(() => {
     if (!showMoreLikeThis || !movie?.id) return;
-    if (similarTitles.length > 0) return;
+    if (similarTitles.length > 0) return; // Already present from props or cached
 
     let isCancelled = false;
     setSimilarLoading(true);
