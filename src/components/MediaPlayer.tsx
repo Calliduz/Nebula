@@ -1196,6 +1196,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const uploadSubtitleInputRef = useRef<HTMLInputElement>(null);
   // Track custom-uploaded subtitle blob URLs so we can revoke them on unmount
   const customSubBlobUrls = useRef<string[]>([]);
+
+  // Close all open player popups, drawers, and modals
+  const closeAllModals = useCallback(() => {
+    setShowSettings(false);
+    setShowServersModal(false);
+    setShowAudioModal(false);
+    setShowSubtitles(false);
+    setShowSubStyles(false);
+    setShowEpisodeDrawer(false);
+    setShowMoreLikeThis(false);
+    setShowHotkeys(false);
+    setSourceSelect(null);
+  }, []);
+
+  const isAnyMenuOpen = Boolean(
+    showSettings ||
+      showServersModal ||
+      showAudioModal ||
+      showSubtitles ||
+      showSubStyles ||
+      showEpisodeDrawer ||
+      showMoreLikeThis ||
+      showHotkeys ||
+      sourceSelect,
+  );
   useEffect(() => {
     return () => {
       customSubBlobUrls.current.forEach((u) => URL.revokeObjectURL(u));
@@ -4164,53 +4189,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setShowUi(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      if (
-        !isPaused &&
-        !showSettings &&
-        !showSubtitles &&
-        !showEpisodeDrawer &&
-        !showServersModal &&
-        !sourceSelect &&
-        !isDragging
-      )
+      if (!isPaused && !isAnyMenuOpen && !isDragging) {
         setShowUi(false);
+      }
     }, 3000);
-  }, [
-    isPaused,
-    showSettings,
-    showSubtitles,
-    showEpisodeDrawer,
-    showServersModal,
-    sourceSelect,
-    isDragging,
-  ]);
+  }, [isPaused, isAnyMenuOpen, isDragging]);
 
-  // Prevent auto-hiding controls when any menu/drawer is open
+  // Prevent auto-hiding controls when any menu/drawer/modal is open
   useEffect(() => {
-    const isMenuOpen =
-      showSettings ||
-      showSubtitles ||
-      showEpisodeDrawer ||
-      showServersModal ||
-      Boolean(sourceSelect);
-
-    if (isMenuOpen) {
+    if (isAnyMenuOpen) {
       setShowUi(true);
       if (hideTimer.current) {
         clearTimeout(hideTimer.current);
         hideTimer.current = null;
       }
     }
-  }, [
-    showSettings,
-    showSubtitles,
-    showEpisodeDrawer,
-    showServersModal,
-    sourceSelect,
-  ]);
+  }, [isAnyMenuOpen]);
 
   // Tap on the video/empty area:
-  //  - If a menu is open → close it
+  //  - If any menu/modal is open → close all open menus
   //  - If controls are hidden → show them and start the auto-hide timer
   //  - If controls are visible → hide them immediately
   const handleTap = useCallback(() => {
@@ -4219,19 +4216,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       isLongPressing.current = false;
       return;
     }
-    if (
-      showSettings ||
-      showSubtitles ||
-      showEpisodeDrawer ||
-      showServersModal ||
-      sourceSelect
-    ) {
-      // Close whichever menu is open
-      setShowSettings(false);
-      setShowSubtitles(false);
-      setShowEpisodeDrawer(false);
-      setShowServersModal(false);
-      setSourceSelect(null);
+    if (isAnyMenuOpen) {
+      closeAllModals();
       resetHideTimer();
     } else if (!showUi) {
       resetHideTimer();
@@ -4240,15 +4226,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setShowUi(false);
       setShowMobileVolume(false);
     }
-  }, [
-    showUi,
-    showSettings,
-    showSubtitles,
-    showEpisodeDrawer,
-    showServersModal,
-    sourceSelect,
-    resetHideTimer,
-  ]);
+  }, [showUi, isAnyMenuOpen, closeAllModals, resetHideTimer]);
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent<HTMLDivElement>) => {
@@ -4415,7 +4393,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           setVolume((p) => Math.max(0, p - 5));
           break;
         case "Escape":
-          showSettings ? setShowSettings(false) : onClose();
+          if (isAnyMenuOpen) {
+            closeAllModals();
+          } else {
+            onClose();
+          }
           break;
         case "Slash":
         case "KeySlash":
@@ -4428,7 +4410,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose, showSettings, seekBy, setShowHotkeys]);
+  }, [onClose, isAnyMenuOpen, closeAllModals, seekBy, setShowHotkeys]);
 
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
@@ -5297,14 +5279,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     if (sourceSelect) {
                       setSourceSelect(null);
                     } else {
+                      closeAllModals();
                       setSourceSelect({
                         season: season ?? 1,
                         episode: episode ?? 1,
                       });
-                      setShowServersModal(false);
-                      setShowSettings(false);
-                      setShowSubtitles(false);
-                      setShowEpisodeDrawer(false);
                     }
                   }}
                   className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border ${
@@ -5459,11 +5438,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <div className="relative">
                   <button
                     onClick={() => {
-                      setShowServersModal((p) => !p);
-                      setSourceSelect(null);
-                      setShowSettings(false);
-                      setShowSubtitles(false);
-                      setShowEpisodeDrawer(false);
+                      const next = !showServersModal;
+                      closeAllModals();
+                      setShowServersModal(next);
                     }}
                     className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all border ${
                       showServersModal
@@ -5790,12 +5767,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               {!isEmbed && (
                 <button
                   onClick={() => {
-                    setShowMoreLikeThis((prev) => !prev);
-                    setShowSettings(false);
-                    setShowSubtitles(false);
-                    setShowAudioModal(false);
-                    setShowServersModal(false);
-                    setShowEpisodeDrawer(false);
+                    const next = !showMoreLikeThis;
+                    closeAllModals();
+                    setShowMoreLikeThis(next);
                   }}
                   className={`hidden sm:flex h-8 sm:h-9 px-3 rounded-full text-xs font-bold transition-all border items-center gap-1.5 shrink-0 ${
                     showMoreLikeThis
@@ -5823,11 +5797,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               {movie.type === "tv" && (
                 <button
                   onClick={() => {
-                    setShowEpisodeDrawer(true);
-                    setShowSettings(false);
-                    setShowSubtitles(false);
-                    setShowAudioModal(false);
-                    setShowServersModal(false);
+                    const next = !showEpisodeDrawer;
+                    closeAllModals();
+                    setShowEpisodeDrawer(next);
                   }}
                   className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                     showEpisodeDrawer
@@ -5844,11 +5816,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   {/* Subtitles Button */}
                   <button
                     onClick={() => {
-                      setShowSubtitles((p) => !p);
-                      setShowSettings(false);
-                      setShowAudioModal(false);
-                      setShowServersModal(false);
-                      setShowEpisodeDrawer(false);
+                      const next = !showSubtitles;
+                      closeAllModals();
+                      setShowSubtitles(next);
                     }}
                     className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                       showSubtitles
@@ -5863,11 +5833,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   {/* Audio Tracks Button — hidden on small mobile to preserve essential space */}
                   <button
                     onClick={() => {
-                      setShowAudioModal((p) => !p);
-                      setShowSubtitles(false);
-                      setShowSettings(false);
-                      setShowServersModal(false);
-                      setShowEpisodeDrawer(false);
+                      const next = !showAudioModal;
+                      closeAllModals();
+                      setShowAudioModal(next);
                     }}
                     className={`hidden sm:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center border transition-all active:scale-95 shrink-0 ${
                       showAudioModal
@@ -5882,11 +5850,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   {/* Settings */}
                   <button
                     onClick={() => {
-                      setShowSettings((p) => !p);
-                      setShowSubtitles(false);
-                      setShowAudioModal(false);
-                      setShowServersModal(false);
-                      setShowEpisodeDrawer(false);
+                      const next = !showSettings;
+                      closeAllModals();
+                      setShowSettings(next);
                     }}
                     className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                       showSettings
