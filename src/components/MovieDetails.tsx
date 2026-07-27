@@ -2548,7 +2548,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                     Direct High-Speed Downloads
                                   </h3>
                                   <span className="text-[11px] text-white/60 uppercase tracking-wider mt-0.5 font-bold">
-                                    via VidVault • No torrent client needed
+                                    Direct Stream • No torrent client needed
                                   </span>
                                 </div>
                                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-300">
@@ -2566,6 +2566,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                       <span className="font-bold text-sm text-white">
                                         {d.quality}
                                       </span>
+                                      {d.source && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-300 uppercase">
+                                          {d.source}
+                                        </span>
+                                      )}
                                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
                                         {d.size}
                                       </span>
@@ -3096,7 +3101,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                           Direct Downloads
                                                         </span>
                                                         <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold">
-                                                          via VidVault • No
+                                                          Direct Stream • No
                                                           torrent client needed
                                                         </span>
                                                       </div>
@@ -3116,6 +3121,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                                               <span className="font-bold text-sm text-white">
                                                                 {d.quality}
                                                               </span>
+                                                              {d.source && (
+                                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-300 uppercase">
+                                                                  {d.source}
+                                                                </span>
+                                                              )}
                                                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
                                                                 {d.size}
                                                               </span>
