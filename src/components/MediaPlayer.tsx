@@ -79,8 +79,14 @@ function formatTime(s: number) {
 }
 
 const parseMirrorName = (name: string) => {
+  // Clean bracketed audio tags (e.g. "[Filipino]") and numeric index suffixes (e.g. "(2)")
+  const clean = name
+    .replace(/\s*\[.*?\]/g, "")
+    .replace(/\s*\(\d+\)$/g, "")
+    .trim();
+
   // First try parenthesized format: "Vidnest (1080p)"
-  const parenMatch = name.match(
+  const parenMatch = clean.match(
     /^(.*?)\s*\((1080p|720p|480p|360p|Auto|Original)\)$/i,
   );
   if (parenMatch) {
@@ -88,15 +94,15 @@ const parseMirrorName = (name: string) => {
   }
 
   // Next try hyphen format: "VidRock - 1080p"
-  const match = name.match(/^(.*?)\s*-\s*(\d+p|Auto|Original)\s*\)?$/i);
+  const match = clean.match(/^(.*?)\s*-\s*(\d+p|Auto|Original)\s*\)?$/i);
   if (match) {
     let base = match[1].trim();
-    if (name.includes("(") && !base.endsWith(")")) {
+    if (clean.includes("(") && !base.endsWith(")")) {
       base = base + ")";
     }
     return { base, quality: match[2].trim() };
   }
-  return { base: name, quality: "Original" };
+  return { base: clean, quality: "Original" };
 };
 
 const PlayerStyles = React.memo(() => (
@@ -302,14 +308,17 @@ const cleanSubProviderName = (name: string): string => {
 };
 
 export const parseMirrorDetails = (sourceName: string) => {
-  // Extract trailing #\d+ if present
+  // Extract trailing #\d+ or (\d+) if present
   let suffix = "";
-  const suffixMatch = sourceName.match(/(.*?)\s*#(\d+)$/);
+  const suffixMatch = sourceName.match(/(.*?)\s*(?:#|\()(\d+)\)?$/);
   let cleanSource = sourceName;
   if (suffixMatch) {
     cleanSource = suffixMatch[1].trim();
     suffix = ` #${suffixMatch[2]}`;
   }
+
+  // Remove bracketed audio tags e.g. [Filipino] for clean category matching
+  cleanSource = cleanSource.replace(/\s*\[.*?\]/g, "").trim();
 
   // Parse cleanSource
   const match = cleanSource.match(/^(.*?)\s*\((.*?)\)$/);
@@ -1372,6 +1381,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             url: v.url,
             type: v.type || "mp4",
             quality: (v as any).quality || "Auto",
+            audio: (v as any).audio || "",
             subtitles: v.subtitles || [],
           }));
       } else if (category === "Peachify") {
@@ -2082,6 +2092,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       url: v.url,
                       type: v.type || "mp4",
                       quality: (v as any).quality || "Auto",
+                      audio: (v as any).audio || "",
                       subtitles: v.subtitles || [],
                     }));
                 } else if (isPeachify) {
@@ -7510,6 +7521,7 @@ const PROVIDERS: ProviderConfig[] = [
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
+    serializeExtra: (src) => src.audio || "",
   },
   {
     id: "videasy",

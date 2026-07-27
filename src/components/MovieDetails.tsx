@@ -137,6 +137,7 @@ const PROVIDERS: ProviderConfig[] = [
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
+    serializeExtra: (src) => src.audio || "",
   },
   {
     id: "videasy",
