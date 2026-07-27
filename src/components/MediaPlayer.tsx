@@ -733,9 +733,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [similarTitles, setSimilarTitles] = useState<any[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
 
-  // Fetch similar titles for "More Like This" modal
+  // Fetch similar titles on demand when "More Like This" modal opens
   useEffect(() => {
-    if (!movie?.id) return;
+    if (!showMoreLikeThis || !movie?.id) return;
+    if (similarTitles.length > 0) return;
+
     let isCancelled = false;
     setSimilarLoading(true);
     getMediaDetails(movie.id, movie.type || "movie")
@@ -754,7 +756,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [movie?.id, movie?.type]);
+  }, [showMoreLikeThis, movie?.id, movie?.type, similarTitles.length]);
 
   // Pre-validate the clearLogo URL once per movie so all <img> elements share
   // the same cached result — prevents the race-condition flicker where the loading
@@ -7201,23 +7203,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMoreLikeThis(false)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1050] pointer-events-auto"
+              className="fixed inset-0 bg-black/85 sm:backdrop-blur-sm z-[1050] pointer-events-auto transform-gpu"
             />
             {/* Modal Sheet */}
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              transition={{ type: "spring", damping: 30, stiffness: 350 }}
               drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0, bottom: 0.7 }}
+              dragElastic={{ top: 0, bottom: 0.5 }}
               onDragEnd={(_, info) => {
                 if (info.offset.y > 100 || info.velocity.y > 300) {
                   setShowMoreLikeThis(false);
                 }
               }}
-              className="fixed inset-x-0 top-0 sm:top-4 bottom-0 z-[1100] bg-[#0c0c0e]/95 backdrop-blur-2xl border-t border-white/10 sm:rounded-t-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden pointer-events-auto touch-pan-y"
+              className="fixed inset-x-0 top-0 sm:top-4 bottom-0 z-[1100] bg-[#0c0c0e]/98 border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto touch-pan-y transform-gpu"
             >
               {/* Drag Handle Bar */}
               <div className="w-full flex items-center justify-center pt-2.5 pb-1 bg-black/40 cursor-grab active:cursor-grabbing border-b border-white/5">
@@ -7258,7 +7260,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </div>
                 ) : similarTitles.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4.5">
-                    {similarTitles.map((m: any, idx: number) => {
+                    {similarTitles.slice(0, 18).map((m: any, idx: number) => {
                       const rating = m.imdb || m.vote_average;
                       const year =
                         m.year ||
@@ -7276,18 +7278,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           className="group relative cursor-pointer flex flex-col active:scale-95 transition-transform"
                         >
                           {/* 16:9 Landscape Poster / Fanart Thumbnail */}
-                          <div className="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300">
+                          <div className="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300 transform-gpu">
                             <img
                               src={posterSrc}
                               alt={m.title}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-85 group-hover:opacity-100"
                               loading="lazy"
+                              decoding="async"
                               referrerPolicy="no-referrer"
                               onError={handleImageError}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-40 group-hover:opacity-20 transition-opacity" />
 
-                            {/* Rating Badge (Bottom-left of thumbnail, matching screenshot) */}
+                            {/* Rating Badge */}
                             {rating && rating > 0 && (
                               <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-bold text-amber-400 flex items-center gap-1 border border-white/15 shadow-md pointer-events-none">
                                 <Star
@@ -7313,7 +7316,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                             </div>
                           </div>
 
-                          {/* Title & Metadata below 16:9 landscape poster */}
+                          {/* Title & Metadata */}
                           <div className="mt-2 px-0.5 min-w-0">
                             <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate leading-tight">
                               {m.title}
