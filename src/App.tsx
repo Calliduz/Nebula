@@ -634,7 +634,7 @@ function MediaPlayerStub({ actions, state }: any) {
           episode={episode}
           source={source}
           onMarkAsWatched={actions.markAsWatched}
-          onClose={() => navigate(-1)}
+          onClose={() => navigate(`/${type}/${id}`, { replace: true })}
         />
       </React.Suspense>
     </div>

@@ -723,6 +723,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
   const [logoFailed, setLogoFailed] = useState(false);
+  // Ref-based validated logo URL: preloaded once on mount so all <img> instances
+  // share the same result and we avoid race-condition flicker where one instance
+  // fires onError while another succeeds (they're all the same URL, cached).
+  const logoValidatedRef = useRef<boolean | null>(null); // null=pending, true=ok, false=fail
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
@@ -751,6 +755,29 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       isCancelled = true;
     };
   }, [movie?.id, movie?.type]);
+
+  // Pre-validate the clearLogo URL once per movie so all <img> elements share
+  // the same cached result — prevents the race-condition flicker where the loading
+  // screen img fires onError before the browser has cached the image.
+  useEffect(() => {
+    logoValidatedRef.current = null;
+    if (!movie?.clearLogo) {
+      setLogoFailed(true);
+      return;
+    }
+    setLogoFailed(false);
+    const img = new Image();
+    img.onload = () => {
+      logoValidatedRef.current = true;
+      // Already false? don't flap it back.
+    };
+    img.onerror = () => {
+      logoValidatedRef.current = false;
+      setLogoFailed(true);
+    };
+    img.referrerPolicy = "no-referrer";
+    img.src = movie.clearLogo;
+  }, [movie?.clearLogo]);
 
   useEffect(() => {
     setLogoFailed(false);
@@ -1421,21 +1448,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           setLoading(true);
           setError("");
 
-          // Fetch mirrors for the new source, with up to 2 retries (waiting 2.5s each) to allow slow backend background scrapers to populate cache
+          // Fetch mirrors for the new source. Give it ONE quick retry
+          // (1.5 s) to let background scrapers populate cache, then bail
+          // immediately — further retries just add latency when the source
+          // genuinely has 0 mirrors for this title.
           let updatedMirrors = await fetchSourceMirrors(nextSource, false);
           if (!updatedMirrors || updatedMirrors.length === 0) {
             console.log(
-              `[PLAYER] Source ${nextSource} returned no mirrors. Retrying to allow background scrape to cache...`,
+              `[PLAYER] Source ${nextSource} returned no mirrors. Waiting 1.5s for background scrape...`,
             );
-            for (let attempt = 1; attempt <= 2; attempt++) {
-              await new Promise((resolve) => setTimeout(resolve, 2500));
-              updatedMirrors = await fetchSourceMirrors(nextSource, false);
-              if (updatedMirrors && updatedMirrors.length > 0) {
-                console.log(
-                  `[PLAYER] Source ${nextSource} mirrors recovered on retry attempt ${attempt}!`,
-                );
-                break;
-              }
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            updatedMirrors = await fetchSourceMirrors(nextSource, false);
+            if (updatedMirrors && updatedMirrors.length > 0) {
+              console.log(
+                `[PLAYER] Source ${nextSource} mirrors recovered on retry!`,
+              );
+            } else {
+              console.warn(
+                `[PLAYER] Source ${nextSource} has 0 mirrors after retry. Skipping immediately.`,
+              );
             }
           }
 
@@ -4667,13 +4698,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     handleNextEpisodeRef.current = handleNextEpisode;
   }, [handleNextEpisode]);
 
+  // onClose is now always deterministic (navigates to movie details) so we
+  // no longer need the home-fallback setTimeout.
   const safeClose = () => {
     onClose();
-    setTimeout(() => {
-      if (window.location.pathname.includes("/watch/")) {
-        navigate("/");
-      }
-    }, 100);
   };
 
   return (
@@ -4741,7 +4769,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 height="112"
                 className="h-20 md:h-28 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse transform-gpu will-change-[opacity,transform]"
                 referrerPolicy="no-referrer"
-                onError={() => setLogoFailed(true)}
+                onError={() => { if (logoValidatedRef.current !== true) setLogoFailed(true); }}
               />
             ) : (
               <h1 className="text-3xl md:text-5xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl transform-gpu will-change-[opacity,transform]">
@@ -4838,7 +4866,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 height="96"
                 className="h-16 md:h-24 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
                 referrerPolicy="no-referrer"
-                onError={() => setLogoFailed(true)}
+                onError={() => { if (logoValidatedRef.current !== true) setLogoFailed(true); }}
               />
             ) : (
               <h1 className="text-xl md:text-3xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl select-none">
@@ -5165,7 +5193,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     alt={movie.title}
                     className="h-7 sm:h-9 max-w-[180px] sm:max-w-[260px] w-auto object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] drop-shadow-md"
                     referrerPolicy="no-referrer"
-                    onError={() => setLogoFailed(true)}
+                    onError={() => { if (logoValidatedRef.current !== true) setLogoFailed(true); }}
                   />
                   {season !== undefined && episode !== undefined && (
                     <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
@@ -5713,8 +5741,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               )}
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 relative">
-              {/* More Like This Button */}
+            <div className="flex items-center gap-1 sm:gap-2.5 relative shrink-0">
+              {/* More Like This Button — hidden on small mobile screens */}
               {!isEmbed && (
                 <button
                   onClick={() => {
@@ -5725,7 +5753,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     setShowServersModal(false);
                     setShowEpisodeDrawer(false);
                   }}
-                  className={`h-8 sm:h-9 px-3 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 shrink-0 ${
+                  className={`hidden sm:flex h-8 sm:h-9 px-3 rounded-full text-xs font-bold transition-all border items-center gap-1.5 shrink-0 ${
                     showMoreLikeThis
                       ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.4)]"
                       : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
@@ -5738,7 +5766,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       showMoreLikeThis ? "text-black" : "text-nebula-cyan"
                     }
                   />
-                  <span className="hidden sm:inline font-semibold">
+                  <span className="hidden md:inline font-semibold">
                     More Like This
                   </span>
                   <ChevronUp
@@ -5757,7 +5785,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     setShowAudioModal(false);
                     setShowServersModal(false);
                   }}
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                     showEpisodeDrawer
                       ? "bg-white text-black border-white shadow-md"
                       : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
@@ -5778,7 +5806,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       setShowServersModal(false);
                       setShowEpisodeDrawer(false);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                       showSubtitles
                         ? "bg-white text-black border-white shadow-md"
                         : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
@@ -5788,7 +5816,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     <Subtitles size={16} />
                   </button>
 
-                  {/* Audio Tracks Button */}
+                  {/* Audio Tracks Button — hidden on small mobile to preserve essential space */}
                   <button
                     onClick={() => {
                       setShowAudioModal((p) => !p);
@@ -5797,7 +5825,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       setShowServersModal(false);
                       setShowEpisodeDrawer(false);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                    className={`hidden sm:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center border transition-all active:scale-95 shrink-0 ${
                       showAudioModal
                         ? "bg-white text-black border-white shadow-md"
                         : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
@@ -5816,7 +5844,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       setShowServersModal(false);
                       setShowEpisodeDrawer(false);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                       showSettings
                         ? "bg-white text-black border-white shadow-md"
                         : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
@@ -5826,10 +5854,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     <Settings size={16} />
                   </button>
 
-                  {/* Fullscreen (far right) */}
+                  {/* Fullscreen (far right) — ALWAYS visible on mobile */}
                   <button
                     onClick={handleFullscreen}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/40 transition-all active:scale-95"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/40 transition-all active:scale-95 shrink-0"
                     title="Fullscreen (F)"
                   >
                     <Maximize size={16} />
@@ -7215,8 +7243,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 </button>
               </div>
 
-              {/* Grid Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6">
+              {/* Grid Content — extra pt-2 ensures the first row isn't hidden
+                  behind the sticky header on portrait mobile */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pt-3 sm:pt-6">
                 {similarLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
                     <Loader2
