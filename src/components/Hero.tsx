@@ -5,6 +5,7 @@ import {
   handleImageError,
   handleBackdropError,
   handleClearLogoError,
+  markLogoValid,
 } from "../utils/helpers";
 
 interface HeroProps {
@@ -140,6 +141,7 @@ export const Hero: React.FC<HeroProps> = ({
                   alt={activeHero.title}
                   height="176"
                   className="hidden md:block w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] h-32 md:h-44 object-contain object-left mb-6 drop-shadow-2xl"
+                  onLoad={() => markLogoValid(activeHero.clearLogo)}
                   onError={() =>
                     setLogoFailedMap((prev) => ({
                       ...prev,

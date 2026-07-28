@@ -13,31 +13,18 @@ export const handleImageError = (
 };
 
 /**
- * Global memory caches for validated/invalid clearLogo URLs across component mounts & episode switches.
+ * Global memory cache for validated clearLogo URLs across component mounts & episode switches.
  */
 export const validLogoCache = new Set<string>();
-export const invalidLogoCache = new Set<string>();
 
 export const isLogoValidated = (url?: string | null): boolean => {
   if (!url) return false;
   return validLogoCache.has(url);
 };
 
-export const isLogoFailed = (url?: string | null): boolean => {
-  if (!url) return true;
-  return invalidLogoCache.has(url);
-};
-
 export const markLogoValid = (url?: string | null) => {
   if (!url) return;
   validLogoCache.add(url);
-  invalidLogoCache.delete(url);
-};
-
-export const markLogoFailed = (url?: string | null) => {
-  if (!url) return;
-  invalidLogoCache.add(url);
-  validLogoCache.delete(url);
 };
 
 /**
