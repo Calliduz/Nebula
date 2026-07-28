@@ -65,6 +65,7 @@ interface ProviderConfig {
   borderClass: string;
   bgClass: string;
   textClass: string;
+  dotBgClass: string;
   buildUrl: (params: {
     tmdbId: string | number;
     type: string;
@@ -87,6 +88,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-cyan-500/40",
     bgClass: "bg-cyan-500/10",
     textClass: "text-cyan-400",
+    dotBgClass: "bg-cyan-400",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -102,6 +104,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-nebula-cyan/40",
     bgClass: "bg-nebula-cyan/10",
     textClass: "text-nebula-cyan",
+    dotBgClass: "bg-nebula-cyan",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidrock?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -118,6 +121,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-emerald-500/40",
     bgClass: "bg-emerald-500/10",
     textClass: "text-emerald-400",
+    dotBgClass: "bg-emerald-400",
     buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -134,6 +138,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-cyan-500/40",
     bgClass: "bg-cyan-500/10",
     textClass: "text-cyan-400",
+    dotBgClass: "bg-cyan-400",
     buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/netnaija?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -150,6 +155,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-violet-500/40",
     bgClass: "bg-violet-500/10",
     textClass: "text-violet-400",
+    dotBgClass: "bg-violet-400",
     buildUrl: () => null, // handled specially via fetchVideasySourcesDirect
     serializeExtra: (src) => src.audio || "",
   },
@@ -161,6 +167,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-white/20",
     bgClass: "bg-white/10",
     textClass: "text-white/70",
+    dotBgClass: "bg-white/70",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidlink?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -176,6 +183,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-emerald-500/40",
     bgClass: "bg-emerald-500/10",
     textClass: "text-emerald-400",
+    dotBgClass: "bg-emerald-400",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidnest?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -191,6 +199,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-violet-500/40",
     bgClass: "bg-violet-500/10",
     textClass: "text-violet-400",
+    dotBgClass: "bg-violet-400",
     buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -206,6 +215,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-pink-500/40",
     bgClass: "bg-pink-500/10",
     textClass: "text-pink-400",
+    dotBgClass: "bg-pink-400",
     buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -221,6 +231,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-fuchsia-500/40",
     bgClass: "bg-fuchsia-500/10",
     textClass: "text-fuchsia-400",
+    dotBgClass: "bg-fuchsia-400",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidrift?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -236,6 +247,7 @@ const PROVIDERS: ProviderConfig[] = [
     borderClass: "border-rose-500/40",
     bgClass: "bg-rose-500/10",
     textClass: "text-rose-400",
+    dotBgClass: "bg-rose-400",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/peachify?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -704,7 +716,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                     <span className="block w-1.5 h-1.5 rounded-full bg-white/20 animate-pulse" />
                   ) : hasData ? (
                     <span
-                      className={`block w-1.5 h-1.5 rounded-full ${p.textClass.replace("text-", "bg-")} ${isAutoPlay || isActive ? "shadow-[0_0_6px_currentColor]" : ""}`}
+                      className={`block w-1.5 h-1.5 rounded-full ${p.dotBgClass} ${isAutoPlay || isActive ? "shadow-[0_0_6px_currentColor]" : ""}`}
                     />
                   ) : (
                     <span className="block w-1.5 h-1.5 rounded-full bg-red-500/50" />
