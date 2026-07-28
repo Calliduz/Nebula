@@ -372,7 +372,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   // Grace-period timer: we wait up to AUTOPLAY_GRACE_MS after the *first*
   // provider resolves so that higher-priority sources (Quantum) have time
   // to come back before we lock in a lower-priority autoplay pick.
-  const autoPlayGraceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoPlayGraceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const autoPlayGraceElapsedRef = useRef(false);
 
   // ── Fetch orchestration ────────────────────────────────────────────────────
@@ -485,7 +487,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     return () => {
       isMountedRef.current = false;
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
-      if (autoPlayGraceTimerRef.current) clearTimeout(autoPlayGraceTimerRef.current);
+      if (autoPlayGraceTimerRef.current)
+        clearTimeout(autoPlayGraceTimerRef.current);
     };
   }, [runScan]);
 
@@ -1128,9 +1131,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         setDirectData(data);
       })
       .catch((err) => {
-        setDirectError(
-          err.message || "Failed to retrieve direct downloads.",
-        );
+        setDirectError(err.message || "Failed to retrieve direct downloads.");
       })
       .finally(() => {
         setDirectLoading(false);
@@ -2585,9 +2586,15 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   >
                                     <RotateCw
                                       size={12}
-                                      className={directLoading ? "animate-spin" : ""}
+                                      className={
+                                        directLoading ? "animate-spin" : ""
+                                      }
                                     />
-                                    <span>{directLoading ? "Refetching..." : "Refetch"}</span>
+                                    <span>
+                                      {directLoading
+                                        ? "Refetching..."
+                                        : "Refetch"}
+                                    </span>
                                   </button>
                                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-300">
                                     Direct

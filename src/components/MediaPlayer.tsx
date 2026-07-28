@@ -179,20 +179,43 @@ export const SOURCE_ALIASES: Record<string, string> = {
   Vesper: "Vesper",
 };
 
-export function getVidrockAudioHelper(name: string, rawLanguage?: string): string {
+export function getVidrockAudioHelper(
+  name: string,
+  rawLanguage?: string,
+): string {
   if (rawLanguage && rawLanguage.trim()) return rawLanguage.trim();
-  const clean = name.replace(/^VidRock[\s-]*/i, "").replace(/^\((.*)\)$/, "$1").trim();
+  const clean = name
+    .replace(/^VidRock[\s-]*/i, "")
+    .replace(/^\((.*)\)$/, "$1")
+    .trim();
   const lower = clean.toLowerCase();
   if (lower === "sol") return "Hindi";
-  if (lower.includes("hindi")) return lower.includes("sub") ? "Hindi Subbed" : "Hindi";
+  if (lower.includes("hindi"))
+    return lower.includes("sub") ? "Hindi Subbed" : "Hindi";
   if (lower === "cosmos") return "Tamil";
   if (lower === "comet") return "Telugu";
   if (lower === "bengali") return "Bengali";
-  if (["nova", "atlas", "orion", "astra", "lyra", "luna", "helios", "vega"].includes(lower)) return "English";
+  if (
+    [
+      "nova",
+      "atlas",
+      "orion",
+      "astra",
+      "lyra",
+      "luna",
+      "helios",
+      "vega",
+    ].includes(lower)
+  )
+    return "English";
   return "English";
 }
 
-export function getVidrockFlagHelper(name: string, rawFlag?: string, audio?: string): string {
+export function getVidrockFlagHelper(
+  name: string,
+  rawFlag?: string,
+  audio?: string,
+): string {
   if (rawFlag) {
     const f = rawFlag.toLowerCase().trim();
     if (f === "ind" || f === "in") return "in";
@@ -208,9 +231,16 @@ export function getVidrockFlagHelper(name: string, rawFlag?: string, audio?: str
   ) {
     return "in";
   }
-  const clean = name.replace(/^VidRock[\s-]*/i, "").replace(/^\((.*)\)$/, "$1").trim();
+  const clean = name
+    .replace(/^VidRock[\s-]*/i, "")
+    .replace(/^\((.*)\)$/, "$1")
+    .trim();
   const lower = clean.toLowerCase();
-  if (["sol", "cosmos", "comet", "bengali", "hindi", "hindi subbed"].includes(lower)) {
+  if (
+    ["sol", "cosmos", "comet", "bengali", "hindi", "hindi subbed"].includes(
+      lower,
+    )
+  ) {
     return "in";
   }
   return "us";
@@ -264,11 +294,7 @@ export const getAudioFlagCode = (
     l.includes("nigeria")
   )
     return "ng";
-  if (
-    l.includes("indonesia") ||
-    l.includes("indonesian") ||
-    l.includes("indo")
-  )
+  if (l.includes("indonesia") || l.includes("indonesian") || l.includes("indo"))
     return "id";
   if (l.includes("malay") || l.includes("malaysia")) return "my";
   if (l.includes("arabic") || l.includes("ara")) return "sa";
@@ -288,7 +314,14 @@ export const getAudioFlagCode = (
     if (df === "en" || df === "eng") return "us";
     if (df === "ko" || df === "kor" || df.includes("kor")) return "kr";
     if (df === "ja" || df === "jpn" || df.includes("japan")) return "jp";
-    if (df === "hi" || df === "hin" || df.includes("hindi") || df === "ind" || df === "in") return "in";
+    if (
+      df === "hi" ||
+      df === "hin" ||
+      df.includes("hindi") ||
+      df === "ind" ||
+      df === "in"
+    )
+      return "in";
     return df;
   }
 
@@ -805,11 +838,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   // share the same result and we avoid race-condition flicker where one instance
   // fires onError while another succeeds (they're all the same URL, cached).
   const logoValidatedRef = useRef<boolean | null>(
-    movie?.clearLogo
-      ? isLogoValidated(movie.clearLogo)
-        ? true
-        : null
-      : false,
+    movie?.clearLogo ? (isLogoValidated(movie.clearLogo) ? true : null) : false,
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -1277,14 +1306,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const isAnyMenuOpen = Boolean(
     showSettings ||
-      showServersModal ||
-      showAudioModal ||
-      showSubtitles ||
-      showSubStyles ||
-      showEpisodeDrawer ||
-      showMoreLikeThis ||
-      showHotkeys ||
-      sourceSelect,
+    showServersModal ||
+    showAudioModal ||
+    showSubtitles ||
+    showSubStyles ||
+    showEpisodeDrawer ||
+    showMoreLikeThis ||
+    showHotkeys ||
+    sourceSelect,
   );
   useEffect(() => {
     return () => {
@@ -1983,7 +2012,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               ? `${API}/api/proxy/segment?url=${encodeURIComponent(rawUrl)}`
               : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
 
-          const rawSubName = name.replace(/^VidRock[\s-]*/i, "").replace(/^\((.*)\)$/, "$1").trim();
+          const rawSubName = name
+            .replace(/^VidRock[\s-]*/i, "")
+            .replace(/^\((.*)\)$/, "$1")
+            .trim();
           const audio = hashAudio || getVidrockAudioHelper(rawSubName);
           const flag = hashFlag || getVidrockFlagHelper(rawSubName, "", audio);
 
@@ -4868,7 +4900,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 className="h-20 md:h-28 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse transform-gpu will-change-[opacity,transform]"
                 referrerPolicy="no-referrer"
                 onError={() => {
-                  if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
+                  if (
+                    movie?.clearLogo &&
+                    !isLogoValidated(movie.clearLogo) &&
+                    logoValidatedRef.current !== true
+                  ) {
                     setLogoFailed(true);
                   }
                 }}
@@ -4969,7 +5005,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 className="h-16 md:h-24 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
                 referrerPolicy="no-referrer"
                 onError={() => {
-                  if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
+                  if (
+                    movie?.clearLogo &&
+                    !isLogoValidated(movie.clearLogo) &&
+                    logoValidatedRef.current !== true
+                  ) {
                     setLogoFailed(true);
                   }
                 }}
@@ -5300,10 +5340,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     className="h-7 sm:h-9 max-w-[180px] sm:max-w-[260px] w-auto object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] drop-shadow-md"
                     referrerPolicy="no-referrer"
                     onError={() => {
-                  if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
-                    setLogoFailed(true);
-                  }
-                }}
+                      if (
+                        movie?.clearLogo &&
+                        !isLogoValidated(movie.clearLogo) &&
+                        logoValidatedRef.current !== true
+                      ) {
+                        setLogoFailed(true);
+                      }
+                    }}
                   />
                   {season !== undefined && episode !== undefined && (
                     <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
@@ -5600,10 +5644,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                 <div className="flex flex-col gap-1 px-1">
                                   {uniqueItems.map(
                                     ({ mirror: m, originalIndex: idx }) => {
-                                      const audioLabel = m.audio || m.language || "";
-                                      const flagCode = getAudioFlagCode(audioLabel, m.flag);
+                                      const audioLabel =
+                                        m.audio || m.language || "";
+                                      const flagCode = getAudioFlagCode(
+                                        audioLabel,
+                                        m.flag,
+                                      );
                                       const countryCode =
-                                        flagCode === "en" ? "us" : flagCode === "ind" ? "in" : flagCode;
+                                        flagCode === "en"
+                                          ? "us"
+                                          : flagCode === "ind"
+                                            ? "in"
+                                            : flagCode;
                                       const isSelected = activeMirror === idx;
                                       const failedReason =
                                         failedMirrors[m.source];
