@@ -179,13 +179,62 @@ export const SOURCE_ALIASES: Record<string, string> = {
   Vesper: "Vesper",
 };
 
+export function getVidrockAudioHelper(name: string, rawLanguage?: string): string {
+  if (rawLanguage && rawLanguage.trim()) return rawLanguage.trim();
+  const clean = name.replace(/^VidRock[\s-]*/i, "").replace(/^\((.*)\)$/, "$1").trim();
+  const lower = clean.toLowerCase();
+  if (lower === "sol") return "Hindi";
+  if (lower.includes("hindi")) return lower.includes("sub") ? "Hindi Subbed" : "Hindi";
+  if (lower === "cosmos") return "Tamil";
+  if (lower === "comet") return "Telugu";
+  if (lower === "bengali") return "Bengali";
+  if (["nova", "atlas", "orion", "astra", "lyra", "luna", "helios", "vega"].includes(lower)) return "English";
+  return "English";
+}
+
+export function getVidrockFlagHelper(name: string, rawFlag?: string, audio?: string): string {
+  if (rawFlag) {
+    const f = rawFlag.toLowerCase().trim();
+    if (f === "ind" || f === "in") return "in";
+    if (f === "us" || f === "en" || f === "eng") return "us";
+    return f;
+  }
+  const audioStr = (audio || "").toLowerCase();
+  if (
+    audioStr.includes("hindi") ||
+    audioStr.includes("tamil") ||
+    audioStr.includes("telugu") ||
+    audioStr.includes("bengali")
+  ) {
+    return "in";
+  }
+  const clean = name.replace(/^VidRock[\s-]*/i, "").replace(/^\((.*)\)$/, "$1").trim();
+  const lower = clean.toLowerCase();
+  if (["sol", "cosmos", "comet", "bengali", "hindi", "hindi subbed"].includes(lower)) {
+    return "in";
+  }
+  return "us";
+}
+
 export const getAudioFlagCode = (
   langStr?: string,
   defaultFlag?: string,
 ): string => {
   const l = (langStr || "").toLowerCase().trim();
   if (l.includes("korean") || l.includes("kor") || l === "ko") return "kr";
-  if (l.includes("hindi") || l.includes("hin")) return "in";
+  if (
+    l.includes("hindi") ||
+    l.includes("hin") ||
+    l.includes("tamil") ||
+    l.includes("telugu") ||
+    l.includes("bengali") ||
+    l.includes("marathi") ||
+    l.includes("punjabi") ||
+    l.includes("gujarati") ||
+    l.includes("kannada") ||
+    l.includes("malayalam")
+  )
+    return "in";
   if (l.includes("german") || l.includes("deutsch") || l.includes("ger"))
     return "de";
   if (
@@ -239,7 +288,7 @@ export const getAudioFlagCode = (
     if (df === "en" || df === "eng") return "us";
     if (df === "ko" || df === "kor" || df.includes("kor")) return "kr";
     if (df === "ja" || df === "jpn" || df.includes("japan")) return "jp";
-    if (df === "hi" || df === "hin" || df.includes("hindi")) return "in";
+    if (df === "hi" || df === "hin" || df.includes("hindi") || df === "ind" || df === "in") return "in";
     return df;
   }
 
@@ -646,10 +695,8 @@ export const sortMirrorsList = (list: any[]) => {
       return catPrioA - catPrioB;
     }
 
-    // Tie-breaker: sort sub-servers by serverSortOrder (e.g. PRIME, ALPHA, BETA)
-    const prioA = getMirrorPriority(a.source);
-    const prioB = getMirrorPriority(b.source);
-    return prioA - prioB;
+    // Preserve original relative order for sub-servers within the same provider category
+    return 0;
   });
 };
 
@@ -1385,8 +1432,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               : `VidRock (${name})`,
             url: v.url,
             type: v.type || "hls",
-            audio: v.audio || "",
-            flag: v.flag || "us",
+            audio: v.audio || v.language || "",
+            flag: v.flag === "ind" ? "in" : v.flag || "us",
           }));
       } else if (category === "FilmU") {
         updatedMirrors = Object.entries(data)
@@ -1912,6 +1959,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const hashName = parts[1]?.trim();
           const hashType = parts[2]?.trim();
           const hashAudio = parts[3]?.trim();
+          const hashFlag = parts[4]?.trim();
 
           if (!rawUrl) {
             return null;
@@ -1934,11 +1982,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             : isMp4
               ? `${API}/api/proxy/segment?url=${encodeURIComponent(rawUrl)}`
               : `${API}/api/proxy/stream?url=${encodeURIComponent(rawUrl)}`;
+
+          const rawSubName = name.replace(/^VidRock[\s-]*/i, "").replace(/^\((.*)\)$/, "$1").trim();
+          const audio = hashAudio || getVidrockAudioHelper(rawSubName);
+          const flag = hashFlag || getVidrockFlagHelper(rawSubName, "", audio);
+
           return {
             source: name,
             url: proxiedUrl,
             type: isEmb ? "embed" : isMp4 ? "mp4" : "hls",
-            audio: hashAudio || "",
+            audio,
+            flag,
           };
         })
         .filter(
@@ -2096,8 +2150,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                         : `VidRock (${name})`,
                       url: v.url,
                       type: v.type || "hls",
-                      audio: v.audio || "",
-                      flag: v.flag || "us",
+                      audio: v.audio || v.language || "",
+                      flag: v.flag === "ind" ? "in" : v.flag || "us",
                     }));
                 } else if (isFilmu) {
                   updatedMirrors = Object.entries(data)
@@ -5546,11 +5600,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                 <div className="flex flex-col gap-1 px-1">
                                   {uniqueItems.map(
                                     ({ mirror: m, originalIndex: idx }) => {
-                                      const flagCode = m.flag
-                                        ? m.flag.toLowerCase()
-                                        : "us";
+                                      const audioLabel = m.audio || m.language || "";
+                                      const flagCode = getAudioFlagCode(audioLabel, m.flag);
                                       const countryCode =
-                                        flagCode === "en" ? "us" : flagCode;
+                                        flagCode === "en" ? "us" : flagCode === "ind" ? "in" : flagCode;
                                       const isSelected = activeMirror === idx;
                                       const failedReason =
                                         failedMirrors[m.source];
@@ -5588,6 +5641,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                                                   </span>
                                                 )}
                                               </div>
+                                              {audioLabel && (
+                                                <span className="text-[10px] font-medium text-white/50 leading-tight truncate">
+                                                  {audioLabel}
+                                                </span>
+                                              )}
                                             </div>
                                           </div>
                                           <div className="flex items-center gap-1.5 shrink-0 ml-2">
@@ -7524,6 +7582,7 @@ const PROVIDERS: ProviderConfig[] = [
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
+    serializeExtra: (src) => src.audio || src.language || "",
   },
   {
     id: "hdghartv",
@@ -7709,8 +7768,9 @@ function serializeSources(sources: any[], extra?: (s: any) => string): string {
   return sources
     .map((s) => {
       if (s.url.includes("#")) return s.url;
-      const ex = extra ? extra(s) : "";
-      return `${s.url}#${s.name}#${s.type}${ex ? `#${ex}` : ""}`;
+      const ex = extra ? extra(s) : s.audio || "";
+      const flag = s.flag || "";
+      return `${s.url}#${s.name}#${s.type}${ex || flag ? `#${ex}#${flag}` : ""}`;
     })
     .join("|");
 }

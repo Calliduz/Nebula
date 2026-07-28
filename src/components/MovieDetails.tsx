@@ -108,6 +108,7 @@ const PROVIDERS: ProviderConfig[] = [
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
+    serializeExtra: (src) => src.audio || src.language || "",
   },
   {
     id: "hdghartv",
@@ -294,8 +295,9 @@ function serializeSources(sources: any[], extra?: (s: any) => string): string {
   return sources
     .map((s) => {
       if (s.url.includes("#")) return s.url;
-      const ex = extra ? extra(s) : "";
-      return `${s.url}#${s.name}#${s.type}${ex ? `#${ex}` : ""}`;
+      const ex = extra ? extra(s) : s.audio || "";
+      const flag = s.flag || "";
+      return `${s.url}#${s.name}#${s.type}${ex || flag ? `#${ex}#${flag}` : ""}`;
     })
     .join("|");
 }
