@@ -46,6 +46,10 @@ import {
   handleImageError,
   handleClearLogoError,
   formatSeasonName,
+  isLogoValidated,
+  isLogoFailed,
+  markLogoValid,
+  markLogoFailed,
 } from "../utils/helpers";
 import { fetchVideasySourcesDirect } from "../services/videasy";
 import { getTVSeasonEpisodes, getMediaDetails } from "../services/tmdb";
@@ -751,11 +755,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         : undefined;
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
-  const [logoFailed, setLogoFailed] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(() =>
+    movie?.clearLogo ? isLogoFailed(movie.clearLogo) : true,
+  );
   // Ref-based validated logo URL: preloaded once on mount so all <img> instances
   // share the same result and we avoid race-condition flicker where one instance
   // fires onError while another succeeds (they're all the same URL, cached).
-  const logoValidatedRef = useRef<boolean | null>(null); // null=pending, true=ok, false=fail
+  const logoValidatedRef = useRef<boolean | null>(
+    movie?.clearLogo
+      ? isLogoValidated(movie.clearLogo)
+        ? true
+        : isLogoFailed(movie.clearLogo)
+          ? false
+          : null
+      : false,
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
@@ -802,18 +816,32 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   // the same cached result — prevents the race-condition flicker where the loading
   // screen img fires onError before the browser has cached the image.
   useEffect(() => {
-    logoValidatedRef.current = null;
     if (!movie?.clearLogo) {
+      logoValidatedRef.current = false;
       setLogoFailed(true);
       return;
     }
+    if (isLogoValidated(movie.clearLogo)) {
+      logoValidatedRef.current = true;
+      setLogoFailed(false);
+      return;
+    }
+    if (isLogoFailed(movie.clearLogo)) {
+      logoValidatedRef.current = false;
+      setLogoFailed(true);
+      return;
+    }
+
+    logoValidatedRef.current = null;
     setLogoFailed(false);
     const img = new Image();
     img.onload = () => {
+      markLogoValid(movie.clearLogo);
       logoValidatedRef.current = true;
-      // Already false? don't flap it back.
+      setLogoFailed(false);
     };
     img.onerror = () => {
+      markLogoFailed(movie.clearLogo);
       logoValidatedRef.current = false;
       setLogoFailed(true);
     };
@@ -822,7 +850,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   }, [movie?.clearLogo]);
 
   useEffect(() => {
-    setLogoFailed(false);
+    if (movie?.clearLogo && isLogoValidated(movie.clearLogo)) {
+      setLogoFailed(false);
+    } else if (movie?.clearLogo && isLogoFailed(movie.clearLogo)) {
+      setLogoFailed(true);
+    }
     hasAutoRetriedRef.current = false;
     failedSourcesRef.current.clear();
     setFailedSourcesList([]);
@@ -4795,7 +4827,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 height="112"
                 className="h-20 md:h-28 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse transform-gpu will-change-[opacity,transform]"
                 referrerPolicy="no-referrer"
-                onError={() => { if (logoValidatedRef.current !== true) setLogoFailed(true); }}
+                onError={() => {
+                  if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
+                    markLogoFailed(movie.clearLogo);
+                    setLogoFailed(true);
+                  }
+                }}
               />
             ) : (
               <h1 className="text-3xl md:text-5xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl transform-gpu will-change-[opacity,transform]">
@@ -4892,7 +4929,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 height="96"
                 className="h-16 md:h-24 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
                 referrerPolicy="no-referrer"
-                onError={() => { if (logoValidatedRef.current !== true) setLogoFailed(true); }}
+                onError={() => {
+                  if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
+                    markLogoFailed(movie.clearLogo);
+                    setLogoFailed(true);
+                  }
+                }}
               />
             ) : (
               <h1 className="text-xl md:text-3xl font-display font-black uppercase tracking-tighter text-white animate-pulse drop-shadow-2xl select-none">
@@ -5219,7 +5261,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     alt={movie.title}
                     className="h-7 sm:h-9 max-w-[180px] sm:max-w-[260px] w-auto object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] drop-shadow-md"
                     referrerPolicy="no-referrer"
-                    onError={() => { if (logoValidatedRef.current !== true) setLogoFailed(true); }}
+                    onError={() => {
+                  if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
+                    markLogoFailed(movie.clearLogo);
+                    setLogoFailed(true);
+                  }
+                }}
                   />
                   {season !== undefined && episode !== undefined && (
                     <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
@@ -7210,20 +7257,35 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowMoreLikeThis(false)}
-              className="fixed inset-0 bg-black/85 sm:backdrop-blur-sm z-[1050] pointer-events-auto transform-gpu"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMoreLikeThis(false);
+              }}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[1050] pointer-events-auto"
             />
             {/* Modal Sheet */}
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 350 }}
-              className="fixed inset-x-0 top-0 sm:top-4 bottom-0 z-[1100] bg-[#0c0c0e]/98 border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto transform-gpu"
+              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="fixed inset-x-0 top-3 sm:top-6 bottom-0 z-[1100] bg-[#0c0c0e]/98 border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto pb-[env(safe-area-inset-bottom,16px)]"
             >
               {/* Drag Handle Bar */}
               <div
-                onClick={() => setShowMoreLikeThis(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoreLikeThis(false);
+                }}
                 className="w-full flex items-center justify-center pt-2.5 pb-1 bg-black/40 cursor-pointer border-b border-white/5"
                 title="Close"
               >
@@ -7241,7 +7303,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </span>
                 </div>
                 <button
-                  onClick={() => setShowMoreLikeThis(false)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMoreLikeThis(false);
+                  }}
                   className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/15 text-white/50 hover:text-white flex items-center justify-center transition-all active:scale-95 flex-shrink-0 cursor-pointer"
                   title="Close"
                 >
@@ -7250,7 +7315,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </div>
 
               {/* Grid Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pt-3 sm:pt-6">
+              <div className="flex-1 overflow-y-auto custom-scrollbar overscroll-contain touch-pan-y p-4 sm:p-6 pt-3 sm:pt-6">
                 {similarLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
                     <Loader2
