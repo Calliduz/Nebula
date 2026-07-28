@@ -47,9 +47,7 @@ import {
   handleClearLogoError,
   formatSeasonName,
   isLogoValidated,
-  isLogoFailed,
   markLogoValid,
-  markLogoFailed,
 } from "../utils/helpers";
 import { fetchVideasySourcesDirect } from "../services/videasy";
 import { getTVSeasonEpisodes, getMediaDetails } from "../services/tmdb";
@@ -755,9 +753,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         : undefined;
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
-  const [logoFailed, setLogoFailed] = useState(() =>
-    movie?.clearLogo ? isLogoFailed(movie.clearLogo) : true,
-  );
+  const [logoFailed, setLogoFailed] = useState(() => !movie?.clearLogo);
   // Ref-based validated logo URL: preloaded once on mount so all <img> instances
   // share the same result and we avoid race-condition flicker where one instance
   // fires onError while another succeeds (they're all the same URL, cached).
@@ -765,9 +761,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     movie?.clearLogo
       ? isLogoValidated(movie.clearLogo)
         ? true
-        : isLogoFailed(movie.clearLogo)
-          ? false
-          : null
+        : null
       : false,
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -826,11 +820,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setLogoFailed(false);
       return;
     }
-    if (isLogoFailed(movie.clearLogo)) {
-      logoValidatedRef.current = false;
-      setLogoFailed(true);
-      return;
-    }
 
     logoValidatedRef.current = null;
     setLogoFailed(false);
@@ -841,7 +830,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setLogoFailed(false);
     };
     img.onerror = () => {
-      markLogoFailed(movie.clearLogo);
       logoValidatedRef.current = false;
       setLogoFailed(true);
     };
@@ -852,8 +840,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   useEffect(() => {
     if (movie?.clearLogo && isLogoValidated(movie.clearLogo)) {
       setLogoFailed(false);
-    } else if (movie?.clearLogo && isLogoFailed(movie.clearLogo)) {
-      setLogoFailed(true);
     }
     hasAutoRetriedRef.current = false;
     failedSourcesRef.current.clear();
@@ -4829,7 +4815,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 referrerPolicy="no-referrer"
                 onError={() => {
                   if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
-                    markLogoFailed(movie.clearLogo);
                     setLogoFailed(true);
                   }
                 }}
@@ -4931,7 +4916,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 referrerPolicy="no-referrer"
                 onError={() => {
                   if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
-                    markLogoFailed(movie.clearLogo);
                     setLogoFailed(true);
                   }
                 }}
@@ -5263,7 +5247,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     referrerPolicy="no-referrer"
                     onError={() => {
                   if (movie?.clearLogo && !isLogoValidated(movie.clearLogo) && logoValidatedRef.current !== true) {
-                    markLogoFailed(movie.clearLogo);
                     setLogoFailed(true);
                   }
                 }}

@@ -38,6 +38,7 @@ import {
   handleClearLogoError,
   triggerPopunder,
   formatSeasonName,
+  markLogoValid,
 } from "../utils/helpers";
 import { fetchVideasySourcesDirect } from "../services/videasy";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -1485,6 +1486,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
           height="160"
           className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] mx-auto lg:mx-0"
           referrerPolicy="no-referrer"
+          onLoad={() => markLogoValid(movie.clearLogo)}
           onError={() => setLogoFailed(true)}
         />
       </div>
@@ -1510,7 +1512,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
           className="w-full h-full object-cover blur-[2px] scale-110 opacity-40 origin-center"
           alt=""
           referrerPolicy="no-referrer"
-          onError={handleImageError}
+          onError={handleBackdropError}
         />
         {/* Ambient Drifting Nebula Glows */}
         <div
