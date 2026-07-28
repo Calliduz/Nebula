@@ -35,6 +35,7 @@ import {
 import { API_BASE_URL } from "../config";
 import {
   handleImageError,
+  handleBackdropError,
   handleClearLogoError,
   triggerPopunder,
   formatSeasonName,
