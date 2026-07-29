@@ -937,7 +937,9 @@ export const getMediaBasicInfo = async (
   try {
     const data = await fetchFromTMDB(`/${type}/${id}`, {}, TTL.DETAILS);
     if (!data || data.status_code === 34) return null;
-    return normalizeMovie(data, type);
+    const normalized = normalizeMovie(data, type);
+    const enriched = await enrichMovies([normalized]);
+    return enriched[0] || normalized;
   } catch {
     return null;
   }

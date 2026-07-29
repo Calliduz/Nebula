@@ -56,7 +56,11 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
-import { getMediaBasicInfo, getPersonDetails } from "./services/tmdb";
+import {
+  getMediaBasicInfo,
+  getPersonDetails,
+  enrichMoviesWithMetadata,
+} from "./services/tmdb";
 import { handleImageError } from "./utils/helpers";
 
 export default function App() {
@@ -553,6 +557,21 @@ function MediaPlayerStub({ actions, state }: any) {
         });
     }
   }, [catalogMovie, id, type]);
+
+  // Enrich movie with logo metadata if clearLogo is missing
+  React.useEffect(() => {
+    if (movie && !movie.clearLogo) {
+      enrichMoviesWithMetadata([movie]).then((enriched) => {
+        if (enriched?.[0]?.clearLogo) {
+          movie.clearLogo = enriched[0].clearLogo;
+          setLocalMovie((prev: any) => ({
+            ...(prev || movie),
+            clearLogo: enriched[0].clearLogo,
+          }));
+        }
+      });
+    }
+  }, [movie?.id, movie?.clearLogo]);
 
   // While the global catalog is still loading OR local fetch is running, show themed skeleton
   if (!movie && (state.isLoading || localLoading)) {

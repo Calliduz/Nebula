@@ -50,7 +50,11 @@ import {
   markLogoValid,
 } from "../utils/helpers";
 import { fetchVideasySourcesDirect } from "../services/videasy";
-import { getTVSeasonEpisodes, getMediaDetails } from "../services/tmdb";
+import {
+  getTVSeasonEpisodes,
+  getMediaDetails,
+  enrichMoviesWithMetadata,
+} from "../services/tmdb";
 import {
   type SkipSegment,
   parseIntroDBResponse,
@@ -877,11 +881,22 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   }, [showMoreLikeThis, movie?.id, movie?.type, similarTitles.length]);
 
   // Reset logo state when the clearLogo URL changes (e.g. episode/movie switch).
-  // We show the logo optimistically and let each rendered <img> onLoad/onError
-  // decide the final outcome — no separate new Image() prevalidation needed.
+  // If clearLogo is missing from movie prop, fetch & enrich it automatically.
   useEffect(() => {
     if (!movie?.clearLogo) {
-      setLogoFailed(true);
+      if (movie?.id) {
+        enrichMoviesWithMetadata([movie]).then((enriched) => {
+          if (enriched?.[0]?.clearLogo) {
+            movie.clearLogo = enriched[0].clearLogo;
+            markLogoValid(enriched[0].clearLogo);
+            setLogoFailed(false);
+          } else {
+            setLogoFailed(true);
+          }
+        });
+      } else {
+        setLogoFailed(true);
+      }
       return;
     }
     // If this URL already loaded successfully in a previous render, keep showing it
@@ -891,7 +906,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
     // Optimistic: show the logo and let the img tags report back
     setLogoFailed(false);
-  }, [movie?.clearLogo]);
+  }, [movie?.id, movie?.clearLogo]);
 
   useEffect(() => {
     if (movie?.clearLogo && isLogoValidated(movie.clearLogo)) {
