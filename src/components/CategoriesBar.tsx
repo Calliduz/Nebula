@@ -123,7 +123,7 @@ interface CategoriesBarProps {
 export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
   ({ setViewingCategory, adultMode = false }) => {
     const [activeSection, setActiveSection] = useState<"genres" | "studios">(
-      "genres",
+      "studios",
     );
     const [glowing, setGlowing] = useState<string | null>(null);
 
@@ -154,52 +154,101 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
     );
 
     return (
-      <section className="mb-8">
+      <section className="mb-10 sm:mb-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 px-4 sm:px-0">
           {/* Title Area */}
           <div className="flex items-center gap-3">
-            <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
-            <h3 className="text-xl md:text-2.5xl font-display font-black uppercase tracking-tighter text-white/90 leading-none">
+            <span className="w-1.5 h-6 rounded-full bg-gradient-to-b from-nebula-cyan via-nebula-cyan/80 to-transparent shrink-0 shadow-[0_0_10px_rgba(0,229,255,0.6)]" />
+            <h3 className="text-xl md:text-2.5xl font-display font-black uppercase tracking-tighter text-white/95 leading-none drop-shadow-md">
               Explore Library
             </h3>
-            <span className="text-[8px] sm:text-[9px] font-bold tracking-[0.2em] text-nebula-cyan uppercase border border-nebula-cyan/25 rounded px-1.5 py-0.5 leading-none">
-              {activeSection === "genres" ? "Genres" : "Studios"}
+            <span className="text-[8px] sm:text-[9px] font-black tracking-[0.2em] text-nebula-cyan uppercase bg-nebula-cyan/10 border border-nebula-cyan/30 rounded-md px-2 py-0.5 leading-none shadow-[0_0_10px_rgba(0,229,255,0.15)]">
+              {activeSection === "studios" ? "Studios" : "Genres"}
             </span>
             {adultMode && activeSection === "genres" && (
-              <span className="text-[8px] sm:text-[9px] font-bold tracking-[0.1em] text-red-400 uppercase border border-red-500/30 px-1.5 py-0.5 rounded leading-none">
+              <span className="text-[8px] sm:text-[9px] font-bold tracking-[0.1em] text-red-400 uppercase bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-md leading-none">
                 18+
               </span>
             )}
           </div>
 
           {/* Premium Tab Switcher */}
-          <div className="flex items-center self-start sm:self-auto gap-1 bg-white/[0.03] border border-white/[0.06] p-1 rounded-xl backdrop-blur-md relative z-25">
-            <button
-              onClick={() => setActiveSection("genres")}
-              className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                activeSection === "genres"
-                  ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_15px_rgba(0,229,255,0.3)]"
-                  : "text-white/40 hover:text-white"
-              }`}
-            >
-              Genres
-            </button>
+          <div className="flex items-center self-start sm:self-auto gap-1.5 bg-black/40 border border-white/10 p-1.5 rounded-2xl backdrop-blur-xl relative z-25 shadow-xl">
             <button
               onClick={() => setActiveSection("studios")}
-              className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+              className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
                 activeSection === "studios"
-                  ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_15px_rgba(0,229,255,0.3)]"
-                  : "text-white/40 hover:text-white"
+                  ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_20px_rgba(0,229,255,0.4)] scale-[1.02]"
+                  : "text-white/40 hover:text-white hover:bg-white/5"
               }`}
             >
               Studios
+            </button>
+            <button
+              onClick={() => setActiveSection("genres")}
+              className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                activeSection === "genres"
+                  ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_20px_rgba(0,229,255,0.4)] scale-[1.02]"
+                  : "text-white/40 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              Genres
             </button>
           </div>
         </div>
 
         {/* Dynamic Display Panel */}
-        {activeSection === "genres" ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2 px-4 sm:px-0">
+        {activeSection === "studios" ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-3.5 sm:gap-4 px-4 sm:px-0">
+            {STUDIO_CATEGORIES.map((studio) => {
+              const isGlowing = glowing === studio.key;
+              return (
+                <button
+                  key={studio.key}
+                  onClick={() => handleStudioClick(studio)}
+                  className={`group relative flex flex-col items-center justify-between rounded-2xl sm:rounded-3xl h-28 sm:h-32 p-3.5 sm:p-4 bg-gradient-to-b from-white/[0.06] via-white/[0.02] to-black/60 border border-white/10 hover:border-white/35 transition-all duration-500 overflow-hidden cursor-pointer shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.8)] hover:-translate-y-1 ${
+                    isGlowing ? "click-glow-once ring-2 ring-nebula-cyan" : ""
+                  }`}
+                >
+                  {/* Glass Specular Top Highlight */}
+                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+
+                  {/* Brand Ambient Radial Glow */}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl scale-150 -z-10 pointer-events-none"
+                    style={{
+                      background: `radial-gradient(circle at center, ${studio.glow} 0%, transparent 70%)`,
+                    }}
+                  />
+
+                  {/* Subtle Internal Brand Gradient Overlay */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-b ${studio.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl sm:rounded-3xl`}
+                  />
+
+                  {/* Studio Brand Logo */}
+                  <div className="h-14 sm:h-16 w-full flex items-center justify-center relative z-10 my-auto transition-transform duration-500 group-hover:scale-110">
+                    <img
+                      src={`${API_BASE_URL}/api/image?url=${encodeURIComponent(`https://image.tmdb.org/t/p/w154${studio.logo}`)}`}
+                      alt={studio.name}
+                      className="max-h-full max-w-[85%] object-contain opacity-70 group-hover:opacity-100 transition-all duration-500 filter invert brightness-200 drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  {/* Studio Title Label */}
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] text-white/40 group-hover:text-white group-hover:text-nebula-cyan transition-all duration-500 relative z-10 truncate w-full text-center drop-shadow-md">
+                    {studio.name}
+                  </span>
+
+                  {/* Bottom Cyan Accent Line */}
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2.5px] w-0 bg-gradient-to-r from-nebula-cyan via-white to-nebula-cyan transition-all duration-500 group-hover:w-4/5 rounded-full shadow-[0_0_10px_rgba(0,229,255,0.8)]" />
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2.5 sm:gap-3 px-4 sm:px-0">
             {categories.map((cat) => {
               const Icon = cat.icon;
               const isGlowing = glowing === cat.key;
@@ -207,28 +256,28 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
                 <button
                   key={cat.key}
                   onClick={() => handleCategoryClick(cat)}
-                  className={`group relative flex items-center justify-center gap-1.5 rounded-xl px-3 py-3 bg-white/[0.03] border transition-all duration-300 font-sans text-[10px] font-black uppercase tracking-[0.1em] text-white/50 hover:text-white overflow-hidden transform-gpu ${
+                  className={`group relative flex items-center justify-center gap-2 rounded-2xl px-3.5 py-3.5 bg-white/[0.04] border transition-all duration-300 font-sans text-[10px] sm:text-[11px] font-black uppercase tracking-[0.12em] text-white/60 hover:text-white overflow-hidden hover:-translate-y-0.5 shadow-lg ${
                     cat.adult
-                      ? "border-red-500/20 hover:border-red-400/40"
-                      : "border-white/[0.06] hover:border-nebula-cyan/30"
-                  } ${isGlowing ? "click-glow-once" : ""}`}
+                      ? "border-red-500/20 hover:border-red-400/50 hover:bg-red-500/10"
+                      : "border-white/10 hover:border-nebula-cyan/40 hover:bg-white/[0.08]"
+                  } ${isGlowing ? "click-glow-once ring-2 ring-nebula-cyan" : ""}`}
                 >
                   {/* Hover background glow */}
                   <div
                     className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                       cat.adult
-                        ? "from-red-500/8 to-transparent"
-                        : "from-nebula-cyan/5 to-transparent"
+                        ? "from-red-500/15 to-transparent"
+                        : "from-nebula-cyan/10 to-transparent"
                     }`}
                   />
 
                   {/* Icon */}
                   <Icon
-                    size={11}
-                    className={`relative z-10 shrink-0 transition-colors duration-300 ${
+                    size={13}
+                    className={`relative z-10 shrink-0 transition-all duration-300 group-hover:scale-110 ${
                       cat.adult
-                        ? "text-red-400/60 group-hover:text-red-300"
-                        : "text-white/30 group-hover:text-nebula-cyan"
+                        ? "text-red-400 group-hover:text-red-300"
+                        : "text-white/40 group-hover:text-nebula-cyan"
                     }`}
                   />
 
@@ -237,59 +286,10 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
 
                   {/* Bottom underline */}
                   <div
-                    className={`absolute bottom-0 left-0 h-[1.5px] w-0 transition-all duration-300 group-hover:w-full ${
+                    className={`absolute bottom-0 left-0 h-[2px] w-0 transition-all duration-300 group-hover:w-full ${
                       cat.adult ? "bg-red-400" : "bg-nebula-cyan"
                     }`}
                   />
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-3 px-4 sm:px-0">
-            {STUDIO_CATEGORIES.map((studio) => {
-              const isGlowing = glowing === studio.key;
-              return (
-                <button
-                  key={studio.key}
-                  onClick={() => handleStudioClick(studio)}
-                  className={`group relative flex flex-col items-center justify-center rounded-2xl h-24 p-3 bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.06] hover:border-white/20 transition-all duration-500 overflow-hidden cursor-pointer ${
-                    isGlowing ? "click-glow-once" : ""
-                  }`}
-                  style={{
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                  }}
-                >
-                  {/* Brand Ambient Glow behind card */}
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl scale-125 -z-10 pointer-events-none"
-                    style={{
-                      background: `radial-gradient(circle, ${studio.glow} 0%, transparent 70%)`,
-                    }}
-                  />
-
-                  {/* Subtle internal gradient overlay */}
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-b ${studio.color} opacity-0 group-hover:opacity-100 transition-opacity duration-550`}
-                  />
-
-                  {/* Logo Image */}
-                  <div className="h-10 w-full flex items-center justify-center relative z-10 transition-transform duration-500 group-hover:scale-110">
-                    <img
-                      src={`${API_BASE_URL}/api/image?url=${encodeURIComponent(`https://image.tmdb.org/t/p/w154${studio.logo}`)}`}
-                      alt={studio.name}
-                      className="max-h-full max-w-[85%] object-contain opacity-60 group-hover:opacity-100 transition-opacity duration-500 filter invert brightness-200"
-                      loading="lazy"
-                    />
-                  </div>
-
-                  {/* Title (Hidden by default, slides up slightly on hover) */}
-                  <span className="mt-2 text-[8px] font-black uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-all duration-500 transform translate-y-1 group-hover:translate-y-0 relative z-10 truncate w-full text-center">
-                    {studio.name}
-                  </span>
-
-                  {/* Bottom active line */}
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] w-0 bg-gradient-to-r from-transparent via-nebula-cyan to-transparent transition-all duration-500 group-hover:w-3/4" />
                 </button>
               );
             })}
