@@ -332,6 +332,79 @@ export const getAudioFlagCode = (
   return "us";
 };
 
+interface RecommendationCardProps {
+  item: any;
+  onSelect: (item: any) => void;
+}
+
+const RecommendationCard = React.memo(
+  ({ item, onSelect }: RecommendationCardProps) => {
+    const rating = item.imdb || item.vote_average;
+    const year =
+      item.year || (item.release_date ? item.release_date.split("-")[0] : null);
+    const typeLabel = item.type === "tv" ? "TV" : "MOVIE";
+    const posterSrc =
+      item.backdrop && item.backdrop.length > 0
+        ? item.backdrop
+        : item.image && item.image.length > 0
+          ? item.image
+          : "/no-image.svg";
+
+    return (
+      <div
+        onClick={() => onSelect(item)}
+        className="group relative cursor-pointer flex flex-col active:scale-95 transition-transform duration-150 will-change-transform contain-layout"
+      >
+        {/* 16:10 Landscape Poster / Fanart Thumbnail */}
+        <div className="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-md transition-colors duration-200">
+          <img
+            src={posterSrc}
+            alt={item.title || "Recommendation"}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 opacity-85 group-hover:opacity-100 will-change-transform"
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            onError={handleImageError}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-40 group-hover:opacity-20 transition-opacity duration-200" />
+
+          {/* Rating Badge */}
+          {rating && rating > 0 && (
+            <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-bold text-amber-400 flex items-center gap-1 border border-white/15 shadow-md pointer-events-none">
+              <Star size={11} className="fill-amber-400 text-amber-400" />
+              <span>
+                {typeof rating === "number" ? rating.toFixed(1) : rating}
+              </span>
+            </div>
+          )}
+
+          {/* Hover Play Button */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/30">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-nebula-cyan text-obsidian flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-105 transition-transform duration-200">
+              <Play size={16} className="fill-current ml-0.5" />
+            </div>
+          </div>
+        </div>
+
+        {/* Title & Metadata */}
+        <div className="mt-2 px-0.5 min-w-0">
+          <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors duration-200 truncate leading-tight">
+            {item.title}
+          </h4>
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono text-white/40 mt-0.5">
+            {year && <span>{year}</span>}
+            {year && <span>•</span>}
+            <span className="uppercase font-bold tracking-wider">
+              {typeLabel}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+RecommendationCard.displayName = "RecommendationCard";
+
 export const getCategoryAlias = (category: string): string => {
   if (!category) return "";
   if (SOURCE_ALIASES[category]) return SOURCE_ALIASES[category];
@@ -827,6 +900,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   onMarkAsWatched,
   onClose,
 }) => {
+  const navigate = useNavigate();
   const season =
     propSeason !== undefined ? propSeason : movie.type === "tv" ? 1 : undefined;
   const episode =
@@ -896,7 +970,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [showMoreLikeThis, movie?.id, movie?.type, similarFetchedId, similarTitles.length]);
+  }, [
+    showMoreLikeThis,
+    movie?.id,
+    movie?.type,
+    similarFetchedId,
+    similarTitles.length,
+  ]);
 
   // Reset logo state when the clearLogo URL changes (e.g. episode/movie switch).
   // If clearLogo is missing from movie prop, fetch & enrich it automatically.
@@ -1317,6 +1397,16 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setSourceSelect(null);
   }, []);
 
+  const handleSelectRecommendation = useCallback(
+    (item: any) => {
+      setShowMoreLikeThis(false);
+      setSimilarTitles([]);
+      setSimilarFetchedId(null);
+      navigate(`/watch/${item.type || "movie"}/${item.id}`);
+    },
+    [navigate],
+  );
+
   const isAnyMenuOpen = Boolean(
     showSettings ||
     showServersModal ||
@@ -1333,7 +1423,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       customSubBlobUrls.current.forEach((u) => URL.revokeObjectURL(u));
     };
   }, []);
-  const navigate = useNavigate();
 
   const hasPrefetchedNextEpisode = useRef(false);
   const nextEpisodeDetailsRef = useRef<any>(null);
@@ -7352,30 +7441,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       <AnimatePresence>
         {showMoreLikeThis && (
           <React.Fragment key="more-like-this-container">
-            {/* Backdrop */}
+            {/* Backdrop — High performance dark overlay without backdrop-blur compositing lag */}
             <motion.div
               key="mlt-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowMoreLikeThis(false);
               }}
               onTouchStart={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
-              className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[1050] pointer-events-auto"
+              className="fixed inset-0 bg-black/90 z-[1050] pointer-events-auto will-change-[opacity]"
             />
-            {/* Modal Sheet */}
+            {/* Modal Sheet — Hardware accelerated transform sheet */}
             <motion.div
               key="mlt-sheet"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
-              className="fixed inset-x-0 top-3 sm:top-6 bottom-0 z-[1100] bg-[#0c0c0e]/98 border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto pb-[env(safe-area-inset-bottom,16px)]"
+              className="fixed inset-x-0 top-3 sm:top-6 bottom-0 z-[1100] bg-[#0c0c0e] border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto pb-[env(safe-area-inset-bottom,16px)] will-change-transform transform-gpu"
             >
               {/* Drag Handle Bar */}
               <div
@@ -7412,7 +7502,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </div>
 
               {/* Grid Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar overscroll-contain touch-pan-y p-4 sm:p-6 pt-3 sm:pt-6">
+              <div className="flex-1 overflow-y-auto custom-scrollbar overscroll-contain touch-pan-y p-4 sm:p-6 pt-3 sm:pt-6 contain-layout">
                 {similarLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
                     <Loader2
@@ -7425,85 +7515,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </div>
                 ) : similarTitles.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4.5">
-                    {similarTitles.slice(0, 20).map((m: any, idx: number) => {
-                      const rating = m.imdb || m.vote_average;
-                      const year =
-                        m.year ||
-                        (m.release_date ? m.release_date.split("-")[0] : null);
-                      const typeLabel = m.type === "tv" ? "TV" : "MOVIE";
-                      const posterSrc =
-                        m.backdrop && m.backdrop.length > 0
-                          ? m.backdrop
-                          : m.image && m.image.length > 0
-                          ? m.image
-                          : "/no-image.svg";
-
-                      return (
-                        <div
-                          key={`mlt-${m.id || idx}-${idx}`}
-                          onClick={() => {
-                            setShowMoreLikeThis(false);
-                            setSimilarTitles([]);
-                            setSimilarFetchedId(null);
-                            navigate(`/watch/${m.type || "movie"}/${m.id}`);
-                          }}
-                          className="group relative cursor-pointer flex flex-col active:scale-95 transition-transform"
-                        >
-                          {/* 16:10 Landscape Poster / Fanart Thumbnail */}
-                          <div className="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300 transform-gpu">
-                            <img
-                              src={posterSrc}
-                              alt={m.title || "Recommendation"}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-85 group-hover:opacity-100"
-                              loading="lazy"
-                              decoding="async"
-                              referrerPolicy="no-referrer"
-                              onError={handleImageError}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-40 group-hover:opacity-20 transition-opacity" />
-
-                            {/* Rating Badge */}
-                            {rating && rating > 0 && (
-                              <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-bold text-amber-400 flex items-center gap-1 border border-white/15 shadow-md pointer-events-none">
-                                <Star
-                                  size={11}
-                                  className="fill-amber-400 text-amber-400"
-                                />
-                                <span>
-                                  {typeof rating === "number"
-                                    ? rating.toFixed(1)
-                                    : rating}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Hover Play Button */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-nebula-cyan text-obsidian flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-105 transition-all">
-                                <Play
-                                  size={16}
-                                  className="fill-current ml-0.5"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Title & Metadata */}
-                          <div className="mt-2 px-0.5 min-w-0">
-                            <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors truncate leading-tight">
-                              {m.title}
-                            </h4>
-                            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono text-white/40 mt-0.5">
-                              {year && <span>{year}</span>}
-                              {year && <span>•</span>}
-                              <span className="uppercase font-bold tracking-wider">
-                                {typeLabel}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {similarTitles.slice(0, 20).map((m: any, idx: number) => (
+                      <RecommendationCard
+                        key={`mlt-${m.id || idx}-${idx}`}
+                        item={m}
+                        onSelect={handleSelectRecommendation}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
