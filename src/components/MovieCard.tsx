@@ -1,5 +1,13 @@
-import React, { useState, useCallback, memo, useEffect, useRef } from "react";
-import { handleImageError } from "../utils/helpers";
+import React, {
+  useState,
+  useCallback,
+  memo,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
+import { handleImageError, getOptimizedPosterUrl } from "../utils/helpers";
+import { useSharedIntersectionObserver } from "../hooks/useSharedIntersectionObserver";
 import { Info, Star } from "lucide-react";
 
 interface MovieCardProps {
@@ -18,7 +26,31 @@ export const MovieCard = memo<MovieCardProps>(
     const isLandscape = aspect === "landscape";
     const [imgLoaded, setImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);
+    const [shouldLoadImg, setShouldLoadImg] = useState(
+      () =>
+        (typeof process !== "undefined" && process.env?.NODE_ENV === "test") ||
+        (typeof import.meta !== "undefined" && (import.meta as any).env?.MODE === "test")
+    );
+    const cardRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
+
+    // Compute dynamic TMDB poster URL based on card aspect/width
+    const optimizedImageSrc = useMemo(() => {
+      const estimatedWidth = isGrid ? 200 : isLandscape ? 240 : 180;
+      return getOptimizedPosterUrl(movie.image, estimatedWidth);
+    }, [movie.image, isLandscape, isGrid]);
+
+    // Use shared IntersectionObserver pool to lazy load card images cleanly
+    useSharedIntersectionObserver(
+      cardRef,
+      (entry) => {
+        if (entry.isIntersecting) {
+          setShouldLoadImg(true);
+        }
+      },
+      { rootMargin: "600px 0px 600px 0px" },
+      !shouldLoadImg,
+    );
 
     // Calculate progress percentage and active progress state
     const pct =
@@ -41,7 +73,7 @@ export const MovieCard = memo<MovieCardProps>(
       ) {
         setImgLoaded(true);
       }
-    }, [movie.image, movie.id]);
+    }, [movie.image, movie.id, shouldLoadImg]);
 
     const onImgLoad = useCallback(() => setImgLoaded(true), []);
     const onImgError = useCallback(
@@ -54,6 +86,7 @@ export const MovieCard = memo<MovieCardProps>(
 
     return (
       <div
+        ref={cardRef}
         className={`group/card relative ${isGrid ? "w-full" : isLandscape ? "w-[170px] sm:w-[220px] md:w-[240px] lg:w-[260px]" : "w-[115px] sm:w-[155px] md:w-[200px] lg:w-[220px]"} shrink-0 ${isLandscape ? "aspect-video" : "aspect-[2/3]"} h-fit self-start transition-all duration-300 ${snap ? "snap-start" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => onSelect?.(movie)}
@@ -64,18 +97,20 @@ export const MovieCard = memo<MovieCardProps>(
           {!imgLoaded && !imgError && (
             <div className="absolute inset-0 bg-white/5 shimmer-bg" />
           )}
-          <img
-            ref={imgRef}
-            key={movie.image || movie.id}
-            src={movie.image || undefined}
-            alt={movie.title}
-            className={`w-full h-full object-cover group-hover/card:scale-105 group-hover/card:opacity-75 transition-all duration-500 ease-out ${imgLoaded ? "opacity-80" : "opacity-0"}`}
-            referrerPolicy="no-referrer"
-            onLoad={onImgLoad}
-            onError={onImgError}
-            loading="lazy"
-            decoding="async"
-          />
+          {shouldLoadImg && (
+            <img
+              ref={imgRef}
+              key={optimizedImageSrc || movie.id}
+              src={optimizedImageSrc || undefined}
+              alt={movie.title}
+              className={`w-full h-full object-cover group-hover/card:scale-105 group-hover/card:opacity-75 transition-all duration-500 ease-out ${imgLoaded ? "opacity-80" : "opacity-0"}`}
+              referrerPolicy="no-referrer"
+              onLoad={onImgLoad}
+              onError={onImgError}
+              loading="lazy"
+              decoding="async"
+            />
+          )}
 
           {/* Type badge — top-left corner tab */}
           {movie.type && (

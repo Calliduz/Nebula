@@ -96,3 +96,39 @@ export const formatSeasonName = (
   }
   return baseName;
 };
+
+/**
+ * Dynamically selects optimized TMDB poster resolution (w185, w342, w500, w780)
+ * based on card layout width and device pixel ratio (DPR).
+ */
+export const getOptimizedPosterUrl = (
+  url?: string | null,
+  cardWidthPx: number = 220,
+): string => {
+  if (!url) return "";
+
+  // Only optimize TMDB image URLs
+  if (!url.includes("image.tmdb.org/t/p/")) {
+    return url;
+  }
+
+  const dpr =
+    typeof window !== "undefined"
+      ? Math.min(window.devicePixelRatio || 1, 2)
+      : 1;
+  const targetPx = cardWidthPx * dpr;
+
+  let targetSize = "w500";
+  if (targetPx <= 200) {
+    targetSize = "w185";
+  } else if (targetPx <= 380) {
+    targetSize = "w342";
+  } else if (targetPx <= 550) {
+    targetSize = "w500";
+  } else {
+    targetSize = "w780";
+  }
+
+  // Replace /t/p/w500/ or /t/p/original/ or /t/p/w342/ with calculated size
+  return url.replace(/\/t\/p\/(w\d+|original)\//, `/t/p/${targetSize}/`);
+};
