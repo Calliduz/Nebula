@@ -161,7 +161,7 @@ export default function App() {
       <main
         key="layout-main"
         id="main-scroller"
-        className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 pb-24 lg:pb-0 ${state.isSearchOpen ? "blur-2xl scale-[0.98] opacity-50" : ""}`}
+        className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-500 pb-24 lg:pb-0 ${state.isSearchOpen ? "opacity-30 scale-[0.99] pointer-events-none transform-gpu" : ""}`}
       >
         <div className="relative z-40">
           <Routes>
