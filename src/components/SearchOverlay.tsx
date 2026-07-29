@@ -149,7 +149,6 @@ const SearchResultCard = React.memo<{
 }>(({ movie, index, isSelected, onSelectMovie }) => {
   return (
     <motion.div
-      layout="position"
       initial={{ opacity: 0, y: 12, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{
@@ -542,7 +541,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-[500] bg-obsidian/95 backdrop-blur-3xl flex flex-col items-center pt-[3vh] sm:pt-[8vh] overflow-y-auto custom-scrollbar transform-gpu"
+            className="fixed inset-0 z-[500] bg-obsidian/98 backdrop-blur-md flex flex-col items-center pt-[3vh] sm:pt-[8vh] overflow-y-auto custom-scrollbar transform-gpu"
             style={{ willChange: "opacity" }}
           >
             <div className="w-full max-w-[1250px] px-4 sm:px-8 pb-32 pb-safe">

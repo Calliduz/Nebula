@@ -1451,19 +1451,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     }
   }, [activeSeason]);
 
-  if (!movie && isLoading) {
-    return <MovieDetailsSkeleton onClose={onClose} />;
-  }
-  if (!movie) return null;
-
-  const accentColor = movie.accent || "#00E5FF";
-  const TABS =
-    movie.type === "tv"
-      ? ["Episodes", "Downloads", "Overview"]
-      : ["Overview", "Downloads"];
-
   // Dynamically determine if the series has a new episode (aired in the last 7 days), is followed/in history, and has not been watched yet
-  const hasNewEpisode = (() => {
+  const hasNewEpisode = React.useMemo(() => {
     if (!movie || movie.type !== "tv") return false;
 
     const lastEp = tvDetails?.last_episode_to_air;
@@ -1476,42 +1465,57 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
       if (airedRecently) {
         // Read history from localStorage
-        const history = JSON.parse(
-          localStorage.getItem("nebula-history") || "[]",
-        );
-        const isInHistory = history.some((item: any) => {
-          if (typeof item === "object" && item !== null) {
-            return (
-              item.id.toString() === movie.id.toString() && item.type === "tv"
-            );
-          }
-          const str = String(item);
-          if (str.includes("_")) {
-            const parts = str.split("_");
-            return parts[1] === movie.id.toString() && parts[0] === "tv";
-          }
-          return false;
-        });
-
-        if (isInList || isInHistory) {
-          const epProgressData = JSON.parse(
-            localStorage.getItem("nebula-progress") || "{}",
+        try {
+          const history = JSON.parse(
+            localStorage.getItem("nebula-history") || "[]",
           );
-          const epKey = `${movie.id}-S${lastEp.season_number}E${lastEp.episode_number}`;
-          const epProg = epProgressData[epKey];
-          const epPct =
-            epProg && epProg.duration > 0
-              ? Math.min(100, (epProg.time / epProg.duration) * 100)
-              : 0;
-          const hasWatchedLastEp = (epProg && epProg.watched) || epPct >= 90;
+          const isInHistory = history.some((item: any) => {
+            if (typeof item === "object" && item !== null) {
+              return (
+                item.id.toString() === movie.id.toString() && item.type === "tv"
+              );
+            }
+            const str = String(item);
+            if (str.includes("_")) {
+              const parts = str.split("_");
+              return parts[1] === movie.id.toString() && parts[0] === "tv";
+            }
+            return false;
+          });
 
-          return !hasWatchedLastEp;
+          if (isInList || isInHistory) {
+            const epProgressData = JSON.parse(
+              localStorage.getItem("nebula-progress") || "{}",
+            );
+            const epKey = `${movie.id}-S${lastEp.season_number}E${lastEp.episode_number}`;
+            const epProg = epProgressData[epKey];
+            const epPct =
+              epProg && epProg.duration > 0
+                ? Math.min(100, (epProg.time / epProg.duration) * 100)
+                : 0;
+            const hasWatchedLastEp = (epProg && epProg.watched) || epPct >= 90;
+
+            return !hasWatchedLastEp;
+          }
+        } catch {
+          /* ignore */
         }
       }
     }
 
-    return !!movie.hasNewEpisode;
-  })();
+    return !!movie?.hasNewEpisode;
+  }, [movie, tvDetails, isInList]);
+
+  if (!movie && isLoading) {
+    return <MovieDetailsSkeleton onClose={onClose} />;
+  }
+  if (!movie) return null;
+
+  const accentColor = movie.accent || "#00E5FF";
+  const TABS =
+    movie.type === "tv"
+      ? ["Episodes", "Downloads", "Overview"]
+      : ["Overview", "Downloads"];
 
   const logoTitle =
     movie.clearLogo && !logoFailed ? (
