@@ -2998,6 +2998,7 @@ export function useAppState() {
       isHoveringHero ||
       isPlaying ||
       isSearchOpen ||
+      selectedMovie ||
       featuredMovies.length === 0
     )
       return;
@@ -3012,6 +3013,7 @@ export function useAppState() {
     isHoveringHero,
     isPlaying,
     isSearchOpen,
+    selectedMovie,
     featuredMovies.length,
     currentHeroIndex,
   ]); // Reset on index change

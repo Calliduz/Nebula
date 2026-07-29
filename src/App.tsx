@@ -604,7 +604,7 @@ function MediaPlayerStub({ actions, state }: any) {
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black">
+    <div className="fixed inset-0 z-[1000] bg-black transform-gpu">
       <React.Suspense
         fallback={
           <div className="h-screen bg-black flex flex-col justify-between p-8 relative overflow-hidden">

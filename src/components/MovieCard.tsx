@@ -74,6 +74,7 @@ export const MovieCard = memo<MovieCardProps>(
             onLoad={onImgLoad}
             onError={onImgError}
             loading="lazy"
+            decoding="async"
           />
 
           {/* Type badge — top-left corner tab */}
