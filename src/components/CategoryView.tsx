@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Play, Search, Plus, Shield } from "lucide-react";
+import { ArrowLeft, Play, Search, Plus, Shield, Trash2, X } from "lucide-react";
 import { MovieCard } from "./MovieCard";
 import { MovieSkeleton } from "./MovieSkeleton";
 import { ROW_FETCH_CONFIG } from "../hooks/useAppState";
@@ -64,6 +64,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   const [windowWidth, setWindowWidth] = React.useState(
     typeof window !== "undefined" ? window.innerWidth : 1200,
   );
+  const [libraryTab, setLibraryTab] = React.useState<"all" | "mylist" | "history">(
+    "all",
+  );
 
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -100,6 +103,49 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       }),
     );
   }, [allMovies, myList]);
+
+  const historyFilteredMovies = React.useMemo(() => {
+    if (!allMovies || !history || history.length === 0) return [];
+    let progressMap: Record<string, any> = {};
+    try {
+      progressMap = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+    } catch {
+      /* ignore */
+    }
+
+    return history
+      .map((item) => {
+        let rawId = "";
+        let type = "movie";
+        if (item && typeof item === "object") {
+          rawId = String(item.id);
+          type = item.type || "movie";
+        } else if (typeof item === "string") {
+          if (item.includes("_")) {
+            const parts = item.split("_");
+            type = parts[0];
+            rawId = parts[1];
+          } else {
+            rawId = item;
+          }
+        } else {
+          rawId = String(item);
+        }
+
+        const m = (allMovies || []).find((movie) => {
+          const mId = movie.id.toString();
+          const mType = movie.type || "movie";
+          return mId === rawId && mType === type;
+        });
+        if (!m) return null;
+
+        const progKey = Object.keys(progressMap).find((k) =>
+          k.startsWith(rawId),
+        );
+        return { ...m, progress: progKey ? progressMap[progKey] : null };
+      })
+      .filter(Boolean);
+  }, [allMovies, history]);
 
   // Helper to render grid with ads every 20 items
   const renderGridWithAds = () => {
@@ -149,10 +195,10 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="min-h-screen pt-24 sm:pt-28 md:pt-32 px-4 sm:px-6 md:px-12 pb-32"
+      className="min-h-screen pt-16 sm:pt-24 md:pt-28 px-3.5 sm:px-6 md:px-12 pb-24 sm:pb-32"
     >
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-        <div className="flex flex-col gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 sm:mb-12">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <button
             onClick={() => {
               setActiveTab("home");
@@ -168,9 +214,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
               Back to Home
             </span>
           </button>
-          <div className="flex items-center gap-4 h-12 md:h-16">
+          <div className="flex items-center gap-3 sm:gap-4 h-10 sm:h-12 md:h-16">
             <span className="w-[3px] self-stretch rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shadow-[0_0_8px_rgba(0,229,255,0.7)] shrink-0" />
-            <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-black tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white/95 to-white/70 bg-clip-text text-transparent">
+            <h2 className="text-2.5xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-black tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white/95 to-white/70 bg-clip-text text-transparent">
               {STREAMING_PROVIDERS.some((p) => p.name === viewingCategory)
                 ? `Popular on ${viewingCategory}`
                 : viewingCategory}
@@ -223,142 +269,195 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
       )}
 
       {viewingCategory === "Library" ? (
-        <div className="space-y-16">
-          <section>
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex items-center gap-3">
-                <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
-                <h3 className="text-xl md:text-2xl font-display font-black uppercase tracking-tighter text-white/90 leading-none">
-                  My List
-                </h3>
-              </div>
-              {myList.length > 0 && (
-                <button
-                  onClick={clearMyList}
-                  className="text-xs font-bold uppercase tracking-widest text-nebula-cyan/70 hover:text-nebula-cyan transition-colors px-4 py-1.5 rounded-full border border-nebula-cyan/30 hover:bg-nebula-cyan/10"
+        <div className="space-y-8 sm:space-y-10">
+          {/* Sub-Tab Navigation Bar & Action Header */}
+          <div className="flex flex-row items-center justify-between gap-2 sm:gap-4 bg-white/[0.03] border border-white/[0.08] p-2 sm:p-4 rounded-2xl sm:rounded-3xl backdrop-blur-xl">
+            {/* Sub-Tabs */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 shrink">
+              <button
+                onClick={() => setLibraryTab("all")}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shrink-0 whitespace-nowrap ${
+                  libraryTab === "all"
+                    ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]"
+                    : "text-white/50 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span>All Saved</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-[8.5px] sm:text-[9px] font-black ${
+                    libraryTab === "all"
+                      ? "bg-obsidian/30 text-obsidian"
+                      : "bg-white/10 text-white/70"
+                  }`}
                 >
-                  Clear All
-                </button>
-              )}
+                  {myListFilteredMovies.length + historyFilteredMovies.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setLibraryTab("mylist")}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shrink-0 whitespace-nowrap ${
+                  libraryTab === "mylist"
+                    ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]"
+                    : "text-white/50 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span>My List</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-[8.5px] sm:text-[9px] font-black ${
+                    libraryTab === "mylist"
+                      ? "bg-obsidian/30 text-obsidian"
+                      : "bg-white/10 text-white/70"
+                  }`}
+                >
+                  {myListFilteredMovies.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setLibraryTab("history")}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shrink-0 whitespace-nowrap ${
+                  libraryTab === "history"
+                    ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]"
+                    : "text-white/50 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span>Watch History</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-[8.5px] sm:text-[9px] font-black ${
+                    libraryTab === "history"
+                      ? "bg-obsidian/30 text-obsidian"
+                      : "bg-white/10 text-white/70"
+                  }`}
+                >
+                  {historyFilteredMovies.length}
+                </span>
+              </button>
             </div>
-            {isLoading && myList.length > 0 ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
-                {[...Array(Math.min(myList.length, 18))].map((_, i) => (
-                  <MovieSkeleton key={`sk-lib-my-${i}`} isGrid={true} />
-                ))}
-              </div>
-            ) : (allMovies || []).length > 0 && myList.length > 0 ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
-                {(allMovies || [])
-                  .filter((m) =>
-                    myList.some((item: any) => {
-                      const id =
-                        typeof item === "object" && item !== null
-                          ? item.id
-                          : item;
-                      const type =
-                        typeof item === "object" && item !== null
-                          ? item.type
-                          : "movie";
-                      return (
-                        id.toString() === m.id.toString() &&
-                        type === (m.type || "movie")
-                      );
-                    }),
-                  )
-                  .map((movie, i) => (
-                    <MovieCard
-                      key={`lib-my-${movie.id}-${i}`}
-                      movie={movie}
-                      isGrid={true}
-                      onSelect={onSelectMovie}
-                      isInList={true}
-                      onToggleList={() => toggleMyList(movie)}
-                      onRemove={() => toggleMyList(movie)}
-                    />
-                  ))}
-              </div>
-            ) : (
-              <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
-                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-8 border border-white/10">
-                  <Plus className="text-dim" size={32} />
-                </div>
-                <h3 className="text-2xl font-bold mb-4">
-                  Your registry is empty
-                </h3>
-                <p className="text-dim max-w-md mx-auto font-light">
-                  Add missions to your list for quick access during deep-space
-                  operation.
-                </p>
-              </div>
+
+            {/* Clear Button */}
+            {((libraryTab === "mylist" && myList.length > 0) ||
+              (libraryTab === "history" && history.length > 0) ||
+              (libraryTab === "all" &&
+                (myList.length > 0 || history.length > 0))) && (
+              <button
+                onClick={() => {
+                  if (libraryTab === "mylist") clearMyList();
+                  else if (libraryTab === "history") clearHistory();
+                  else {
+                    clearMyList();
+                    clearHistory();
+                  }
+                }}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-red-500/20 hover:border-red-500/50 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 flex items-center justify-center transition-all duration-300 shrink-0 cursor-pointer shadow-sm active:scale-95"
+                title={`Clear ${libraryTab === "all" ? "Library" : libraryTab === "mylist" ? "My List" : "Watch History"}`}
+              >
+                <Trash2 size={15} />
+              </button>
             )}
-          </section>
+          </div>
 
-          <section>
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex items-center gap-3">
-                <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0" />
-                <h3 className="text-xl md:text-2xl font-display font-black uppercase tracking-tighter text-white/90 leading-none">
-                  Watch History
-                </h3>
+          {/* 1. MY LIST SECTION */}
+          {(libraryTab === "all" || libraryTab === "mylist") && (
+            <section className="mb-10 sm:mb-12">
+              <div className="flex justify-between items-center mb-5 sm:mb-6">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <span className="w-1.5 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0 shadow-[0_0_8px_rgba(0,229,255,0.6)]" />
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-display font-black uppercase tracking-tighter text-white/95 leading-none">
+                    My List
+                  </h3>
+                  <span className="text-[9px] sm:text-[10px] font-black text-nebula-cyan bg-nebula-cyan/10 border border-nebula-cyan/30 px-2 py-0.5 rounded-md">
+                    {myListFilteredMovies.length}
+                  </span>
+                </div>
               </div>
-              {history.length > 0 && (
-                <button
-                  onClick={clearHistory}
-                  className="text-xs font-bold uppercase tracking-widest text-nebula-cyan/70 hover:text-nebula-cyan transition-colors px-4 py-1.5 rounded-full border border-nebula-cyan/30 hover:bg-nebula-cyan/10"
-                >
-                  Clear All
-                </button>
+
+              {isLoading && myList.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-4 sm:gap-y-8">
+                  {[...Array(Math.min(myList.length, 18))].map((_, i) => (
+                    <MovieSkeleton key={`sk-lib-my-${i}`} isGrid={true} />
+                  ))}
+                </div>
+              ) : myListFilteredMovies.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-4 sm:gap-y-8">
+                  {myListFilteredMovies.map((movie, i) => (
+                    <div
+                      key={`lib-my-${movie.id}-${i}`}
+                      className="relative group/libitem w-full h-full"
+                    >
+                      <MovieCard
+                        movie={movie}
+                        isGrid={true}
+                        onSelect={onSelectMovie}
+                        isInList={true}
+                        onToggleList={() => toggleMyList(movie)}
+                      />
+                      {/* Quick Remove Button Overlay */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMyList(movie);
+                        }}
+                        className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-black/85 backdrop-blur-md border border-white/20 text-white/80 hover:text-red-400 hover:border-red-400/50 hover:bg-black flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover/libitem:opacity-100 transition-all duration-200 shadow-xl cursor-pointer"
+                        title="Remove from My List"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 sm:py-20 text-center border border-dashed border-white/10 rounded-3xl bg-gradient-to-b from-white/[0.02] to-transparent px-4">
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-nebula-cyan/10 border border-nebula-cyan/30 flex items-center justify-center mx-auto mb-5 sm:mb-6 text-nebula-cyan shadow-[0_0_25px_rgba(0,229,255,0.15)]">
+                    <Plus size={26} />
+                  </div>
+                  <h4 className="text-lg sm:text-2xl font-display font-black uppercase tracking-tight text-white mb-2">
+                    Your List is Empty
+                  </h4>
+                  <p className="text-white/40 text-xs sm:text-sm max-w-md mx-auto mb-6 font-medium">
+                    Bookmark movies and TV series to quickly access them anytime.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setActiveTab("home");
+                      setViewingCategory(null);
+                    }}
+                    className="px-6 py-2.5 rounded-full bg-nebula-cyan text-obsidian font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white transition-all shadow-[0_0_20px_rgba(0,229,255,0.3)] cursor-pointer"
+                  >
+                    Explore Movies & TV
+                  </button>
+                </div>
               )}
-            </div>
-            {isLoading && history.length > 0 ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
-                {[...Array(Math.min(history.length, 18))].map((_, i) => (
-                  <MovieSkeleton key={`sk-lib-hist-${i}`} isGrid={true} />
-                ))}
+            </section>
+          )}
+
+          {/* 2. WATCH HISTORY SECTION */}
+          {(libraryTab === "all" || libraryTab === "history") && (
+            <section className="mb-8">
+              <div className="flex justify-between items-center mb-5 sm:mb-6">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <span className="w-1.5 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shrink-0 shadow-[0_0_8px_rgba(0,229,255,0.6)]" />
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-display font-black uppercase tracking-tighter text-white/95 leading-none">
+                    Watch History
+                  </h3>
+                  <span className="text-[9px] sm:text-[10px] font-black text-nebula-cyan bg-nebula-cyan/10 border border-nebula-cyan/30 px-2 py-0.5 rounded-md">
+                    {historyFilteredMovies.length}
+                  </span>
+                </div>
               </div>
-            ) : (allMovies || []).length > 0 && history.length > 0 ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-6 sm:gap-y-12">
-                {history
-                  .slice()
-                  .map((item) => {
-                    let rawId = "";
-                    let type = "movie";
-                    if (item && typeof item === "object") {
-                      rawId = String(item.id);
-                      type = item.type || "movie";
-                    } else if (typeof item === "string") {
-                      if (item.includes("_")) {
-                        const parts = item.split("_");
-                        type = parts[0];
-                        rawId = parts[1];
-                      } else {
-                        rawId = item;
-                      }
-                    } else {
-                      rawId = String(item);
-                    }
 
-                    const m = (allMovies || []).find((m) => {
-                      const mId = m.id.toString();
-                      const mType = m.type || "movie";
-                      return mId === rawId && mType === type;
-                    });
-                    if (!m) return null;
-
-                    const p = JSON.parse(
-                      localStorage.getItem("nebula-progress") || "{}",
-                    );
-                    const progKey = Object.keys(p).find((k) =>
-                      k.startsWith(rawId),
-                    );
-                    return { ...m, progress: progKey ? p[progKey] : null };
-                  })
-                  .filter(Boolean)
-                  .map((movie: any, i) => (
+              {isLoading && history.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-4 sm:gap-y-8">
+                  {[...Array(Math.min(history.length, 18))].map((_, i) => (
+                    <MovieSkeleton key={`sk-lib-hist-${i}`} isGrid={true} />
+                  ))}
+                </div>
+              ) : historyFilteredMovies.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-x-2.5 sm:gap-x-6 gap-y-4 sm:gap-y-8">
+                  {historyFilteredMovies.map((movie: any, i: number) => (
                     <div
                       key={`lib-hist-${movie.id}-${i}`}
-                      className="relative group w-full h-full"
+                      className="relative group/histitem w-full h-full"
                     >
                       <MovieCard
                         movie={movie}
@@ -379,33 +478,57 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                           );
                         })}
                         onToggleList={() => toggleMyList(movie)}
-                        onRemove={() => removeFromHistory(movie.id, movie.type)}
                       />
-                      <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+
+                      {/* Quick Play Action Button */}
+                      <div className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center opacity-0 group-hover/histitem:opacity-100 transition-all duration-300 bg-black/40 backdrop-blur-[2px] rounded-xl">
                         <button
                           onClick={() => startPlayback(movie)}
-                          className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center pointer-events-auto border border-white/50 hover:bg-white hover:text-black transition-colors pl-1"
+                          className="w-12 h-12 rounded-full bg-nebula-cyan text-obsidian flex items-center justify-center pointer-events-auto shadow-[0_0_25px_rgba(0,229,255,0.75)] hover:scale-110 transition-transform duration-300 pl-0.5 cursor-pointer"
+                          title="Resume Playback"
                         >
                           <Play size={20} fill="currentColor" />
                         </button>
                       </div>
+
+                      {/* Quick Remove from History Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFromHistory(movie.id, movie.type);
+                        }}
+                        className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-black/85 backdrop-blur-md border border-white/20 text-white/80 hover:text-red-400 hover:border-red-400/50 hover:bg-black flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover/histitem:opacity-100 transition-all duration-200 shadow-xl cursor-pointer"
+                        title="Remove from History"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
                   ))}
-              </div>
-            ) : (
-              <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
-                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-8 border border-white/10">
-                  <Search className="text-dim" size={32} />
                 </div>
-                <h3 className="text-2xl font-bold mb-4">
-                  No operations history
-                </h3>
-                <p className="text-dim max-w-md mx-auto font-light">
-                  Missions you play will be recorded here.
-                </p>
-              </div>
-            )}
-          </section>
+              ) : (
+                <div className="py-12 sm:py-20 text-center border border-dashed border-white/10 rounded-3xl bg-gradient-to-b from-white/[0.02] to-transparent px-4">
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-nebula-cyan/10 border border-nebula-cyan/30 flex items-center justify-center mx-auto mb-5 sm:mb-6 text-nebula-cyan shadow-[0_0_25px_rgba(0,229,255,0.15)]">
+                    <Search size={26} />
+                  </div>
+                  <h4 className="text-lg sm:text-2xl font-display font-black uppercase tracking-tight text-white mb-2">
+                    No Watch History
+                  </h4>
+                  <p className="text-white/40 text-xs sm:text-sm max-w-md mx-auto mb-6 font-medium">
+                    Titles you play will automatically be tracked here.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setActiveTab("home");
+                      setViewingCategory(null);
+                    }}
+                    className="px-6 py-2.5 rounded-full bg-nebula-cyan text-obsidian font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white transition-all shadow-[0_0_20px_rgba(0,229,255,0.3)] cursor-pointer"
+                  >
+                    Discover Trending Titles
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
         </div>
       ) : (
         <>
