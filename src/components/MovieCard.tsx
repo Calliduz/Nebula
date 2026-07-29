@@ -29,7 +29,8 @@ export const MovieCard = memo<MovieCardProps>(
     const [shouldLoadImg, setShouldLoadImg] = useState(
       () =>
         (typeof process !== "undefined" && process.env?.NODE_ENV === "test") ||
-        (typeof import.meta !== "undefined" && (import.meta as any).env?.MODE === "test")
+        (typeof import.meta !== "undefined" &&
+          (import.meta as any).env?.MODE === "test"),
     );
     const cardRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);

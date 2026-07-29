@@ -45,13 +45,18 @@ function getSharedObserver(
 export function observeElement(
   element: Element,
   callback: IntersectionCallback,
-  options: IntersectionObserverInit = {}
+  options: IntersectionObserverInit = {},
 ): () => void {
   const isTest =
     (typeof process !== "undefined" && process.env?.NODE_ENV === "test") ||
-    (typeof import.meta !== "undefined" && (import.meta as any).env?.MODE === "test");
+    (typeof import.meta !== "undefined" &&
+      (import.meta as any).env?.MODE === "test");
 
-  if (isTest || typeof window === "undefined" || !("IntersectionObserver" in window)) {
+  if (
+    isTest ||
+    typeof window === "undefined" ||
+    !("IntersectionObserver" in window)
+  ) {
     // Fallback for SSR/unsupported browsers/unit tests: simulate immediate intersection
     callback({
       isIntersecting: true,
