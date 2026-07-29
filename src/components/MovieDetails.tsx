@@ -981,6 +981,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     episode?: number;
   } | null>(null);
   const [showSourceModal, setShowSourceModal] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const [torrentData, setTorrentData] = useState<any>(null);
   const [torrentLoading, setTorrentLoading] = useState(false);
@@ -1495,19 +1496,19 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
   const logoTitle =
     movie.clearLogo && !logoFailed ? (
-      <div className="mb-8 lg:mb-12 flex justify-center lg:justify-start">
+      <div className="mb-4 sm:mb-8 lg:mb-12 flex justify-center lg:justify-start">
         <img
           src={movie.clearLogo}
           alt={movie.title}
           height="160"
-          className="h-20 sm:h-28 md:h-40 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] mx-auto lg:mx-0"
+          className="h-20 sm:h-28 md:h-32 lg:h-40 w-auto max-w-[90%] object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] mx-auto lg:mx-0"
           referrerPolicy="no-referrer"
           onLoad={() => markLogoValid(movie.clearLogo)}
           onError={() => setLogoFailed(true)}
         />
       </div>
     ) : (
-      <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight mb-8 uppercase leading-[0.9] break-words max-w-2xl drop-shadow-2xl text-center lg:text-left mx-auto lg:mx-0">
+      <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight mb-4 sm:mb-8 uppercase leading-[0.95] break-words max-w-2xl drop-shadow-2xl text-center lg:text-left mx-auto lg:mx-0">
         {movie.title}
       </h1>
     );
@@ -1541,25 +1542,25 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         />
       </div>
 
-      <div className="relative z-20 w-full max-w-[1400px] mx-auto px-6 lg:px-10 pt-10 pb-20">
+      <div className="relative z-20 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 pt-4 sm:pt-10 pb-16 sm:pb-20">
         <button
           onClick={onClose}
-          className="flex items-center gap-3 text-dim hover:text-white mb-8 lg:mb-16 transition-all group w-fit"
+          className="flex items-center gap-2.5 sm:gap-3 text-dim hover:text-white mb-4 sm:mb-8 lg:mb-16 transition-all group w-fit"
         >
-          <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-nebula-cyan group-hover:bg-white/5 transition-all">
-            <ArrowLeft size={20} />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-nebula-cyan group-hover:bg-white/5 transition-all">
+            <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
           </div>
-          <span className="text-xs font-bold tracking-[0.2em] uppercase">
+          <span className="text-[10px] sm:text-xs font-bold tracking-[0.2em] uppercase">
             Back to Browse
           </span>
         </button>
 
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-start w-full">
+        <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 lg:gap-16 items-center lg:items-start w-full">
           <motion.div
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="w-full max-w-[300px] sm:max-w-[350px] mx-auto lg:mx-0 aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] relative group shrink-0"
+            className="w-full max-w-[250px] xs:max-w-[270px] sm:max-w-[300px] md:max-w-[320px] lg:max-w-[350px] mx-auto lg:mx-0 aspect-[2/3] rounded-xl sm:rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.8)] sm:shadow-[0_30px_60px_rgba(0,0,0,0.8)] relative group shrink-0"
           >
             <img
               src={movie.image}
@@ -1569,11 +1570,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
               onError={handleImageError}
             />
             {hasNewEpisode && (
-              <div className="absolute bottom-0 inset-x-0 bg-nebula-cyan text-obsidian font-black uppercase text-[10px] py-1.5 text-center tracking-widest select-none z-30 shadow-[0_-2px_10px_rgba(0,229,255,0.25)] border-t border-nebula-cyan/30">
+              <div className="absolute bottom-0 inset-x-0 bg-nebula-cyan text-obsidian font-black uppercase text-[9px] sm:text-[10px] py-1 sm:py-1.5 text-center tracking-widest select-none z-30 shadow-[0_-2px_10px_rgba(0,229,255,0.25)] border-t border-nebula-cyan/30">
                 New Episode
               </div>
             )}
-            <div className="absolute inset-0 border-[1px] border-white/20 rounded-2xl pointer-events-none" />
+            <div className="absolute inset-0 border-[1px] border-white/20 rounded-xl sm:rounded-2xl pointer-events-none" />
           </motion.div>
 
           <div className="flex-1 w-full overflow-hidden">
@@ -1584,7 +1585,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
             >
               {logoTitle}
 
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-4 text-[10px] sm:text-[11px] font-bold tracking-wider select-none w-full">
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-3 sm:mb-4 text-[10px] sm:text-[11px] font-bold tracking-wider select-none w-full">
                 {/* Rating Badge */}
                 <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md shrink-0">
                   <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 fill-amber-400" />
@@ -1648,11 +1649,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
               {/* Genre / Category Badges Row */}
               {movie.genre && (
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-8 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] select-none w-full">
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-1.5 sm:gap-2 mb-4 sm:mb-8 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] select-none w-full">
                   {movie.genre.split(", ").map((g: string) => (
                     <div
                       key={g}
-                      className="px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/10 text-white/50 backdrop-blur-md shrink-0 hover:text-white hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 select-none"
+                      className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-white/[0.03] border border-white/10 text-white/50 backdrop-blur-md shrink-0 hover:text-white hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 select-none"
                     >
                       <span>{g}</span>
                     </div>
@@ -1660,11 +1661,28 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                 </div>
               )}
 
-              <p className="text-lg text-white/70 font-light leading-relaxed mb-10 max-w-2xl">
-                {movie.description}
-              </p>
+              <div className="mb-5 sm:mb-10 max-w-2xl">
+                <p
+                  className={`text-xs sm:text-base lg:text-lg text-white/70 font-light leading-relaxed text-center lg:text-left ${!isDescriptionExpanded ? "line-clamp-3 sm:line-clamp-none" : ""}`}
+                >
+                  {movie.description}
+                </p>
+                {movie.description && movie.description.length > 100 && (
+                  <button
+                    onClick={() => setIsDescriptionExpanded((p) => !p)}
+                    className="mt-2 text-nebula-cyan hover:text-white text-[11px] font-bold tracking-wider uppercase flex items-center justify-center lg:justify-start gap-1 mx-auto lg:mx-0 transition-colors"
+                  >
+                    <span>{isDescriptionExpanded ? "Show Less" : "Read More"}</span>
+                    {isDescriptionExpanded ? (
+                      <ChevronUp size={12} />
+                    ) : (
+                      <ChevronDown size={12} />
+                    )}
+                  </button>
+                )}
+              </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-16 w-full max-w-2xl">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-16 w-full max-w-2xl">
                 <div className="flex flex-row gap-3 w-full sm:w-auto flex-1">
                   {(() => {
                     const p = JSON.parse(
@@ -2250,7 +2268,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       </p>
                     </div>
                   ) : episodes.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6">
                       {episodes.map((ep: any) => {
                         // Read per-episode progress from localStorage
                         const epProgressData = JSON.parse(
@@ -2271,12 +2289,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         return (
                           <div
                             key={ep.episode_number}
-                            className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30"
+                            className="group relative bg-white/5 rounded-xl border border-white/10 overflow-hidden flex flex-row sm:flex-col cursor-pointer transition-all hover:bg-white/10 hover:border-white/30"
                             onClick={() =>
                               handlePlayClick(activeSeason, ep.episode_number)
                             }
                           >
-                            <div className="aspect-video bg-black/50 relative overflow-hidden">
+                            <div className="w-28 xs:w-36 sm:w-full shrink-0 aspect-video bg-black/50 relative overflow-hidden">
                               {ep.still_path ? (
                                 <img
                                   src={ep.still_path}
@@ -2289,16 +2307,16 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white/20">
-                                  <Play size={32} />
+                                  <Play size={24} className="sm:w-8 sm:h-8" />
                                 </div>
                               )}
                               <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all" />
 
                               {epWatched && (
-                                <div className="absolute top-2 right-2 flex items-center gap-1 bg-nebula-cyan px-1.5 py-0.5 rounded text-[8px] tracking-wide font-black uppercase text-obsidian shadow-lg">
+                                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1 bg-nebula-cyan px-1 sm:px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] tracking-wide font-black uppercase text-obsidian shadow-lg">
                                   <svg
-                                    width="10"
-                                    height="10"
+                                    width="9"
+                                    height="9"
                                     viewBox="0 0 10 10"
                                     fill="none"
                                     xmlns="http://www.w3.org/2000/svg"
@@ -2311,7 +2329,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                       strokeLinejoin="round"
                                     />
                                   </svg>
-                                  <span className="text-[8px] font-black uppercase tracking-widest text-obsidian/80">
+                                  <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-obsidian/80">
                                     Watched
                                   </span>
                                 </div>
@@ -2319,11 +2337,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                               {/* Play button hover */}
                               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="w-12 h-12 bg-nebula-cyan/90 text-obsidian rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-110 transition-all">
+                                <div className="w-8 h-8 sm:w-12 sm:h-12 bg-nebula-cyan/90 text-obsidian rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-110 transition-all">
                                   <Play
-                                    size={20}
+                                    size={14}
+                                    className="sm:w-5 sm:h-5 ml-0.5"
                                     fill="currentColor"
-                                    className="ml-1"
                                   />
                                 </div>
                               </div>
@@ -2331,7 +2349,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                               {/* ── Netflix-style progress bar at bottom of thumbnail ── */}
                               {epPct >= 1 && !epWatched && (
                                 <div className="absolute bottom-0 left-0 right-0">
-                                  <div className="h-[5px] w-full bg-black/40">
+                                  <div className="h-[4px] sm:h-[5px] w-full bg-black/40">
                                     <div
                                       className="h-full"
                                       style={{
@@ -2345,10 +2363,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   </div>
                                 </div>
                               )}
-                              {/* Watched: full 100% red bar (consistent with in-progress style) */}
+                              {/* Watched: full 100% red bar */}
                               {epWatched && (
                                 <div className="absolute bottom-0 left-0 right-0">
-                                  <div className="h-[5px] w-full bg-black/40">
+                                  <div className="h-[4px] sm:h-[5px] w-full bg-black/40">
                                     <div
                                       className="h-full w-full"
                                       style={{
@@ -2361,8 +2379,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                               )}
                             </div>
 
-                            <div className="p-4 flex flex-col flex-1">
-                              <h4 className="font-bold text-sm text-white group-hover:text-nebula-cyan transition-colors line-clamp-1 mb-1">
+                            <div className="p-2.5 sm:p-4 flex flex-col flex-1 min-w-0 justify-center sm:justify-start">
+                              <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-nebula-cyan transition-colors line-clamp-1 mb-0.5 sm:mb-1">
                                 {ep.episode_number}.{" "}
                                 {!ep.name || ep.name.includes("Episode")
                                   ? `Episode ${ep.episode_number}`
@@ -2370,12 +2388,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                               </h4>
 
                               {(ep.vote_average > 0 || ep.air_date) && (
-                                <div className="flex items-center gap-2 text-[11px] font-mono mb-1.5 text-white/50 flex-wrap">
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] font-mono mb-1 sm:mb-1.5 text-white/50 flex-wrap">
                                   {ep.vote_average > 0 && (
                                     <span className="flex items-center gap-1 text-amber-400 font-bold">
                                       <Star
-                                        size={11}
-                                        className="fill-amber-400 text-amber-400"
+                                        size={10}
+                                        className="sm:w-3 sm:h-3 fill-amber-400 text-amber-400"
                                       />
                                       {ep.vote_average.toFixed(1)}
                                     </span>
@@ -2388,7 +2406,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 </div>
                               )}
 
-                              <p className="text-xs text-dim line-clamp-2 mt-auto">
+                              <p className="text-[11px] sm:text-xs text-dim line-clamp-2 mt-auto">
                                 {ep.overview || "No description available."}
                               </p>
                             </div>

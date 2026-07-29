@@ -18,29 +18,29 @@ export const MovieDetailsSkeleton: React.FC<MovieDetailsSkeletonProps> = ({
         <div className="w-full h-full bg-white/5 shimmer-bg opacity-20" />
       </div>
 
-      <div className="relative z-20 w-full max-w-[1400px] mx-auto px-6 lg:px-10 pt-10 pb-20">
+      <div className="relative z-20 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 pt-4 sm:pt-10 pb-16 sm:pb-20">
         {/* Back Button */}
         <button
           onClick={onClose}
-          className="flex items-center gap-3 text-dim hover:text-white mb-8 lg:mb-16 transition-all group w-fit"
+          className="flex items-center gap-2.5 sm:gap-3 text-dim hover:text-white mb-4 sm:mb-8 lg:mb-16 transition-all group w-fit"
         >
-          <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-nebula-cyan group-hover:bg-white/5 transition-all">
-            <ArrowLeft size={20} />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-nebula-cyan group-hover:bg-white/5 transition-all">
+            <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
           </div>
-          <span className="text-xs font-bold tracking-[0.2em] uppercase">
+          <span className="text-[10px] sm:text-xs font-bold tracking-[0.2em] uppercase">
             Back to Browse
           </span>
         </button>
 
         {/* Layout Container */}
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-start w-full">
+        <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 lg:gap-16 items-center lg:items-start w-full">
           {/* Shimmering Poster */}
-          <div className="w-full max-w-[300px] sm:max-w-[350px] mx-auto lg:mx-0 aspect-[2/3] rounded-2xl bg-white/5 border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] relative shimmer-bg shrink-0" />
+          <div className="w-full max-w-[250px] xs:max-w-[270px] sm:max-w-[300px] md:max-w-[320px] lg:max-w-[350px] mx-auto lg:mx-0 aspect-[2/3] rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.8)] sm:shadow-[0_30px_60px_rgba(0,0,0,0.8)] relative shimmer-bg shrink-0" />
 
           {/* Shimmering Info */}
           <div className="flex-1 w-full overflow-hidden space-y-8">
             {/* Title / Logo Skeleton */}
-            <div className="h-16 sm:h-24 md:h-32 w-3/4 max-w-xl bg-white/5 rounded-2xl shimmer-bg" />
+            <div className="h-20 sm:h-24 md:h-32 w-3/4 max-w-xl bg-white/5 rounded-2xl shimmer-bg mx-auto lg:mx-0" />
 
             {/* Metadata Badges */}
             <div className="flex flex-wrap items-center gap-4 text-xs font-bold tracking-widest text-dim uppercase">
