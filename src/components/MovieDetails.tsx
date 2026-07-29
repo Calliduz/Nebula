@@ -2441,16 +2441,16 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   className="space-y-8 animate-fade-in"
                 >
                   {/* Warning Cards & Recommendations */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 flex gap-4 items-start">
-                      <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 shrink-0">
-                        <Shield size={20} />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 flex gap-3 sm:gap-4 items-start">
+                      <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-amber-500/10 text-amber-400 shrink-0">
+                        <Shield size={16} className="sm:w-5 sm:h-5" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider mb-1">
+                        <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider mb-0.5 sm:mb-1">
                           Security Notice: Use a VPN
                         </h4>
-                        <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed">
+                        <p className="text-[10px] sm:text-xs text-white/60 leading-relaxed">
                           Your ISP can monitor torrent downloads. We highly
                           recommend using a secure VPN (like Mullvad, ProtonVPN,
                           or NordVPN) to encrypt your traffic before clicking
@@ -2459,15 +2459,15 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       </div>
                     </div>
 
-                    <div className="bg-nebula-cyan/10 border border-nebula-cyan/20 rounded-2xl p-5 flex gap-4 items-start">
-                      <div className="p-3 rounded-xl bg-nebula-cyan/10 text-nebula-cyan shrink-0">
-                        <Info size={20} />
+                    <div className="bg-nebula-cyan/10 border border-nebula-cyan/20 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 flex gap-3 sm:gap-4 items-start">
+                      <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-nebula-cyan/10 text-nebula-cyan shrink-0">
+                        <Info size={16} className="sm:w-5 sm:h-5" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider mb-1">
+                        <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider mb-0.5 sm:mb-1">
                           Desktop Clients
                         </h4>
-                        <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed">
+                        <p className="text-[10px] sm:text-xs text-white/60 leading-relaxed">
                           Magnet links require a client to download. We
                           recommend downloading{" "}
                           <a
@@ -2492,15 +2492,15 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       </div>
                     </div>
 
-                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-5 flex gap-4 items-start">
-                      <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 shrink-0">
-                        <Smartphone size={20} />
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 flex gap-3 sm:gap-4 items-start">
+                      <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-purple-500/10 text-purple-400 shrink-0">
+                        <Smartphone size={16} className="sm:w-5 sm:h-5" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider mb-1">
+                        <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider mb-0.5 sm:mb-1">
                           Mobile &amp; iOS Torrenting
                         </h4>
-                        <p className="text-[11px] sm:text-xs text-white/60 leading-relaxed">
+                        <p className="text-[10px] sm:text-xs text-white/60 leading-relaxed">
                           Android users can use apps like{" "}
                           <strong className="text-white">Flud</strong> or{" "}
                           <strong className="text-white">LibreTorrent</strong>.
@@ -3012,10 +3012,10 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                           )}
 
                           {/* Episode List Section */}
-                          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                          <div className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                             {/* Season Selector */}
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-                              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                              <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                                 <Download size={16} />
                                 Individual Episode Swarms
                               </h3>
@@ -3069,7 +3069,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                             loadBackupTorrents(epNum);
                                           }
                                         }}
-                                        className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-white/5 transition-all"
+                                        className="w-full px-3.5 py-3 sm:px-5 sm:py-4 flex items-center justify-between text-left hover:bg-white/5 transition-all"
                                       >
                                         <div>
                                           <span className="text-xs font-bold text-nebula-cyan uppercase tracking-wider mr-2">
@@ -3571,15 +3571,15 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4 sm:mb-6">
                       Director's Cut Cast
                     </h3>
-                    <div className="flex gap-6 sm:gap-10 overflow-x-auto pb-6 no-scrollbar touch-pan-x">
+                    <div className="flex gap-4 sm:gap-10 overflow-x-auto pb-4 sm:pb-6 no-scrollbar touch-pan-x">
                       {deepDetails.cast.length > 0 ? (
                         deepDetails.cast.map((person: any, i: number) => (
                           <div
                             key={`${person.name}-${person.role}-${i}`}
                             onClick={() => onSelectActor?.(person.id)}
-                            className="flex flex-col items-center gap-4 group cursor-pointer shrink-0"
+                            className="flex flex-col items-center gap-2.5 sm:gap-4 group cursor-pointer shrink-0"
                           >
-                            <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-2 border-white/10 p-1.5 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden relative">
+                            <div className="w-16 h-16 sm:w-28 sm:h-28 rounded-full border-2 border-white/10 p-1 sm:p-1.5 group-hover:border-nebula-cyan transition-all duration-500 overflow-hidden relative">
                               <img
                                 src={person.avatar}
                                 className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
@@ -3587,11 +3587,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                               />
                               <div className="absolute inset-0 bg-nebula-cyan/0 group-hover:bg-nebula-cyan/10 transition-colors" />
                             </div>
-                            <div className="text-center w-24 sm:w-32">
+                            <div className="text-center w-20 sm:w-32">
                               <p className="text-xs sm:text-sm font-bold text-white group-hover:text-nebula-cyan transition-colors line-clamp-1">
                                 {person.name}
                               </p>
-                              <p className="text-[10px] sm:text-[11px] font-medium text-dim uppercase tracking-wider mt-1 line-clamp-1">
+                              <p className="text-[9px] sm:text-[11px] font-medium text-dim uppercase tracking-wider mt-0.5 line-clamp-1">
                                 {person.role}
                               </p>
                             </div>
@@ -3622,7 +3622,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                         </button>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                       {deepDetails.trailers.length > 0 ? (
                         (showAllTrailers
                           ? deepDetails.trailers
