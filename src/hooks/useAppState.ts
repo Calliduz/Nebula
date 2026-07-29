@@ -2842,6 +2842,10 @@ export function useAppState() {
   useEffect(() => {
     const handlePopState = () => {
       (window as any).__isRestoringScroll = true;
+      if (searchOpenedFromRef.current) {
+        setIsSearchOpen(true);
+        searchOpenedFromRef.current = false;
+      }
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -2926,14 +2930,24 @@ export function useAppState() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isSearchOpen]);
 
+  const searchOpenedFromRef = useRef(false);
+
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) searchInputRef.current.focus();
   }, [isSearchOpen]);
+
   const wrappedSetSelectedMovie = (movie: any) => {
     if (!movie) {
+      if (searchOpenedFromRef.current) {
+        setIsSearchOpen(true);
+        searchOpenedFromRef.current = false;
+      }
       const params = new URLSearchParams(location.search);
       navigate(`/?${params.toString()}`);
     } else {
+      if (isSearchOpen) {
+        searchOpenedFromRef.current = true;
+      }
       // Save scroll position before navigating to detail page
       saveScrollPosition(location.pathname, viewingCategory);
       (window as any).__isRestoringScroll = true;
@@ -3421,6 +3435,10 @@ export function useAppState() {
   };
 
   const handleBack = () => {
+    if (searchOpenedFromRef.current) {
+      setIsSearchOpen(true);
+      searchOpenedFromRef.current = false;
+    }
     saveScrollPosition(location.pathname, viewingCategory);
     (window as any).__isRestoringScroll = true;
     setIsTransitioning(true);
