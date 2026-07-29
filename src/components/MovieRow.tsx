@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface MovieRowProps {
@@ -19,6 +19,16 @@ export const MovieRow: React.FC<MovieRowProps> = ({
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
 
+  // Virtualization state: visible index range
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 12 });
+  const itemWidthRef = useRef<number>(180);
+
+  // Convert children to array for indexing
+  const childrenArray = useMemo(
+    () => React.Children.toArray(children),
+    [children],
+  );
+
   // Drag-to-scroll state
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
@@ -38,7 +48,38 @@ export const MovieRow: React.FC<MovieRowProps> = ({
     if (indicatorFillRef.current) {
       indicatorFillRef.current.style.width = `${Math.max(4, pct)}%`;
     }
-  }, []);
+
+    // ── Calculate Virtualization Window ──
+    const totalItems = childrenArray.length;
+    if (totalItems > 0 && rowRef.current.firstElementChild) {
+      const firstCard = rowRef.current.querySelector(
+        "[data-card-index]",
+      ) as HTMLElement;
+      if (firstCard && firstCard.offsetWidth > 0) {
+        const gap = window.innerWidth >= 640 ? 20 : 10;
+        itemWidthRef.current = firstCard.offsetWidth + gap;
+      }
+    }
+
+    const estimatedWidth = itemWidthRef.current || 180;
+    const overscanBuffer = Math.max(clientWidth * 1.5, 600); // 1.5 viewports buffer left & right
+
+    const startIdx = Math.max(
+      0,
+      Math.floor((scrollLeft - overscanBuffer) / estimatedWidth),
+    );
+    const endIdx = Math.min(
+      totalItems - 1,
+      Math.ceil((scrollLeft + clientWidth + overscanBuffer) / estimatedWidth),
+    );
+
+    setVisibleRange((prev) => {
+      if (prev.start !== startIdx || prev.end !== endIdx) {
+        return { start: startIdx, end: endIdx };
+      }
+      return prev;
+    });
+  }, [childrenArray.length]);
 
   const updateArrows = useCallback(() => {
     if (rafId.current !== null) return;
@@ -142,7 +183,7 @@ export const MovieRow: React.FC<MovieRowProps> = ({
           </div>
         </button>
 
-        {/* Scrollable row */}
+        {/* Scrollable row with horizontal virtualization */}
         <div
           ref={rowRef}
           onScroll={updateArrows}
@@ -152,7 +193,28 @@ export const MovieRow: React.FC<MovieRowProps> = ({
           onMouseLeave={onMouseLeave}
           className="flex gap-2.5 sm:gap-5 overflow-x-auto overflow-y-hidden py-4 -my-4 pr-4 sm:px-0 custom-scrollbar snap-x snap-proximity scroll-smooth select-none touch-pan-x transform-gpu"
         >
-          {children}
+          {childrenArray.map((child, idx) => {
+            const isVisible =
+              idx >= visibleRange.start && idx <= visibleRange.end;
+            if (!isVisible) {
+              return (
+                <div
+                  key={`virt-placeholder-${idx}`}
+                  data-card-index={idx}
+                  className="w-[115px] sm:w-[155px] md:w-[200px] lg:w-[220px] aspect-[2/3] shrink-0 pointer-events-none opacity-0"
+                  aria-hidden="true"
+                />
+              );
+            }
+
+            if (React.isValidElement(child)) {
+              return React.cloneElement(child as React.ReactElement<any>, {
+                "data-card-index": idx,
+              });
+            }
+
+            return child;
+          })}
         </div>
 
         {/* Right arrow button (Instant CSS group-hover overlay) */}
@@ -183,3 +245,4 @@ export const MovieRow: React.FC<MovieRowProps> = ({
     </section>
   );
 };
+

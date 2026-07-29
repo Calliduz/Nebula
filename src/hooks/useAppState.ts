@@ -1882,35 +1882,66 @@ export function useAppState() {
         },
       });
 
-      // 10. Context Row (Weekend Curation / Weekday Deep-Dive)
-      const dayOfWeek = new Date().getDay();
+      // 10. Time-of-Day & Day-of-Week Contextual Intent Row
+      const now = new Date();
+      const currentHour = now.getHours();
+      const dayOfWeek = now.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-      const contextTitle = isWeekend
-        ? "Weekend Blockbuster Curation"
-        : "Weekday Deep-Dive Series";
-      const contextConfig = isWeekend
-        ? {
-            mediaType: "movie" as const,
-            discoverParams: {
-              with_genres: "28,878,53", // Action, Sci-Fi, Thriller
-              sort_by: "popularity.desc",
-            },
-            filterFn: (m: any) =>
-              m.genre.includes("Action") ||
-              m.genre.includes("Sci-Fi") ||
-              m.genre.includes("Thriller"),
-          }
-        : {
-            mediaType: "movie" as const,
-            discoverParams: {
-              with_genres: "99,18", // Documentary, Drama
-              sort_by: "popularity.desc",
-            },
-            filterFn: (m: any) =>
-              m.genre.includes("Documentary") ||
-              m.genre.includes("Drama") ||
-              m.type === "tv",
-          };
+
+      let contextTitle = "Evening Prime Time Hits";
+      let contextConfig: any = {
+        mediaType: "movie" as const,
+        discoverParams: {
+          with_genres: "28,18,9648", // Action, Drama, Mystery
+          sort_by: "popularity.desc",
+        },
+        filterFn: (m: any) =>
+          m.genre.includes("Action") ||
+          m.genre.includes("Drama") ||
+          m.genre.includes("Mystery"),
+      };
+
+      if (currentHour >= 22 || currentHour < 5) {
+        contextTitle = "Late Night Easy Watches";
+        contextConfig = {
+          mediaType: "movie" as const,
+          discoverParams: {
+            with_genres: "35,16,27", // Comedy, Animation, Horror
+            sort_by: "popularity.desc",
+          },
+          filterFn: (m: any) =>
+            m.genre.includes("Comedy") ||
+            m.genre.includes("Animation") ||
+            m.genre.includes("Horror"),
+        };
+      } else if (isWeekend && currentHour >= 17 && currentHour < 23) {
+        contextTitle = "Weekend Blockbuster Curation";
+        contextConfig = {
+          mediaType: "movie" as const,
+          discoverParams: {
+            with_genres: "28,878,53", // Action, Sci-Fi, Thriller
+            sort_by: "popularity.desc",
+          },
+          filterFn: (m: any) =>
+            m.genre.includes("Action") ||
+            m.genre.includes("Sci-Fi") ||
+            m.genre.includes("Thriller"),
+        };
+      } else if (!isWeekend && currentHour >= 8 && currentHour < 17) {
+        contextTitle = "Weekday Deep-Dive Series";
+        contextConfig = {
+          mediaType: "movie" as const,
+          discoverParams: {
+            with_genres: "99,18", // Documentary, Drama
+            sort_by: "popularity.desc",
+          },
+          filterFn: (m: any) =>
+            m.genre.includes("Documentary") ||
+            m.genre.includes("Drama") ||
+            m.type === "tv",
+        };
+      }
+
       initialRows.push({
         title: contextTitle,
         items: [],
@@ -2266,6 +2297,18 @@ export function useAppState() {
                   sort_by: "popularity.desc",
                   page: pageStr,
                 }).catch(() => []);
+              } else if (title === "Late Night Easy Watches") {
+                return await discoverMediaWithAdult("movie", {
+                  with_genres: "35,16,27",
+                  sort_by: "popularity.desc",
+                  page: pageStr,
+                }).catch(() => []);
+              } else if (title === "Evening Prime Time Hits") {
+                return await discoverMediaWithAdult("movie", {
+                  with_genres: "28,18,9648",
+                  sort_by: "popularity.desc",
+                  page: pageStr,
+                }).catch(() => []);
               } else if (title === "Under the Radar Missions") {
                 return await discoverMediaWithAdult("movie", {
                   "vote_average.gte": "7.5",
@@ -2286,6 +2329,28 @@ export function useAppState() {
           let fetchedItems = await performFetch(1);
           if (config && config.type === "recommendations") {
             fetchedItems = rotateItems(fetchedItems, currentSeed);
+          } else {
+            // Apply contextual time-of-day re-ranking for catalog & discovery items
+            const now = new Date();
+            const h = now.getHours();
+            fetchedItems = [...fetchedItems].sort((a, b) => {
+              let scoreA = (a.popularity || 0) + (a.vote_average || 0) * 10;
+              let scoreB = (b.popularity || 0) + (b.vote_average || 0) * 10;
+              const gA = (a.genre || "").toLowerCase();
+              const gB = (b.genre || "").toLowerCase();
+
+              // Late night affinity boost (Comedy / Animation)
+              if (h >= 22 || h < 5) {
+                if (gA.includes("comedy") || gA.includes("animation")) scoreA *= 1.3;
+                if (gB.includes("comedy") || gB.includes("animation")) scoreB *= 1.3;
+              }
+              // Prime evening affinity boost (Action / Thriller)
+              else if (h >= 17 && h < 22) {
+                if (gA.includes("action") || gA.includes("thriller")) scoreA *= 1.3;
+                if (gB.includes("action") || gB.includes("thriller")) scoreB *= 1.3;
+              }
+              return scoreB - scoreA;
+            });
           }
 
           // If the seed has changed, discard the results (stale refresh)

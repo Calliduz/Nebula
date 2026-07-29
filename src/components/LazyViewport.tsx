@@ -4,7 +4,9 @@ interface LazyViewportProps {
   children: React.ReactNode;
   placeholder?: React.ReactNode;
   onVisible?: () => void;
-  rootMargin?: string;
+  onPrefetch?: () => void;
+  prefetchMargin?: string;
+  renderMargin?: string;
   minHeight?: string | number;
 }
 
@@ -12,38 +14,70 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
   children,
   placeholder = null,
   onVisible,
-  rootMargin = "600px",
+  onPrefetch,
+  prefetchMargin = "2500px 0px 2500px 0px",
+  renderMargin = "1200px 0px 1200px 0px",
   minHeight = "350px",
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const hasPrefetchedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // 1. Stage 1: Prefetch observer — triggers background data fetch early
+  useEffect(() => {
+    if (hasPrefetchedRef.current) return;
+
+    const currentEl = containerRef.current;
+    if (!currentEl) return;
+
+    const prefetchObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          hasPrefetchedRef.current = true;
+          if (onPrefetch) {
+            onPrefetch();
+          } else if (onVisible) {
+            onVisible();
+          }
+          prefetchObserver.unobserve(currentEl);
+        }
+      },
+      { rootMargin: prefetchMargin },
+    );
+
+    prefetchObserver.observe(currentEl);
+    return () => {
+      prefetchObserver.disconnect();
+    };
+  }, [onPrefetch, onVisible, prefetchMargin]);
+
+  // 2. Stage 2: Render observer — renders actual component DOM when close to viewport
   useEffect(() => {
     if (isVisible) return;
 
-    const observer = new IntersectionObserver(
+    const currentEl = containerRef.current;
+    if (!currentEl) return;
+
+    const renderObserver = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          if (onVisible) {
+          // If onVisible wasn't called during prefetch, call it now
+          if (!hasPrefetchedRef.current && onVisible) {
+            hasPrefetchedRef.current = true;
             onVisible();
           }
+          renderObserver.unobserve(currentEl);
         }
       },
-      { rootMargin },
+      { rootMargin: renderMargin },
     );
 
-    const currentEl = containerRef.current;
-    if (currentEl) {
-      observer.observe(currentEl);
-    }
-
+    renderObserver.observe(currentEl);
     return () => {
-      if (currentEl) {
-        observer.unobserve(currentEl);
-      }
+      renderObserver.disconnect();
     };
-  }, [isVisible, onVisible, rootMargin]);
+  }, [isVisible, onVisible, renderMargin]);
 
   return (
     <div
@@ -54,3 +88,4 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
     </div>
   );
 };
+

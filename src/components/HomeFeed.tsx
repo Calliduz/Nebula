@@ -171,7 +171,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       <React.Fragment key={`row-group-${row.title}-${rowIndex}`}>
         <LazyViewport
           placeholder={skeletonPlaceholder}
+          onPrefetch={() => fetchRowData(row.title)}
           onVisible={() => fetchRowData(row.title)}
+          prefetchMargin="2500px 0px 2500px 0px"
+          renderMargin="1200px 0px 1200px 0px"
           minHeight="350px"
         >
           {row.items.length > 0 ? (
