@@ -16,32 +16,53 @@ import { MovieDetailsSkeleton } from "./components/MovieDetailsSkeleton";
 import { MovieSkeleton } from "./components/MovieSkeleton";
 import { DiscordInvite } from "./components/DiscordInvite";
 
-const MediaPlayer = React.lazy(() =>
+// Auto-retrying lazy loader to handle new production deployments gracefully when chunk hashes change
+const lazyWithRetry = (componentImport: () => Promise<any>) =>
+  React.lazy(async () => {
+    const pageHasBeenRefreshed = JSON.parse(
+      window.sessionStorage.getItem("nebula-lazy-refreshed") || "false",
+    );
+
+    try {
+      const component = await componentImport();
+      window.sessionStorage.removeItem("nebula-lazy-refreshed");
+      return component;
+    } catch (error: any) {
+      if (!pageHasBeenRefreshed) {
+        window.sessionStorage.setItem("nebula-lazy-refreshed", "true");
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw error;
+    }
+  });
+
+const MediaPlayer = lazyWithRetry(() =>
   import("./components/MediaPlayer").then((module) => ({
     default: module.MediaPlayer,
   })),
 );
-const MovieDetails = React.lazy(() =>
+const MovieDetails = lazyWithRetry(() =>
   import("./components/MovieDetails").then((module) => ({
     default: module.MovieDetails,
   })),
 );
-const SourceSelectionModal = React.lazy(() =>
+const SourceSelectionModal = lazyWithRetry(() =>
   import("./components/MovieDetails").then((module) => ({
     default: module.SourceSelectionModal,
   })),
 );
-const SearchOverlay = React.lazy(() =>
+const SearchOverlay = lazyWithRetry(() =>
   import("./components/SearchOverlay").then((module) => ({
     default: module.SearchOverlay,
   })),
 );
-const CategoryView = React.lazy(() =>
+const CategoryView = lazyWithRetry(() =>
   import("./components/CategoryView").then((module) => ({
     default: module.CategoryView,
   })),
 );
-const NotFound = React.lazy(() =>
+const NotFound = lazyWithRetry(() =>
   import("./components/NotFound").then((module) => ({
     default: module.NotFound,
   })),

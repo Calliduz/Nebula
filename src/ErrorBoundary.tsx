@@ -17,6 +17,21 @@ export class ErrorBoundary extends Component<Props, State> {
   public state: State = { hasError: false, error: null, errorInfo: null };
 
   static getDerivedStateFromError(error: Error): State {
+    const errorMsg = error?.message || error?.toString() || "";
+    const isChunkError =
+      error?.name === "ChunkLoadError" ||
+      errorMsg.includes("Failed to fetch dynamically imported module") ||
+      errorMsg.includes("dynamically imported module");
+
+    if (isChunkError) {
+      const storageKey = "nebula-chunk-retry";
+      const hasRetried = sessionStorage.getItem(storageKey);
+      if (!hasRetried) {
+        sessionStorage.setItem(storageKey, "true");
+        window.location.reload();
+      }
+    }
+
     return { hasError: true, error, errorInfo: null };
   }
 
