@@ -834,12 +834,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<any[]>([]);
   const [logoFailed, setLogoFailed] = useState(() => !movie?.clearLogo);
-  // Ref-based validated logo URL: preloaded once on mount so all <img> instances
-  // share the same result and we avoid race-condition flicker where one instance
-  // fires onError while another succeeds (they're all the same URL, cached).
-  const logoValidatedRef = useRef<boolean | null>(
-    movie?.clearLogo ? (isLogoValidated(movie.clearLogo) ? true : null) : false,
-  );
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
@@ -882,35 +876,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
   }, [showMoreLikeThis, movie?.id, movie?.type, similarTitles.length]);
 
-  // Pre-validate the clearLogo URL once per movie so all <img> elements share
-  // the same cached result — prevents the race-condition flicker where the loading
-  // screen img fires onError before the browser has cached the image.
+  // Reset logo state when the clearLogo URL changes (e.g. episode/movie switch).
+  // We show the logo optimistically and let each rendered <img> onLoad/onError
+  // decide the final outcome — no separate new Image() prevalidation needed.
   useEffect(() => {
     if (!movie?.clearLogo) {
-      logoValidatedRef.current = false;
       setLogoFailed(true);
       return;
     }
+    // If this URL already loaded successfully in a previous render, keep showing it
     if (isLogoValidated(movie.clearLogo)) {
-      logoValidatedRef.current = true;
       setLogoFailed(false);
       return;
     }
-
-    logoValidatedRef.current = null;
+    // Optimistic: show the logo and let the img tags report back
     setLogoFailed(false);
-    const img = new Image();
-    img.onload = () => {
-      markLogoValid(movie.clearLogo);
-      logoValidatedRef.current = true;
-      setLogoFailed(false);
-    };
-    img.onerror = () => {
-      logoValidatedRef.current = false;
-      setLogoFailed(true);
-    };
-    img.referrerPolicy = "no-referrer";
-    img.src = movie.clearLogo;
   }, [movie?.clearLogo]);
 
   useEffect(() => {
@@ -4899,12 +4879,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 height="112"
                 className="h-20 md:h-28 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse transform-gpu will-change-[opacity,transform]"
                 referrerPolicy="no-referrer"
+                onLoad={() => markLogoValid(movie.clearLogo)}
                 onError={() => {
-                  if (
-                    movie?.clearLogo &&
-                    !isLogoValidated(movie.clearLogo) &&
-                    logoValidatedRef.current !== true
-                  ) {
+                  if (movie?.clearLogo && !isLogoValidated(movie.clearLogo)) {
                     setLogoFailed(true);
                   }
                 }}
@@ -5004,12 +4981,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 height="96"
                 className="h-16 md:h-24 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] drop-shadow-2xl animate-pulse opacity-80 pointer-events-none"
                 referrerPolicy="no-referrer"
+                onLoad={() => markLogoValid(movie.clearLogo)}
                 onError={() => {
-                  if (
-                    movie?.clearLogo &&
-                    !isLogoValidated(movie.clearLogo) &&
-                    logoValidatedRef.current !== true
-                  ) {
+                  if (movie?.clearLogo && !isLogoValidated(movie.clearLogo)) {
                     setLogoFailed(true);
                   }
                 }}
@@ -5339,11 +5313,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     alt={movie.title}
                     className="h-7 sm:h-9 max-w-[180px] sm:max-w-[260px] w-auto object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] drop-shadow-md"
                     referrerPolicy="no-referrer"
+                    onLoad={() => markLogoValid(movie.clearLogo)}
                     onError={() => {
                       if (
                         movie?.clearLogo &&
-                        !isLogoValidated(movie.clearLogo) &&
-                        logoValidatedRef.current !== true
+                        !isLogoValidated(movie.clearLogo)
                       ) {
                         setLogoFailed(true);
                       }
