@@ -10,29 +10,63 @@ export const TopNav = ({
   viewingCategory,
   setViewingCategory,
 }: any) => {
+  const isItemActive = (itemId: string) => {
+    if (itemId === "search") return false;
+    if (itemId === "home") return activeTab === "home" && !viewingCategory;
+    if (itemId === "movies")
+      return (
+        (activeTab === "movies" && !viewingCategory) ||
+        viewingCategory === "Movies" ||
+        viewingCategory === "Popular Movies"
+      );
+    if (itemId === "tv")
+      return (
+        (activeTab === "tv" && !viewingCategory) ||
+        viewingCategory === "TV Shows" ||
+        viewingCategory === "TV Dramas"
+      );
+    if (itemId === "library")
+      return (
+        (activeTab === "library" && !viewingCategory) ||
+        viewingCategory === "Library" ||
+        viewingCategory === "My List"
+      );
+    return activeTab === itemId;
+  };
+
   return (
     <>
       <header
-        className={`nav-glow-border fixed top-0 inset-x-0 z-[100] transition-[background-color,box-shadow] duration-500 flex items-center justify-between px-4 sm:px-6 md:px-12 py-3 md:py-4 ${
+        className={`fixed top-0 inset-x-0 z-[100] transition-all duration-500 flex items-center justify-between px-3.5 sm:px-6 md:px-12 py-2.5 sm:py-3.5 md:py-4.5 ${
           scrolled
-            ? "bg-obsidian shadow-[0_4px_30px_rgba(0,0,0,0.8)] nav-scrolled"
-            : "glass-header"
+            ? "bg-black/90 backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.85)]"
+            : "bg-gradient-to-b from-black/85 via-black/35 to-transparent"
         }`}
       >
+        {/* Smooth Bottom Specular Line - Opacity fade eliminates 1px border flash */}
+        <div
+          className={`absolute bottom-0 inset-x-0 h-[1px] bg-white/10 transition-opacity duration-500 pointer-events-none ${
+            scrolled ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
         {/* Brand */}
         <div className="flex items-center gap-4 sm:gap-12">
           <div
-            onClick={() => onTabChange("home")}
+            onClick={() => {
+              setViewingCategory(null);
+              onTabChange("home");
+            }}
             className="cursor-pointer group flex items-center gap-2.5"
           >
-            <div className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
               <img
                 src="/nebula-icon.png"
                 alt="Nebula Logo"
-                className="w-full h-full object-contain transition-[filter] duration-300 group-hover:[filter:drop-shadow(0_0_8px_rgba(0,229,255,0.6))]"
+                className="w-full h-full object-contain transition-all duration-300 drop-shadow-[0_0_8px_rgba(0,229,255,0.3)] group-hover:drop-shadow-[0_0_14px_rgba(0,229,255,0.85)]"
               />
             </div>
-            <span className="text-[14px] md:text-lg font-black tracking-tighter uppercase text-white group-hover:text-nebula-cyan transition-colors duration-300 hidden sm:block">
+            <span className="text-base md:text-xl font-display font-black tracking-tight uppercase bg-gradient-to-r from-white via-white/95 to-nebula-cyan/90 bg-clip-text text-transparent group-hover:drop-shadow-[0_0_12px_rgba(0,229,255,0.7)] transition-all duration-300 hidden sm:block">
               Nebula
             </span>
           </div>
@@ -40,23 +74,21 @@ export const TopNav = ({
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-8">
             {NAV_ITEMS.filter((n) => n.id !== "search").map((item) => {
-              const isActive = activeTab === item.id && !viewingCategory;
+              const isActive = isItemActive(item.id);
               return (
                 <button
                   key={item.id}
                   onClick={() => {
-                    if (item.id === "my-list") setViewingCategory("My List");
-                    else onTabChange(item.id);
+                    setViewingCategory(null);
+                    onTabChange(item.id);
                   }}
-                  className={`animated-underline relative text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 hover:text-nebula-cyan ${
-                    isActive ? "text-white" : "text-white/50"
+                  className={`relative text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 cursor-pointer ${
+                    isActive
+                      ? "text-nebula-cyan drop-shadow-[0_0_12px_rgba(0,229,255,0.7)] scale-[1.03]"
+                      : "text-white/60 hover:text-white"
                   }`}
                 >
                   {item.label}
-                  {/* Active dot */}
-                  {isActive && (
-                    <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-nebula-cyan shadow-[0_0_6px_rgba(0,229,255,0.9)]" />
-                  )}
                 </button>
               );
             })}
@@ -67,10 +99,10 @@ export const TopNav = ({
         <div className="flex items-center gap-4 sm:gap-6">
           <button
             onClick={onSearchClick}
-            className="flex items-center gap-2.5 text-white/70 hover:text-nebula-cyan transition-colors duration-300 group"
+            className="flex items-center gap-2 text-white/70 hover:text-nebula-cyan transition-all duration-300 group cursor-pointer p-2 sm:px-3 sm:py-1.5 rounded-full bg-white/5 sm:bg-transparent border border-white/10 sm:border-transparent active:scale-95 shadow-sm sm:shadow-none"
             aria-label="Search (Ctrl+K)"
           >
-            <Search size={20} strokeWidth={2.5} />
+            <Search size={18} strokeWidth={2.5} className="sm:w-5 sm:h-5" />
             <span className="hidden lg:flex items-center gap-1 text-[9px] font-black text-white/25 group-hover:text-nebula-cyan/60 transition-colors duration-300 tracking-widest uppercase">
               <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 group-hover:border-nebula-cyan/20 transition-colors duration-300 backdrop-blur-sm">
                 Ctrl
@@ -91,15 +123,16 @@ export const TopNav = ({
 
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              item.id === "search" ? false : activeTab === item.id;
+            const isActive = isItemActive(item.id);
             return (
               <button
                 key={`mobile-nav-${item.id}`}
                 onClick={() => {
                   if (item.id === "search") onSearchClick();
-                  else if (item.id === "my-list") setViewingCategory("My List");
-                  else onTabChange(item.id);
+                  else {
+                    setViewingCategory(null);
+                    onTabChange(item.id);
+                  }
                 }}
                 className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-300 active:scale-90 cursor-pointer ${
                   isActive
