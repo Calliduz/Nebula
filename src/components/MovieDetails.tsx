@@ -2044,7 +2044,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   <div
                     ref={relatedRowRef}
                     onScroll={updateRelatedArrows}
-                    className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar touch-pan-x snap-x snap-mandatory scroll-smooth"
+                    className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory scroll-smooth"
                   >
                     {deepDetails.similar.length > 0 ? (
                       deepDetails.similar.map((m: any, i: number) => (
@@ -3624,7 +3624,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4 sm:mb-6">
                       Director's Cut Cast
                     </h3>
-                    <div className="flex gap-4 sm:gap-10 overflow-x-auto pb-4 sm:pb-6 no-scrollbar touch-pan-x">
+                    <div className="flex gap-4 sm:gap-10 overflow-x-auto pb-4 sm:pb-6 no-scrollbar">
                       {deepDetails.cast.length > 0 ? (
                         deepDetails.cast.map((person: any, i: number) => (
                           <div

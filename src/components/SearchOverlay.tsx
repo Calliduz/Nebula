@@ -708,7 +708,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                           <span className="w-4 h-px bg-white/15" />
                           Cast & Crew
                         </h4>
-                        <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-2 no-scrollbar touch-pan-x">
+                        <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-2 no-scrollbar">
                           {searchPeopleResults.map((actor: any) => {
                             const navIdx = navigableItems.findIndex(
                               (i) =>

@@ -7502,7 +7502,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </div>
 
               {/* Grid Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar overscroll-contain touch-pan-y p-4 sm:p-6 pt-3 sm:pt-6 contain-layout">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pt-3 sm:pt-6 contain-layout">
                 {similarLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
                     <Loader2

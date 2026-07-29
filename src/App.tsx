@@ -941,7 +941,7 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
 
                 <div
                   ref={filmRowRef}
-                  className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 custom-scrollbar touch-pan-x snap-x snap-mandatory scroll-smooth"
+                  className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory scroll-smooth"
                 >
                   {details.combined_credits &&
                   details.combined_credits.length > 0 ? (
