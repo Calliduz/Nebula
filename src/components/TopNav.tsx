@@ -83,17 +83,12 @@ export const TopNav = ({
         </div>
       </header>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[100] shrink-0">
-        {/* Top border glow */}
-        <div
-          className="absolute top-0 inset-x-0 h-px"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.15) 30%, rgba(0,229,255,0.3) 50%, rgba(0,229,255,0.15) 70%, transparent 100%)",
-          }}
-        />
-        <div className="bg-obsidian/95 backdrop-blur-sm px-6 py-3 pb-6 flex items-center justify-between shadow-[0_-20px_40px_rgba(0,0,0,0.7)]">
+      {/* Floating Glass Mobile Bottom Nav */}
+      <nav className="lg:hidden fixed bottom-2 sm:bottom-3 inset-x-0 z-[100] px-3 sm:px-4 pointer-events-none">
+        <div className="max-w-md mx-auto pointer-events-auto relative rounded-3xl bg-black/85 backdrop-blur-2xl border border-white/12 shadow-[0_12px_40px_rgba(0,0,0,0.9),_0_0_20px_rgba(0,229,255,0.08)] px-3 py-2 flex items-center justify-around overflow-hidden">
+          {/* Glass Specular Top Highlight */}
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -106,26 +101,24 @@ export const TopNav = ({
                   else if (item.id === "my-list") setViewingCategory("My List");
                   else onTabChange(item.id);
                 }}
-                className={`relative flex flex-col items-center gap-1.5 transition-all duration-300 ${
+                className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-300 active:scale-90 cursor-pointer ${
                   isActive
-                    ? "text-nebula-cyan"
-                    : "text-white/40 hover:text-white/70"
+                    ? "bg-nebula-cyan/15 text-nebula-cyan border border-nebula-cyan/30 shadow-[0_0_15px_rgba(0,229,255,0.25)]"
+                    : "text-white/45 hover:text-white/80 border border-transparent"
                 }`}
               >
-                {/* Cyan glow dot above active icon */}
-                <span
-                  className={`absolute -top-1.5 w-1 h-1 rounded-full transition-all duration-300 ${
-                    isActive
-                      ? "bg-nebula-cyan shadow-[0_0_6px_rgba(0,229,255,0.9)] opacity-100"
-                      : "opacity-0"
+                <Icon
+                  size={19}
+                  strokeWidth={isActive ? 2.5 : 2}
+                  className={`transition-all duration-300 ${
+                    isActive ? "scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]" : ""
                   }`}
                 />
-                <Icon
-                  size={20}
-                  strokeWidth={isActive ? 2.5 : 2}
-                  className="transition-all duration-300"
-                />
-                <span className="text-[9px] font-bold uppercase tracking-widest">
+                <span
+                  className={`text-[8.5px] font-black uppercase tracking-wider transition-colors ${
+                    isActive ? "text-nebula-cyan" : "text-white/45"
+                  }`}
+                >
                   {item.label}
                 </span>
               </button>
