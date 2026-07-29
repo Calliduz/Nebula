@@ -982,6 +982,25 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   } | null>(null);
   const [showSourceModal, setShowSourceModal] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const descRef = useRef<HTMLParagraphElement>(null);
+  const [isDescTruncated, setIsDescTruncated] = useState(false);
+
+  useEffect(() => {
+    const checkTruncation = () => {
+      if (descRef.current) {
+        setIsDescTruncated(
+          descRef.current.scrollHeight > descRef.current.clientHeight + 2,
+        );
+      }
+    };
+
+    const timer = setTimeout(checkTruncation, 50);
+    window.addEventListener("resize", checkTruncation);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", checkTruncation);
+    };
+  }, [movie?.description, isDescriptionExpanded]);
 
   const [torrentData, setTorrentData] = useState<any>(null);
   const [torrentLoading, setTorrentLoading] = useState(false);
@@ -1663,11 +1682,12 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
               <div className="mb-5 sm:mb-10 max-w-2xl">
                 <p
+                  ref={descRef}
                   className={`text-xs sm:text-base lg:text-lg text-white/70 font-light leading-relaxed text-center lg:text-left ${!isDescriptionExpanded ? "line-clamp-3 sm:line-clamp-none" : ""}`}
                 >
                   {movie.description}
                 </p>
-                {movie.description && movie.description.length > 100 && (
+                {(isDescriptionExpanded || isDescTruncated) && (
                   <button
                     onClick={() => setIsDescriptionExpanded((p) => !p)}
                     className="mt-2 text-nebula-cyan hover:text-white text-[11px] font-bold tracking-wider uppercase flex items-center justify-center lg:justify-start gap-1 mx-auto lg:mx-0 transition-colors"
@@ -2315,7 +2335,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                               <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all" />
 
                               {epWatched && (
-                                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1 bg-nebula-cyan px-1 sm:px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] tracking-wide font-black uppercase text-obsidian shadow-lg">
+                                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1 bg-nebula-cyan px-1 sm:px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] tracking-wide font-black uppercase text-obsidian shadow-lg z-10">
                                   <svg
                                     width="9"
                                     height="9"
@@ -2331,7 +2351,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                       strokeLinejoin="round"
                                     />
                                   </svg>
-                                  <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-obsidian/80">
+                                  <span className="hidden sm:inline text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-obsidian/80">
                                     Watched
                                   </span>
                                 </div>
@@ -2348,9 +2368,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 </div>
                               </div>
 
-                              {/* ── Netflix-style progress bar at bottom of thumbnail ── */}
+                              {/* ── Netflix-style progress bar at bottom of thumbnail (desktop) ── */}
                               {epPct >= 1 && !epWatched && (
-                                <div className="absolute bottom-0 left-0 right-0">
+                                <div className="hidden sm:block absolute bottom-0 left-0 right-0">
                                   <div className="h-[4px] sm:h-[5px] w-full bg-black/40">
                                     <div
                                       className="h-full"
@@ -2365,9 +2385,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                   </div>
                                 </div>
                               )}
-                              {/* Watched: full 100% red bar */}
+                              {/* Watched: full 100% red bar (desktop) */}
                               {epWatched && (
-                                <div className="absolute bottom-0 left-0 right-0">
+                                <div className="hidden sm:block absolute bottom-0 left-0 right-0">
                                   <div className="h-[4px] sm:h-[5px] w-full bg-black/40">
                                     <div
                                       className="h-full w-full"
@@ -2412,6 +2432,37 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                 {ep.overview || "No description available."}
                               </p>
                             </div>
+
+                            {/* ── Progress bar across bottom of card (mobile) ── */}
+                            {epPct >= 1 && !epWatched && (
+                              <div className="block sm:hidden absolute bottom-0 left-0 right-0 pointer-events-none z-10">
+                                <div className="h-[3px] w-full bg-black/40">
+                                  <div
+                                    className="h-full"
+                                    style={{
+                                      width: `${epPct}%`,
+                                      background: "#e50914",
+                                      boxShadow: "0 0 4px rgba(229,9,20,0.7)",
+                                      transition:
+                                        "width 0.4s cubic-bezier(0.4,0,0.2,1)",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {epWatched && (
+                              <div className="block sm:hidden absolute bottom-0 left-0 right-0 pointer-events-none z-10">
+                                <div className="h-[3px] w-full bg-black/40">
+                                  <div
+                                    className="h-full w-full"
+                                    style={{
+                                      background: "#e50914",
+                                      boxShadow: "0 0 4px rgba(229,9,20,0.7)",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
