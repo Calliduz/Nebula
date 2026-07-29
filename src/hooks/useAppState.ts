@@ -28,6 +28,7 @@ import {
 } from "../services/tmdb";
 
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { getUserRegionInfo } from "../utils/userRegion";
 
 // Expanded actor pool — rotates day-by-day, personalised when history exists
 const SPOTLIGHT_POOL = [
@@ -1516,21 +1517,34 @@ export function useAppState() {
 
     if (isLoading) setIsLoading(true);
     try {
-      // 1. Fetch critical raw data in parallel
-      const [rawTrendingPage1, rawTrendingPage2, pinoyRes] = await Promise.all([
+      // 1. Detect user region & fetch critical raw data in parallel
+      const userRegion = await getUserRegionInfo();
+      const topInTitle = `Top in ${userRegion.name}`;
+
+      ROW_FETCH_CONFIG[topInTitle] = {
+        mediaType: "all",
+        discoverParams: {
+          region: userRegion.code,
+          watch_region: userRegion.code,
+          sort_by: "popularity.desc",
+        },
+        filterFn: () => true,
+      };
+
+      const [rawTrendingPage1, rawTrendingPage2, regionalRes] = await Promise.all([
         getTrending("all", "1").catch(() => []),
         getTrending("all", "2").catch(() => []),
         (async () => {
           try {
             const [mRes, tvRes] = await Promise.all([
               discoverMediaWithAdult("movie", {
-                region: "PH",
-                watch_region: "PH",
+                region: userRegion.code,
+                watch_region: userRegion.code,
                 sort_by: "popularity.desc",
               }).catch(() => []),
               discoverMediaWithAdult("tv", {
-                region: "PH",
-                watch_region: "PH",
+                region: userRegion.code,
+                watch_region: userRegion.code,
                 sort_by: "popularity.desc",
               }).catch(() => []),
             ]);
@@ -1545,7 +1559,7 @@ export function useAppState() {
         ...rawTrendingPage1,
         ...rawTrendingPage2,
       ]).filter(isMoviePopularAndModern);
-      const pinoyDramas = hardDedupe(pinoyRes || [])
+      const regionalMedia = hardDedupe(regionalRes || [])
         .filter(isMoviePopularAndModern)
         .slice(0, 24);
 
@@ -1726,15 +1740,16 @@ export function useAppState() {
         });
       }
 
-      // 2. Top in Philippines Row
-      if (pinoyDramas.length > 0) {
+      // 2. Top in [User Region] Row
+      if (regionalMedia.length > 0) {
         initialRows.push({
-          title: "Top in Philippines",
-          items: pinoyDramas,
+          title: topInTitle,
+          items: regionalMedia,
           hasLoaded: true,
           isLoading: false,
+          config: ROW_FETCH_CONFIG[topInTitle],
         });
-        pinoyDramas.forEach((m) => globalShownRef.current.add(m.id.toString()));
+        regionalMedia.forEach((m) => globalShownRef.current.add(m.id.toString()));
       }
 
       // 3. Trending Now Row
@@ -2132,7 +2147,7 @@ export function useAppState() {
         ...enrichedTop,
         ...enrichedFeatured,
         ...trending,
-        ...pinoyDramas,
+        ...regionalMedia,
         ...continueWatchingItems,
         ...myListItems,
         ...watchItAgainItems,
@@ -2211,6 +2226,19 @@ export function useAppState() {
                   pageStr,
                 ).catch(() => []);
               } else if (config.mediaType === "all") {
+                if (config.discoverParams?.region) {
+                  const [mRes, tvRes] = await Promise.all([
+                    discoverMediaWithAdult("movie", {
+                      ...config.discoverParams,
+                      page: pageStr,
+                    }).catch(() => []),
+                    discoverMediaWithAdult("tv", {
+                      ...config.discoverParams,
+                      page: pageStr,
+                    }).catch(() => []),
+                  ]);
+                  return hardDedupe([...mRes, ...tvRes]);
+                }
                 return await getTrending("all", pageStr).catch(() => []);
               } else {
                 return await discoverMediaWithAdult(config.mediaType, {
@@ -3091,8 +3119,12 @@ export function useAppState() {
                 config.mediaType as any,
                 dramaPage.toString(),
               );
-            } else if (PROVIDERS.includes(viewingCategory || "")) {
-              // Parallel movie and TV fetch for providers
+            } else if (
+              PROVIDERS.includes(viewingCategory || "") ||
+              config.discoverParams?.region ||
+              (viewingCategory && viewingCategory.startsWith("Top in "))
+            ) {
+              // Parallel movie and TV fetch for providers & regional rows
               const [mRes, tvRes] = await Promise.all([
                 discoverMediaWithAdult("movie", {
                   ...config.discoverParams,

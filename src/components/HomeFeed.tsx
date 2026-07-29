@@ -74,16 +74,18 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     "Adult Anime",
   ];
 
-  const priorityTitles = [
-    "Continue Watching",
-    "Top in Philippines",
-    "Trending Now",
-  ];
+  const isTopInRow = (title: string) => title.startsWith("Top in ");
+  const isPriorityRow = (title: string) =>
+    title === "Continue Watching" || title === "Trending Now" || isTopInRow(title);
 
-  // Explicitly order priority rows based on priorityTitles sequence
-  const priorityRows = priorityTitles
-    .map((title) => rows.find((r) => r.title === title))
-    .filter(Boolean);
+  const continueWatching = rows.find((r) => r.title === "Continue Watching");
+  const topInRow = rows.find((r) => isTopInRow(r.title));
+  const trendingNow = rows.find((r) => r.title === "Trending Now");
+
+  // Explicitly order priority rows: Continue Watching, Top in [Region], Trending Now
+  const priorityRows = [continueWatching, topInRow, trendingNow].filter(
+    Boolean,
+  ) as typeof rows;
 
   const isPersonalized = (title: string) => {
     return (
@@ -99,7 +101,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   const catalogRows = rows.filter(
     (r) =>
-      !priorityTitles.includes(r.title) &&
+      !isPriorityRow(r.title) &&
       !isPersonalized(r.title) &&
       !isAdultRow(r.title),
   );
