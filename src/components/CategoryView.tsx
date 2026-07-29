@@ -480,17 +480,6 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                         onToggleList={() => toggleMyList(movie)}
                       />
 
-                      {/* Quick Play Action Button */}
-                      <div className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center opacity-0 group-hover/histitem:opacity-100 transition-all duration-300 bg-black/40 backdrop-blur-[2px] rounded-xl">
-                        <button
-                          onClick={() => startPlayback(movie)}
-                          className="w-12 h-12 rounded-full bg-nebula-cyan text-obsidian flex items-center justify-center pointer-events-auto shadow-[0_0_25px_rgba(0,229,255,0.75)] hover:scale-110 transition-transform duration-300 pl-0.5 cursor-pointer"
-                          title="Resume Playback"
-                        >
-                          <Play size={20} fill="currentColor" />
-                        </button>
-                      </div>
-
                       {/* Quick Remove from History Button */}
                       <button
                         onClick={(e) => {

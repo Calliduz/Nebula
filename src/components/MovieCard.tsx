@@ -92,7 +92,7 @@ export const MovieCard = memo<MovieCardProps>(
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => onSelect?.(movie)}
       >
-        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/10 group-hover/card:border-nebula-cyan/70 cursor-pointer bg-obsidian origin-center transition-all duration-300 group-hover/card:scale-[1.08] group-hover/card:-translate-y-2 group-hover/card:shadow-[0_20px_50px_rgba(0,229,255,0.3),_0_14px_36px_rgba(0,0,0,0.95)] transform-gpu shadow-2xl">
+        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/10 group-hover/card:border-nebula-cyan/70 cursor-pointer bg-obsidian origin-center transition-all duration-300 group-hover/card:scale-[1.08] group-hover/card:-translate-y-2 group-hover/card:z-30 group-hover/card:shadow-[0_20px_50px_rgba(0,229,255,0.3),_0_14px_36px_rgba(0,0,0,0.95)] transform-gpu shadow-2xl">
           {/* Shimmer placeholder while image loads */}
           {!imgLoaded && !imgError && (
             <div className="absolute inset-0 bg-white/5 shimmer-bg" />
