@@ -126,14 +126,12 @@ export const TopTenShelf = memo(
                         color: "#0b0f19",
                         WebkitTextStroke: "2px rgba(255,255,255,0.7)",
                         textShadow: "0 10px 30px rgba(0,0,0,0.8)",
-                        willChange: "transform",
                       }}
                     >
                       {i + 1}
                     </span>
                     <div
                       className="w-[90px] sm:w-[130px] md:w-[150px] lg:w-[160px] aspect-[2/3] rounded-xl md:rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/card:scale-110 group-hover/card:-translate-y-2 group-hover/card:border-nebula-cyan/60 group-hover/card:shadow-[0_20px_60px_rgba(0,229,255,0.3)] group-hover/card:z-30 z-10 origin-bottom relative transform-gpu"
-                      style={{ willChange: "transform" }}
                     >
                       <img
                         src={movie.image}

@@ -197,7 +197,7 @@ export const MovieRow = memo<MovieRowProps>(
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseLeave}
-            className="flex gap-2.5 sm:gap-5 overflow-x-auto overflow-y-hidden py-4 -my-4 pr-4 sm:px-0 custom-scrollbar snap-x snap-proximity scroll-smooth select-none touch-pan-x transform-gpu"
+            className="flex gap-2.5 sm:gap-5 overflow-x-auto overflow-y-hidden py-4 -my-4 pr-4 sm:px-0 custom-scrollbar snap-x snap-proximity scroll-smooth select-none transform-gpu"
           >
             {childrenArray.map((child, idx) => {
               const isVisible =

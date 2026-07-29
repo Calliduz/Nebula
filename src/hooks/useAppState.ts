@@ -2865,7 +2865,8 @@ export function useAppState() {
     const handleScroll = () => {
       const mainEl = document.querySelector("main");
       const offset = Math.max(window.scrollY, mainEl?.scrollTop || 0);
-      setScrolled(offset > 50);
+      const isPast50 = offset > 50;
+      setScrolled((prev) => (prev !== isPast50 ? isPast50 : prev));
 
       // Only save if we are not in the process of restoring scroll
       if ((window as any).__isRestoringScroll) return;
@@ -2881,7 +2882,7 @@ export function useAppState() {
       }, 100);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     const mainEl = document.querySelector("main");
     if (mainEl) {
       mainEl.addEventListener("scroll", handleScroll, { passive: true });
