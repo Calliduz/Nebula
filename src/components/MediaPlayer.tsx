@@ -845,40 +845,58 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     () => movie?.similar || movie?.similarTitles || [],
   );
   const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarFetchedId, setSimilarFetchedId] = useState<number | null>(null);
 
-  // Sync similarTitles if movie prop changes or receives pre-fetched recommendations
+  // Sync / reset similarTitles whenever movie prop or movie.id changes
   useEffect(() => {
+    setSimilarFetchedId(null);
     if (movie?.similar?.length) {
       setSimilarTitles(movie.similar);
+      setSimilarFetchedId(movie.id);
     } else if (movie?.similarTitles?.length) {
       setSimilarTitles(movie.similarTitles);
+      setSimilarFetchedId(movie.id);
+    } else {
+      setSimilarTitles([]);
     }
-  }, [movie?.similar, movie?.similarTitles]);
+  }, [movie?.id, movie?.similar, movie?.similarTitles]);
 
-  // Fetch similar titles on demand when "More Like This" modal opens (cached in TMDB service)
+  // Fetch similar titles on demand when "More Like This" modal opens
   useEffect(() => {
     if (!showMoreLikeThis || !movie?.id) return;
-    if (similarTitles.length > 0) return; // Already present from props or cached
 
-    let isCancelled = false;
+    // Skip if recommendations for this exact movie.id are already loaded or fetched
+    if (similarFetchedId === movie.id && similarTitles.length > 0) {
+      setSimilarLoading(false);
+      return;
+    }
+
+    let isMounted = true;
     setSimilarLoading(true);
+
     getMediaDetails(movie.id, movie.type || "movie")
       .then((res) => {
-        if (!isCancelled) {
+        if (isMounted) {
           setSimilarTitles(res?.similar || []);
+          setSimilarFetchedId(movie.id);
         }
       })
       .catch((err) => {
-        if (!isCancelled) console.error("Failed to fetch similar titles:", err);
+        if (isMounted) {
+          console.error("Failed to fetch similar titles:", err);
+          setSimilarTitles([]);
+          setSimilarFetchedId(movie.id);
+        }
       })
       .finally(() => {
-        if (!isCancelled) setSimilarLoading(false);
+        // ALWAYS turn off loading indicator when network call finishes
+        setSimilarLoading(false);
       });
 
     return () => {
-      isCancelled = true;
+      isMounted = false;
     };
-  }, [showMoreLikeThis, movie?.id, movie?.type, similarTitles.length]);
+  }, [showMoreLikeThis, movie?.id, movie?.type, similarFetchedId, similarTitles.length]);
 
   // Reset logo state when the clearLogo URL changes (e.g. episode/movie switch).
   // If clearLogo is missing from movie prop, fetch & enrich it automatically.
@@ -5892,7 +5910,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2.5 relative shrink-0">
-              {/* More Like This Button — hidden on small mobile screens */}
+              {/* More Like This Button */}
               {!isEmbed && (
                 <button
                   onClick={() => {
@@ -5900,7 +5918,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     closeAllModals();
                     setShowMoreLikeThis(next);
                   }}
-                  className={`hidden sm:flex h-8 sm:h-9 px-3 rounded-full text-xs font-bold transition-all border items-center gap-1.5 shrink-0 ${
+                  className={`flex h-8 sm:h-9 px-2.5 sm:px-3 rounded-full text-xs font-bold transition-all border items-center gap-1.5 shrink-0 ${
                     showMoreLikeThis
                       ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.4)]"
                       : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
@@ -7333,9 +7351,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       {/* ── More Like This Overlay Drawer/Modal ──────────────── */}
       <AnimatePresence>
         {showMoreLikeThis && (
-          <>
+          <React.Fragment key="more-like-this-container">
             {/* Backdrop */}
             <motion.div
+              key="mlt-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -7344,21 +7363,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 setShowMoreLikeThis(false);
               }}
               onTouchStart={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
               className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[1050] pointer-events-auto"
             />
             {/* Modal Sheet */}
             <motion.div
+              key="mlt-sheet"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
               onClick={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
               className="fixed inset-x-0 top-3 sm:top-6 bottom-0 z-[1100] bg-[#0c0c0e]/98 border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto pb-[env(safe-area-inset-bottom,16px)]"
             >
@@ -7368,7 +7383,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   e.stopPropagation();
                   setShowMoreLikeThis(false);
                 }}
-                className="w-full flex items-center justify-center pt-2.5 pb-1 bg-black/40 cursor-pointer border-b border-white/5"
+                className="w-full flex items-center justify-center pt-2.5 pb-1 bg-black/40 cursor-pointer border-b border-white/5 shrink-0"
                 title="Close"
               >
                 <div className="w-12 h-1.5 bg-white/25 hover:bg-white/40 rounded-full transition-colors" />
@@ -7410,28 +7425,35 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </div>
                 ) : similarTitles.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4.5">
-                    {similarTitles.slice(0, 18).map((m: any, idx: number) => {
+                    {similarTitles.slice(0, 20).map((m: any, idx: number) => {
                       const rating = m.imdb || m.vote_average;
                       const year =
                         m.year ||
                         (m.release_date ? m.release_date.split("-")[0] : null);
                       const typeLabel = m.type === "tv" ? "TV" : "MOVIE";
-                      const posterSrc = m.backdrop || m.image;
+                      const posterSrc =
+                        m.backdrop && m.backdrop.length > 0
+                          ? m.backdrop
+                          : m.image && m.image.length > 0
+                          ? m.image
+                          : "/no-image.svg";
 
                       return (
                         <div
-                          key={`mlt-${m.id}-${idx}`}
+                          key={`mlt-${m.id || idx}-${idx}`}
                           onClick={() => {
                             setShowMoreLikeThis(false);
+                            setSimilarTitles([]);
+                            setSimilarFetchedId(null);
                             navigate(`/watch/${m.type || "movie"}/${m.id}`);
                           }}
                           className="group relative cursor-pointer flex flex-col active:scale-95 transition-transform"
                         >
-                          {/* 16:9 Landscape Poster / Fanart Thumbnail */}
+                          {/* 16:10 Landscape Poster / Fanart Thumbnail */}
                           <div className="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-nebula-cyan/50 relative shadow-lg transition-all duration-300 transform-gpu">
                             <img
                               src={posterSrc}
-                              alt={m.title}
+                              alt={m.title || "Recommendation"}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-85 group-hover:opacity-100"
                               loading="lazy"
                               decoding="async"
@@ -7493,7 +7515,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 )}
               </div>
             </motion.div>
-          </>
+          </React.Fragment>
         )}
       </AnimatePresence>
 
