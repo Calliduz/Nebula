@@ -1672,7 +1672,9 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                     onClick={() => setIsDescriptionExpanded((p) => !p)}
                     className="mt-2 text-nebula-cyan hover:text-white text-[11px] font-bold tracking-wider uppercase flex items-center justify-center lg:justify-start gap-1 mx-auto lg:mx-0 transition-colors"
                   >
-                    <span>{isDescriptionExpanded ? "Show Less" : "Read More"}</span>
+                    <span>
+                      {isDescriptionExpanded ? "Show Less" : "Read More"}
+                    </span>
                     {isDescriptionExpanded ? (
                       <ChevronUp size={12} />
                     ) : (
@@ -3607,11 +3609,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                   {/* Trailers & Media Clips */}
                   <div className="w-full">
-                    <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <div className="flex items-center justify-between mb-3 sm:mb-6">
                       <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em]">
                         Trailers & Media Clips
                       </h3>
-                      {deepDetails.trailers.length > 3 && (
+                      {deepDetails.trailers.length > 1 && (
                         <button
                           onClick={() => setShowAllTrailers((prev) => !prev)}
                           className="text-nebula-cyan hover:underline text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all"
@@ -3626,7 +3628,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                       {deepDetails.trailers.length > 0 ? (
                         (showAllTrailers
                           ? deepDetails.trailers
-                          : deepDetails.trailers.slice(0, 3)
+                          : deepDetails.trailers.slice(0, 1)
                         ).map((video: any, i: number) => (
                           <div
                             key={`trailer-${video.youtubeId}-${i}`}
@@ -3684,39 +3686,39 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                   {/* Audience & TMDB User Reviews */}
                   <div className="w-full">
-                    <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-4 sm:mb-6">
+                    <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-3 sm:mb-6">
                       Audience Reviews
                     </h3>
                     {reviewsLoading ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center gap-3 w-full border border-dashed border-white/10 rounded-2xl">
+                      <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center gap-3 w-full border border-dashed border-white/10 rounded-xl sm:rounded-2xl">
                         <Loader2
-                          size={24}
+                          size={20}
                           className="animate-spin text-nebula-cyan"
                         />
-                        <p className="text-xs text-white/40 uppercase tracking-widest font-bold">
+                        <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-widest font-bold">
                           Loading User Reviews...
                         </p>
                       </div>
                     ) : reviews.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                         {reviews.map((rev) => {
                           const isExpanded = expandedReviews[rev.id];
-                          const isLong = rev.content.length > 320;
+                          const isLong = rev.content.length > 140;
                           const displayContent =
                             isLong && !isExpanded
-                              ? rev.content.substring(0, 320) + "..."
+                              ? rev.content.substring(0, 140) + "..."
                               : rev.content;
                           const rating = rev.author_details?.rating;
 
                           return (
                             <div
                               key={rev.id}
-                              className="bg-white/5 border border-white/10 hover:border-white/20 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between gap-4"
+                              className="bg-white/5 border border-white/10 hover:border-white/20 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 transition-all duration-300 flex flex-col justify-between gap-3 sm:gap-4"
                             >
-                              <div className="space-y-4">
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center text-white/40 shrink-0">
+                              <div className="space-y-2.5 sm:space-y-4">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2.5 sm:gap-3">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center text-white/40 shrink-0">
                                       {rev.author_details?.avatar_path ? (
                                         <img
                                           src={rev.author_details.avatar_path}
@@ -3728,39 +3730,39 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                           }}
                                         />
                                       ) : (
-                                        <span className="font-bold text-sm uppercase">
+                                        <span className="font-bold text-xs sm:text-sm uppercase">
                                           {rev.author.charAt(0)}
                                         </span>
                                       )}
                                     </div>
                                     <div>
-                                      <h4 className="font-bold text-sm text-white leading-tight">
+                                      <h4 className="font-bold text-xs sm:text-sm text-white leading-tight">
                                         {rev.author}
                                       </h4>
                                       {rev.author_details?.username && (
-                                        <p className="text-[10px] text-white/40 font-mono">
+                                        <p className="text-[9px] sm:text-[10px] text-white/40 font-mono">
                                           @{rev.author_details.username}
                                         </p>
                                       )}
                                     </div>
                                   </div>
                                   {rating !== null && rating !== undefined && (
-                                    <div className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center gap-1 shrink-0">
+                                    <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-[10px] sm:text-xs flex items-center gap-1 shrink-0">
                                       <Star
-                                        size={12}
-                                        className="fill-amber-400"
+                                        size={10}
+                                        className="fill-amber-400 sm:w-3 sm:h-3"
                                       />
                                       <span>{rating}/10</span>
                                     </div>
                                   )}
                                 </div>
 
-                                <p className="text-xs text-white/70 font-light leading-relaxed whitespace-pre-line">
+                                <p className="text-[11px] sm:text-xs text-white/70 font-light leading-relaxed whitespace-pre-line">
                                   {displayContent}
                                 </p>
                               </div>
 
-                              <div className="flex items-center justify-between pt-3 border-t border-white/5 text-[10px] text-white/40">
+                              <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-white/5 text-[9px] sm:text-[10px] text-white/40">
                                 <span>
                                   {new Date(rev.created_at).toLocaleDateString(
                                     undefined,
@@ -3779,7 +3781,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                                         [rev.id]: !prev[rev.id],
                                       }))
                                     }
-                                    className="text-nebula-cyan hover:underline font-bold uppercase tracking-wider text-[9.5px]"
+                                    className="text-nebula-cyan hover:underline font-bold uppercase tracking-wider text-[9px] sm:text-[9.5px]"
                                   >
                                     {isExpanded
                                       ? "Show Less"
