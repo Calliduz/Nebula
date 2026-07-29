@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
@@ -60,71 +66,76 @@ const TypewriterInput = React.memo(
       isFocused: boolean;
       isOpen: boolean;
     }
-  >(({ value, onChange, onFocus, onBlur, onKeyDown, isFocused, isOpen }, ref) => {
-    const [placeholder, setPlaceholder] = useState("Search...");
-    const termIdx = useRef(0);
-    const charIdx = useRef(0);
-    const isDeleting = useRef(false);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  >(
+    (
+      { value, onChange, onFocus, onBlur, onKeyDown, isFocused, isOpen },
+      ref,
+    ) => {
+      const [placeholder, setPlaceholder] = useState("Search...");
+      const termIdx = useRef(0);
+      const charIdx = useRef(0);
+      const isDeleting = useRef(false);
+      const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => {
-      // Pause typewriter animation when focused or non-empty
-      if (!isOpen || value.trim().length > 0 || isFocused) {
-        setPlaceholder("Search movies, TV series, or actors...");
-        if (timerRef.current) clearTimeout(timerRef.current);
-        return;
-      }
-
-      const tick = () => {
-        const term = `Search ${topSearches[termIdx.current]}...`;
-        if (!isDeleting.current) {
-          charIdx.current = Math.min(charIdx.current + 1, term.length);
-          setPlaceholder(term.slice(0, charIdx.current));
-          if (charIdx.current === term.length) {
-            timerRef.current = setTimeout(() => {
-              isDeleting.current = true;
-              tick();
-            }, 2200);
-            return;
-          }
-        } else {
-          charIdx.current = Math.max(charIdx.current - 1, 0);
-          setPlaceholder(term.slice(0, charIdx.current));
-          if (charIdx.current === 0) {
-            isDeleting.current = false;
-            termIdx.current = (termIdx.current + 1) % topSearches.length;
-          }
+      useEffect(() => {
+        // Pause typewriter animation when focused or non-empty
+        if (!isOpen || value.trim().length > 0 || isFocused) {
+          setPlaceholder("Search movies, TV series, or actors...");
+          if (timerRef.current) clearTimeout(timerRef.current);
+          return;
         }
-        const speed = isDeleting.current ? 35 : 65;
-        timerRef.current = setTimeout(tick, speed);
-      };
 
-      timerRef.current = setTimeout(tick, 800);
-      return () => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-      };
-    }, [isOpen, value, isFocused]);
+        const tick = () => {
+          const term = `Search ${topSearches[termIdx.current]}...`;
+          if (!isDeleting.current) {
+            charIdx.current = Math.min(charIdx.current + 1, term.length);
+            setPlaceholder(term.slice(0, charIdx.current));
+            if (charIdx.current === term.length) {
+              timerRef.current = setTimeout(() => {
+                isDeleting.current = true;
+                tick();
+              }, 2200);
+              return;
+            }
+          } else {
+            charIdx.current = Math.max(charIdx.current - 1, 0);
+            setPlaceholder(term.slice(0, charIdx.current));
+            if (charIdx.current === 0) {
+              isDeleting.current = false;
+              termIdx.current = (termIdx.current + 1) % topSearches.length;
+            }
+          }
+          const speed = isDeleting.current ? 35 : 65;
+          timerRef.current = setTimeout(tick, speed);
+        };
 
-    return (
-      <input
-        ref={ref}
-        type="search"
-        inputMode="search"
-        enterKeyHint="search"
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        onFocus={onFocus}
-        onBlur={onBlur}
-        onKeyDown={onKeyDown}
-        className="w-full bg-white/[0.03] border-b-2 border-white/10 py-4 sm:py-9 pl-10 sm:pl-24 pr-24 sm:pr-40 text-xl sm:text-4xl font-black placeholder:text-white/20 focus:outline-none focus:border-nebula-cyan/70 transition-colors duration-300 caret-nebula-cyan uppercase tracking-tighter italic"
-      />
-    );
-  })
+        timerRef.current = setTimeout(tick, 800);
+        return () => {
+          if (timerRef.current) clearTimeout(timerRef.current);
+        };
+      }, [isOpen, value, isFocused]);
+
+      return (
+        <input
+          ref={ref}
+          type="search"
+          inputMode="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
+          className="w-full bg-white/[0.03] border-b-2 border-white/10 py-4 sm:py-9 pl-10 sm:pl-24 pr-24 sm:pr-40 text-xl sm:text-4xl font-black placeholder:text-white/20 focus:outline-none focus:border-nebula-cyan/70 transition-colors duration-300 caret-nebula-cyan uppercase tracking-tighter italic"
+        />
+      );
+    },
+  ),
 );
 
 TypewriterInput.displayName = "TypewriterInput";
@@ -258,7 +269,16 @@ const SkeletonGrid = React.memo(() => (
 
 SkeletonGrid.displayName = "SkeletonGrid";
 
-const GENRE_FILTERS = ["All", "Action", "Sci-Fi", "Drama", "Comedy", "Animation", "Horror", "★ 8.0+"];
+const GENRE_FILTERS = [
+  "All",
+  "Action",
+  "Sci-Fi",
+  "Drama",
+  "Comedy",
+  "Animation",
+  "Horror",
+  "★ 8.0+",
+];
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -289,7 +309,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   const [scrolledDown, setScrolledDown] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [activeSearchTab, setActiveSearchTab] = useState<"all" | "media" | "people">("all");
+  const [activeSearchTab, setActiveSearchTab] = useState<
+    "all" | "media" | "people"
+  >("all");
   const [selectedGenreFilter, setSelectedGenreFilter] = useState("All");
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isListening, setIsListening] = useState(false);
@@ -318,7 +340,8 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   // Voice Search integration (Web Speech API)
   const handleVoiceSearch = useCallback(() => {
     const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       alert("Voice search is not supported in your browser.");
@@ -356,7 +379,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
       return searchResults.filter((m) => m.imdb && m.imdb >= 8.0);
     }
     return searchResults.filter((m) => {
-      const gStr = Array.isArray(m.genres) ? m.genres.join(" ") : (m.genre || "");
+      const gStr = Array.isArray(m.genres) ? m.genres.join(" ") : m.genre || "";
       return gStr.toLowerCase().includes(selectedGenreFilter.toLowerCase());
     });
   }, [searchResults, selectedGenreFilter]);
@@ -368,10 +391,14 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     }
     const items: any[] = [];
     if (activeSearchTab !== "media" && searchPeopleResults.length > 0) {
-      searchPeopleResults.forEach((actor) => items.push({ type: "actor", value: actor }));
+      searchPeopleResults.forEach((actor) =>
+        items.push({ type: "actor", value: actor }),
+      );
     }
     if (activeSearchTab !== "people" && filteredMediaResults.length > 0) {
-      filteredMediaResults.forEach((movie) => items.push({ type: "movie", value: movie }));
+      filteredMediaResults.forEach((movie) =>
+        items.push({ type: "movie", value: movie }),
+      );
     }
     return items;
   }, [searchQuery, activeSearchTab, searchPeopleResults, filteredMediaResults]);
@@ -383,7 +410,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
       onSelectMovie(movie);
       onClose();
     },
-    [searchQuery, onSelectMovie, onClose]
+    [searchQuery, onSelectMovie, onClose],
   );
 
   const handleSelectActor = useCallback(
@@ -392,7 +419,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
       onSelectActor(id);
       onClose();
     },
-    [searchQuery, onSelectActor, onClose]
+    [searchQuery, onSelectActor, onClose],
   );
 
   const handleSuggestionClick = useCallback(
@@ -402,14 +429,17 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
         searchInputRef.current?.focus();
       });
     },
-    [setSearchQuery, searchInputRef]
+    [setSearchQuery, searchInputRef],
   );
 
-  const handleRemoveRecent = useCallback((term: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    removeRecentSearch(term);
-    setRecentSearches(getRecentSearches());
-  }, []);
+  const handleRemoveRecent = useCallback(
+    (term: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      removeRecentSearch(term);
+      setRecentSearches(getRecentSearches());
+    },
+    [],
+  );
 
   const handleClearAllRecent = useCallback(() => {
     clearAllRecentSearches();
@@ -430,10 +460,14 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setFocusedIndex((prev) => (prev < navigableItems.length - 1 ? prev + 1 : 0));
+        setFocusedIndex((prev) =>
+          prev < navigableItems.length - 1 ? prev + 1 : 0,
+        );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setFocusedIndex((prev) => (prev > 0 ? prev - 1 : navigableItems.length - 1));
+        setFocusedIndex((prev) =>
+          prev > 0 ? prev - 1 : navigableItems.length - 1,
+        );
       } else if (e.key === "Enter" && focusedIndex >= 0) {
         e.preventDefault();
         const item = navigableItems[focusedIndex];
@@ -446,7 +480,15 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, focusedIndex, navigableItems, handleSelectMovie, handleSelectActor, handleSuggestionClick, onClose]);
+  }, [
+    isOpen,
+    focusedIndex,
+    navigableItems,
+    handleSelectMovie,
+    handleSelectActor,
+    handleSuggestionClick,
+    onClose,
+  ]);
 
   // Track scroll
   useEffect(() => {
@@ -534,7 +576,11 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && searchQuery.trim() && focusedIndex < 0) {
+                      if (
+                        e.key === "Enter" &&
+                        searchQuery.trim() &&
+                        focusedIndex < 0
+                      ) {
                         saveRecentSearch(searchQuery.trim());
                         setRecentSearches(getRecentSearches());
                       }
@@ -600,7 +646,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                           : "text-white/40 hover:text-white"
                       }`}
                     >
-                      All ({filteredMediaResults.length + searchPeopleResults.length})
+                      All (
+                      {filteredMediaResults.length + searchPeopleResults.length}
+                      )
                     </button>
                     <button
                       onClick={() => setActiveSearchTab("media")}
@@ -626,7 +674,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
                   {/* Genre Quick Filter Chips */}
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
-                    <Filter size={12} className="text-white/30 shrink-0 mr-1 hidden sm:block" />
+                    <Filter
+                      size={12}
+                      className="text-white/30 shrink-0 mr-1 hidden sm:block"
+                    />
                     {GENRE_FILTERS.map((genre) => (
                       <button
                         key={genre}
@@ -660,13 +711,16 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                         <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-2 no-scrollbar touch-pan-x">
                           {searchPeopleResults.map((actor: any) => {
                             const navIdx = navigableItems.findIndex(
-                              (i) => i.type === "actor" && i.value.id === actor.id
+                              (i) =>
+                                i.type === "actor" && i.value.id === actor.id,
                             );
                             return (
                               <ActorCard
                                 key={`actor-${actor.id}`}
                                 actor={actor}
-                                isSelected={navIdx >= 0 && navIdx === focusedIndex}
+                                isSelected={
+                                  navIdx >= 0 && navIdx === focusedIndex
+                                }
                                 onSelectActor={handleSelectActor}
                               />
                             );
@@ -687,7 +741,8 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-4 gap-2 sm:gap-4">
                       {filteredMediaResults.map((movie, i) => {
                         const navIdx = navigableItems.findIndex(
-                          (item) => item.type === "movie" && item.value.id === movie.id
+                          (item) =>
+                            item.type === "movie" && item.value.id === movie.id,
                         );
                         return (
                           <SearchResultCard
@@ -705,13 +760,17 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                     <div className="py-16 flex flex-col items-center">
                       <div className="relative mb-6">
                         <div className="absolute inset-0 bg-nebula-red/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                        <Search size={56} className="text-white/10 relative z-10" />
+                        <Search
+                          size={56}
+                          className="text-white/10 relative z-10"
+                        />
                       </div>
                       <h4 className="text-xl font-black text-white uppercase tracking-tighter italic mb-2">
                         No Transmission Found
                       </h4>
                       <p className="text-white/40 text-sm font-medium tracking-wide text-center max-w-xs mb-6">
-                        The Nebula signal could not locate "{searchQuery}" under this category.
+                        The Nebula signal could not locate "{searchQuery}" under
+                        this category.
                       </p>
                       <div className="flex flex-wrap gap-2 justify-center">
                         {topSearches.slice(0, 5).map((term) => (
@@ -780,9 +839,12 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                           <div className="flex flex-wrap gap-2.5 justify-center max-w-lg">
                             {topSearches.map((term) => {
                               const navIdx = navigableItems.findIndex(
-                                (item) => item.type === "suggestion" && item.value === term
+                                (item) =>
+                                  item.type === "suggestion" &&
+                                  item.value === term,
                               );
-                              const isSelected = navIdx >= 0 && navIdx === focusedIndex;
+                              const isSelected =
+                                navIdx >= 0 && navIdx === focusedIndex;
                               return (
                                 <button
                                   key={term}
@@ -842,13 +904,22 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
               <div className="mt-10 pt-4 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-bold text-white/30 uppercase tracking-wider">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1.5">
-                    <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] text-white/60">↑↓</kbd> Navigate
+                    <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] text-white/60">
+                      ↑↓
+                    </kbd>{" "}
+                    Navigate
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] text-white/60">↵</kbd> Select
+                    <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] text-white/60">
+                      ↵
+                    </kbd>{" "}
+                    Select
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] text-white/60">ESC</kbd> Close
+                    <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] text-white/60">
+                      ESC
+                    </kbd>{" "}
+                    Close
                   </span>
                 </div>
                 <div className="hidden sm:flex items-center gap-2 text-nebula-cyan/60">
@@ -870,7 +941,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.7, y: 12 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            onClick={() => overlayRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+            onClick={() =>
+              overlayRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+            }
             aria-label="Scroll to top"
             className="fixed bottom-8 right-8 z-[510] w-11 h-11 rounded-full
                        bg-nebula-cyan/10 border border-nebula-cyan/35 backdrop-blur-md

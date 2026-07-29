@@ -1,4 +1,10 @@
-import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface MovieRowProps {
@@ -245,4 +251,3 @@ export const MovieRow: React.FC<MovieRowProps> = ({
     </section>
   );
 };
-

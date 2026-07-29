@@ -76,7 +76,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   const isTopInRow = (title: string) => title.startsWith("Top in ");
   const isPriorityRow = (title: string) =>
-    title === "Continue Watching" || title === "Trending Now" || isTopInRow(title);
+    title === "Continue Watching" ||
+    title === "Trending Now" ||
+    isTopInRow(title);
 
   const continueWatching = rows.find((r) => r.title === "Continue Watching");
   const topInRow = rows.find((r) => isTopInRow(r.title));

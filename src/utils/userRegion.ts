@@ -69,7 +69,9 @@ export async function getUserRegionInfo(): Promise<UserRegionInfo> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch("https://ipapi.co/json/", { signal: controller.signal });
+      const res = await fetch("https://ipapi.co/json/", {
+        signal: controller.signal,
+      });
       clearTimeout(timer);
       if (res.ok) {
         const data = await res.json();
@@ -88,9 +90,12 @@ export async function getUserRegionInfo(): Promise<UserRegionInfo> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch("http://ip-api.com/json/?fields=status,country,countryCode", {
-        signal: controller.signal,
-      });
+      const res = await fetch(
+        "http://ip-api.com/json/?fields=status,country,countryCode",
+        {
+          signal: controller.signal,
+        },
+      );
       clearTimeout(timer);
       if (res.ok) {
         const data = await res.json();
@@ -106,7 +111,8 @@ export async function getUserRegionInfo(): Promise<UserRegionInfo> {
 
   // 4. Try browser language/locale tag
   if (!code) {
-    const navLang = typeof navigator !== "undefined" ? navigator.language || "" : "";
+    const navLang =
+      typeof navigator !== "undefined" ? navigator.language || "" : "";
     if (navLang.includes("-")) {
       const parts = navLang.split("-");
       if (parts[1] && parts[1].length === 2) {
@@ -127,7 +133,7 @@ export async function getUserRegionInfo(): Promise<UserRegionInfo> {
   try {
     localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ ...result, timestamp: Date.now() })
+      JSON.stringify({ ...result, timestamp: Date.now() }),
     );
   } catch {
     // ignore

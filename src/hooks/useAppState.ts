@@ -1531,29 +1531,30 @@ export function useAppState() {
         filterFn: () => true,
       };
 
-      const [rawTrendingPage1, rawTrendingPage2, regionalRes] = await Promise.all([
-        getTrending("all", "1").catch(() => []),
-        getTrending("all", "2").catch(() => []),
-        (async () => {
-          try {
-            const [mRes, tvRes] = await Promise.all([
-              discoverMediaWithAdult("movie", {
-                region: userRegion.code,
-                watch_region: userRegion.code,
-                sort_by: "popularity.desc",
-              }).catch(() => []),
-              discoverMediaWithAdult("tv", {
-                region: userRegion.code,
-                watch_region: userRegion.code,
-                sort_by: "popularity.desc",
-              }).catch(() => []),
-            ]);
-            return hardDedupe([...mRes, ...tvRes]);
-          } catch {
-            return [];
-          }
-        })(),
-      ]);
+      const [rawTrendingPage1, rawTrendingPage2, regionalRes] =
+        await Promise.all([
+          getTrending("all", "1").catch(() => []),
+          getTrending("all", "2").catch(() => []),
+          (async () => {
+            try {
+              const [mRes, tvRes] = await Promise.all([
+                discoverMediaWithAdult("movie", {
+                  region: userRegion.code,
+                  watch_region: userRegion.code,
+                  sort_by: "popularity.desc",
+                }).catch(() => []),
+                discoverMediaWithAdult("tv", {
+                  region: userRegion.code,
+                  watch_region: userRegion.code,
+                  sort_by: "popularity.desc",
+                }).catch(() => []),
+              ]);
+              return hardDedupe([...mRes, ...tvRes]);
+            } catch {
+              return [];
+            }
+          })(),
+        ]);
 
       const trending = hardDedupe([
         ...rawTrendingPage1,
@@ -1749,7 +1750,9 @@ export function useAppState() {
           isLoading: false,
           config: ROW_FETCH_CONFIG[topInTitle],
         });
-        regionalMedia.forEach((m) => globalShownRef.current.add(m.id.toString()));
+        regionalMedia.forEach((m) =>
+          globalShownRef.current.add(m.id.toString()),
+        );
       }
 
       // 3. Trending Now Row
@@ -2341,13 +2344,17 @@ export function useAppState() {
 
               // Late night affinity boost (Comedy / Animation)
               if (h >= 22 || h < 5) {
-                if (gA.includes("comedy") || gA.includes("animation")) scoreA *= 1.3;
-                if (gB.includes("comedy") || gB.includes("animation")) scoreB *= 1.3;
+                if (gA.includes("comedy") || gA.includes("animation"))
+                  scoreA *= 1.3;
+                if (gB.includes("comedy") || gB.includes("animation"))
+                  scoreB *= 1.3;
               }
               // Prime evening affinity boost (Action / Thriller)
               else if (h >= 17 && h < 22) {
-                if (gA.includes("action") || gA.includes("thriller")) scoreA *= 1.3;
-                if (gB.includes("action") || gB.includes("thriller")) scoreB *= 1.3;
+                if (gA.includes("action") || gA.includes("thriller"))
+                  scoreA *= 1.3;
+                if (gB.includes("action") || gB.includes("thriller"))
+                  scoreB *= 1.3;
               }
               return scoreB - scoreA;
             });
