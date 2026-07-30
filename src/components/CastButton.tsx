@@ -57,7 +57,10 @@ export const CastButton: React.FC<CastButtonProps> = ({
       return;
     }
     // Default fallback try Chromecast then AirPlay
-    if (videoRef.current && (videoRef.current as any).webkitShowPlaybackTargetPicker) {
+    if (
+      videoRef.current &&
+      (videoRef.current as any).webkitShowPlaybackTargetPicker
+    ) {
       triggerAirPlay(videoRef.current);
     } else {
       triggerCast(streamUrl, metadata);

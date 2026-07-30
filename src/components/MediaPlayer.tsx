@@ -5499,13 +5499,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             <div className="flex items-center gap-2 shrink-0">
               {/* Cast to TV Button (Chromecast / AirPlay) */}
               <CastButton
-                streamUrl={streamUrl || (mirrors[activeMirror]?.url || "")}
+                streamUrl={streamUrl || mirrors[activeMirror]?.url || ""}
                 metadata={{
                   title: movie.title || movie.name || "Nebula Stream",
-                  poster: movie.backdrop_path || movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.backdrop_path || movie.poster_path}` : undefined,
+                  poster:
+                    movie.backdrop_path || movie.poster_path
+                      ? `https://image.tmdb.org/t/p/w500${movie.backdrop_path || movie.poster_path}`
+                      : undefined,
                   season,
                   episode,
-                  subtitleUrl: activeSubtitle >= 0 && subtitles[activeSubtitle] ? subtitles[activeSubtitle].url : undefined,
+                  subtitleUrl:
+                    activeSubtitle >= 0 && subtitles[activeSubtitle]
+                      ? subtitles[activeSubtitle].url
+                      : undefined,
                 }}
                 videoRef={videoRef}
               />
