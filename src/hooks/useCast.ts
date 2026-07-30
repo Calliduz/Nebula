@@ -25,13 +25,13 @@ export function useCast() {
       try {
         castContext = (window as any).cast.framework.CastContext.getInstance();
         
-        // Initialize options only once
-        if (!castContext.getCastState) {
+        // Ensure Cast Context options are always initialized
+        try {
           castContext.setOptions({
             receiverApplicationId: (window as any).chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
             autoJoinPolicy: (window as any).chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
           });
-        }
+        } catch {}
 
         // Session state listener
         const StateEvent = (window as any).cast.framework.CastContextEventType;
@@ -63,7 +63,11 @@ export function useCast() {
       setIsCastAvailable(true);
       setupCastContext();
     } else if (typeof window !== "undefined") {
+      const prevCallback = (window as any).__onGCastApiAvailable;
       (window as any).__onGCastApiAvailable = (isAvailable: boolean) => {
+        if (typeof prevCallback === "function") {
+          try { prevCallback(isAvailable); } catch {}
+        }
         if (isAvailable && isMounted) {
           setupCastContext();
         }
@@ -101,13 +105,22 @@ export function useCast() {
   // Trigger Google Chromecast Session
   const triggerCast = useCallback(
     async (streamUrl: string, metadata: CastMetadata) => {
-      if (!(window as any).cast?.framework) {
-        alert("Chromecast is not available on this browser/device.");
+      if (typeof window === "undefined" || !(window as any).cast?.framework) {
+        alert("Chromecast is not supported or ready on this browser. Try Google Chrome or MS Edge.");
         return;
       }
 
       try {
         const castContext = (window as any).cast.framework.CastContext.getInstance();
+        
+        // Ensure receiver application options are initialized before requesting session
+        try {
+          castContext.setOptions({
+            receiverApplicationId: (window as any).chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+            autoJoinPolicy: (window as any).chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+          });
+        } catch {}
+
         await castContext.requestSession();
         const session = castContext.getCurrentSession();
 
@@ -146,8 +159,9 @@ export function useCast() {
           setActiveDeviceName(session.getCastDevice()?.friendlyName || "TV");
         }
       } catch (err: any) {
-        if (err !== "cancel") {
+        if (err !== "cancel" && err?.code !== "cancel") {
           console.error("[CAST] Error starting cast session:", err);
+          alert(`Cast session notice: ${typeof err === "string" ? err : err?.message || "Failed to connect to Cast device."}`);
         }
       }
     },
