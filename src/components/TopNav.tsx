@@ -100,33 +100,44 @@ export const TopNav = React.memo(
           <div className="flex items-center gap-4 sm:gap-6">
             <button
               onClick={onSearchClick}
-              className="p-2 sm:p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white transition-all duration-300 cursor-pointer hover:scale-105 hover:border-nebula-cyan/50"
+              className="flex items-center gap-2 text-white/70 hover:text-nebula-cyan transition-all duration-300 group cursor-pointer p-2 sm:px-3 sm:py-1.5 rounded-full bg-white/5 sm:bg-transparent border border-white/10 sm:border-transparent active:scale-95 shadow-sm sm:shadow-none"
+              aria-label="Search (Ctrl+K)"
             >
-              <Search className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+              <Search size={18} strokeWidth={2.5} className="sm:w-5 sm:h-5" />
+              <span className="hidden lg:flex items-center gap-1 text-[9px] font-black text-white/25 group-hover:text-nebula-cyan/60 transition-colors duration-300 tracking-widest uppercase">
+                <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 group-hover:border-nebula-cyan/20 transition-colors duration-300 backdrop-blur-sm">
+                  Ctrl
+                </kbd>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 group-hover:border-nebula-cyan/20 transition-colors duration-300 backdrop-blur-sm">
+                  K
+                </kbd>
+              </span>
             </button>
           </div>
         </header>
 
-        {/* Mobile Navigation Bar */}
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[100] bg-black/95 backdrop-blur-2xl border-t border-white/10 px-3 py-2 shadow-[0_-10px_30px_rgba(0,0,0,0.9)]">
-          <div className="flex items-center justify-around">
+        {/* Floating Glass Mobile Bottom Nav */}
+        <nav className="lg:hidden fixed bottom-2 sm:bottom-3 inset-x-0 z-[100] px-3 sm:px-4 pointer-events-none">
+          <div className="max-w-md mx-auto pointer-events-auto relative rounded-3xl bg-black/85 backdrop-blur-2xl border border-white/12 shadow-[0_12px_40px_rgba(0,0,0,0.9),_0_0_20px_rgba(0,229,255,0.08)] px-3 py-2 flex items-center justify-around overflow-hidden">
+            {/* Glass Specular Top Highlight */}
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
             {NAV_ITEMS.map((item) => {
-              const isActive = isItemActive(item.id);
               const Icon = item.icon;
+              const isActive = isItemActive(item.id);
               return (
                 <button
-                  key={item.id}
+                  key={`mobile-nav-${item.id}`}
                   onClick={() => {
-                    if (item.id === "search") {
-                      onSearchClick();
-                    } else {
+                    if (item.id === "search") onSearchClick();
+                    else {
                       setViewingCategory(null);
                       onTabChange(item.id);
                     }
                   }}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
+                  className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-300 active:scale-90 cursor-pointer ${
                     isActive
-                      ? "text-nebula-cyan bg-nebula-cyan/10 border border-nebula-cyan/30"
+                      ? "bg-nebula-cyan/15 text-nebula-cyan border border-nebula-cyan/30 shadow-[0_0_15px_rgba(0,229,255,0.25)]"
                       : "text-white/45 hover:text-white/80 border border-transparent"
                   }`}
                 >
