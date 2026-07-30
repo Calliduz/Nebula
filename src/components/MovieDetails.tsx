@@ -905,6 +905,24 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const [activeTab, setActiveTab] = useState(
     initialMovie?.type === "tv" ? "Episodes" : "Overview",
   );
+
+  // Memoized localStorage reads to avoid synchronous disk access during renders
+  const userProgress = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+    } catch {
+      return {};
+    }
+  }, [movie?.id]);
+
+  const userHistory = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("nebula-history") || "[]");
+    } catch {
+      return [];
+    }
+  }, [movie?.id]);
+
   const [reviews, setReviews] = useState<TMDBReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState<
@@ -985,6 +1003,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   const descRef = useRef<HTMLParagraphElement>(null);
   const [isDescTruncated, setIsDescTruncated] = useState(false);
 
+  // Defer truncation measurement slightly so layout reflow occurs after entrance animation finishes
   useEffect(() => {
     const checkTruncation = () => {
       if (descRef.current) {
@@ -994,7 +1013,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       }
     };
 
-    const timer = setTimeout(checkTruncation, 50);
+    const timer = setTimeout(checkTruncation, 300);
     window.addEventListener("resize", checkTruncation);
     return () => {
       clearTimeout(timer);
@@ -1375,7 +1394,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         currentMovie &&
         !currentMovie.isDrama &&
         currentMovie.origin !== "dramacool" &&
-        currentMovie.origin !== "kisskh"
+        currentMovie.origin !== "kisskh" &&
+        !currentMovie.clearLogo
       ) {
         const enriched = await enrichMoviesWithMetadata([currentMovie]);
         currentMovie = { ...currentMovie, ...enriched[0] };
@@ -1395,10 +1415,11 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
             );
             const data = await r.json();
             if (data) {
-              setMovie({
+              currentMovie = {
                 ...currentMovie,
                 description: data.description || currentMovie.description,
-              });
+              };
+              setMovie(currentMovie);
               setEpisodes(data.episodes || []);
               setTvDetails({
                 number_of_seasons: 1,
@@ -1415,20 +1436,24 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
             console.error("Failed to fetch KissKH details", e);
           }
         } else {
-          const details = await getMediaDetails(
-            currentMovie.id,
-            currentMovie.type,
-          );
-          setDeepDetails(details);
-
+          // Parallelize deep details, TV details, and season 1 episodes concurrently
           if (currentMovie.type === "tv") {
-            const tvInfo = await getTVDetails(currentMovie.id);
-            if (tvInfo) {
-              setTvDetails(tvInfo);
-              const eps = await getTVSeasonEpisodes(currentMovie.id, 1);
-              setEpisodes(eps);
-            }
+            const [details, tvInfo, eps] = await Promise.all([
+              getMediaDetails(currentMovie.id, currentMovie.type),
+              getTVDetails(currentMovie.id),
+              getTVSeasonEpisodes(currentMovie.id, 1),
+            ]);
+            if (details) setDeepDetails(details);
+            if (tvInfo) setTvDetails(tvInfo);
+            if (eps) setEpisodes(eps);
+          } else {
+            const details = await getMediaDetails(
+              currentMovie.id,
+              currentMovie.type,
+            );
+            if (details) setDeepDetails(details);
           }
+          setMovie(currentMovie);
         }
       }
       setIsLoading(false);
@@ -1451,7 +1476,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     }
   }, [activeSeason]);
 
-  // Dynamically determine if the series has a new episode (aired in the last 7 days), is followed/in history, and has not been watched yet
+  // Dynamically determine if the series has a new episode using pre-parsed user storage
   const hasNewEpisode = React.useMemo(() => {
     if (!movie || movie.type !== "tv") return false;
 
@@ -1464,11 +1489,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       const airedRecently = diffDays >= 0 && diffDays <= 7;
 
       if (airedRecently) {
-        // Read history from localStorage
         try {
-          const history = JSON.parse(
-            localStorage.getItem("nebula-history") || "[]",
-          );
+          const history = userHistory;
           const isInHistory = history.some((item: any) => {
             if (typeof item === "object" && item !== null) {
               return (
@@ -1484,9 +1506,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
           });
 
           if (isInList || isInHistory) {
-            const epProgressData = JSON.parse(
-              localStorage.getItem("nebula-progress") || "{}",
-            );
+            const epProgressData = userProgress;
             const epKey = `${movie.id}-S${lastEp.season_number}E${lastEp.episode_number}`;
             const epProg = epProgressData[epKey];
             const epPct =
@@ -1504,7 +1524,166 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     }
 
     return !!movie?.hasNewEpisode;
-  }, [movie, tvDetails, isInList]);
+  }, [movie, tvDetails, isInList, userHistory, userProgress]);
+
+  // Memoized resume button calculation
+  const resumeData = React.useMemo(() => {
+    if (!movie) return null;
+    const p = userProgress;
+    const key = movie.id.toString();
+
+    if (movie.type === "tv") {
+      const tvEntries = Object.entries(p)
+        .filter(([k]) => k === key || k.startsWith(`${key}-S`))
+        .map(([k, val]: [string, any]) => {
+          const tvMatch = k.match(/-S(\d+)E(\d+)/);
+          return tvMatch
+            ? {
+                season: parseInt(tvMatch[1]),
+                episode: parseInt(tvMatch[2]),
+                ...val,
+                _key: k,
+              }
+            : null;
+        })
+        .filter(Boolean) as any[];
+
+      if (tvEntries.length > 0) {
+        tvEntries.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+        const latest = tvEntries[0];
+        const pct =
+          latest.duration > 0 ? (latest.time / latest.duration) * 100 : 0;
+
+        if (pct >= 90 || latest.watched) {
+          if (tvDetails && tvDetails.seasons) {
+            const sortedSeasons = tvDetails.seasons
+              .filter((s: any) => s.season_number > 0)
+              .sort((a: any, b: any) => a.season_number - b.season_number);
+
+            const lastEpS = tvDetails.last_episode_to_air?.season_number;
+            const lastEpE = tvDetails.last_episode_to_air?.episode_number;
+
+            const checkEpisodeAired = (s: number, e: number) => {
+              if (lastEpS === undefined || lastEpE === undefined) return true;
+              if (s > lastEpS) return false;
+              if (s === lastEpS && e > lastEpE) return false;
+              return true;
+            };
+
+            const currentSeasonInfo = sortedSeasons.find(
+              (s: any) => s.season_number === latest.season,
+            );
+            if (currentSeasonInfo) {
+              const maxEpisodes = currentSeasonInfo.episode_count;
+              if (
+                latest.episode < maxEpisodes &&
+                checkEpisodeAired(latest.season, latest.episode + 1)
+              ) {
+                return {
+                  season: latest.season,
+                  episode: latest.episode + 1,
+                  _isNext: true,
+                };
+              } else if (latest.episode >= maxEpisodes) {
+                const currentSeasonIdx = sortedSeasons.findIndex(
+                  (s: any) => s.season_number === latest.season,
+                );
+                if (
+                  currentSeasonIdx !== -1 &&
+                  currentSeasonIdx < sortedSeasons.length - 1
+                ) {
+                  const nextSeason = sortedSeasons[currentSeasonIdx + 1];
+                  if (checkEpisodeAired(nextSeason.season_number, 1)) {
+                    return {
+                      season: nextSeason.season_number,
+                      episode: 1,
+                      _isNext: true,
+                    };
+                  } else {
+                    const isOngoing =
+                      tvDetails.in_production ||
+                      (tvDetails.status !== "Ended" &&
+                        tvDetails.status !== "Canceled");
+                    return {
+                      season: latest.season,
+                      episode: latest.episode,
+                      _completed: !isOngoing,
+                      _caughtUp: isOngoing,
+                    };
+                  }
+                } else {
+                  const isOngoing =
+                    tvDetails.in_production ||
+                    (tvDetails.status !== "Ended" &&
+                      tvDetails.status !== "Canceled");
+                  return {
+                    season: latest.season,
+                    episode: latest.episode,
+                    _completed: !isOngoing,
+                    _caughtUp: isOngoing,
+                  };
+                }
+              } else {
+                const isOngoing =
+                  tvDetails.in_production ||
+                  (tvDetails.status !== "Ended" &&
+                    tvDetails.status !== "Canceled");
+                return {
+                  season: latest.season,
+                  episode: latest.episode,
+                  _completed: !isOngoing,
+                  _caughtUp: isOngoing,
+                };
+              }
+            } else {
+              if (checkEpisodeAired(latest.season, latest.episode + 1)) {
+                return {
+                  season: latest.season,
+                  episode: latest.episode + 1,
+                  _isNext: true,
+                };
+              } else {
+                const isOngoing =
+                  tvDetails.in_production ||
+                  (tvDetails.status !== "Ended" &&
+                    tvDetails.status !== "Canceled");
+                return {
+                  season: latest.season,
+                  episode: latest.episode,
+                  _completed: !isOngoing,
+                  _caughtUp: isOngoing,
+                };
+              }
+            }
+          } else {
+            return {
+              season: latest.season,
+              episode: latest.episode + 1,
+              _isNext: true,
+            };
+          }
+        } else {
+          return latest;
+        }
+      }
+    } else {
+      const entry = Object.entries(p).find(
+        ([k]) => k === key || k.startsWith(`${key}-S`),
+      );
+      if (entry) {
+        const [k, val]: [string, any] = entry;
+        const tvMatch = k.match(/-S(\d+)E(\d+)/);
+        return tvMatch
+          ? {
+              season: parseInt(tvMatch[1]),
+              episode: parseInt(tvMatch[2]),
+              ...val,
+            }
+          : val;
+      }
+    }
+    return null;
+  }, [movie, userProgress, tvDetails]);
 
   if (!movie && isLoading) {
     return <MovieDetailsSkeleton onClose={onClose} />;
@@ -1711,218 +1890,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-16 w-full max-w-2xl">
                 <div className="flex flex-row gap-3 w-full sm:w-auto flex-1">
                   {(() => {
-                    const p = JSON.parse(
-                      localStorage.getItem("nebula-progress") || "{}",
-                    );
-                    const key = movie.id.toString();
-
-                    // ── Resume Logic: find the LATEST watched episode by timestamp
-                    // For TV: collect all episodes for this show, sort by timestamp DESC
-                    // If that episode is >= 85% done (likely credits), advance to next.
-                    let resumeData: any = null;
-
-                    if (movie.type === "tv") {
-                      // Gather all progress entries belonging to this show
-                      const tvEntries = Object.entries(p)
-                        .filter(([k]) => k === key || k.startsWith(`${key}-S`))
-                        .map(([k, val]: [string, any]) => {
-                          const tvMatch = k.match(/-S(\d+)E(\d+)/);
-                          return tvMatch
-                            ? {
-                                season: parseInt(tvMatch[1]),
-                                episode: parseInt(tvMatch[2]),
-                                ...val,
-                                _key: k,
-                              }
-                            : null;
-                        })
-                        .filter(Boolean) as any[];
-
-                      if (tvEntries.length > 0) {
-                        // Pick the most recently watched
-                        tvEntries.sort(
-                          (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0),
-                        );
-                        const latest = tvEntries[0];
-                        const pct =
-                          latest.duration > 0
-                            ? (latest.time / latest.duration) * 100
-                            : 0;
-
-                        if (pct >= 90 || latest.watched) {
-                          // Episode nearly done — jump to NEXT episode
-                          if (tvDetails && tvDetails.seasons) {
-                            const sortedSeasons = tvDetails.seasons
-                              .filter((s: any) => s.season_number > 0)
-                              .sort(
-                                (a: any, b: any) =>
-                                  a.season_number - b.season_number,
-                              );
-
-                            const lastEpS =
-                              tvDetails.last_episode_to_air?.season_number;
-                            const lastEpE =
-                              tvDetails.last_episode_to_air?.episode_number;
-
-                            const checkEpisodeAired = (
-                              s: number,
-                              e: number,
-                            ) => {
-                              if (
-                                lastEpS === undefined ||
-                                lastEpE === undefined
-                              )
-                                return true; // fallback
-                              if (s > lastEpS) return false;
-                              if (s === lastEpS && e > lastEpE) return false;
-                              return true;
-                            };
-
-                            const currentSeasonInfo = sortedSeasons.find(
-                              (s: any) => s.season_number === latest.season,
-                            );
-                            if (currentSeasonInfo) {
-                              const maxEpisodes =
-                                currentSeasonInfo.episode_count;
-                              if (
-                                latest.episode < maxEpisodes &&
-                                checkEpisodeAired(
-                                  latest.season,
-                                  latest.episode + 1,
-                                )
-                              ) {
-                                resumeData = {
-                                  season: latest.season,
-                                  episode: latest.episode + 1,
-                                  _isNext: true,
-                                };
-                              } else if (latest.episode >= maxEpisodes) {
-                                // Transition to next season
-                                const currentSeasonIdx =
-                                  sortedSeasons.findIndex(
-                                    (s: any) =>
-                                      s.season_number === latest.season,
-                                  );
-                                if (
-                                  currentSeasonIdx !== -1 &&
-                                  currentSeasonIdx < sortedSeasons.length - 1
-                                ) {
-                                  const nextSeason =
-                                    sortedSeasons[currentSeasonIdx + 1];
-                                  if (
-                                    checkEpisodeAired(
-                                      nextSeason.season_number,
-                                      1,
-                                    )
-                                  ) {
-                                    resumeData = {
-                                      season: nextSeason.season_number,
-                                      episode: 1,
-                                      _isNext: true,
-                                    };
-                                  } else {
-                                    // Next season is not aired yet!
-                                    const isOngoing =
-                                      tvDetails.in_production ||
-                                      (tvDetails.status !== "Ended" &&
-                                        tvDetails.status !== "Canceled");
-                                    resumeData = {
-                                      season: latest.season,
-                                      episode: latest.episode,
-                                      _completed: !isOngoing,
-                                      _caughtUp: isOngoing,
-                                    };
-                                  }
-                                } else {
-                                  // No more seasons or episodes!
-                                  const isOngoing =
-                                    tvDetails.in_production ||
-                                    (tvDetails.status !== "Ended" &&
-                                      tvDetails.status !== "Canceled");
-                                  resumeData = {
-                                    season: latest.season,
-                                    episode: latest.episode,
-                                    _completed: !isOngoing,
-                                    _caughtUp: isOngoing,
-                                  };
-                                }
-                              } else {
-                                // next episode in current season is not aired yet!
-                                const isOngoing =
-                                  tvDetails.in_production ||
-                                  (tvDetails.status !== "Ended" &&
-                                    tvDetails.status !== "Canceled");
-                                resumeData = {
-                                  season: latest.season,
-                                  episode: latest.episode,
-                                  _completed: !isOngoing,
-                                  _caughtUp: isOngoing,
-                                };
-                              }
-                            } else {
-                              // Fallback if current season info not found
-                              if (
-                                checkEpisodeAired(
-                                  latest.season,
-                                  latest.episode + 1,
-                                )
-                              ) {
-                                resumeData = {
-                                  season: latest.season,
-                                  episode: latest.episode + 1,
-                                  _isNext: true,
-                                };
-                              } else {
-                                const isOngoing =
-                                  tvDetails.in_production ||
-                                  (tvDetails.status !== "Ended" &&
-                                    tvDetails.status !== "Canceled");
-                                resumeData = {
-                                  season: latest.season,
-                                  episode: latest.episode,
-                                  _completed: !isOngoing,
-                                  _caughtUp: isOngoing,
-                                };
-                              }
-                            }
-                          } else {
-                            // tvDetails not loaded yet, fallback to next episode
-                            resumeData = {
-                              season: latest.season,
-                              episode: latest.episode + 1,
-                              _isNext: true,
-                            };
-                          }
-                        } else {
-                          resumeData = latest;
-                        }
-                      }
-                    } else {
-                      // Movie: single progress entry
-                      const entry = Object.entries(p).find(
-                        ([k]) => k === key || k.startsWith(`${key}-S`),
-                      );
-                      if (entry) {
-                        const [k, val]: [string, any] = entry;
-                        const tvMatch = k.match(/-S(\d+)E(\d+)/);
-                        resumeData = tvMatch
-                          ? {
-                              season: parseInt(tvMatch[1]),
-                              episode: parseInt(tvMatch[2]),
-                              ...val,
-                            }
-                          : val;
-                      }
-                    }
-
                     const isTBA = movie.quality === "TBA";
 
-                    // Label logic:
-                    // • No progress at all → "Watch Now" / "Try Playback"
-                    // • Movie with progress → "Resume Watching"
-                    // • TV: next episode (done) → "Play S1E2"
-                    // • TV: mid-episode at S1E1 → "Resume Watching" (don't clutter with S1E1)
-                    // • TV: mid-episode at S2E3 etc → "Resume S2E3"
                     let label: string;
                     if (isTBA) {
                       label = resumeData ? "Resume (TBA)" : "Try Playback";
@@ -2296,12 +2265,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
                   ) : episodes.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6">
                       {episodes.map((ep: any) => {
-                        // Read per-episode progress from localStorage
-                        const epProgressData = JSON.parse(
-                          localStorage.getItem("nebula-progress") || "{}",
-                        );
                         const epKey = `${movie.id}-S${activeSeason}E${ep.episode_number}`;
-                        const epProg = epProgressData[epKey];
+                        const epProg = userProgress[epKey];
                         const epPct =
                           epProg && epProg.duration > 0
                             ? Math.min(
