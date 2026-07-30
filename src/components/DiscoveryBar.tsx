@@ -66,122 +66,124 @@ const AgeGateDialog: React.FC<{
 );
 
 // ─── DiscoveryBar ─────────────────────────────────────────────────────────────
-export const DiscoveryBar = ({
-  sortBy,
-  setSortBy,
-  onRandomize,
-  onRefreshFeed,
-  adultMode,
-  setAdultMode,
-}: any) => {
-  const [isSortOpen, setIsSortOpen] = useState(false);
-  const [showAgeGate, setShowAgeGate] = useState(false);
+export const DiscoveryBar = React.memo(
+  ({
+    sortBy,
+    setSortBy,
+    onRandomize,
+    onRefreshFeed,
+    adultMode,
+    setAdultMode,
+  }: any) => {
+    const [isSortOpen, setIsSortOpen] = useState(false);
+    const [showAgeGate, setShowAgeGate] = useState(false);
 
-  const handleAdultToggle = () => {
-    if (adultMode) {
-      // Turning off — no confirmation needed
-      setAdultMode(false);
-    } else {
-      // Turning on — check if already confirmed before
-      const alreadyConfirmed =
-        localStorage.getItem("nebula-adult-confirmed") === "true";
-      if (alreadyConfirmed) {
-        setAdultMode(true);
+    const handleAdultToggle = () => {
+      if (adultMode) {
+        // Turning off — no confirmation needed
+        setAdultMode(false);
       } else {
-        setShowAgeGate(true);
+        // Turning on — check if already confirmed before
+        const alreadyConfirmed =
+          localStorage.getItem("nebula-adult-confirmed") === "true";
+        if (alreadyConfirmed) {
+          setAdultMode(true);
+        } else {
+          setShowAgeGate(true);
+        }
       }
-    }
-  };
+    };
 
-  const handleAgeConfirm = () => {
-    localStorage.setItem("nebula-adult-confirmed", "true");
-    setAdultMode(true);
-    setShowAgeGate(false);
-  };
+    const handleAgeConfirm = () => {
+      localStorage.setItem("nebula-adult-confirmed", "true");
+      setAdultMode(true);
+      setShowAgeGate(false);
+    };
 
-  const handleAgeCancel = () => {
-    setShowAgeGate(false);
-  };
+    const handleAgeCancel = () => {
+      setShowAgeGate(false);
+    };
 
-  return (
-    <>
-      {showAgeGate && (
-        <AgeGateDialog
-          onConfirm={handleAgeConfirm}
-          onCancel={handleAgeCancel}
-        />
-      )}
+    return (
+      <>
+        {showAgeGate && (
+          <AgeGateDialog
+            onConfirm={handleAgeConfirm}
+            onCancel={handleAgeCancel}
+          />
+        )}
 
-      <section className="mb-4 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:flex-none">
+        <section className="mb-4 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:flex-none">
+              <button
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="w-full flex items-center justify-between sm:justify-start gap-3 px-3 sm:px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-dim hover:text-white transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <History size={14} className="text-nebula-cyan shrink-0" />
+                  <span className="truncate">Sort: {sortBy}</span>
+                </div>
+                <ChevronDown size={14} className="shrink-0" />
+              </button>
+
+              {isSortOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsSortOpen(false)}
+                  />
+                  <div className="absolute top-full right-0 mt-2 w-full sm:w-48 bg-obsidian border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl">
+                    {SORTS.map((sort) => (
+                      <button
+                        key={sort}
+                        onClick={() => {
+                          setSortBy(sort);
+                          setIsSortOpen(false);
+                        }}
+                        className="w-full px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 transition-colors text-dim hover:text-nebula-cyan"
+                      >
+                        {sort}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
-              onClick={() => setIsSortOpen(!isSortOpen)}
-              className="w-full flex items-center justify-between sm:justify-start gap-3 px-3 sm:px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-dim hover:text-white transition-all"
+              onClick={onRefreshFeed}
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-nebula-cyan/10 border border-nebula-cyan/30 text-nebula-cyan text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hover:bg-nebula-cyan hover:text-obsidian transition-all flex-1 md:flex-none"
             >
-              <div className="flex items-center gap-2">
-                <History size={14} className="text-nebula-cyan shrink-0" />
-                <span className="truncate">Sort: {sortBy}</span>
-              </div>
-              <ChevronDown size={14} className="shrink-0" />
+              <RefreshCw size={14} className="shrink-0" />
+              <span className="truncate">Refresh Feed</span>
             </button>
 
-            {isSortOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsSortOpen(false)}
-                />
-                <div className="absolute top-full right-0 mt-2 w-full sm:w-48 bg-obsidian border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl">
-                  {SORTS.map((sort) => (
-                    <button
-                      key={sort}
-                      onClick={() => {
-                        setSortBy(sort);
-                        setIsSortOpen(false);
-                      }}
-                      className="w-full px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 transition-colors text-dim hover:text-nebula-cyan"
-                    >
-                      {sort}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            <button
+              onClick={onRandomize}
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-nebula-cyan/10 border border-nebula-cyan/30 text-nebula-cyan text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hover:bg-nebula-cyan hover:text-obsidian transition-all flex-1 md:flex-none"
+            >
+              <Dices size={14} className="shrink-0" />
+              <span className="truncate">Randomizer</span>
+            </button>
+
+            {/* 18+ Toggle */}
+            <button
+              id="adult-mode-toggle"
+              onClick={handleAdultToggle}
+              title={adultMode ? "Disable 18+ content" : "Enable 18+ content"}
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all flex-1 md:flex-none ${
+                adultMode
+                  ? "bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 hover:text-red-300"
+                  : "bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/8"
+              }`}
+            >
+              <ShieldAlert size={14} className="shrink-0" />
+              <span className="truncate">18+{adultMode ? " On" : " Off"}</span>
+            </button>
           </div>
-
-          <button
-            onClick={onRefreshFeed}
-            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-nebula-cyan/10 border border-nebula-cyan/30 text-nebula-cyan text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hover:bg-nebula-cyan hover:text-obsidian transition-all flex-1 md:flex-none"
-          >
-            <RefreshCw size={14} className="shrink-0" />
-            <span className="truncate">Refresh Feed</span>
-          </button>
-
-          <button
-            onClick={onRandomize}
-            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-nebula-cyan/10 border border-nebula-cyan/30 text-nebula-cyan text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hover:bg-nebula-cyan hover:text-obsidian transition-all flex-1 md:flex-none"
-          >
-            <Dices size={14} className="shrink-0" />
-            <span className="truncate">Randomizer</span>
-          </button>
-
-          {/* 18+ Toggle */}
-          <button
-            id="adult-mode-toggle"
-            onClick={handleAdultToggle}
-            title={adultMode ? "Disable 18+ content" : "Enable 18+ content"}
-            className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all flex-1 md:flex-none ${
-              adultMode
-                ? "bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 hover:text-red-300"
-                : "bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/8"
-            }`}
-          >
-            <ShieldAlert size={14} className="shrink-0" />
-            <span className="truncate">18+{adultMode ? " On" : " Off"}</span>
-          </button>
-        </div>
-      </section>
-    </>
-  );
-};
+        </section>
+      </>
+    );
+  },
+);

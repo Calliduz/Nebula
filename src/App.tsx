@@ -102,7 +102,11 @@ export default function App() {
     string | number | null
   >(null);
 
-  const handleHeroPlay = (movie: any) => {
+  const handleOpenSearch = React.useCallback(() => {
+    actions.setIsSearchOpen(true);
+  }, [actions]);
+
+  const handleHeroPlay = React.useCallback((movie: any) => {
     triggerPopunder();
     const p = JSON.parse(localStorage.getItem("nebula-progress") || "{}");
     const key = movie.id.toString();
@@ -147,7 +151,7 @@ export default function App() {
     }
     setSelectedMovieForSource(movie);
     setSelectedEpForSource({ season, episode });
-  };
+  }, []);
 
   // Force portrait mode globally unless watching a video
   React.useEffect(() => {
@@ -177,7 +181,7 @@ export default function App() {
           activeTab={state.activeTab}
           onTabChange={actions.handleNavClick}
           scrolled={state.scrolled}
-          onSearchClick={() => actions.setIsSearchOpen(true)}
+          onSearchClick={handleOpenSearch}
           viewingCategory={state.viewingCategory}
           setViewingCategory={actions.setViewingCategory}
         />

@@ -8,7 +8,7 @@ const SUPPORT_EMAIL =
 const DISCORD_URL = "https://discord.gg/EYVm7HkMTM";
 const CURRENT_YEAR = new Date().getFullYear();
 
-export const Footer: React.FC = () => (
+export const Footer = React.memo(() => (
   <footer
     aria-label="Site footer"
     className="relative mt-20 bg-obsidian pb-28 lg:pb-12"
@@ -132,4 +132,4 @@ export const Footer: React.FC = () => (
       </div>
     </div>
   </footer>
-);
+));
