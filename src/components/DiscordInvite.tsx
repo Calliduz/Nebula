@@ -10,6 +10,8 @@ export const DiscordInvite = () => {
   );
   const [isVisible, setIsVisible] = useState(false);
 
+  const dismissTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!dismissed) {
       // Delay showing the invite card so it doesn't pop in instantly on load
@@ -20,10 +22,19 @@ export const DiscordInvite = () => {
     }
   }, [dismissed]);
 
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleDismiss = () => {
     setIsVisible(false);
     // Wait for exit animation to complete before updating localStorage to prevent layout flash
-    setTimeout(() => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = setTimeout(() => {
       setDismissed(true);
     }, 400);
   };

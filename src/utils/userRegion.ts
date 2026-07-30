@@ -51,14 +51,17 @@ export async function getUserRegionInfo(): Promise<UserRegionInfo> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch("https://ipwho.is/", { signal: controller.signal });
-    clearTimeout(timer);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && data.country_code) {
-        code = data.country_code.toUpperCase();
-        name = data.country || getCountryName(code);
+    try {
+      const res = await fetch("https://ipwho.is/", { signal: controller.signal });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.country_code) {
+          code = data.country_code.toUpperCase();
+          name = data.country || getCountryName(code);
+        }
       }
+    } finally {
+      clearTimeout(timer);
     }
   } catch {
     // fallback
@@ -69,16 +72,19 @@ export async function getUserRegionInfo(): Promise<UserRegionInfo> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch("https://ipapi.co/json/", {
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.country_code) {
-          code = data.country_code.toUpperCase();
-          name = data.country_name || getCountryName(code);
+      try {
+        const res = await fetch("https://ipapi.co/json/", {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.country_code) {
+            code = data.country_code.toUpperCase();
+            name = data.country_name || getCountryName(code);
+          }
         }
+      } finally {
+        clearTimeout(timer);
       }
     } catch {
       // fallback
@@ -90,19 +96,22 @@ export async function getUserRegionInfo(): Promise<UserRegionInfo> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch(
-        "http://ip-api.com/json/?fields=status,country,countryCode",
-        {
-          signal: controller.signal,
-        },
-      );
-      clearTimeout(timer);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status === "success" && data.countryCode) {
-          code = data.countryCode.toUpperCase();
-          name = data.country || getCountryName(code);
+      try {
+        const res = await fetch(
+          "http://ip-api.com/json/?fields=status,country,countryCode",
+          {
+            signal: controller.signal,
+          },
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "success" && data.countryCode) {
+            code = data.countryCode.toUpperCase();
+            name = data.country || getCountryName(code);
+          }
         }
+      } finally {
+        clearTimeout(timer);
       }
     } catch {
       // fallback
