@@ -501,17 +501,20 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   // Focus input on open
   useEffect(() => {
     if (isOpen) {
+      let timer: ReturnType<typeof setTimeout> | null = null;
       const raf = requestAnimationFrame(() => {
-        const timer = setTimeout(() => {
+        timer = setTimeout(() => {
           try {
             searchInputRef.current?.focus({ preventScroll: true });
           } catch {
             searchInputRef.current?.focus();
           }
         }, 100);
-        return () => clearTimeout(timer);
       });
-      return () => cancelAnimationFrame(raf);
+      return () => {
+        cancelAnimationFrame(raf);
+        if (timer) clearTimeout(timer);
+      };
     } else {
       setScrolledDown(false);
       setIsFocused(false);

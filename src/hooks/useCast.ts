@@ -16,11 +16,12 @@ export function useCast() {
 
   // Initialize Google Cast SDK & AirPlay
   useEffect(() => {
+    let isMounted = true;
     let castStateListener: ((event: any) => void) | null = null;
     let castContext: any = null;
 
     const setupCastContext = () => {
-      if (typeof window === "undefined" || !(window as any).cast?.framework) return;
+      if (!isMounted || typeof window === "undefined" || !(window as any).cast?.framework) return;
       try {
         castContext = (window as any).cast.framework.CastContext.getInstance();
         
@@ -37,6 +38,7 @@ export function useCast() {
         const CastState = (window as any).cast.framework.CastState;
 
         castStateListener = (event: any) => {
+          if (!isMounted) return;
           if (event.castState === CastState.CONNECTED) {
             setIsCasting(true);
             const session = castContext.getCurrentSession();
@@ -48,7 +50,9 @@ export function useCast() {
         };
 
         castContext.addEventListener(StateEvent.CAST_STATE_CHANGED, castStateListener);
-        setIsCastAvailable(true);
+        if (isMounted) {
+          setIsCastAvailable(true);
+        }
       } catch (e) {
         console.warn("[CAST] Context init notice:", e);
       }
@@ -60,7 +64,7 @@ export function useCast() {
       setupCastContext();
     } else if (typeof window !== "undefined") {
       (window as any).__onGCastApiAvailable = (isAvailable: boolean) => {
-        if (isAvailable) {
+        if (isAvailable && isMounted) {
           setupCastContext();
         }
       };
@@ -81,6 +85,10 @@ export function useCast() {
 
     // Cleanup listeners on unmount
     return () => {
+      isMounted = false;
+      if (typeof window !== "undefined" && (window as any).__onGCastApiAvailable) {
+        delete (window as any).__onGCastApiAvailable;
+      }
       if (castContext && castStateListener && (window as any).cast?.framework) {
         try {
           const StateEvent = (window as any).cast.framework.CastContextEventType;
