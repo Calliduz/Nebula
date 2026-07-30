@@ -70,9 +70,19 @@ export const CategoryView = React.memo<CategoryViewProps>(
     >("all");
 
     React.useEffect(() => {
-      const handleResize = () => setWindowWidth(window.innerWidth);
+      let timeoutId: any = null;
+      const handleResize = () => {
+        if (timeoutId) return;
+        timeoutId = setTimeout(() => {
+          setWindowWidth(window.innerWidth);
+          timeoutId = null;
+        }, 100);
+      };
       window.addEventListener("resize", handleResize);
-      return () => window.removeEventListener("resize", handleResize);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        if (timeoutId) clearTimeout(timeoutId);
+      };
     }, []);
 
     const columns = React.useMemo(() => {
@@ -91,30 +101,55 @@ export const CategoryView = React.memo<CategoryViewProps>(
 
     const isDrama = viewingCategory === "Dramas";
 
+    // O(1) Lookup Set for MyList items
+    const myListSet = React.useMemo(() => {
+      const set = new Set<string>();
+      if (Array.isArray(myList)) {
+        myList.forEach((item: any) => {
+          const id = typeof item === "object" && item !== null ? item.id : item;
+          const type =
+            typeof item === "object" && item !== null
+              ? item.type || "movie"
+              : "movie";
+          set.add(`${type}_${id}`);
+          set.add(`${id}`);
+        });
+      }
+      return set;
+    }, [myList]);
+
+    // O(1) Lookup Map for allMovies
+    const allMoviesMap = React.useMemo(() => {
+      const map = new Map<string, any>();
+      if (Array.isArray(allMovies)) {
+        allMovies.forEach((m) => {
+          const type = m.type || "movie";
+          map.set(`${type}_${m.id}`, m);
+          map.set(`${m.id}`, m);
+        });
+      }
+      return map;
+    }, [allMovies]);
+
+    // Memoized localStorage progress read
+    const userProgress = React.useMemo(() => {
+      try {
+        return JSON.parse(localStorage.getItem("nebula-progress") || "{}");
+      } catch {
+        return {};
+      }
+    }, [history]);
+
     const myListFilteredMovies = React.useMemo(() => {
       if (!allMovies || !myList) return [];
       return allMovies.filter((m) =>
-        myList.some((item: any) => {
-          const id = typeof item === "object" && item !== null ? item.id : item;
-          const type =
-            typeof item === "object" && item !== null ? item.type : "movie";
-          return (
-            id.toString() === m.id.toString() && type === (m.type || "movie")
-          );
-        }),
+        myListSet.has(`${m.type || "movie"}_${m.id}`),
       );
-    }, [allMovies, myList]);
+    }, [allMovies, myListSet]);
 
     const historyFilteredMovies = React.useMemo(() => {
       if (!allMovies || !history || history.length === 0) return [];
-      let progressMap: Record<string, any> = {};
-      try {
-        progressMap = JSON.parse(
-          localStorage.getItem("nebula-progress") || "{}",
-        );
-      } catch {
-        /* ignore */
-      }
+      const progressMap = userProgress;
 
       return history
         .map((item) => {
@@ -135,11 +170,8 @@ export const CategoryView = React.memo<CategoryViewProps>(
             rawId = String(item);
           }
 
-          const m = (allMovies || []).find((movie) => {
-            const mId = movie.id.toString();
-            const mType = movie.type || "movie";
-            return mId === rawId && mType === type;
-          });
+          const m =
+            allMoviesMap.get(`${type}_${rawId}`) || allMoviesMap.get(rawId);
           if (!m) return null;
 
           const progKey = Object.keys(progressMap).find((k) =>
@@ -148,14 +180,13 @@ export const CategoryView = React.memo<CategoryViewProps>(
           return { ...m, progress: progKey ? progressMap[progKey] : null };
         })
         .filter(Boolean);
-    }, [allMovies, history]);
+    }, [allMovies, history, allMoviesMap, userProgress]);
 
     // Helper to render grid with ads every 20 items
     const renderGridWithAds = () => {
       const rawItems = data.slice(0, visibleCount);
 
       // We only slice to a multiple of columns if we have more items to load in total.
-      // That means if we are not at the end of the collection (we can either load more or fetch more).
       const hasMoreData =
         data.length > visibleCount ||
         [
@@ -180,14 +211,7 @@ export const CategoryView = React.memo<CategoryViewProps>(
           aspect="portrait"
           isGrid={true}
           onSelect={onSelectMovie}
-          isInList={myList.some((i: any) => {
-            const id = typeof i === "object" && i !== null ? i.id : i;
-            const type = typeof i === "object" && i !== null ? i.type : "movie";
-            return (
-              id.toString() === item.id.toString() &&
-              type === (item.type || "movie")
-            );
-          })}
+          isInList={myListSet.has(`${item.type || "movie"}_${item.id}`)}
           onToggleList={() => toggleMyList(item)}
         />
       ));
@@ -467,20 +491,9 @@ export const CategoryView = React.memo<CategoryViewProps>(
                           movie={movie}
                           isGrid={true}
                           onSelect={onSelectMovie}
-                          isInList={myList.some((item: any) => {
-                            const id =
-                              typeof item === "object" && item !== null
-                                ? item.id
-                                : item;
-                            const type =
-                              typeof item === "object" && item !== null
-                                ? item.type
-                                : "movie";
-                            return (
-                              id.toString() === movie.id.toString() &&
-                              type === (movie.type || "movie")
-                            );
-                          })}
+                          isInList={myListSet.has(
+                            `${movie.type || "movie"}_${movie.id}`,
+                          )}
                           onToggleList={() => toggleMyList(movie)}
                         />
 
