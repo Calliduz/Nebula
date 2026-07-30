@@ -144,7 +144,9 @@ export const TopNav = ({
                   size={19}
                   strokeWidth={isActive ? 2.5 : 2}
                   className={`transition-all duration-300 ${
-                    isActive ? "scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]" : ""
+                    isActive
+                      ? "scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]"
+                      : ""
                   }`}
                 />
                 <span

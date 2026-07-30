@@ -64,9 +64,9 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
   const [windowWidth, setWindowWidth] = React.useState(
     typeof window !== "undefined" ? window.innerWidth : 1200,
   );
-  const [libraryTab, setLibraryTab] = React.useState<"all" | "mylist" | "history">(
-    "all",
-  );
+  const [libraryTab, setLibraryTab] = React.useState<
+    "all" | "mylist" | "history"
+  >("all");
 
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -415,7 +415,8 @@ export const CategoryView: React.FC<CategoryViewProps> = ({
                     Your List is Empty
                   </h4>
                   <p className="text-white/40 text-xs sm:text-sm max-w-md mx-auto mb-6 font-medium">
-                    Bookmark movies and TV series to quickly access them anytime.
+                    Bookmark movies and TV series to quickly access them
+                    anytime.
                   </p>
                   <button
                     onClick={() => {
