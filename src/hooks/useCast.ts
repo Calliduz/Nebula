@@ -14,74 +14,80 @@ export function useCast() {
   const [isCasting, setIsCasting] = useState(false);
   const [activeDeviceName, setActiveDeviceName] = useState<string | null>(null);
 
-  // Initialize Google Cast SDK
+  // Initialize Google Cast SDK & AirPlay
   useEffect(() => {
-    // Check if Google Cast API is already loaded
-    if (
-      typeof window !== "undefined" &&
-      (window as any).chrome?.cast?.isAvailable
-    ) {
-      setIsCastAvailable(true);
-    } else {
-      // Define window callback for Cast SDK
-      (window as any).__onGCastApiAvailable = (isAvailable: boolean) => {
-        if (isAvailable && (window as any).cast?.framework) {
-          try {
-            const castContext = (
-              window as any
-            ).cast.framework.CastContext.getInstance();
-            castContext.setOptions({
-              receiverApplicationId: (window as any).chrome.cast.media
-                .DEFAULT_MEDIA_RECEIVER_APP_ID,
-              autoJoinPolicy: (window as any).chrome.cast.AutoJoinPolicy
-                .ORIGIN_SCOPED,
-            });
+    let castStateListener: ((event: any) => void) | null = null;
+    let castContext: any = null;
 
-            // Listen for session state changes
-            const StateEvent = (window as any).cast.framework
-              .CastContextEventType;
-            castContext.addEventListener(
-              StateEvent.CAST_STATE_CHANGED,
-              (event: any) => {
-                const CastState = (window as any).cast.framework.CastState;
-                if (event.castState === CastState.CONNECTED) {
-                  setIsCasting(true);
-                  const session = castContext.getCurrentSession();
-                  setActiveDeviceName(
-                    session?.getCastDevice()?.friendlyName || "TV",
-                  );
-                } else if (event.castState === CastState.NOT_CONNECTED) {
-                  setIsCasting(false);
-                  setActiveDeviceName(null);
-                }
-              },
-            );
+    const setupCastContext = () => {
+      if (typeof window === "undefined" || !(window as any).cast?.framework) return;
+      try {
+        castContext = (window as any).cast.framework.CastContext.getInstance();
+        
+        // Initialize options only once
+        if (!castContext.getCastState) {
+          castContext.setOptions({
+            receiverApplicationId: (window as any).chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+            autoJoinPolicy: (window as any).chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+          });
+        }
 
-            setIsCastAvailable(true);
-          } catch (e) {
-            console.warn("[CAST] Failed to initialize Google Cast context:", e);
+        // Session state listener
+        const StateEvent = (window as any).cast.framework.CastContextEventType;
+        const CastState = (window as any).cast.framework.CastState;
+
+        castStateListener = (event: any) => {
+          if (event.castState === CastState.CONNECTED) {
+            setIsCasting(true);
+            const session = castContext.getCurrentSession();
+            setActiveDeviceName(session?.getCastDevice()?.friendlyName || "TV");
+          } else if (event.castState === CastState.NOT_CONNECTED) {
+            setIsCasting(false);
+            setActiveDeviceName(null);
           }
+        };
+
+        castContext.addEventListener(StateEvent.CAST_STATE_CHANGED, castStateListener);
+        setIsCastAvailable(true);
+      } catch (e) {
+        console.warn("[CAST] Context init notice:", e);
+      }
+    };
+
+    // Check if Cast SDK is already active
+    if (typeof window !== "undefined" && (window as any).chrome?.cast?.isAvailable) {
+      setIsCastAvailable(true);
+      setupCastContext();
+    } else if (typeof window !== "undefined") {
+      (window as any).__onGCastApiAvailable = (isAvailable: boolean) => {
+        if (isAvailable) {
+          setupCastContext();
         }
       };
 
-      // Dynamically load Google Cast SDK script if not present
       if (!document.getElementById("google-cast-sdk")) {
         const script = document.createElement("script");
         script.id = "google-cast-sdk";
-        script.src =
-          "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
+        script.src = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
         script.async = true;
         document.body.appendChild(script);
       }
     }
 
-    // AirPlay availability detection for WebKit/Safari
-    if (
-      typeof window !== "undefined" &&
-      (window as any).WebKitPlaybackTargetAvailabilityEvent
-    ) {
+    // AirPlay availability detection for WebKit / Safari
+    if (typeof window !== "undefined" && (window as any).WebKitPlaybackTargetAvailabilityEvent) {
       setIsAirPlayAvailable(true);
     }
+
+    // Cleanup listeners on unmount
+    return () => {
+      if (castContext && castStateListener && (window as any).cast?.framework) {
+        try {
+          const StateEvent = (window as any).cast.framework.CastContextEventType;
+          castContext.removeEventListener(StateEvent.CAST_STATE_CHANGED, castStateListener);
+        } catch {}
+      }
+    };
   }, []);
 
   // Trigger Google Chromecast Session
@@ -93,21 +99,17 @@ export function useCast() {
       }
 
       try {
-        const castContext = (
-          window as any
-        ).cast.framework.CastContext.getInstance();
+        const castContext = (window as any).cast.framework.CastContext.getInstance();
         await castContext.requestSession();
         const session = castContext.getCurrentSession();
 
         if (session) {
           const mediaInfo = new (window as any).chrome.cast.media.MediaInfo(
             streamUrl,
-            streamUrl.includes(".m3u8") ? "application/x-mpegurl" : "video/mp4",
+            streamUrl.includes(".m3u8") ? "application/x-mpegurl" : "video/mp4"
           );
 
-          const mediaMetadata = new (
-            window as any
-          ).chrome.cast.media.GenericMediaMetadata();
+          const mediaMetadata = new (window as any).chrome.cast.media.GenericMediaMetadata();
           mediaMetadata.title = metadata.title;
           if (metadata.poster) {
             mediaMetadata.images = [
@@ -120,21 +122,17 @@ export function useCast() {
           if (metadata.subtitleUrl) {
             const subtitleTrack = new (window as any).chrome.cast.media.Track(
               1,
-              (window as any).chrome.cast.media.TrackType.TEXT,
+              (window as any).chrome.cast.media.TrackType.TEXT
             );
             subtitleTrack.trackContentId = metadata.subtitleUrl;
             subtitleTrack.trackContentType = "text/vtt";
-            subtitleTrack.subtype = (
-              window as any
-            ).chrome.cast.media.TextTrackType.SUBTITLES;
+            subtitleTrack.subtype = (window as any).chrome.cast.media.TextTrackType.SUBTITLES;
             subtitleTrack.name = "English Subtitles";
             subtitleTrack.language = "en-US";
             mediaInfo.tracks = [subtitleTrack];
           }
 
-          const request = new (window as any).chrome.cast.media.LoadRequest(
-            mediaInfo,
-          );
+          const request = new (window as any).chrome.cast.media.LoadRequest(mediaInfo);
           await session.loadMedia(request);
           setIsCasting(true);
           setActiveDeviceName(session.getCastDevice()?.friendlyName || "TV");
@@ -145,22 +143,19 @@ export function useCast() {
         }
       }
     },
-    [],
+    []
   );
 
   // Trigger Apple AirPlay Target Picker
-  const triggerAirPlay = useCallback(
-    (videoElement: HTMLVideoElement | null) => {
-      if (!videoElement) return;
+  const triggerAirPlay = useCallback((videoElement: HTMLVideoElement | null) => {
+    if (!videoElement) return;
 
-      if ((videoElement as any).webkitShowPlaybackTargetPicker) {
-        (videoElement as any).webkitShowPlaybackTargetPicker();
-      } else {
-        alert("AirPlay is only supported on Safari / Apple devices.");
-      }
-    },
-    [],
-  );
+    if ((videoElement as any).webkitShowPlaybackTargetPicker) {
+      (videoElement as any).webkitShowPlaybackTargetPicker();
+    } else {
+      alert("AirPlay is supported on Safari / Apple devices.");
+    }
+  }, []);
 
   return {
     isCastAvailable,
