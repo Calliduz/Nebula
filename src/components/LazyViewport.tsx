@@ -8,6 +8,7 @@ interface LazyViewportProps {
   prefetchMargin?: string;
   renderMargin?: string;
   minHeight?: string | number;
+  recycleOffscreen?: boolean;
 }
 
 export const LazyViewport: React.FC<LazyViewportProps> = ({
@@ -18,6 +19,7 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
   prefetchMargin = "2500px 0px 2500px 0px",
   renderMargin = "1200px 0px 1200px 0px",
   minHeight = "350px",
+  recycleOffscreen = true,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const hasPrefetchedRef = useRef(false);
@@ -53,8 +55,6 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
 
   // 2. Stage 2: Render observer — renders actual component DOM when close to viewport
   useEffect(() => {
-    if (isVisible) return;
-
     const currentEl = containerRef.current;
     if (!currentEl) return;
 
@@ -67,7 +67,11 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
             hasPrefetchedRef.current = true;
             onVisible();
           }
-          renderObserver.unobserve(currentEl);
+          if (!recycleOffscreen) {
+            renderObserver.unobserve(currentEl);
+          }
+        } else if (recycleOffscreen) {
+          setIsVisible(false);
         }
       },
       { rootMargin: renderMargin },
@@ -77,7 +81,7 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
     return () => {
       renderObserver.disconnect();
     };
-  }, [isVisible, onVisible, renderMargin]);
+  }, [onVisible, renderMargin, recycleOffscreen]);
 
   return (
     <div

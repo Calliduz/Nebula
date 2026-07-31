@@ -100,6 +100,19 @@ export const HomeFeed = React.memo<HomeFeedProps>(
       );
     };
 
+    const myListSet = React.useMemo(() => {
+      const set = new Set<string>();
+      if (Array.isArray(myList)) {
+        for (const item of myList) {
+          const id = typeof item === "object" && item !== null ? item.id : item;
+          const type =
+            typeof item === "object" && item !== null ? item.type : "movie";
+          set.add(`${type || "movie"}_${id}`);
+        }
+      }
+      return set;
+    }, [myList]);
+
     const isAdultRow = (title: string) => ADULT_ROW_TITLES.includes(title);
 
     const catalogRows = rows.filter(
@@ -114,51 +127,6 @@ export const HomeFeed = React.memo<HomeFeedProps>(
     const adultRows = rows.filter((r) => isAdultRow(r.title));
 
     const renderRow = (row: any, rowIndex: number) => {
-      if (row.hasLoaded) {
-        return (
-          <React.Fragment key={`row-group-${row.title}-${rowIndex}`}>
-            {row.items.length > 0 && (
-              <MovieRow
-                title={row.title}
-                onTitleClick={() => setViewingCategory(row.title)}
-              >
-                {row.items.map((m: any, i: number) => (
-                  <MovieCard
-                    key={`card-${row.title}-${rowIndex}-${m.id}-${i}`}
-                    movie={m}
-                    snap
-                    aspect="portrait"
-                    onSelect={setSelectedMovie}
-                    isInList={myList.some((item: any) => {
-                      const id =
-                        typeof item === "object" && item !== null
-                          ? item.id
-                          : item;
-                      const type =
-                        typeof item === "object" && item !== null
-                          ? item.type
-                          : "movie";
-                      return (
-                        id.toString() === m.id.toString() &&
-                        type === (m.type || "movie")
-                      );
-                    })}
-                    onToggleList={() => toggleMyList(m)}
-                    onRemove={
-                      row.title === "Continue Watching"
-                        ? () => removeFromProgress(m.id.toString())
-                        : row.title === "My List"
-                          ? () => toggleMyList(m)
-                          : undefined
-                    }
-                  />
-                ))}
-              </MovieRow>
-            )}
-          </React.Fragment>
-        );
-      }
-
       const skeletonPlaceholder = (
         <MovieRow
           title={row.title}
@@ -170,56 +138,50 @@ export const HomeFeed = React.memo<HomeFeedProps>(
         </MovieRow>
       );
 
+      const renderRowContent = () => (
+        <MovieRow
+          title={row.title}
+          onTitleClick={() => setViewingCategory(row.title)}
+        >
+          {row.items.map((m: any, i: number) => (
+            <MovieCard
+              key={`card-${row.title}-${rowIndex}-${m.id}-${i}`}
+              movie={m}
+              snap
+              aspect="portrait"
+              onSelect={setSelectedMovie}
+              isInList={myListSet.has(`${m.type || "movie"}_${m.id}`)}
+              onToggleList={() => toggleMyList(m)}
+              onRemove={
+                row.title === "Continue Watching"
+                  ? () => removeFromProgress(m.id.toString())
+                  : row.title === "My List"
+                    ? () => toggleMyList(m)
+                    : undefined
+              }
+            />
+          ))}
+        </MovieRow>
+      );
+
       return (
         <React.Fragment key={`row-group-${row.title}-${rowIndex}`}>
           <LazyViewport
             placeholder={skeletonPlaceholder}
-            onPrefetch={() => fetchRowData(row.title)}
-            onVisible={() => fetchRowData(row.title)}
+            onPrefetch={() => !row.hasLoaded && fetchRowData(row.title)}
+            onVisible={() => !row.hasLoaded && fetchRowData(row.title)}
             prefetchMargin="2500px 0px 2500px 0px"
             renderMargin="1200px 0px 1200px 0px"
             minHeight="350px"
+            recycleOffscreen={true}
           >
-            {row.items.length > 0 ? (
-              <MovieRow
-                title={row.title}
-                onTitleClick={() => setViewingCategory(row.title)}
-              >
-                {row.items.map((m: any, i: number) => (
-                  <MovieCard
-                    key={`card-${row.title}-${rowIndex}-${m.id}-${i}`}
-                    movie={m}
-                    snap
-                    aspect="portrait"
-                    onSelect={setSelectedMovie}
-                    isInList={myList.some((item: any) => {
-                      const id =
-                        typeof item === "object" && item !== null
-                          ? item.id
-                          : item;
-                      const type =
-                        typeof item === "object" && item !== null
-                          ? item.type
-                          : "movie";
-                      return (
-                        id.toString() === m.id.toString() &&
-                        type === (m.type || "movie")
-                      );
-                    })}
-                    onToggleList={() => toggleMyList(m)}
-                    onRemove={
-                      row.title === "Continue Watching"
-                        ? () => removeFromProgress(m.id.toString())
-                        : row.title === "My List"
-                          ? () => toggleMyList(m)
-                          : undefined
-                    }
-                  />
-                ))}
-              </MovieRow>
-            ) : (
-              skeletonPlaceholder
-            )}
+            {row.hasLoaded
+              ? row.items.length > 0
+                ? renderRowContent()
+                : null
+              : row.items.length > 0
+                ? renderRowContent()
+                : skeletonPlaceholder}
           </LazyViewport>
         </React.Fragment>
       );
