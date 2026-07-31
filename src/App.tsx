@@ -548,7 +548,12 @@ function MediaPlayerStub({ actions, state }: any) {
         (m: any) =>
           m.id.toString() === id.toString() &&
           (m.type === type || (!m.type && type === "movie")),
-      ) || state.selectedMovie
+      ) ||
+      (state.selectedMovie &&
+      state.selectedMovie.id?.toString() === id.toString() &&
+      (state.selectedMovie.type === type || (!state.selectedMovie.type && type === "movie"))
+        ? state.selectedMovie
+        : null)
     : null;
 
   const movie = catalogMovie || localMovie;

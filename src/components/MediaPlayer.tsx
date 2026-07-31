@@ -2667,10 +2667,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           );
         }
 
-        // Preserve custom-uploaded subs when refetching
+        // Preserve existing provider & custom subs when refetching
         setSubtitles((prev) => {
-          const customSubs = prev.filter((s) => s.source === "Custom");
-          return processSubtitles(fetchedSubs, customSubs);
+          return processSubtitles(fetchedSubs, prev);
         });
       } catch (e) {
         console.error("Subtitle fetch error:", e);

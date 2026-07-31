@@ -125,32 +125,54 @@ export function useCast() {
         const session = castContext.getCurrentSession();
 
         if (session) {
+          // Resolve relative URLs to absolute HTTP/HTTPS origin URLs for Chromecast Receiver
+          let fullStreamUrl = streamUrl;
+          if (streamUrl && streamUrl.startsWith("/")) {
+            fullStreamUrl = `${window.location.origin}${streamUrl}`;
+          }
+
+          const lowerUrl = fullStreamUrl.toLowerCase();
+          const isHls =
+            lowerUrl.includes(".m3u8") ||
+            lowerUrl.includes("/proxy/stream") ||
+            lowerUrl.includes("type=hls") ||
+            lowerUrl.includes("format=hls");
+
           const mediaInfo = new (window as any).chrome.cast.media.MediaInfo(
-            streamUrl,
-            streamUrl.includes(".m3u8") ? "application/x-mpegurl" : "video/mp4"
+            fullStreamUrl,
+            isHls ? "application/x-mpegurl" : "video/mp4"
           );
 
           const mediaMetadata = new (window as any).chrome.cast.media.GenericMediaMetadata();
           mediaMetadata.title = metadata.title;
           if (metadata.poster) {
+            let posterUrl = metadata.poster;
+            if (posterUrl.startsWith("/")) {
+              posterUrl = `${window.location.origin}${posterUrl}`;
+            }
             mediaMetadata.images = [
-              new (window as any).chrome.cast.media.Image(metadata.poster),
+              new (window as any).chrome.cast.media.Image(posterUrl),
             ];
           }
           mediaInfo.metadata = mediaMetadata;
 
-          // Attach subtitles if available
-          if (metadata.subtitleUrl) {
+          // Attach subtitles if available (must be valid HTTP/HTTPS URL, not blob:)
+          if (metadata.subtitleUrl && !metadata.subtitleUrl.startsWith("blob:")) {
+            let subUrl = metadata.subtitleUrl;
+            if (subUrl.startsWith("/")) {
+              subUrl = `${window.location.origin}${subUrl}`;
+            }
             const subtitleTrack = new (window as any).chrome.cast.media.Track(
               1,
               (window as any).chrome.cast.media.TrackType.TEXT
             );
-            subtitleTrack.trackContentId = metadata.subtitleUrl;
+            subtitleTrack.trackContentId = subUrl;
             subtitleTrack.trackContentType = "text/vtt";
             subtitleTrack.subtype = (window as any).chrome.cast.media.TextTrackType.SUBTITLES;
-            subtitleTrack.name = "English Subtitles";
-            subtitleTrack.language = "en-US";
+            subtitleTrack.name = "Subtitles";
+            subtitleTrack.language = "en";
             mediaInfo.tracks = [subtitleTrack];
+            mediaInfo.activeTrackIds = [1];
           }
 
           const request = new (window as any).chrome.cast.media.LoadRequest(mediaInfo);
