@@ -1493,6 +1493,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "HDGharTV") {
+          fetchUrl = `${API}/api/hdghartv?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "NetNaija" || category === "Vesper") {
           fetchUrl = `${API}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
@@ -1543,6 +1547,19 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             type: v.type || "hls",
             audio: v.audio || v.language || "",
             flag: v.flag === "ind" ? "in" : v.flag || "us",
+          }));
+      } else if (category === "HDGharTV") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
+          .map(([name, v]: any) => ({
+            source: name.toLowerCase().startsWith("hdghartv") ||
+              name.toLowerCase().startsWith("ghartv")
+              ? name
+              : `HDGharTV (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            quality: (v as any).quality || "Auto",
+            audio: (v as any).audio || "",
           }));
       } else if (category === "FilmU") {
         updatedMirrors = Object.entries(data)
