@@ -1651,17 +1651,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     ],
   );
 
-  const SOURCE_PRIORITY = [
-    "Vaplayer",
-    "VidRock",
-    "Vidrift",
-    "Videasy",
-    "VidLink",
-    "Vidnest",
-    "FilmU",
-    "Peachify",
-    "Kuro",
-  ];
+  // Derived from PROVIDERS order in config/providers.ts — reordering there
+  // automatically updates the cross-source fallback priority here too.
+  const SOURCE_PRIORITY = PROVIDERS.map((p) => p.apiCategory).filter(
+    Boolean,
+  ) as string[];
 
   const switchToNextSource = useCallback(
     async (overrideCategory?: string) => {

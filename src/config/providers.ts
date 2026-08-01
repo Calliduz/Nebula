@@ -34,6 +34,12 @@ export interface ProviderConfig {
    * MovieDetails uses this directly; MediaPlayer derives it from textClass.
    */
   dotBgClass?: string;
+  /**
+   * The API-side category name this provider's streams are tagged with.
+   * Matches the keys used in SOURCE_ALIASES in MediaPlayer.
+   * Used to derive SOURCE_PRIORITY order automatically from PROVIDERS.
+   */
+  apiCategory?: string;
   buildUrl: (params: {
     tmdbId: string | number;
     type: string;
@@ -57,6 +63,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-emerald-500/10",
     textClass: "text-emerald-400",
     dotBgClass: "bg-emerald-400",
+    apiCategory: "HDGharTV",
     buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -74,6 +81,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-nebula-cyan/10",
     textClass: "text-nebula-cyan",
     dotBgClass: "bg-nebula-cyan",
+    apiCategory: "VidRock",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidrock?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -91,6 +99,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-cyan-500/10",
     textClass: "text-cyan-400",
     dotBgClass: "bg-cyan-400",
+    apiCategory: "NetNaija",
     buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/netnaija?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -108,6 +117,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-cyan-500/10",
     textClass: "text-cyan-400",
     dotBgClass: "bg-cyan-400",
+    apiCategory: "Vaplayer",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -124,6 +134,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-violet-500/10",
     textClass: "text-violet-400",
     dotBgClass: "bg-violet-400",
+    apiCategory: "Videasy",
     buildUrl: () => null,
     serializeExtra: (src) => src.audio || "",
   },
@@ -136,6 +147,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-white/10",
     textClass: "text-white/70",
     dotBgClass: "bg-white/70",
+    apiCategory: "VidLink",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidlink?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -152,6 +164,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-emerald-500/10",
     textClass: "text-emerald-400",
     dotBgClass: "bg-emerald-400",
+    apiCategory: "Vidnest",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidnest?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -200,6 +213,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-fuchsia-500/10",
     textClass: "text-fuchsia-400",
     dotBgClass: "bg-fuchsia-400",
+    apiCategory: "Vidrift",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidrift?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
@@ -216,6 +230,7 @@ export const PROVIDERS: ProviderConfig[] = [
     bgClass: "bg-rose-500/10",
     textClass: "text-rose-400",
     dotBgClass: "bg-rose-400",
+    apiCategory: "Peachify",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/peachify?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
