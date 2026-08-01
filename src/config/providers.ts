@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Nebula — Unified Provider Configuration
  *
  * This is the SINGLE SOURCE OF TRUTH for streaming provider definitions,
@@ -49,20 +49,21 @@ export interface ProviderConfig {
 
 export const PROVIDERS: ProviderConfig[] = [
   {
-    id: "vaplayer",
-    name: "Quantum",
-    badge: "GLOBAL MIRRORS",
-    colorClass: "cyan",
-    borderClass: "border-cyan-500/40",
-    bgClass: "bg-cyan-500/10",
-    textClass: "text-cyan-400",
-    dotBgClass: "bg-cyan-400",
-    buildUrl: ({ tmdbId, type, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+    id: "hdghartv",
+    name: "Aether",
+    badge: "MULTI-AUDIO",
+    colorClass: "emerald",
+    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-500/10",
+    textClass: "text-emerald-400",
+    dotBgClass: "bg-emerald-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
+    serializeExtra: (src) => src.audio || "",
   },
   {
     id: "vidrock",
@@ -82,23 +83,6 @@ export const PROVIDERS: ProviderConfig[] = [
     serializeExtra: (src) => src.audio || src.language || "",
   },
   {
-    id: "hdghartv",
-    name: "Aether",
-    badge: "MULTI-AUDIO",
-    colorClass: "emerald",
-    borderClass: "border-emerald-500/40",
-    bgClass: "bg-emerald-500/10",
-    textClass: "text-emerald-400",
-    dotBgClass: "bg-emerald-400",
-    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
-      if (season !== undefined) u += `&season=${season}`;
-      if (episode !== undefined) u += `&episode=${episode}`;
-      return u;
-    },
-    serializeExtra: (src) => src.audio || "",
-  },
-  {
     id: "netnaija",
     name: "Vesper",
     badge: "DIRECT MP4",
@@ -114,6 +98,22 @@ export const PROVIDERS: ProviderConfig[] = [
       return u;
     },
     serializeExtra: (src) => src.audio || "",
+  },
+  {
+    id: "vaplayer",
+    name: "Quantum",
+    badge: "GLOBAL MIRRORS",
+    colorClass: "cyan",
+    borderClass: "border-cyan-500/40",
+    bgClass: "bg-cyan-500/10",
+    textClass: "text-cyan-400",
+    dotBgClass: "bg-cyan-400",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
   },
   {
     id: "videasy",
@@ -241,15 +241,15 @@ export const PRIORITY_PROVIDER_ID = PROVIDERS[0].id;
  * use either form. Keep both when a provider has an alias.
  */
 export const CATEGORY_PRIORITY: string[] = [
-  "Quantum",
-  "Vaplayer",
-  "Hyperion",
-  "VidRock",
   "Aether",
   "HDGharTV",
   "GharTV",
+  "Hyperion",
+  "VidRock",
   "Vesper",
   "NetNaija",
+  "Quantum",
+  "Vaplayer",
   "Pulse",
   "Videasy",
   "Spectra",
