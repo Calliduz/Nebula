@@ -61,7 +61,6 @@ import { MovieDetailsSkeleton } from "./MovieDetailsSkeleton";
 
 // ─── Source Selection Modal (Reimagined) ─────────────────────────────────────
 
-
 type ProviderState = {
   sources: any[];
   loading: boolean;
@@ -308,7 +307,8 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     );
 
     // #1 provider in PROVIDERS array — always PROVIDERS[0] (currently Quantum/vaplayer)
-    const isQuantumReady = (scan[PRIORITY_PROVIDER_ID]?.sources.length ?? 0) > 0;
+    const isQuantumReady =
+      (scan[PRIORITY_PROVIDER_ID]?.sources.length ?? 0) > 0;
     const isQuantumLoading = scan[PRIORITY_PROVIDER_ID]?.loading ?? true;
 
     // If the priority provider (#1) is ready with sources, pick it IMMEDIATELY!

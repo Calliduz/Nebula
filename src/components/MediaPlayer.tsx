@@ -533,9 +533,7 @@ export const parseMirrorDetails = (sourceName: string) => {
     cleanSource.toLowerCase().startsWith("cinesrc") ||
     cleanSource.toLowerCase().startsWith("starlight")
   ) {
-    const rest = cleanSource
-      .replace(/^(cinesrc|starlight)[\s-]*/i, "")
-      .trim();
+    const rest = cleanSource.replace(/^(cinesrc|starlight)[\s-]*/i, "").trim();
     const subClean = cleanSubProviderName(rest);
     return {
       category: "Starlight",
@@ -760,8 +758,6 @@ export const serverSortOrder = [
   "atlas",
   "orion",
 ];
-
-
 
 export const getMirrorPriority = (sourceName: string) => {
   const { category, name } = parseMirrorDetails(sourceName);
@@ -1568,10 +1564,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         updatedMirrors = Object.entries(data)
           .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
           .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("hdghartv") ||
+            source:
+              name.toLowerCase().startsWith("hdghartv") ||
               name.toLowerCase().startsWith("ghartv")
-              ? name
-              : `HDGharTV (${name})`,
+                ? name
+                : `HDGharTV (${name})`,
             url: v.url,
             type: v.type || "hls",
             quality: (v as any).quality || "Auto",
@@ -7632,8 +7629,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     </div>
   );
 };
-
-
 
 type ProviderState = {
   sources: any[];

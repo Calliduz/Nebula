@@ -52,7 +52,9 @@ export async function getUserRegionInfo(): Promise<UserRegionInfo> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2500);
     try {
-      const res = await fetch("https://ipwho.is/", { signal: controller.signal });
+      const res = await fetch("https://ipwho.is/", {
+        signal: controller.signal,
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.country_code) {

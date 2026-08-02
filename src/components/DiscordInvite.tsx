@@ -10,7 +10,9 @@ export const DiscordInvite = () => {
   );
   const [isVisible, setIsVisible] = useState(false);
 
-  const dismissTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!dismissed) {

@@ -551,7 +551,8 @@ function MediaPlayerStub({ actions, state }: any) {
       ) ||
       (state.selectedMovie &&
       state.selectedMovie.id?.toString() === id.toString() &&
-      (state.selectedMovie.type === type || (!state.selectedMovie.type && type === "movie"))
+      (state.selectedMovie.type === type ||
+        (!state.selectedMovie.type && type === "movie"))
         ? state.selectedMovie
         : null)
     : null;
