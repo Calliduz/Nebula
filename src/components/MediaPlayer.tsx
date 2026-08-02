@@ -1521,6 +1521,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           fetchUrl = `${API}/api/kuro?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
+        } else if (category === "CineSrc" || category === "Starlight") {
+          fetchUrl = `${API}/api/cinesrc?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
+          if (season !== undefined) fetchUrl += `&season=${season}`;
+          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else {
           // VidLink
           fetchUrl = `${API}/api/stream?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&releaseYear=${movie.year || ""}&releaseDate=${movie.release_date || ""}${forceParam}`;
@@ -1654,6 +1658,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             url: v.url,
             type: v.type || "hls",
             quality: (v as any).quality || "Auto",
+          }));
+      } else if (category === "CineSrc" || category === "Starlight") {
+        updatedMirrors = Object.entries(data)
+          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
+          .map(([name, v]: any) => ({
+            source:
+              name.toLowerCase().startsWith("starlight") ||
+              name.toLowerCase().startsWith("cinesrc")
+                ? name
+                : `Starlight (${name})`,
+            url: v.url,
+            type: v.type || "hls",
+            quality: (v as any).quality || "1080p",
+            subtitles: (v as any).subtitles || [],
           }));
       } else {
         // VidLink
