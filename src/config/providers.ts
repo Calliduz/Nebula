@@ -126,6 +126,23 @@ export const PROVIDERS: ProviderConfig[] = [
     },
   },
   {
+    id: "cinesrc",
+    name: "CineSrc",
+    badge: "FAST HLS",
+    colorClass: "indigo",
+    borderClass: "border-indigo-500/40",
+    bgClass: "bg-indigo-500/10",
+    textClass: "text-indigo-400",
+    dotBgClass: "bg-indigo-400",
+    apiCategory: "CineSrc",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/cinesrc?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
     id: "videasy",
     name: "Pulse",
     badge: "WASM DECRYPT",
