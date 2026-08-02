@@ -172,8 +172,9 @@ const PlayerStyles = React.memo(() => (
 
 export const SOURCE_ALIASES: Record<string, string> = {
   Vaplayer: "Quantum",
-  CineSrc: "CineSrc",
-  cinesrc: "CineSrc",
+  CineSrc: "Starlight",
+  cinesrc: "Starlight",
+  Starlight: "Starlight",
   VidRock: "Hyperion",
   Vidrift: "Velocity",
   Videasy: "Pulse",
@@ -528,11 +529,16 @@ export const parseMirrorDetails = (sourceName: string) => {
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
-  if (cleanSource.toLowerCase().startsWith("cinesrc")) {
-    const rest = cleanSource.replace(/^cinesrc[\s-]*/i, "").trim();
+  if (
+    cleanSource.toLowerCase().startsWith("cinesrc") ||
+    cleanSource.toLowerCase().startsWith("starlight")
+  ) {
+    const rest = cleanSource
+      .replace(/^(cinesrc|starlight)[\s-]*/i, "")
+      .trim();
     const subClean = cleanSubProviderName(rest);
     return {
-      category: "CineSrc",
+      category: "Starlight",
       name: ((subClean || "Nebula") + suffix).toUpperCase(),
     };
   }
