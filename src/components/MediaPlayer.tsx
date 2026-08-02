@@ -533,7 +533,10 @@ export const parseMirrorDetails = (sourceName: string) => {
     cleanSource.toLowerCase().startsWith("cinesrc") ||
     cleanSource.toLowerCase().startsWith("starlight")
   ) {
-    const rest = cleanSource.replace(/^(cinesrc|starlight)[\s-]*/i, "").trim();
+    const rest = cleanSource
+      .replace(/^(cinesrc|starlight)[\s-]*/i, "")
+      .replace(/^\(|\)$/g, "")
+      .trim();
     const subClean = cleanSubProviderName(rest);
     return {
       category: "Starlight",
@@ -1469,6 +1472,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (rawName.includes("peachify") || rawName.includes("aurora"))
       return "Peachify";
     if (rawName.includes("kuro") || rawName.includes("zenith")) return "Kuro";
+    if (rawName.includes("cinesrc") || rawName.includes("starlight"))
+      return "Starlight";
 
     return "VidLink";
   }, []);
@@ -2690,6 +2695,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         setSubtitles((prev) => {
           return processSubtitles(fetchedSubs, prev);
         });
+        hasAutoSelectedSub.current = false;
+        setActiveSubtitle(-1);
       } catch (e) {
         console.error("Subtitle fetch error:", e);
         showToast("Subtitle search failed", "error");
@@ -2889,37 +2896,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
   }, [activeSubtitle, activeSubUrl, subtitleOffset, updateActiveCues]);
 
-  // ── Auto-select first subtitle or restore preferred language ──────────────
-  useEffect(() => {
-    if (subtitles.length > 0) {
-      // If we already have a valid manual or automatic selection, don't override it
-      if (activeSubtitle !== -1 && subtitles[activeSubtitle]) {
-        return;
-      }
-
-      if (preferredLanguageISO) {
-        const matchIdx = subtitles.findIndex(
-          (s) => s.lang === preferredLanguageISO,
-        );
-        if (matchIdx !== -1) {
-          setActiveSubtitle(matchIdx);
-          return;
-        }
-      }
-      if (activeSubtitle === -1 && !hasAutoSelectedSub.current) {
-        setActiveSubtitle(0);
-        hasAutoSelectedSub.current = true;
-      }
-    }
-  }, [subtitles, preferredLanguageISO, activeSubtitle]);
-
-  const getProgressKey = useCallback(() => {
-    if (movie.type === "tv" && season !== undefined && episode !== undefined) {
-      return `${movie.id}-S${season}E${episode}`;
-    }
-    return movie.id;
-  }, [movie.id, movie.type, season, episode]);
-
   const isSubFromSelectedSource = useCallback(
     (sub: any, activeM: any): boolean => {
       if (!sub || !sub.source || !activeM || !activeM.source) return false;
@@ -2949,6 +2925,54 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     },
     [],
   );
+
+  // ── Auto-select provider-paired subtitle or restore preferred language ────
+  useEffect(() => {
+    if (subtitles.length > 0) {
+      if (activeSubtitle === -1 || !hasAutoSelectedSub.current) {
+        const activeM = mirrorsRef.current[activeMirrorRef.current];
+        let targetIdx = -1;
+
+        if (activeM) {
+          // 1. Try English sub paired with active provider
+          targetIdx = subtitles.findIndex(
+            (s) =>
+              isSubFromSelectedSource(s, activeM) &&
+              ((s.lang || "").toLowerCase().startsWith("en") ||
+                s.languageName?.toLowerCase().includes("english")),
+          );
+
+          // 2. Try any sub paired with active provider
+          if (targetIdx === -1) {
+            targetIdx = subtitles.findIndex((s) =>
+              isSubFromSelectedSource(s, activeM),
+            );
+          }
+        }
+
+        // 3. Fallback to preferred language or first available track
+        if (targetIdx === -1 && preferredLanguageISO) {
+          targetIdx = subtitles.findIndex(
+            (s) => s.lang === preferredLanguageISO,
+          );
+        }
+
+        if (targetIdx === -1) {
+          targetIdx = 0;
+        }
+
+        setActiveSubtitle(targetIdx);
+        hasAutoSelectedSub.current = true;
+      }
+    }
+  }, [subtitles, preferredLanguageISO, activeSubtitle, isSubFromSelectedSource]);
+
+  const getProgressKey = useCallback(() => {
+    if (movie.type === "tv" && season !== undefined && episode !== undefined) {
+      return `${movie.id}-S${season}E${episode}`;
+    }
+    return movie.id;
+  }, [movie.id, movie.type, season, episode]);
 
   const processSubtitles = useCallback(
     (newSubs: any[], existingSubs: any[], activeM?: any) => {
@@ -7775,13 +7799,22 @@ export function InPlayerSourcePicker({
             const data = await res.json();
             const all = Object.entries(data)
               .filter(([, v]: any) => v && v.url)
-              .map(([name, v]: any) => ({
-                name: name.startsWith("Kuro") ? name : (v as any).name || name,
-                url: (v as any).url,
-                type: (v as any).type || "hls",
-                quality: (v as any).quality || "Auto",
-                audio: (v as any).audio || "",
-              }));
+              .map(([name, v]: any) => {
+                const displayName =
+                  name.toLowerCase().startsWith("starlight") ||
+                  name.toLowerCase().startsWith("cinesrc")
+                    ? name
+                    : `Starlight (${name})`;
+                return {
+                  name: p.id.startsWith("kuro")
+                    ? name
+                    : (v as any).name || (p.id === "cinesrc" ? displayName : name),
+                  url: (v as any).url,
+                  type: (v as any).type || "hls",
+                  quality: (v as any).quality || "Auto",
+                  audio: (v as any).audio || "",
+                };
+              });
 
             if (p.id === "kuro_sub") {
               const subSrcs = all.filter(
