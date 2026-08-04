@@ -176,7 +176,6 @@ export const SOURCE_ALIASES: Record<string, string> = {
   cinesrc: "Starlight",
   Starlight: "Starlight",
   VidRock: "Hyperion",
-  Vidrift: "Velocity",
   Videasy: "Pulse",
   VidLink: "Spectra",
   Vidnest: "Titan",
@@ -184,7 +183,6 @@ export const SOURCE_ALIASES: Record<string, string> = {
   "Kuro (Dub)": "Zenith (Dub)",
   Kuro: "Zenith",
   FilmU: "Orbital",
-  Peachify: "Aurora",
   HDGharTV: "Aether",
   GharTV: "Aether",
   Aether: "Aether",
@@ -428,12 +426,10 @@ export const getCategoryAlias = (category: string): string => {
     return "Aether";
   if (catLower.startsWith("netnaija") || catLower.startsWith("vesper"))
     return "Vesper";
-  if (catLower.startsWith("vidrift")) return "Velocity";
   if (catLower.startsWith("videasy")) return "Pulse";
   if (catLower.startsWith("vidlink")) return "Spectra";
   if (catLower.startsWith("vidnest")) return "Titan";
   if (catLower.startsWith("filmu")) return "Orbital";
-  if (catLower.startsWith("peachify")) return "Aurora";
   if (catLower.startsWith("kuro")) {
     if (catLower.includes("dub")) return "Zenith (Dub)";
     if (catLower.includes("sub")) return "Zenith (Sub)";
@@ -465,11 +461,9 @@ export const formatSubtitleSource = (rawSource?: string): string => {
   if (sLower.includes("vesper") || sLower.includes("netnaija")) return "Vesper";
   if (sLower.includes("vidnest")) return "Titan";
   if (sLower.includes("vaplayer")) return "Quantum";
-  if (sLower.includes("vidrift")) return "Velocity";
   if (sLower.includes("filmu")) return "Orbital";
   if (sLower.includes("vidlink")) return "Spectra";
   if (sLower.includes("videasy")) return "Pulse";
-  if (sLower.includes("peachify")) return "Aurora";
   if (sLower.includes("kuro")) return "Zenith";
   if (sLower.includes("vidvault")) return "VidVault";
 
@@ -592,27 +586,11 @@ export const parseMirrorDetails = (sourceName: string) => {
       name: ((subClean || "Stream") + suffix).toUpperCase(),
     };
   }
-  if (cleanSource.toLowerCase().startsWith("vidrift")) {
-    const rest = cleanSource.replace(/^Vidrift[\s-]*/i, "").trim();
-    const subClean = cleanSubProviderName(rest);
-    return {
-      category: "Velocity",
-      name: ((subClean || "Mirror") + suffix).toUpperCase(),
-    };
-  }
   if (cleanSource.toLowerCase().startsWith("filmu")) {
     const rest = cleanSource.replace(/^FilmU[\s-]*/i, "").trim();
     const subClean = cleanSubProviderName(rest);
     return {
       category: "Orbital",
-      name: ((subClean || "Mirror") + suffix).toUpperCase(),
-    };
-  }
-  if (cleanSource.toLowerCase().startsWith("peachify")) {
-    const rest = cleanSource.replace(/^Peachify[\s-]*/i, "").trim();
-    const subClean = cleanSubProviderName(rest);
-    return {
-      category: "Aurora",
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
     };
   }
@@ -688,7 +666,6 @@ export const serverSortOrder = [
   "titan",
   "vortex",
   "zenith",
-  "aurora",
   "breeze",
   "comet",
   "dawn",
@@ -1457,8 +1434,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       return "VidRock";
     if (rawName.includes("vaplayer") || rawName.includes("quantum"))
       return "Vaplayer";
-    if (rawName.includes("vidrift") || rawName.includes("velocity"))
-      return "Vidrift";
     if (rawName.includes("netnaija") || rawName.includes("vesper"))
       return "NetNaija";
     if (rawName.includes("videasy") || rawName.includes("pulse"))
@@ -1469,8 +1444,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       return "Vidnest";
     if (rawName.includes("filmu") || rawName.includes("orbital"))
       return "FilmU";
-    if (rawName.includes("peachify") || rawName.includes("aurora"))
-      return "Peachify";
     if (rawName.includes("kuro") || rawName.includes("zenith")) return "Kuro";
     if (rawName.includes("cinesrc") || rawName.includes("starlight"))
       return "Starlight";
@@ -1506,20 +1479,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-        } else if (category === "Vidrift") {
-          fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
-          if (season !== undefined) fetchUrl += `&season=${season}`;
-          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "HDGharTV") {
           fetchUrl = `${API}/api/hdghartv?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "NetNaija" || category === "Vesper") {
           fetchUrl = `${API}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}${forceParam}`;
-          if (season !== undefined) fetchUrl += `&season=${season}`;
-          if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-        } else if (category === "Peachify") {
-          fetchUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}${forceParam}`;
           if (season !== undefined) fetchUrl += `&season=${season}`;
           if (episode !== undefined) fetchUrl += `&episode=${episode}`;
         } else if (category === "Kuro") {
@@ -1616,17 +1581,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             type: v.type || "hls",
             quality: (v as any).quality || "Auto",
           }));
-      } else if (category === "Vidrift") {
-        updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
-          .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("vidrift")
-              ? name
-              : `Vidrift (${name})`,
-            url: v.url,
-            type: v.type || "hls",
-            quality: (v as any).quality || "Auto",
-          }));
       } else if (category === "NetNaija" || category === "Vesper") {
         updatedMirrors = Object.entries(data)
           .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
@@ -1641,17 +1595,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             quality: (v as any).quality || "Auto",
             audio: (v as any).audio || "",
             subtitles: v.subtitles || [],
-          }));
-      } else if (category === "Peachify") {
-        updatedMirrors = Object.entries(data)
-          .filter(([_, v]: any) => v && typeof v === "object" && Boolean(v.url))
-          .map(([name, v]: any) => ({
-            source: name.toLowerCase().startsWith("peachify")
-              ? name
-              : `Peachify (${name})`,
-            url: v.url,
-            type: v.type || "hls",
-            quality: (v as any).quality || "Auto",
           }));
       } else if (category === "Kuro") {
         updatedMirrors = Object.entries(data)
@@ -2217,16 +2160,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const isVaplayer = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("vaplayer"),
           );
-          const isVidrift = processedMirrors.some((m) =>
-            m.source.toLowerCase().startsWith("vidrift"),
-          );
           const isNetnaija = processedMirrors.some(
             (m) =>
               m.source.toLowerCase().startsWith("vesper") ||
               m.source.toLowerCase().startsWith("netnaija"),
-          );
-          const isPeachify = processedMirrors.some((m) =>
-            m.source.toLowerCase().startsWith("peachify"),
           );
           const isKuro = processedMirrors.some((m) =>
             m.source.toLowerCase().startsWith("kuro"),
@@ -2258,16 +2195,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               fetchUrl = `${API}/api/vaplayer?tmdbId=${movie.id}&type=${movie.type}`;
               if (season !== undefined) fetchUrl += `&season=${season}`;
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-            } else if (isVidrift) {
-              fetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}`;
-              if (season !== undefined) fetchUrl += `&season=${season}`;
-              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             } else if (isNetnaija) {
               fetchUrl = `${API}/api/netnaija?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}`;
-              if (season !== undefined) fetchUrl += `&season=${season}`;
-              if (episode !== undefined) fetchUrl += `&episode=${episode}`;
-            } else if (isPeachify) {
-              fetchUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}`;
               if (season !== undefined) fetchUrl += `&season=${season}`;
               if (episode !== undefined) fetchUrl += `&episode=${episode}`;
             } else if (isKuro) {
@@ -2345,17 +2274,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       type: v.type || "hls",
                       quality: (v as any).quality || "Auto",
                     }));
-                } else if (isVidrift) {
-                  updatedMirrors = Object.entries(data)
-                    .filter(([_, v]: any) => v && v.url)
-                    .map(([name, v]: any) => ({
-                      source: name.toLowerCase().startsWith("vidrift")
-                        ? name
-                        : `Vidrift (${name})`,
-                      url: v.url,
-                      type: v.type || "hls",
-                      quality: (v as any).quality || "Auto",
-                    }));
                 } else if (isNetnaija) {
                   updatedMirrors = Object.entries(data)
                     .filter(([_, v]: any) => v && v.url)
@@ -2369,18 +2287,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       type: v.type || "mp4",
                       quality: (v as any).quality || "Auto",
                       audio: (v as any).audio || "",
-                      subtitles: v.subtitles || [],
-                    }));
-                } else if (isPeachify) {
-                  updatedMirrors = Object.entries(data)
-                    .filter(([_, v]: any) => v && v.url)
-                    .map(([name, v]: any) => ({
-                      source: name.toLowerCase().startsWith("peachify")
-                        ? name
-                        : `Peachify (${name})`,
-                      url: v.url,
-                      type: v.type || "hls",
-                      quality: (v as any).quality || "Auto",
                       subtitles: v.subtitles || [],
                     }));
                 }
@@ -3993,35 +3899,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 ),
               );
 
-            // 7. Vidrift prefetch
-            let vidriftPrefetchUrl = `${API}/api/vidrift?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
-            fetch(vidriftPrefetchUrl)
-              .then((r) => r.json())
-              .then(() =>
-                console.log(
-                  `[PLAYER] Prefetched next episode from Vidrift (S${nextEp.season}E${nextEp.episode})`,
-                ),
-              )
-              .catch((err) =>
-                console.warn(
-                  `[PLAYER] Prefetch Vidrift failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
-                ),
-              );
 
-            // 8. Peachify prefetch
-            let peachifyPrefetchUrl = `${API}/api/peachify?tmdbId=${movie.id}&type=${movie.type}&season=${nextEp.season}&episode=${nextEp.episode}`;
-            fetch(peachifyPrefetchUrl)
-              .then((r) => r.json())
-              .then(() =>
-                console.log(
-                  `[PLAYER] Prefetched next episode from Peachify (S${nextEp.season}E${nextEp.episode})`,
-                ),
-              )
-              .catch((err) =>
-                console.warn(
-                  `[PLAYER] Prefetch Peachify failed for S${nextEp.season}E${nextEp.episode}: ${err.message || err}`,
-                ),
-              );
 
             // 9. Subtitles prefetch
             let subPrefetchUrl = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&season=${nextEp.season}&episode=${nextEp.episode}`;
@@ -7950,7 +7828,7 @@ export function InPlayerSourcePicker({
                     s = s.replace(/^[-_\s]*\d*[-_\s]*/, "");
                     s = s
                       .replace(
-                        /^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Vidrift|Peachify|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i,
+                        /^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i,
                         "",
                       )
                       .trim();

@@ -230,40 +230,6 @@ export const PROVIDERS: ProviderConfig[] = [
       return clean.toUpperCase() || "";
     },
   },
-  {
-    id: "vidrift",
-    name: "Velocity",
-    badge: "HLS STREAM",
-    colorClass: "fuchsia",
-    borderClass: "border-fuchsia-500/40",
-    bgClass: "bg-fuchsia-500/10",
-    textClass: "text-fuchsia-400",
-    dotBgClass: "bg-fuchsia-400",
-    apiCategory: "Vidrift",
-    buildUrl: ({ tmdbId, type, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/vidrift?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
-      if (season !== undefined) u += `&season=${season}`;
-      if (episode !== undefined) u += `&episode=${episode}`;
-      return u;
-    },
-  },
-  {
-    id: "peachify",
-    name: "Aurora",
-    badge: "HLS",
-    colorClass: "rose",
-    borderClass: "border-rose-500/40",
-    bgClass: "bg-rose-500/10",
-    textClass: "text-rose-400",
-    dotBgClass: "bg-rose-400",
-    apiCategory: "Peachify",
-    buildUrl: ({ tmdbId, type, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/peachify?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
-      if (season !== undefined) u += `&season=${season}`;
-      if (episode !== undefined) u += `&episode=${episode}`;
-      return u;
-    },
-  },
 ];
 
 /**
@@ -307,8 +273,4 @@ export const CATEGORY_PRIORITY: string[] = [
   "FilmU",
   "Starlight",
   "Cinesrc",
-  "Velocity",
-  "Vidrift",
-  "Aurora",
-  "Peachify",
 ];
