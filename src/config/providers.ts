@@ -55,24 +55,6 @@ export interface ProviderConfig {
 
 export const PROVIDERS: ProviderConfig[] = [
   {
-    id: "hdghartv",
-    name: "Aether",
-    badge: "MULTI-AUDIO",
-    colorClass: "emerald",
-    borderClass: "border-emerald-500/40",
-    bgClass: "bg-emerald-500/10",
-    textClass: "text-emerald-400",
-    dotBgClass: "bg-emerald-400",
-    apiCategory: "HDGharTV",
-    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
-      if (season !== undefined) u += `&season=${season}`;
-      if (episode !== undefined) u += `&episode=${episode}`;
-      return u;
-    },
-    serializeExtra: (src) => src.audio || "",
-  },
-  {
     id: "vidrock",
     name: "Hyperion",
     badge: "DEFAULT",
@@ -126,30 +108,22 @@ export const PROVIDERS: ProviderConfig[] = [
     },
   },
   {
-    id: "cinesrc",
-    name: "Starlight",
-    badge: "FAST HLS",
-    colorClass: "indigo",
-    borderClass: "border-indigo-500/40",
-    bgClass: "bg-indigo-500/10",
-    textClass: "text-indigo-400",
-    dotBgClass: "bg-indigo-400",
-    apiCategory: "Starlight",
-    buildUrl: ({ tmdbId, type, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/cinesrc?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+    id: "hdghartv",
+    name: "Aether",
+    badge: "MULTI-AUDIO",
+    colorClass: "emerald",
+    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-500/10",
+    textClass: "text-emerald-400",
+    dotBgClass: "bg-emerald-400",
+    apiCategory: "HDGharTV",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
-    serializeExtra: (src) => {
-      if (!src) return "";
-      const raw = typeof src === "string" ? src : src.source || src.name || "";
-      const clean = raw
-        .replace(/^cinesrc-?/i, "")
-        .replace(/^starlight-?/i, "")
-        .trim();
-      return clean.toUpperCase() || "";
-    },
+    serializeExtra: (src) => src.audio || "",
   },
   {
     id: "videasy",
@@ -231,6 +205,32 @@ export const PROVIDERS: ProviderConfig[] = [
     },
   },
   {
+    id: "cinesrc",
+    name: "Starlight",
+    badge: "FAST HLS",
+    colorClass: "indigo",
+    borderClass: "border-indigo-500/40",
+    bgClass: "bg-indigo-500/10",
+    textClass: "text-indigo-400",
+    dotBgClass: "bg-indigo-400",
+    apiCategory: "Starlight",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/cinesrc?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+    serializeExtra: (src) => {
+      if (!src) return "";
+      const raw = typeof src === "string" ? src : src.source || src.name || "";
+      const clean = raw
+        .replace(/^cinesrc-?/i, "")
+        .replace(/^starlight-?/i, "")
+        .trim();
+      return clean.toUpperCase() || "";
+    },
+  },
+  {
     id: "vidrift",
     name: "Velocity",
     badge: "HLS STREAM",
@@ -282,15 +282,15 @@ export const PRIORITY_PROVIDER_ID = PROVIDERS[0].id;
  * use either form. Keep both when a provider has an alias.
  */
 export const CATEGORY_PRIORITY: string[] = [
-  "Aether",
-  "HDGharTV",
-  "GharTV",
   "Hyperion",
   "VidRock",
   "Vesper",
   "NetNaija",
   "Quantum",
   "Vaplayer",
+  "Aether",
+  "HDGharTV",
+  "GharTV",
   "Pulse",
   "Videasy",
   "Spectra",
@@ -305,8 +305,10 @@ export const CATEGORY_PRIORITY: string[] = [
   "Kuro",
   "Orbital",
   "FilmU",
-  "Aurora",
-  "Peachify",
+  "Starlight",
+  "Cinesrc",
   "Velocity",
   "Vidrift",
+  "Aurora",
+  "Peachify",
 ];
