@@ -2929,7 +2929,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   // ── Auto-select provider-paired subtitle or restore preferred language ────
   useEffect(() => {
     if (subtitles.length > 0) {
-      if (activeSubtitle === -1 || !hasAutoSelectedSub.current) {
+      if (!hasAutoSelectedSub.current) {
         const activeM = mirrorsRef.current[activeMirrorRef.current];
         let targetIdx = -1;
 
@@ -2965,7 +2965,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         hasAutoSelectedSub.current = true;
       }
     }
-  }, [subtitles, preferredLanguageISO, activeSubtitle, isSubFromSelectedSource]);
+  }, [subtitles, preferredLanguageISO, isSubFromSelectedSource]);
 
   const getProgressKey = useCallback(() => {
     if (movie.type === "tv" && season !== undefined && episode !== undefined) {

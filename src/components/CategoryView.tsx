@@ -141,14 +141,30 @@ export const CategoryView = React.memo<CategoryViewProps>(
     }, [history]);
 
     const myListFilteredMovies = React.useMemo(() => {
-      if (!allMovies || !myList) return [];
-      return allMovies.filter((m) =>
-        myListSet.has(`${m.type || "movie"}_${m.id}`),
-      );
-    }, [allMovies, myListSet]);
+      if (!myList) return [];
+      return myList
+        .map((item) => {
+          const id = typeof item === "object" && item !== null ? item.id.toString() : String(item);
+          const type = typeof item === "object" && item !== null ? item.type || "movie" : "movie";
+          const m = allMoviesMap.get(`${type}_${id}`) || allMoviesMap.get(id);
+          if (m) return m;
+          if (typeof item === "object" && item !== null && (item.title || item.name)) {
+            return {
+              id,
+              type,
+              title: item.title || item.name,
+              poster_path: item.poster_path || item.poster || null,
+              backdrop_path: item.backdrop_path || null,
+              ...item,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+    }, [myList, allMoviesMap]);
 
     const historyFilteredMovies = React.useMemo(() => {
-      if (!allMovies || !history || history.length === 0) return [];
+      if (!history || history.length === 0) return [];
       const progressMap = userProgress;
 
       return history
@@ -171,7 +187,18 @@ export const CategoryView = React.memo<CategoryViewProps>(
           }
 
           const m =
-            allMoviesMap.get(`${type}_${rawId}`) || allMoviesMap.get(rawId);
+            allMoviesMap.get(`${type}_${rawId}`) ||
+            allMoviesMap.get(rawId) ||
+            (typeof item === "object" && item !== null && (item.title || item.name)
+              ? {
+                  id: rawId,
+                  type,
+                  title: item.title || item.name,
+                  poster_path: item.poster_path || item.poster || null,
+                  backdrop_path: item.backdrop_path || null,
+                  ...item,
+                }
+              : null);
           if (!m) return null;
 
           const progKey = Object.keys(progressMap).find((k) =>
@@ -180,7 +207,7 @@ export const CategoryView = React.memo<CategoryViewProps>(
           return { ...m, progress: progKey ? progressMap[progKey] : null };
         })
         .filter(Boolean);
-    }, [allMovies, history, allMoviesMap, userProgress]);
+    }, [history, allMoviesMap, userProgress]);
 
     // Helper to render grid with ads every 20 items
     const renderGridWithAds = () => {

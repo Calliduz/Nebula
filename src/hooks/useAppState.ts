@@ -990,14 +990,14 @@ export function useAppState() {
   );
 
   const syncUserRows = useCallback(async () => {
-    let allMovies = allMoviesRef.current;
+    let currentAllMovies = allMoviesRef.current;
     const history = historyRef.current;
     const myList = myListRef.current;
     const tvDetailsCache = tvDetailsCacheRef.current;
     const featuredMovies = featuredMoviesRef.current;
     const rows = rowsRef.current;
 
-    if (allMovies.length === 0) return;
+    if (currentAllMovies.length === 0) return;
     if (syncInProgressRef.current) return;
     syncInProgressRef.current = true;
 
@@ -1031,12 +1031,262 @@ export function useAppState() {
       },
     );
 
-    // First pass: Find missing media
+    // Helper to rebuild user rows synchronously from current pool
+    const updateRowsImmediate = (
+      pool: NebulaMovie[],
+      recommendationRows: any[] = [],
+    ) => {
+      const continueWatchingItems: any[] = [];
+      for (const [baseId, { key, val }] of sortedProgressEntries) {
+        const type = key.includes("-") ? "tv" : "movie";
+        const movie = pool.find(
+          (m) =>
+            m &&
+            m.id &&
+            m.id.toString() === baseId &&
+            (m.type || "movie") === type,
+        );
+        if (movie) {
+          const isMovie = type === "movie";
+          if (isMovie) {
+            const isWatched =
+              typeof val === "object" && val !== null && val.watched;
+            if (isWatched) continue;
+          } else {
+            const details = tvDetailsCache[baseId];
+            if (details) {
+              const lastEp = getLastEpisodeDetails(details);
+              if (lastEp) {
+                const lastEpKey = `${baseId}-S${lastEp.season_number}E${lastEp.episode_number}`;
+                const lastEpProg = progressData[lastEpKey];
+                const isLastWatched =
+                  lastEpProg &&
+                  (lastEpProg.watched ||
+                    (lastEpProg.duration > 0 &&
+                      (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
+                if (isLastWatched) continue;
+              }
+            }
+          }
+          continueWatchingItems.push({
+            ...movie,
+            progressKey: key,
+            progress: val,
+          });
+        }
+      }
+
+      const myListItems = pool
+        .filter(
+          (m) =>
+            m &&
+            m.id &&
+            myList.some((item) => {
+              const id =
+                typeof item === "object" && item !== null ? item.id : item;
+              const type =
+                typeof item === "object" && item !== null ? item.type : "movie";
+              return (
+                id.toString() === m.id.toString() && type === (m.type || "movie")
+              );
+            }),
+        )
+        .slice(0, 20);
+
+      const watchItAgainItems: any[] = [];
+      for (const item of history) {
+        const rid = historyRawId(item);
+        const rtype = historyType(item);
+        const movie = pool.find(
+          (m) =>
+            m && m.id && m.id.toString() === rid && (m.type || "movie") === rtype,
+        );
+        if (movie) {
+          if (isWatchItAgainItem(movie, progressData, tvDetailsCache)) {
+            const progKey = Object.keys(progressData).find((k) =>
+              k.startsWith(rid),
+            );
+            watchItAgainItems.push({
+              ...movie,
+              progress: progKey ? progressData[progKey] : null,
+            });
+          }
+        }
+      }
+
+      const globalShown = new Set<string>();
+      featuredMovies.forEach((m) => {
+        if (m && m.id) globalShown.add(m.id.toString());
+      });
+
+      // Genre preference rows
+      const genreCounts: Record<string, number> = {};
+      [...history, ...myList].forEach((item) => {
+        const id = typeof item === "object" ? item.id : item;
+        const type = typeof item === "object" ? item.type : "movie";
+        const m = pool.find(
+          (mItem) =>
+            mItem &&
+            mItem.id &&
+            mItem.id.toString() === id.toString() &&
+            (mItem.type || "movie") === type,
+        );
+        if (m?.genre) {
+          m.genre.split(", ").forEach((g) => {
+            genreCounts[g] = (genreCounts[g] || 0) + 1;
+          });
+        }
+      });
+      const topGenres = Object.entries(genreCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map((e) => e[0])
+        .slice(0, 2);
+
+      const genreRows = topGenres
+        .map((g) => {
+          const gId = Object.entries(GENRE_MAP).find(
+            ([_, name]) => name === g,
+          )?.[0];
+          const genreItems: any[] = [];
+          const rawGenreItems = pool.filter((m) => m && m.genre?.includes(g));
+          for (const m of rawGenreItems) {
+            if (m && m.id && !globalShown.has(m.id.toString())) {
+              genreItems.push(m);
+              globalShown.add(m.id.toString());
+            }
+            if (genreItems.length >= 20) break;
+          }
+          if (genreItems.length < 10) {
+            const extras = rawGenreItems
+              .filter((m) => !genreItems.some((u) => u.id === m.id))
+              .slice(0, 20 - genreItems.length);
+            extras.forEach((m) => {
+              if (m && m.id) globalShown.add(m.id.toString());
+            });
+            genreItems.push(...extras);
+          }
+
+          return {
+            title: `Because you like ${g}`,
+            items: genreItems,
+            hasLoaded: true,
+            isLoading: false,
+            config: gId
+              ? {
+                  mediaType: "movie" as const,
+                  discoverParams: {
+                    with_genres: gId,
+                    sort_by: "popularity.desc",
+                  },
+                  filterFn: (m: any) => m.genre?.includes(g),
+                }
+              : undefined,
+          };
+        })
+        .filter((r) => r.items.length > 0);
+
+      setRows((prev) => {
+        if (prev.length === 0) return prev;
+        const staticRowsMap = new Map<string, any>();
+        prev.forEach((r) => {
+          const isPersonalized =
+            r.title === "Continue Watching" ||
+            r.title === "My List" ||
+            r.title === "Watch It Again" ||
+            r.title.startsWith("Because you watched ") ||
+            r.title.startsWith("More Like ") ||
+            r.title.startsWith("Because you like ");
+          if (!isPersonalized) {
+            staticRowsMap.set(r.title, r);
+          }
+        });
+
+        const rebuiltRows: any[] = [];
+
+        // 1. Continue Watching
+        if (continueWatchingItems.length > 0) {
+          rebuiltRows.push({
+            title: "Continue Watching",
+            items: continueWatchingItems,
+            hasLoaded: true,
+            isLoading: false,
+          });
+        }
+
+        // 2. Trending Now
+        const trendingRow = staticRowsMap.get("Trending Now");
+        if (trendingRow) rebuiltRows.push(trendingRow);
+
+        // 3. My List
+        if (myListItems.length > 0) {
+          rebuiltRows.push({
+            title: "My List",
+            items: myListItems,
+            hasLoaded: true,
+            isLoading: false,
+          });
+        }
+
+        // 4. Recommendation rows
+        rebuiltRows.push(...recommendationRows);
+
+        // 5. Watch It Again
+        if (watchItAgainItems.length > 0) {
+          rebuiltRows.push({
+            title: "Watch It Again",
+            items: watchItAgainItems.slice(0, 10),
+            hasLoaded: true,
+            isLoading: false,
+          });
+        }
+
+        // 6. Trending TV Shows
+        const dramaRow = staticRowsMap.get("Trending TV Shows");
+        if (dramaRow) rebuiltRows.push(dramaRow);
+
+        // 7. Genre preference rows
+        rebuiltRows.push(...genreRows);
+
+        // 8. Other static rows
+        prev.forEach((r) => {
+          const isPersonalized =
+            r.title === "Continue Watching" ||
+            r.title === "My List" ||
+            r.title === "Watch It Again" ||
+            r.title.startsWith("Because you watched ") ||
+            r.title.startsWith("More Like ") ||
+            r.title.startsWith("Because you like ");
+          if (
+            !isPersonalized &&
+            r.title !== "Trending Now" &&
+            r.title !== "Trending TV Shows"
+          ) {
+            rebuiltRows.push(r);
+          }
+        });
+
+        try {
+          const cached = localStorage.getItem("nebula-feed-cache");
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            parsed.rows = rebuiltRows;
+            localStorage.setItem("nebula-feed-cache", JSON.stringify(parsed));
+          }
+        } catch (e) {}
+
+        return rebuiltRows;
+      });
+    };
+
+    // Step A: Render user rows immediately from local pool (0ms delay!)
+    updateRowsImmediate(currentAllMovies);
+
+    // Step B: Find missing media and hydrate asynchronously
     const missingMedia: { id: string; type: "movie" | "tv" }[] = [];
 
     for (const [baseId, { key }] of sortedProgressEntries) {
       const type = key.includes("-") ? "tv" : "movie";
-      const exists = allMovies.some(
+      const exists = currentAllMovies.some(
         (m) =>
           m &&
           m.id &&
@@ -1052,7 +1302,7 @@ export function useAppState() {
       const id = typeof item === "object" && item !== null ? item.id : item;
       const type =
         typeof item === "object" && item !== null ? item.type : "movie";
-      const exists = allMovies.some(
+      const exists = currentAllMovies.some(
         (m) =>
           m &&
           m.id &&
@@ -1067,7 +1317,7 @@ export function useAppState() {
     for (const item of history) {
       const rid = historyRawId(item);
       const rtype = historyType(item);
-      const exists = allMovies.some(
+      const exists = currentAllMovies.some(
         (m) =>
           m && m.id && m.id.toString() === rid && (m.type || "movie") === rtype,
       );
@@ -1076,14 +1326,12 @@ export function useAppState() {
       }
     }
 
-    // Fetch missing movies if any — but skip IDs we already tried
     if (missingMedia.length > 0) {
       const uniqueMissing = missingMedia.filter(
         (val, index, self) =>
           self.findIndex((t) => t.id === val.id && t.type === val.type) ===
             index && !fetchedMissingIdsRef.current.has(`${val.type}_${val.id}`),
       );
-      // Mark these as attempted so we don't re-fetch on next cycle
       uniqueMissing.forEach((m) =>
         fetchedMissingIdsRef.current.add(`${m.type}_${m.id}`),
       );
@@ -1101,7 +1349,8 @@ export function useAppState() {
           const valid = fetched.filter(Boolean) as any[];
           if (valid.length > 0) {
             updateGlobalPool(valid);
-            allMovies = [...allMovies, ...valid];
+            currentAllMovies = [...currentAllMovies, ...valid];
+            updateRowsImmediate(currentAllMovies);
           }
         } catch (err) {
           console.error("Failed to fetch missing items in syncUserRows", err);
@@ -1109,334 +1358,78 @@ export function useAppState() {
       }
     }
 
-    // Second pass: Build lists using fully populated allMovies
-    const continueWatchingItems: any[] = [];
-    for (const [baseId, { key, val }] of sortedProgressEntries) {
-      const type = key.includes("-") ? "tv" : "movie";
-      const movie = allMovies.find(
-        (m) =>
-          m &&
-          m.id &&
-          m.id.toString() === baseId &&
-          (m.type || "movie") === type,
-      );
-      if (movie) {
-        const isMovie = type === "movie";
-        if (isMovie) {
-          const isWatched =
-            typeof val === "object" && val !== null && val.watched;
-          if (isWatched) continue;
-        } else {
-          const details = tvDetailsCache[baseId];
-          if (details) {
-            const lastEp = getLastEpisodeDetails(details);
-            if (lastEp) {
-              const lastEpKey = `${baseId}-S${lastEp.season_number}E${lastEp.episode_number}`;
-              const lastEpProg = progressData[lastEpKey];
-              const isLastWatched =
-                lastEpProg &&
-                (lastEpProg.watched ||
-                  (lastEpProg.duration > 0 &&
-                    (lastEpProg.time / lastEpProg.duration) * 100 >= 90));
-              if (isLastWatched) continue;
-            }
-          }
-        }
-        continueWatchingItems.push({
-          ...movie,
-          progressKey: key,
-          progress: val,
-        });
-      }
-    }
-
-    const myListItems = allMovies
-      .filter(
-        (m) =>
-          m &&
-          m.id &&
-          myList.some((item) => {
-            const id =
-              typeof item === "object" && item !== null ? item.id : item;
-            const type =
-              typeof item === "object" && item !== null ? item.type : "movie";
-            return (
-              id.toString() === m.id.toString() && type === (m.type || "movie")
-            );
-          }),
-      )
-      .slice(0, 20);
-
-    const watchItAgainItems: any[] = [];
-    for (const item of history) {
-      const rid = historyRawId(item);
-      const rtype = historyType(item);
-      const movie = allMovies.find(
-        (m) =>
-          m && m.id && m.id.toString() === rid && (m.type || "movie") === rtype,
-      );
-      if (movie) {
-        if (isWatchItAgainItem(movie, progressData, tvDetailsCache)) {
-          const progKey = Object.keys(progressData).find((k) =>
-            k.startsWith(rid),
-          );
-          watchItAgainItems.push({
-            ...movie,
-            progress: progKey ? progressData[progKey] : null,
-          });
-        }
-      }
-    }
-    // Build globalShown from featured and static rows in rows state
-    const globalShown = new Set<string>();
-    featuredMovies.forEach((m) => {
-      if (m && m.id) globalShown.add(m.id.toString());
-    });
-    rows.forEach((r) => {
-      const isPersonalized =
-        r.title === "Continue Watching" ||
-        r.title === "My List" ||
-        r.title === "Watch It Again" ||
-        r.title.startsWith("Because you watched ") ||
-        r.title.startsWith("More Like ") ||
-        r.title.startsWith("Because you like ");
-      if (!isPersonalized) {
-        r.items.forEach((m) => {
-          if (m && m.id) globalShown.add(m.id.toString());
-        });
-      }
-    });
-
-    // 4. Recommendation rows (up to 5 history items)
-    const recommendationRows: any[] = [];
-    const historyItems = [...history].reverse().slice(0, 5);
-    const recsPromises = historyItems.map(async (hist, histIdx) => {
-      const histRawId = historyRawId(hist);
-      const histItemType = historyType(hist);
-      let movie = allMovies.find(
-        (m) => m.id.toString() === histRawId && m.type === histItemType,
-      );
-      if (!movie) {
-        try {
-          movie = (await getMediaBasicInfo(
-            histRawId,
-            histItemType as "tv" | "movie",
-          )) as any;
-        } catch {}
-      }
-      if (movie) {
-        try {
-          const recs = await getRecommendations(
-            histRawId,
-            movie.type || "movie",
-          ).catch(() => []);
-          return { movie, recs, histIdx, histRawId };
-        } catch {}
-      }
-      return null;
-    });
-    const resolvedRecs = (await Promise.all(recsPromises)).filter(Boolean);
-
-    for (const item of resolvedRecs) {
-      if (!item) continue;
-      const { movie, recs, histIdx, histRawId } = item;
-      const rotatedRecs = rotateItems(recs, feedSeed);
-      const filtered = rotatedRecs
-        .filter((m) => m && m.id && !globalShown.has(m.id.toString()))
-        .slice(0, 20);
-      if (filtered.length > 5) {
-        filtered.forEach((m) => globalShown.add(m.id.toString()));
-        const label =
-          histIdx === 0
-            ? `Because you watched ${movie.title}`
-            : `More Like ${movie.title}`;
-        recommendationRows.push({
-          title: label,
-          items: filtered,
-          hasLoaded: true,
-          isLoading: false,
-          config: {
-            mediaType: movie.type || "movie",
-            type: "recommendations",
-            targetId: histRawId,
-            discoverParams: {},
-            filterFn: (m: any) => m.type === (movie?.type || "movie"),
-          },
-        });
-      }
-    }
-
-    // 5. Genre preference rows
-    const genreCounts: Record<string, number> = {};
-    [...history, ...myList].forEach((item) => {
-      const id = typeof item === "object" ? item.id : item;
-      const type = typeof item === "object" ? item.type : "movie";
-      const m = allMovies.find(
-        (mItem) => mItem.id.toString() === id.toString() && mItem.type === type,
-      );
-      if (m?.genre) {
-        m.genre.split(", ").forEach((g) => {
-          genreCounts[g] = (genreCounts[g] || 0) + 1;
-        });
-      }
-    });
-    const topGenres = Object.entries(genreCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map((e) => e[0])
-      .slice(0, 2);
-
-    const genreRows = topGenres
-      .map((g) => {
-        const gId = Object.entries(GENRE_MAP).find(
-          ([_, name]) => name === g,
-        )?.[0];
-        const genreItems: any[] = [];
-        const rawGenreItems = allMovies.filter((m) => m.genre?.includes(g));
-        for (const m of rawGenreItems) {
-          if (m && m.id && !globalShown.has(m.id.toString())) {
-            genreItems.push(m);
-            globalShown.add(m.id.toString());
-          }
-          if (genreItems.length >= 20) break;
-        }
-        if (genreItems.length < 10) {
-          const extras = rawGenreItems
-            .filter((m) => !genreItems.some((u) => u.id === m.id))
-            .slice(0, 20 - genreItems.length);
-          extras.forEach((m) => {
-            if (m && m.id) globalShown.add(m.id.toString());
-          });
-          genreItems.push(...extras);
-        }
-        const existingGenreRow = rows.find(
-          (r) => r.title === `Because you like ${g}`,
-        );
-        const hasLoaded = existingGenreRow ? existingGenreRow.hasLoaded : false;
-        const isLoading = existingGenreRow ? existingGenreRow.isLoading : false;
-
-        return {
-          title: `Because you like ${g}`,
-          items: genreItems,
-          hasLoaded,
-          isLoading,
-          config: gId
-            ? {
-                mediaType: "movie" as const,
-                discoverParams: {
-                  with_genres: gId,
-                  sort_by: "popularity.desc",
-                },
-                filterFn: (m: any) => m.genre.includes(g),
-              }
-            : undefined,
-        };
-      })
-      .filter((r) => r.items.length > 0);
-
-    // Save update to nebula-feed-cache timestamp (reset to 0 to trigger fresh load next mount)
-    try {
-      const cached = localStorage.getItem("nebula-feed-cache");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        parsed.timestamp = 0;
-        localStorage.setItem("nebula-feed-cache", JSON.stringify(parsed));
-      }
-    } catch (e) {}
-
     syncInProgressRef.current = false;
 
-    setRows((prev) => {
-      if (prev.length === 0) return prev;
-      const staticRowsMap = new Map<string, any>();
-      prev.forEach((r) => {
-        const isPersonalized =
-          r.title === "Continue Watching" ||
-          r.title === "My List" ||
-          r.title === "Watch It Again" ||
-          r.title.startsWith("Because you watched ") ||
-          r.title.startsWith("More Like ") ||
-          r.title.startsWith("Because you like ");
-        if (!isPersonalized) {
-          staticRowsMap.set(r.title, r);
+    // Step C: Fetch recommendations asynchronously in background without blocking user rows
+    const historyItems = [...history].reverse().slice(0, 5);
+    if (historyItems.length > 0) {
+      const recsPromises = historyItems.map(async (hist, histIdx) => {
+        const histRawId = historyRawId(hist);
+        const histItemType = historyType(hist);
+        let movie = currentAllMovies.find(
+          (m) => m.id.toString() === histRawId && m.type === histItemType,
+        );
+        if (!movie) {
+          try {
+            movie = (await getMediaBasicInfo(
+              histRawId,
+              histItemType as "tv" | "movie",
+            )) as any;
+          } catch {}
         }
+        if (movie) {
+          try {
+            const recs = await getRecommendations(
+              histRawId,
+              movie.type || "movie",
+            ).catch(() => []);
+            return { movie, recs, histIdx, histRawId };
+          } catch {}
+        }
+        return null;
       });
 
-      const rebuiltRows: any[] = [];
-
-      // 1. Continue Watching
-      if (continueWatchingItems.length > 0) {
-        rebuiltRows.push({
-          title: "Continue Watching",
-          items: continueWatchingItems,
-          hasLoaded: true,
-          isLoading: false,
-        });
-      }
-
-      // 2. Trending Now
-      const trendingRow = staticRowsMap.get("Trending Now");
-      if (trendingRow) rebuiltRows.push(trendingRow);
-
-      // 3. My List
-      if (myListItems.length > 0) {
-        rebuiltRows.push({
-          title: "My List",
-          items: myListItems,
-          hasLoaded: true,
-          isLoading: false,
-        });
-      }
-
-      // 4. Recommendation Rows
-      rebuiltRows.push(...recommendationRows);
-
-      // 5. Watch It Again
-      if (watchItAgainItems.length > 0) {
-        rebuiltRows.push({
-          title: "Watch It Again",
-          items: watchItAgainItems.slice(0, 10),
-          hasLoaded: true,
-          isLoading: false,
-        });
-      }
-
-      // 6. Trending TV Shows
-      const dramaRow = staticRowsMap.get("Trending TV Shows");
-      if (dramaRow) rebuiltRows.push(dramaRow);
-
-      // 7. Because you like [Genre]
-      rebuiltRows.push(...genreRows);
-
-      // 8. Other static rows in original order
-      prev.forEach((r) => {
-        const isPersonalized =
-          r.title === "Continue Watching" ||
-          r.title === "My List" ||
-          r.title === "Watch It Again" ||
-          r.title.startsWith("Because you watched ") ||
-          r.title.startsWith("More Like ") ||
-          r.title.startsWith("Because you like ");
-        if (
-          !isPersonalized &&
-          r.title !== "Trending Now" &&
-          r.title !== "Trending TV Shows"
-        ) {
-          rebuiltRows.push(r);
-        }
-      });
-
-      // Save updated rebuiltRows back to the cache
-      try {
-        const cached = localStorage.getItem("nebula-feed-cache");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          parsed.rows = rebuiltRows;
-          localStorage.setItem("nebula-feed-cache", JSON.stringify(parsed));
-        }
-      } catch (e) {}
-
-      return rebuiltRows;
-    });
+      Promise.all(recsPromises)
+        .then((resolvedRecs) => {
+          const validRecs = resolvedRecs.filter(Boolean);
+          if (validRecs.length > 0) {
+            const recRows: any[] = [];
+            const globalShown = new Set<string>();
+            for (const item of validRecs) {
+              if (!item) continue;
+              const { movie, recs, histIdx, histRawId } = item;
+              const rotatedRecs = rotateItems(recs, feedSeed);
+              const filtered = rotatedRecs
+                .filter((m) => m && m.id && !globalShown.has(m.id.toString()))
+                .slice(0, 20);
+              if (filtered.length > 5) {
+                filtered.forEach((m) => globalShown.add(m.id.toString()));
+                const label =
+                  histIdx === 0
+                    ? `Because you watched ${movie.title}`
+                    : `More Like ${movie.title}`;
+                recRows.push({
+                  title: label,
+                  items: filtered,
+                  hasLoaded: true,
+                  isLoading: false,
+                  config: {
+                    mediaType: movie.type || "movie",
+                    type: "recommendations",
+                    targetId: histRawId,
+                    discoverParams: {},
+                    filterFn: (m: any) => m.type === (movie?.type || "movie"),
+                  },
+                });
+              }
+            }
+            if (recRows.length > 0) {
+              updateRowsImmediate(currentAllMovies, recRows);
+            }
+          }
+        })
+        .catch(() => {});
+    }
   }, [updateGlobalPool]);
 
   const fetchInitialData = async (overrideSeed?: number) => {
