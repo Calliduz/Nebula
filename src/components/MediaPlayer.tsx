@@ -1963,60 +1963,82 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     frag0LoadRetries.current = 0;
   }, [streamUrl]);
 
-  // ── Auto Fullscreen & Landscape ───────────────────────────────────────────
+  // ── Fullscreen & Orientation Lock Management ───────────────────────────────
   useEffect(() => {
-    const handleAutoFullscreen = async () => {
-      // Only trigger auto-fullscreen/orientation for mobile devices
-      const isMobile =
-        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
-        window.innerWidth < 768;
-      if (!isMobile) return;
+    const handleFullscreenChange = async () => {
+      const isFs = Boolean(
+        document.fullscreenElement ||
+          (document as any).webkitFullscreenElement ||
+          (document as any).mozFullScreenElement ||
+          (document as any).msFullscreenElement,
+      );
 
-      try {
-        if (containerRef.current) {
-          // Standard Fullscreen API
-          if (containerRef.current.requestFullscreen) {
-            await containerRef.current.requestFullscreen();
-          } else if ((containerRef.current as any).webkitRequestFullscreen) {
-            await (containerRef.current as any).webkitRequestFullscreen();
-          } else if ((containerRef.current as any).mozRequestFullScreen) {
-            await (containerRef.current as any).mozRequestFullScreen();
-          } else if ((containerRef.current as any).msRequestFullscreen) {
-            await (containerRef.current as any).msRequestFullscreen();
-          }
-        }
-
-        // Screen Orientation API (Mobile)
-        // Note: Orientation lock usually requires being in fullscreen first
+      if (isFs) {
+        // Lock orientation to landscape strictly while in full screen mode
         if (
           window.screen &&
           window.screen.orientation &&
           (window.screen.orientation as any).lock
         ) {
-          await (window.screen.orientation as any)
-            .lock("landscape")
-            .catch((e: any) => {
-              console.warn("Orientation lock failed:", e);
-            });
+          try {
+            await (window.screen.orientation as any).lock("landscape");
+          } catch (e) {
+            console.warn("Orientation lock to landscape failed:", e);
+          }
         }
-      } catch (err) {
-        console.warn("Auto-fullscreen/orientation failed:", err);
+      } else {
+        // Revert orientation back to portrait / unlock when exiting full screen
+        if (
+          window.screen &&
+          window.screen.orientation &&
+          (window.screen.orientation as any).lock
+        ) {
+          try {
+            await (window.screen.orientation as any).lock("portrait");
+          } catch (e) {
+            try {
+              (window.screen.orientation as any).unlock();
+            } catch (err) {}
+          }
+        }
       }
     };
 
-    // Delay slightly to ensure component is fully mounted and animation is settled
-    const timer = setTimeout(handleAutoFullscreen, 300);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener(
+      "webkitfullscreenchange",
+      handleFullscreenChange,
+    );
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
 
     return () => {
-      clearTimeout(timer);
-      // Unlock orientation when player closes
-      if (
-        window.screen &&
-        window.screen.orientation &&
-        (window.screen.orientation as any).unlock
-      ) {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange,
+      );
+      document.removeEventListener(
+        "mozfullscreenchange",
+        handleFullscreenChange,
+      );
+      document.removeEventListener(
+        "MSFullscreenChange",
+        handleFullscreenChange,
+      );
+
+      // Revert orientation to portrait when player closes
+      if (window.screen && window.screen.orientation) {
         try {
-          (window.screen.orientation as any).unlock();
+          if ((window.screen.orientation as any).lock) {
+            (window.screen.orientation as any).lock("portrait").catch(() => {
+              try {
+                (window.screen.orientation as any).unlock();
+              } catch (e) {}
+            });
+          } else if ((window.screen.orientation as any).unlock) {
+            (window.screen.orientation as any).unlock();
+          }
         } catch (e) {}
       }
     };
