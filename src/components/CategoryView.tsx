@@ -437,7 +437,7 @@ export const CategoryView = React.memo<CategoryViewProps>(
                     {myListFilteredMovies.map((movie, i) => (
                       <div
                         key={`lib-my-${movie.id}-${i}`}
-                        className="relative group/libitem w-full h-full"
+                        className="w-full h-full"
                       >
                         <MovieCard
                           movie={movie}
@@ -445,18 +445,8 @@ export const CategoryView = React.memo<CategoryViewProps>(
                           onSelect={onSelectMovie}
                           isInList={true}
                           onToggleList={() => toggleMyList(movie)}
+                          onRemove={() => toggleMyList(movie)}
                         />
-                        {/* Quick Remove Button Overlay */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleMyList(movie);
-                          }}
-                          className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-black/85 backdrop-blur-md border border-white/20 text-white/80 hover:text-red-400 hover:border-red-400/50 hover:bg-black flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover/libitem:opacity-100 transition-all duration-200 shadow-xl cursor-pointer"
-                          title="Remove from My List"
-                        >
-                          <X size={14} />
-                        </button>
                       </div>
                     ))}
                   </div>
@@ -512,7 +502,7 @@ export const CategoryView = React.memo<CategoryViewProps>(
                     {historyFilteredMovies.map((movie: any, i: number) => (
                       <div
                         key={`lib-hist-${movie.id}-${i}`}
-                        className="relative group/histitem w-full h-full"
+                        className="w-full h-full"
                       >
                         <MovieCard
                           movie={movie}
@@ -522,19 +512,8 @@ export const CategoryView = React.memo<CategoryViewProps>(
                             `${movie.type || "movie"}_${movie.id}`,
                           )}
                           onToggleList={() => toggleMyList(movie)}
+                          onRemove={() => removeFromHistory(movie.id, movie.type)}
                         />
-
-                        {/* Quick Remove from History Button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFromHistory(movie.id, movie.type);
-                          }}
-                          className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-black/85 backdrop-blur-md border border-white/20 text-white/80 hover:text-red-400 hover:border-red-400/50 hover:bg-black flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover/histitem:opacity-100 transition-all duration-200 shadow-xl cursor-pointer"
-                          title="Remove from History"
-                        >
-                          <X size={14} />
-                        </button>
                       </div>
                     ))}
                   </div>

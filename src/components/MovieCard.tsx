@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { handleImageError, getOptimizedPosterUrl } from "../utils/helpers";
 import { useSharedIntersectionObserver } from "../hooks/useSharedIntersectionObserver";
-import { Info, Star } from "lucide-react";
+import { Info, Star, X } from "lucide-react";
 
 interface MovieCardProps {
   movie: any;
@@ -22,7 +22,7 @@ interface MovieCardProps {
 }
 
 export const MovieCard = memo<MovieCardProps>(
-  ({ movie, snap = false, onSelect, aspect = "portrait", isGrid = false }) => {
+  ({ movie, snap = false, onSelect, onRemove, aspect = "portrait", isGrid = false }) => {
     const isLandscape = aspect === "landscape";
     const [imgLoaded, setImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);
@@ -121,9 +121,28 @@ export const MovieCard = memo<MovieCardProps>(
 
           {/* Rating badge — top-right corner tab */}
           {movie.imdb && movie.imdb > 0 && (
-            <div className="absolute top-0 right-0 z-20 pointer-events-none bg-black/70 backdrop-blur-md text-nebula-cyan group-hover/card:bg-black/90 group-hover/card:border-nebula-cyan/40 text-[8px] sm:text-[9px] font-black tracking-wider px-2.5 py-1 rounded-bl-lg border-l border-b border-white/10 leading-none transition-colors">
+            <div
+              className={`absolute top-0 right-0 z-20 pointer-events-none bg-black/70 backdrop-blur-md text-nebula-cyan group-hover/card:bg-black/90 group-hover/card:border-nebula-cyan/40 text-[8px] sm:text-[9px] font-black tracking-wider px-2.5 py-1 rounded-bl-lg border-l border-b border-white/10 leading-none transition-all duration-200 ${
+                onRemove ? "group-hover/card:opacity-0" : ""
+              }`}
+            >
               ★ {movie.imdb}
             </div>
+          )}
+
+          {/* Quick Remove button — inside top-right corner */}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              className="absolute top-1.5 right-1.5 z-40 w-6.5 h-6.5 rounded-full bg-black/85 backdrop-blur-md border border-white/20 text-white/80 hover:text-red-400 hover:border-red-400/50 hover:bg-black flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all duration-200 shadow-xl cursor-pointer"
+              title="Remove"
+            >
+              <X size={13} />
+            </button>
           )}
 
           {/* Progress Bar for Continue Watching */}
