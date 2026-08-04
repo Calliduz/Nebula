@@ -4046,12 +4046,25 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
           // Mark as watched in history after 5 seconds of successful playback
           if (cur > 5 && !hasLoggedHistory.current) {
-            onMarkAsWatched(movie.id, movie.type || "movie");
+            onMarkAsWatched(movie, movie.type || "movie");
             hasLoggedHistory.current = true;
           }
 
           const isNearEnd =
             video.duration - cur < 60 || cur / video.duration > 0.9;
+
+          const richMetaData = {
+            id: movie.id ? movie.id.toString() : key.split("-")[0],
+            title: movie.title || movie.name || "",
+            poster_path: movie.poster_path || movie.poster || "",
+            backdrop_path: movie.backdrop_path || movie.backdrop || "",
+            image: movie.image || "",
+            backdrop: movie.backdrop || "",
+            type: movie.type || (key.includes("-") ? "tv" : "movie"),
+            year: movie.year || (movie.release_date ? String(movie.release_date).split("-")[0] : undefined),
+            vote_average: movie.vote_average || movie.imdb || 0,
+            genre: movie.genre || "",
+          };
 
           if (cur > 5 && !isNearEnd) {
             const p = JSON.parse(
@@ -4061,6 +4074,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               time: cur,
               duration: video.duration,
               timestamp: Date.now(),
+              ...richMetaData,
             };
             localStorage.setItem("nebula-progress", JSON.stringify(p));
             lastSaveTime.current = Date.now();
@@ -4074,6 +4088,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               duration: video.duration,
               timestamp: Date.now(),
               watched: true,
+              ...richMetaData,
             };
             localStorage.setItem("nebula-progress", JSON.stringify(p));
             lastSaveTime.current = Date.now();

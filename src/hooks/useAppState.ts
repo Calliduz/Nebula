@@ -803,6 +803,127 @@ function decorateMovieWithNewEpisode(
   } as any;
 }
 
+/**
+ * Build the proxy image URL from a raw TMDB poster_path or pre-built image URL.
+ * Mirrors the proxyImage + normalizeMovie logic in tmdb.ts so MovieCard.image works.
+ */
+const buildImageUrl = (
+  posterPath?: string,
+  existingImage?: string,
+): string => {
+  // If we already have a fully-built image URL (proxy or absolute), use it directly
+  if (existingImage && (existingImage.includes("/api/image?url=") || existingImage.startsWith("http") || existingImage.startsWith("/"))) {
+    return existingImage;
+  }
+  if (!posterPath) return "";
+  // Raw TMDB path like "/abc123.jpg" → build full proxy URL
+  if (posterPath.startsWith("/") && !posterPath.includes("/api/")) {
+    const tmdbUrl = `https://image.tmdb.org/t/p/w500${posterPath}`;
+    return `${API_BASE_URL}/api/image?url=${encodeURIComponent(tmdbUrl)}`;
+  }
+  return posterPath;
+};
+
+const buildBackdropUrl = (
+  backdropPath?: string,
+  existingBackdrop?: string,
+): string => {
+  if (existingBackdrop && (existingBackdrop.includes("/api/image?url=") || existingBackdrop.startsWith("http") || existingBackdrop.startsWith("/"))) {
+    return existingBackdrop;
+  }
+  if (!backdropPath) return "";
+  if (backdropPath.startsWith("/") && !backdropPath.includes("/api/")) {
+    const tmdbUrl = `https://image.tmdb.org/t/p/original${backdropPath}`;
+    return `${API_BASE_URL}/api/image?url=${encodeURIComponent(tmdbUrl.replace("/original/", "/w1280/"))}`;
+  }
+  return backdropPath;
+};
+
+const buildPoolItem = (
+  id: string | number,
+  type: "movie" | "tv",
+  item: any,
+): NebulaMovie => {
+  const posterPath = item.poster_path || item.poster || "";
+  const backdropPath = item.backdrop_path || item.backdrop || "";
+  return {
+    id: Number(id) || (id as any),
+    tmdbId: Number(id) || (id as any),
+    title: item.title || item.name || "",
+    name: item.title || item.name || "",
+    type,
+    image: buildImageUrl(posterPath, item.image),
+    backdrop: buildBackdropUrl(backdropPath, item.backdrop),
+    description: "",
+    poster_path: posterPath,
+    backdrop_path: backdropPath,
+    imdb: item.vote_average || item.imdb || 0,
+    vote_average: item.vote_average || item.imdb || 0,
+    release_date: item.release_date || (item.year ? `${item.year}-01-01` : ""),
+    year: item.year || 0,
+    genre: item.genre || "",
+  } as any;
+};
+
+const getInitialLocalPool = (): NebulaMovie[] => {
+  if (typeof window === "undefined") return [];
+  const poolMap = new Map<string, NebulaMovie>();
+  try {
+    const progressData = JSON.parse(
+      localStorage.getItem("nebula-progress") || "{}",
+    );
+    for (const [key, val] of Object.entries(progressData)) {
+      if (val && typeof val === "object") {
+        const item = val as any;
+        const baseId = key.split("-")[0];
+        const type = item.type || (key.includes("-") ? "tv" : "movie");
+        const mapKey = `${type}_${baseId}`;
+        if (!poolMap.has(mapKey)) {
+          // Include ALL entries — even legacy ones without title.
+          // Items with title+poster render instantly; items without will be
+          // matched by syncUserRows as "existing in pool" but still trigger
+          // a fetch when their image is empty.
+          poolMap.set(mapKey, buildPoolItem(baseId, type, item));
+        }
+      }
+    }
+
+    const myListData = JSON.parse(
+      localStorage.getItem("nebula-my-list") || "[]",
+    );
+    if (Array.isArray(myListData)) {
+      myListData.forEach((item: any) => {
+        if (item && typeof item === "object" && item.id) {
+          const id = item.id.toString();
+          const type = item.type || "movie";
+          const mapKey = `${type}_${id}`;
+          if (!poolMap.has(mapKey)) {
+            poolMap.set(mapKey, buildPoolItem(id, type, item));
+          }
+        }
+      });
+    }
+
+    const historyData = JSON.parse(
+      localStorage.getItem("nebula-history") || "[]",
+    );
+    if (Array.isArray(historyData)) {
+      historyData.forEach((item: any) => {
+        if (item && typeof item === "object" && item.id) {
+          const id = item.id.toString();
+          const type = item.type || "movie";
+          const mapKey = `${type}_${id}`;
+          if (!poolMap.has(mapKey)) {
+            poolMap.set(mapKey, buildPoolItem(id, type, item));
+          }
+        }
+      });
+    }
+  } catch (e) {}
+
+  return Array.from(poolMap.values());
+};
+
 export function useAppState() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -918,7 +1039,7 @@ export function useAppState() {
   const [searchResults, setSearchResults] = useState<NebulaMovie[]>([]);
   const [searchPeopleResults, setSearchPeopleResults] = useState<any[]>([]);
 
-  const [allMovies, setAllMovies] = useState<NebulaMovie[]>([]);
+  const [allMovies, setAllMovies] = useState<NebulaMovie[]>(getInitialLocalPool);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -936,7 +1057,7 @@ export function useAppState() {
     feedSeedRef.current = feedSeed;
   }, [feedSeed]);
 
-  const allMoviesRef = useRef(allMovies);
+  const allMoviesRef = useRef<NebulaMovie[]>(allMovies);
   const historyRef = useRef(history);
   const myListRef = useRef(myList);
   const tvDetailsCacheRef = useRef(tvDetailsCache);
@@ -1282,18 +1403,25 @@ export function useAppState() {
     updateRowsImmediate(currentAllMovies);
 
     // Step B: Find missing media and hydrate asynchronously
+    // Items are "missing" if they're either not in the pool at all, OR they're
+    // in the pool but have no image (legacy entries without poster metadata).
     const missingMedia: { id: string; type: "movie" | "tv" }[] = [];
 
-    for (const [baseId, { key }] of sortedProgressEntries) {
-      const type = key.includes("-") ? "tv" : "movie";
-      const exists = currentAllMovies.some(
+    const needsFetch = (id: string, type: string) => {
+      const match = currentAllMovies.find(
         (m) =>
           m &&
           m.id &&
-          m.id.toString() === baseId &&
+          m.id.toString() === id &&
           (m.type || "movie") === type,
       );
-      if (!exists) {
+      // Missing from pool entirely, or in pool but without an image (legacy skeleton)
+      return !match || !match.image;
+    };
+
+    for (const [baseId, { key }] of sortedProgressEntries) {
+      const type = key.includes("-") ? "tv" : "movie";
+      if (needsFetch(baseId, type)) {
         missingMedia.push({ id: baseId, type });
       }
     }
@@ -1302,14 +1430,7 @@ export function useAppState() {
       const id = typeof item === "object" && item !== null ? item.id : item;
       const type =
         typeof item === "object" && item !== null ? item.type : "movie";
-      const exists = currentAllMovies.some(
-        (m) =>
-          m &&
-          m.id &&
-          m.id.toString() === id.toString() &&
-          (m.type || "movie") === type,
-      );
-      if (!exists) {
+      if (needsFetch(id.toString(), type)) {
         missingMedia.push({ id: id.toString(), type });
       }
     }
@@ -1317,11 +1438,7 @@ export function useAppState() {
     for (const item of history) {
       const rid = historyRawId(item);
       const rtype = historyType(item);
-      const exists = currentAllMovies.some(
-        (m) =>
-          m && m.id && m.id.toString() === rid && (m.type || "movie") === rtype,
-      );
-      if (!exists) {
+      if (needsFetch(rid, rtype)) {
         missingMedia.push({ id: rid, type: rtype as "movie" | "tv" });
       }
     }
@@ -1346,10 +1463,124 @@ export function useAppState() {
               }
             }),
           );
-          const valid = fetched.filter(Boolean) as any[];
+           const valid = fetched.filter(Boolean) as any[];
           if (valid.length > 0) {
+            // Replace skeleton pool items with fully-hydrated ones
+            currentAllMovies = currentAllMovies
+              .filter((m) => !valid.some((v: any) =>
+                v.id.toString() === m.id.toString() && (v.type || "movie") === (m.type || "movie")
+              ))
+              .concat(valid);
             updateGlobalPool(valid);
-            currentAllMovies = [...currentAllMovies, ...valid];
+
+            try {
+              // Enrich nebula-progress legacy entries with rich metadata
+              const progressCur = JSON.parse(
+                localStorage.getItem("nebula-progress") || "{}",
+              );
+              let progressUpdated = false;
+              for (const [pKey, pVal] of Object.entries(progressCur)) {
+                if (pVal && typeof pVal === "object") {
+                  const pItem = pVal as any;
+                  if (!pItem.title && !pItem.poster_path) {
+                    const pBaseId = pKey.split("-")[0];
+                    const pType = pItem.type || (pKey.includes("-") ? "tv" : "movie");
+                    const match = valid.find(
+                      (v: any) =>
+                        v.id.toString() === pBaseId &&
+                        (v.type || "movie") === pType,
+                    );
+                    if (match) {
+                      progressUpdated = true;
+                      const posterRaw = match.poster_path || match.poster || "";
+                      progressCur[pKey] = {
+                        ...pItem,
+                        title: match.title || match.name,
+                        poster_path: posterRaw,
+                        backdrop_path: match.backdrop_path || match.backdrop || "",
+                        image: match.image || "",
+                        type: pType,
+                        vote_average: match.vote_average || match.imdb || 0,
+                        year: match.year,
+                        genre: match.genre || "",
+                      };
+                    }
+                  }
+                }
+              }
+              if (progressUpdated) {
+                localStorage.setItem("nebula-progress", JSON.stringify(progressCur));
+              }
+
+              // Enrich nebula-my-list legacy entries
+              const myListCur = JSON.parse(
+                localStorage.getItem("nebula-my-list") || "[]",
+              );
+              let myListUpdated = false;
+              const newMyList = myListCur.map((item: any) => {
+                const itemId =
+                  typeof item === "object" ? item.id.toString() : String(item);
+                const itemType =
+                  typeof item === "object" ? item.type || "movie" : "movie";
+                const match = valid.find(
+                  (v: any) =>
+                    v.id.toString() === itemId &&
+                    (v.type || "movie") === itemType,
+                );
+                if (match && (typeof item !== "object" || !item.title)) {
+                  myListUpdated = true;
+                  return {
+                    id: itemId,
+                    type: itemType,
+                    title: match.title || match.name,
+                    poster_path: match.poster_path || match.poster,
+                    backdrop_path: match.backdrop_path || match.backdrop,
+                    image: match.image || "",
+                    vote_average: match.vote_average || match.imdb,
+                    year: match.year,
+                    genre: match.genre,
+                  };
+                }
+                return item;
+              });
+              if (myListUpdated) {
+                setMyList(newMyList);
+              }
+
+              // Enrich nebula-history legacy entries
+              const historyCur = JSON.parse(
+                localStorage.getItem("nebula-history") || "[]",
+              );
+              let historyUpdated = false;
+              const newHistory = historyCur.map((item: any) => {
+                const itemId = historyRawId(item);
+                const itemType = historyType(item);
+                const match = valid.find(
+                  (v: any) =>
+                    v.id.toString() === itemId &&
+                    (v.type || "movie") === itemType,
+                );
+                if (match && (typeof item !== "object" || !item.title)) {
+                  historyUpdated = true;
+                  return {
+                    id: itemId,
+                    type: itemType,
+                    title: match.title || match.name,
+                    poster_path: match.poster_path || match.poster,
+                    backdrop_path: match.backdrop_path || match.backdrop,
+                    image: match.image || "",
+                    vote_average: match.vote_average || match.imdb,
+                    year: match.year,
+                    genre: match.genre,
+                  };
+                }
+                return item;
+              });
+              if (historyUpdated) {
+                setHistory(newHistory);
+              }
+            } catch (e) {}
+
             updateRowsImmediate(currentAllMovies);
           }
         } catch (err) {
@@ -2709,7 +2940,26 @@ export function useAppState() {
           return !(itemId.toString() === id && itemType === mediaType);
         });
       } else {
-        return [...prev, { id, type: mediaType }];
+        const itemObj =
+          typeof movieOrId === "object" && movieOrId !== null
+            ? {
+                id,
+                type: mediaType,
+                title: movieOrId.title || movieOrId.name,
+                poster_path: movieOrId.poster_path || movieOrId.poster,
+                backdrop_path: movieOrId.backdrop_path || movieOrId.backdrop,
+                image: movieOrId.image || "",
+                backdrop: movieOrId.backdrop || "",
+                year:
+                  movieOrId.year ||
+                  (movieOrId.release_date
+                    ? String(movieOrId.release_date).split("-")[0]
+                    : undefined),
+                vote_average: movieOrId.vote_average || movieOrId.imdb,
+                genre: movieOrId.genre,
+              }
+            : { id, type: mediaType };
+        return [...prev, itemObj];
       }
     });
   };
@@ -3344,16 +3594,46 @@ export function useAppState() {
   }, [rows]);
 
   const markAsWatched = (
-    id: string | number,
+    movieOrId: any,
     type: "movie" | "tv" = "movie",
   ) => {
-    invalidateRecommendationCache(id, type);
+    let id: string;
+    let itemType: "movie" | "tv" = "movie";
+    let richObj: any = null;
+
+    if (typeof movieOrId === "object" && movieOrId !== null) {
+      id = movieOrId.id.toString();
+      itemType = movieOrId.type || type;
+      richObj = {
+        id,
+        type: itemType,
+        title: movieOrId.title || movieOrId.name,
+        poster_path: movieOrId.poster_path || movieOrId.poster,
+        backdrop_path: movieOrId.backdrop_path || movieOrId.backdrop,
+        image: movieOrId.image || "",
+        backdrop: movieOrId.backdrop || "",
+        year:
+          movieOrId.year ||
+          (movieOrId.release_date
+            ? String(movieOrId.release_date).split("-")[0]
+            : undefined),
+        vote_average: movieOrId.vote_average || movieOrId.imdb,
+        genre: movieOrId.genre,
+      };
+    } else {
+      id = movieOrId.toString();
+      itemType = type;
+      richObj = { id, type: itemType };
+    }
+
+    invalidateRecommendationCache(id, itemType);
     setHistory((prev) => {
       const filtered = prev.filter((item) => {
         const itemId = typeof item === "object" ? item.id : item;
-        return itemId.toString() !== id.toString();
+        const htype = typeof item === "object" ? item.type : "movie";
+        return !(itemId.toString() === id && htype === itemType);
       });
-      return [{ id: id.toString(), type }, ...filtered].slice(0, 100);
+      return [richObj, ...filtered].slice(0, 100);
     });
   };
 
