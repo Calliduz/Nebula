@@ -1422,6 +1422,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const useHlsLevelsForQualityRef = useRef<boolean>(false);
 
   const hasReportedSuccess = useRef(false);
+  const hasAutoFullscreenedRef = useRef(false);
   const frag0LoadRetries = useRef(0);
   const bufferingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const serverTipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1962,6 +1963,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   useEffect(() => {
     hasReportedSuccess.current = false;
+    hasAutoFullscreenedRef.current = false;
     setIsZoomed(false);
   }, [movie.id, season, episode]);
 
@@ -2049,6 +2051,51 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       }
     };
   }, []);
+
+  // ── Auto-fullscreen on mobile when stream first plays ─────────────────────
+  useEffect(() => {
+    const video = videoRef.current;
+    const container = containerRef.current;
+    if (!video || !container) return;
+
+    const isMobileDevice =
+      ("ontouchstart" in window || navigator.maxTouchPoints > 0) &&
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (!isMobileDevice) return;
+
+    const onFirstPlaying = () => {
+      if (hasAutoFullscreenedRef.current) return;
+      hasAutoFullscreenedRef.current = true;
+
+      // Already in fullscreen (e.g. user manually entered before playback)
+      if (
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement
+      )
+        return;
+
+      // Try Fullscreen API on the container (triggers fullscreenchange → landscape lock)
+      if (container.requestFullscreen) {
+        container.requestFullscreen().catch(() => {
+          // Browser blocked it (no user gesture, or not supported)
+          console.warn("[PLAYER] Auto-fullscreen blocked by browser.");
+        });
+      } else if ((video as any).webkitEnterFullscreen) {
+        // iOS Safari fallback — native video fullscreen only
+        try {
+          (video as any).webkitEnterFullscreen();
+        } catch (e) {
+          console.warn("[PLAYER] webkitEnterFullscreen failed:", e);
+        }
+      }
+    };
+
+    video.addEventListener("playing", onFirstPlaying);
+    return () => {
+      video.removeEventListener("playing", onFirstPlaying);
+    };
+  }, [streamUrl]);
 
   // ── Fetch stream ──────────────────────────────────────────────────────────
   useEffect(() => {

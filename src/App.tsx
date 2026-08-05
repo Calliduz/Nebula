@@ -154,24 +154,39 @@ export default function App() {
   }, []);
 
   // Force portrait mode globally unless watching a video
+  // Debounced to avoid racing with MediaPlayer's cleanup orientation calls,
+  // re-runs on every navigation so the lock is re-acquired after page transitions.
   React.useEffect(() => {
+    if (isWatching) return;
+
     const isMobile =
-      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
-      window.innerWidth < 768;
+      ("ontouchstart" in window || navigator.maxTouchPoints > 0) &&
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
     if (
-      isMobile &&
-      window.screen &&
-      window.screen.orientation &&
-      (window.screen.orientation as any).lock
-    ) {
-      if (!isWatching) {
-        (window.screen.orientation as any).lock("portrait").catch((e: any) => {
-          // Ignore: Some browsers require fullscreen to lock orientation, or user interaction
-          console.warn("Could not lock to portrait:", e);
-        });
-      }
-    }
-  }, [isWatching]);
+      !isMobile ||
+      !window.screen?.orientation ||
+      !(window.screen.orientation as any).lock
+    )
+      return;
+
+    // Debounce: let MediaPlayer's cleanup finish first
+    const timer = setTimeout(() => {
+      // Don't fight with fullscreen landscape lock
+      if (
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement
+      )
+        return;
+
+      (window.screen.orientation as any).lock("portrait").catch((e: any) => {
+        // Ignore: Some browsers require fullscreen to lock orientation, or user interaction
+        console.warn("Could not lock to portrait:", e);
+      });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [isWatching, location.pathname]);
 
   return (
     <div className="flex min-h-screen bg-obsidian font-sans overflow-x-hidden">
