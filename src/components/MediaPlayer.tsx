@@ -1103,6 +1103,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [failedMirrors, setFailedMirrors] = useState<Record<string, string>>(
     {},
   );
+  const failedMirrorsRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    failedMirrorsRef.current = failedMirrors;
+  }, [failedMirrors]);
   const failedSourcesRef = useRef<Set<string>>(new Set());
   const [failedSourcesList, setFailedSourcesList] = useState<string[]>([]);
 
@@ -1424,6 +1428,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const activeFragLoads = useRef(0);
   const lastFragLoadedTime = useRef(0);
   const hasAutoRetriedRef = useRef(false);
+  const fragErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const getSourceCategory = useCallback((mirrorsList: any[]): string => {
     if (!mirrorsList || mirrorsList.length === 0) return "VidLink";
@@ -1825,6 +1830,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const handleMirrorExhaustion = useCallback(
     async (errorMessage: string) => {
+      setLoading(true);
       const currentCat = getSourceCategory(mirrorsRef.current);
       if (!hasAutoRetriedRef.current) {
         hasAutoRetriedRef.current = true;
@@ -3041,7 +3047,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const nextIdx = getNextFallbackMirrorIndex(
             activeMirrorRef.current,
             mirrorsRef.current,
-            failedMirrors,
+            failedMirrorsRef.current,
             failingMirror?.source,
           );
           if (nextIdx !== -1) {
@@ -3287,7 +3293,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = getNextFallbackMirrorIndex(
               activeMirrorRef.current,
               mirrorsRef.current,
-              failedMirrors,
+              failedMirrorsRef.current,
               failingMirror?.source,
             );
             if (nextIdx !== -1) {
@@ -3404,7 +3410,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const nextIdx = getNextFallbackMirrorIndex(
             activeMirrorRef.current,
             mirrorsRef.current,
-            failedMirrors,
+            failedMirrorsRef.current,
             failingMirror?.source,
           );
           if (nextIdx !== -1) {
@@ -3432,6 +3438,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
         // Switch immediately on fatal manifest load error to avoid slow retry storms
         if (
+          d.fatal &&
           d.type === Hls.ErrorTypes.NETWORK_ERROR &&
           d.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR
         ) {
@@ -3446,7 +3453,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const nextIdx = getNextFallbackMirrorIndex(
             activeMirrorRef.current,
             mirrorsRef.current,
-            failedMirrors,
+            failedMirrorsRef.current,
             failingMirror?.source,
           );
           if (nextIdx !== -1) {
@@ -3477,11 +3484,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           if (statusCode) {
             lastFragErrorStatus = String(statusCode);
           }
-          if (!fragErrorTimeout) {
+          if (!fragErrorTimeoutRef.current) {
             console.warn(
               "[HLS] Fragment load error detected. Starting 5s mirror fallback timer...",
             );
-            fragErrorTimeout = setTimeout(() => {
+            fragErrorTimeoutRef.current = setTimeout(() => {
               console.error(
                 "[HLS] Continuous fragment load errors for 5 seconds. Switching to next mirror...",
               );
@@ -3493,7 +3500,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               const nextIdx = getNextFallbackMirrorIndex(
                 activeMirrorRef.current,
                 mirrorsRef.current,
-                failedMirrors,
+                failedMirrorsRef.current,
                 failingMirror?.source,
               );
               if (nextIdx !== -1) {
@@ -3513,7 +3520,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   "Continuous segment loading failures. All mirrors exhausted.",
                 );
               }
-              fragErrorTimeout = null;
+              fragErrorTimeoutRef.current = null;
             }, 5000);
           }
         }
@@ -3541,7 +3548,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = getNextFallbackMirrorIndex(
               activeMirrorRef.current,
               mirrorsRef.current,
-              failedMirrors,
+              failedMirrorsRef.current,
               failingMirror?.source,
             );
             if (nextIdx !== -1) {
@@ -3602,7 +3609,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = getNextFallbackMirrorIndex(
               activeMirrorRef.current,
               mirrorsRef.current,
-              failedMirrors,
+              failedMirrorsRef.current,
               failingMirror?.source,
             );
             if (nextIdx !== -1) {
@@ -3646,7 +3653,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = getNextFallbackMirrorIndex(
               activeMirrorRef.current,
               mirrorsRef.current,
-              failedMirrors,
+              failedMirrorsRef.current,
               failingMirror?.source,
             );
             if (nextIdx !== -1) {
@@ -3685,20 +3692,20 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           networkRetries = 0;
         }
         mediaRecoveryAttempt = 0;
-        if (fragErrorTimeout) {
+        if (fragErrorTimeoutRef.current) {
           console.log(
             "[HLS] Fragment loaded successfully. Clearing error fallback timer.",
           );
-          clearTimeout(fragErrorTimeout);
-          fragErrorTimeout = null;
+          clearTimeout(fragErrorTimeoutRef.current);
+          fragErrorTimeoutRef.current = null;
         }
       });
       return () => {
         hls.destroy();
         hlsRef.current = null;
-        if (fragErrorTimeout) {
-          clearTimeout(fragErrorTimeout);
-          fragErrorTimeout = null;
+        if (fragErrorTimeoutRef.current) {
+          clearTimeout(fragErrorTimeoutRef.current);
+          fragErrorTimeoutRef.current = null;
         }
         // Note: HLS.js does NOT use the Cache Storage API — it relies on
         // the browser's standard HTTP cache, governed by the
@@ -3707,11 +3714,50 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       };
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamUrl;
+
+      const onNativeHlsMeta = () => {
+        if (
+          isFinite(video.duration) &&
+          video.duration > 0 &&
+          video.duration <= 3
+        ) {
+          console.warn(
+            `[PLAYER] Native HLS mirror has duration ${video.duration.toFixed(1)}s (≤3s) — skipping.`,
+          );
+          const failingIdx = activeMirrorRef.current;
+          const failingMirror = mirrorsRef.current[failingIdx];
+          if (failingMirror?.url) {
+            reportDeadMirror(failingMirror.url);
+          }
+          const nextIdx = getNextFallbackMirrorIndex(
+            activeMirrorRef.current,
+            mirrorsRef.current,
+            failedMirrorsRef.current,
+            failingMirror?.source,
+          );
+          if (nextIdx !== -1) {
+            if (failingMirror) {
+              setFailedMirrors((prev) => ({
+                ...prev,
+                [failingMirror.source]: "SHORT",
+              }));
+            }
+            selectMirror(nextIdx, mirrorsRef.current);
+          } else {
+            handleMirrorExhaustion("Short/restricted video on all mirrors.");
+          }
+        }
+      };
+      video.addEventListener("loadedmetadata", onNativeHlsMeta, { once: true });
+
       video.play().catch((err) => {
         console.warn("[PLAYER] play() failed or was interrupted:", err);
         setIsPaused(true);
         showToast("Playback failed to start.", "error");
       });
+      return () => {
+        video.removeEventListener("loadedmetadata", onNativeHlsMeta);
+      };
     }
   }, [streamUrl, isEmbed, reportDeadMirror]);
 
@@ -4126,10 +4172,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           );
           const failingIdx = activeMirrorRef.current;
           const failingMirror = mirrorsRef.current[failingIdx];
+          if (failingMirror?.url) {
+            reportDeadMirror(failingMirror.url);
+          }
           const nextIdx = getNextFallbackMirrorIndex(
             activeMirrorRef.current,
             mirrorsRef.current,
-            failedMirrors,
+            failedMirrorsRef.current,
             failingMirror?.source,
           );
           if (nextIdx !== -1) {
@@ -4208,7 +4257,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             const nextIdx = getNextFallbackMirrorIndex(
               activeMirrorRef.current,
               mirrorsRef.current,
-              failedMirrors,
+              failedMirrorsRef.current,
               failingMirror?.source,
             );
             if (nextIdx !== -1) {
