@@ -291,22 +291,42 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     return () => {
       isMountedRef.current = false;
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
-      if (autoPlayGraceTimerRef.current)
+      if (autoPlayGraceTimerRef.current) {
         clearTimeout(autoPlayGraceTimerRef.current);
+        autoPlayGraceTimerRef.current = null;
+      }
+      autoPlayGraceElapsedRef.current = false;
     };
   }, [runScan]);
 
   // ── Auto-play selection and countdown ──────────────────────────────────────
-  // Strictly respects PROVIDERS order (Quantum #1, Hyperion #2, etc.)
+  // Respects user's stored provider preference or falls back to PROVIDERS order
   useEffect(() => {
     if (autoPlayCancelledRef.current) return;
     if (autoPlayId !== null) return; // already selected an autoplay provider
+
+    // Priority 0: Check user's saved preferred provider for this specific title
+    try {
+      const userPrefId = localStorage.getItem(prefKey(movie.id, movie.type));
+      if (userPrefId) {
+        const prefSrcs = scan[userPrefId]?.sources ?? [];
+        if (prefSrcs.length > 0) {
+          if (autoPlayGraceTimerRef.current) {
+            clearTimeout(autoPlayGraceTimerRef.current);
+            autoPlayGraceTimerRef.current = null;
+          }
+          setAutoPlayId(userPrefId);
+          setAutoPlayCountdown(3);
+          return;
+        }
+      }
+    } catch (e) {}
 
     const firstReadyProviderWithData = PROVIDERS.find(
       (p) => (scan[p.id]?.sources.length ?? 0) > 0,
     );
 
-    // #1 provider in PROVIDERS array — always PROVIDERS[0] (currently Quantum/vaplayer)
+    // #1 provider in PROVIDERS array — always PROVIDERS[0] (currently Hyperion/vidrock)
     const isQuantumReady =
       (scan[PRIORITY_PROVIDER_ID]?.sources.length ?? 0) > 0;
     const isQuantumLoading = scan[PRIORITY_PROVIDER_ID]?.loading ?? true;
@@ -352,7 +372,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       setAutoPlayId(firstReadyProviderWithData.id);
       setAutoPlayCountdown(3);
     }
-  }, [scan, autoPlayId]);
+  }, [scan, autoPlayId, movie.id, movie.type]);
 
   useEffect(() => {
     if (autoPlayId === null) return;
@@ -364,6 +384,11 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         if (srcs.length > 0) {
           localStorage.setItem(prefKey(movie.id, movie.type), p.id);
           onSelect(serializeSources(srcs, p.serializeExtra));
+        } else {
+          // If sources became empty, cancel autoplay cleanly
+          autoPlayCancelledRef.current = true;
+          setAutoPlayId(null);
+          setAutoPlayCountdown(3);
         }
       }
       return;
