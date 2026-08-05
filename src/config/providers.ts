@@ -55,22 +55,21 @@ export interface ProviderConfig {
 
 export const PROVIDERS: ProviderConfig[] = [
   {
-    id: "vidrock",
-    name: "Hyperion",
-    badge: "DEFAULT",
-    colorClass: "nebula-cyan",
-    borderClass: "border-nebula-cyan/40",
-    bgClass: "bg-nebula-cyan/10",
-    textClass: "text-nebula-cyan",
-    dotBgClass: "bg-nebula-cyan",
-    apiCategory: "VidRock",
+    id: "vaplayer",
+    name: "Quantum",
+    badge: "GLOBAL MIRRORS",
+    colorClass: "cyan",
+    borderClass: "border-cyan-500/40",
+    bgClass: "bg-cyan-500/10",
+    textClass: "text-cyan-400",
+    dotBgClass: "bg-cyan-400",
+    apiCategory: "Vaplayer",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/vidrock?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
-    serializeExtra: (src) => src.audio || src.language || "",
   },
   {
     id: "netnaija",
@@ -91,21 +90,22 @@ export const PROVIDERS: ProviderConfig[] = [
     serializeExtra: (src) => src.audio || "",
   },
   {
-    id: "vaplayer",
-    name: "Quantum",
-    badge: "GLOBAL MIRRORS",
-    colorClass: "cyan",
-    borderClass: "border-cyan-500/40",
-    bgClass: "bg-cyan-500/10",
-    textClass: "text-cyan-400",
-    dotBgClass: "bg-cyan-400",
-    apiCategory: "Vaplayer",
+    id: "vidrock",
+    name: "Hyperion",
+    badge: "DEFAULT",
+    colorClass: "nebula-cyan",
+    borderClass: "border-nebula-cyan/40",
+    bgClass: "bg-nebula-cyan/10",
+    textClass: "text-nebula-cyan",
+    dotBgClass: "bg-nebula-cyan",
+    apiCategory: "VidRock",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      let u = `${API_BASE_URL}/api/vidrock?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
+    serializeExtra: (src) => src.audio || src.language || "",
   },
   {
     id: "hdghartv",
@@ -139,6 +139,38 @@ export const PROVIDERS: ProviderConfig[] = [
     serializeExtra: (src) => src.audio || "",
   },
   {
+    id: "kuro_sub",
+    name: "Zenith (Sub)",
+    badge: "JPN AUDIO",
+    colorClass: "violet",
+    borderClass: "border-violet-500/40",
+    bgClass: "bg-violet-500/10",
+    textClass: "text-violet-400",
+    dotBgClass: "bg-violet-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
+    id: "kuro_dub",
+    name: "Zenith (Dub)",
+    badge: "ENG DUB",
+    colorClass: "pink",
+    borderClass: "border-pink-500/40",
+    bgClass: "bg-pink-500/10",
+    textClass: "text-pink-400",
+    dotBgClass: "bg-pink-400",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
     id: "vidlink",
     name: "Spectra",
     badge: "INDEX NODE",
@@ -167,38 +199,6 @@ export const PROVIDERS: ProviderConfig[] = [
     apiCategory: "Vidnest",
     buildUrl: ({ tmdbId, type, season, episode, force }) => {
       let u = `${API_BASE_URL}/api/vidnest?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
-      if (season !== undefined) u += `&season=${season}`;
-      if (episode !== undefined) u += `&episode=${episode}`;
-      return u;
-    },
-  },
-  {
-    id: "kuro_sub",
-    name: "Zenith (Sub)",
-    badge: "JPN AUDIO",
-    colorClass: "violet",
-    borderClass: "border-violet-500/40",
-    bgClass: "bg-violet-500/10",
-    textClass: "text-violet-400",
-    dotBgClass: "bg-violet-400",
-    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
-      if (season !== undefined) u += `&season=${season}`;
-      if (episode !== undefined) u += `&episode=${episode}`;
-      return u;
-    },
-  },
-  {
-    id: "kuro_dub",
-    name: "Zenith (Dub)",
-    badge: "ENG DUB",
-    colorClass: "pink",
-    borderClass: "border-pink-500/40",
-    bgClass: "bg-pink-500/10",
-    textClass: "text-pink-400",
-    dotBgClass: "bg-pink-400",
-    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/kuro?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
@@ -248,27 +248,27 @@ export const PRIORITY_PROVIDER_ID = PROVIDERS[0].id;
  * use either form. Keep both when a provider has an alias.
  */
 export const CATEGORY_PRIORITY: string[] = [
-  "Hyperion",
-  "VidRock",
-  "Vesper",
-  "NetNaija",
   "Quantum",
   "Vaplayer",
+  "Vesper",
+  "NetNaija",
+  "Hyperion",
+  "VidRock",
   "Aether",
   "HDGharTV",
   "GharTV",
   "Pulse",
   "Videasy",
-  "Spectra",
-  "VidLink",
-  "Titan",
-  "Vidnest",
   "Zenith (Sub)",
   "Kuro (Sub)",
   "Zenith (Dub)",
   "Kuro (Dub)",
   "Zenith",
   "Kuro",
+  "Spectra",
+  "VidLink",
+  "Titan",
+  "Vidnest",
   "Orbital",
   "FilmU",
   "Starlight",
