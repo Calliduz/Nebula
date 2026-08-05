@@ -23,6 +23,7 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const hasPrefetchedRef = useRef(false);
+  const hasBeenVisibleRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 1. Stage 1: Prefetch observer — triggers background data fetch early
@@ -54,6 +55,10 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
   }, [onPrefetch, onVisible, prefetchMargin]);
 
   // 2. Stage 2: Render observer — renders actual component DOM when close to viewport
+  //    Once rendered, we NEVER unmount (hasBeenVisibleRef stays true).
+  //    Instead, we use CSS content-visibility:auto to let the browser
+  //    skip layout/paint for offscreen rows without destroying the DOM
+  //    or evicting decoded images from cache.
   useEffect(() => {
     const currentEl = containerRef.current;
     if (!currentEl) return;
@@ -62,6 +67,7 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
+          hasBeenVisibleRef.current = true;
           // If onVisible wasn't called during prefetch, call it now
           if (!hasPrefetchedRef.current && onVisible) {
             hasPrefetchedRef.current = true;
@@ -83,12 +89,24 @@ export const LazyViewport: React.FC<LazyViewportProps> = ({
     };
   }, [onVisible, renderMargin, recycleOffscreen]);
 
+  // Once rendered, always keep in DOM — use content-visibility for perf
+  const hasRendered = hasBeenVisibleRef.current || isVisible;
+
   return (
     <div
       ref={containerRef}
-      style={{ minHeight: isVisible ? undefined : minHeight }}
+      style={
+        hasRendered
+          ? isVisible
+            ? undefined
+            : {
+                contentVisibility: "auto" as any,
+                containIntrinsicSize: `auto ${minHeight}`,
+              }
+          : { minHeight }
+      }
     >
-      {isVisible ? children : placeholder}
+      {hasRendered ? children : placeholder}
     </div>
   );
 };
