@@ -373,11 +373,9 @@ input[type="range"].appearance-slider-vertical {
     background: linear-gradient(
       to top,
       rgba(5, 5, 5, 0.98) 0%,
-      rgba(5, 5, 5, 0.85) 65%,
+      rgba(5, 5, 5, 0.92) 65%,
       rgba(5, 5, 5, 0) 100%
     );
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     transform: translateY(100%);
     transition:
       transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
@@ -392,6 +390,7 @@ input[type="range"].appearance-slider-vertical {
   .group\/card:hover .card-hover-drawer {
     transform: translateY(0);
     opacity: 1;
+    will-change: transform, opacity;
   }
   .hide-on-hover-capable {
     display: none !important;

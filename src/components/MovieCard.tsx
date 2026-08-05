@@ -92,7 +92,7 @@ export const MovieCard = memo<MovieCardProps>(
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => onSelect?.(movie)}
       >
-        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/10 group-hover/card:border-nebula-cyan/70 cursor-pointer bg-obsidian origin-center transition-all duration-300 group-hover/card:scale-[1.08] group-hover/card:-translate-y-2 group-hover/card:z-30 group-hover/card:shadow-[0_16px_40px_rgba(0,229,255,0.25),_0_10px_25px_rgba(0,0,0,0.9)] transform-gpu will-change-transform shadow-2xl">
+        <div className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden border border-white/10 group-hover/card:border-nebula-cyan/70 cursor-pointer bg-obsidian origin-center transition-[transform,border-color,box-shadow] duration-300 group-hover/card:scale-[1.08] group-hover/card:-translate-y-2 group-hover/card:z-30 group-hover/card:shadow-[0_16px_40px_rgba(0,229,255,0.25),_0_10px_25px_rgba(0,0,0,0.9)] group-hover/card:will-change-transform group-hover/card:[transform-style:preserve-3d] shadow-2xl contain-paint">
           {/* Shimmer placeholder while image loads */}
           {!imgLoaded && !imgError && (
             <div className="absolute inset-0 bg-white/5 shimmer-bg" />
@@ -114,7 +114,7 @@ export const MovieCard = memo<MovieCardProps>(
 
           {/* Type badge — top-left corner tab */}
           {movie.type && (
-            <div className="absolute top-0 left-0 z-20 pointer-events-none bg-black/70 backdrop-blur-md text-white/90 group-hover/card:text-white group-hover/card:bg-black/90 group-hover/card:border-nebula-cyan/40 text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-br-lg border-r border-b border-white/10 leading-none transition-colors">
+            <div className="absolute top-0 left-0 z-20 pointer-events-none bg-black/80 text-white/90 group-hover/card:text-white group-hover/card:bg-black/90 group-hover/card:border-nebula-cyan/40 text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-br-lg border-r border-b border-white/10 leading-none transition-colors">
               {movie.type === "tv" ? "TV" : "Film"}
             </div>
           )}
@@ -122,7 +122,7 @@ export const MovieCard = memo<MovieCardProps>(
           {/* Rating badge — top-right corner tab */}
           {movie.imdb && movie.imdb > 0 && (
             <div
-              className={`absolute top-0 right-0 z-20 pointer-events-none bg-black/70 backdrop-blur-md text-nebula-cyan group-hover/card:bg-black/90 group-hover/card:border-nebula-cyan/40 text-[8px] sm:text-[9px] font-black tracking-wider px-2.5 py-1 rounded-bl-lg border-l border-b border-white/10 leading-none transition-all duration-200 ${
+              className={`absolute top-0 right-0 z-20 pointer-events-none bg-black/80 text-nebula-cyan group-hover/card:bg-black/90 group-hover/card:border-nebula-cyan/40 text-[8px] sm:text-[9px] font-black tracking-wider px-2.5 py-1 rounded-bl-lg border-l border-b border-white/10 leading-none transition-[opacity,background-color,border-color] duration-200 ${
                 onRemove ? "group-hover/card:opacity-0" : ""
               }`}
             >
@@ -138,7 +138,7 @@ export const MovieCard = memo<MovieCardProps>(
                 e.stopPropagation();
                 onRemove();
               }}
-              className="absolute top-1.5 right-1.5 z-40 w-6.5 h-6.5 rounded-full bg-black/85 backdrop-blur-md border border-white/20 text-white/80 hover:text-red-400 hover:border-red-400/50 hover:bg-black flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all duration-200 shadow-xl cursor-pointer"
+              className="absolute top-1.5 right-1.5 z-40 w-6.5 h-6.5 rounded-full bg-black/90 border border-white/20 text-white/80 hover:text-red-400 hover:border-red-400/50 hover:bg-black flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-[opacity,color,border-color,background-color] duration-200 shadow-xl cursor-pointer"
               title="Remove"
             >
               <X size={13} />
@@ -147,10 +147,10 @@ export const MovieCard = memo<MovieCardProps>(
 
           {/* Progress Bar for Continue Watching */}
           {hasProgress && (
-            <div className="absolute inset-x-0 bottom-0 z-40 w-full flex flex-col pointer-events-none transition-all duration-300">
+            <div className="absolute inset-x-0 bottom-0 z-40 w-full flex flex-col pointer-events-none">
               {/* Watched badge */}
               {pct >= 95 && (
-                <div className="flex items-center gap-1.5 mb-2 mx-auto sm:mx-2 px-2 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 w-fit self-center sm:self-start">
+                <div className="flex items-center gap-1.5 mb-2 mx-auto sm:mx-2 px-2 py-1 rounded-full bg-black/80 border border-white/10 w-fit self-center sm:self-start">
                   <div className="w-3.5 h-3.5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
                     <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
                       <path
