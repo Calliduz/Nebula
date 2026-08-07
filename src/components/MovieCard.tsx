@@ -22,7 +22,14 @@ interface MovieCardProps {
 }
 
 export const MovieCard = memo<MovieCardProps>(
-  ({ movie, snap = false, onSelect, onRemove, aspect = "portrait", isGrid = false }) => {
+  ({
+    movie,
+    snap = false,
+    onSelect,
+    onRemove,
+    aspect = "portrait",
+    isGrid = false,
+  }) => {
     const isLandscape = aspect === "landscape";
     const [imgLoaded, setImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);

@@ -144,11 +144,21 @@ export const CategoryView = React.memo<CategoryViewProps>(
       if (!myList) return [];
       return myList
         .map((item) => {
-          const id = typeof item === "object" && item !== null ? item.id.toString() : String(item);
-          const type = typeof item === "object" && item !== null ? item.type || "movie" : "movie";
+          const id =
+            typeof item === "object" && item !== null
+              ? item.id.toString()
+              : String(item);
+          const type =
+            typeof item === "object" && item !== null
+              ? item.type || "movie"
+              : "movie";
           const m = allMoviesMap.get(`${type}_${id}`) || allMoviesMap.get(id);
           if (m) return m;
-          if (typeof item === "object" && item !== null && (item.title || item.name)) {
+          if (
+            typeof item === "object" &&
+            item !== null &&
+            (item.title || item.name)
+          ) {
             return {
               id,
               type,
@@ -189,7 +199,9 @@ export const CategoryView = React.memo<CategoryViewProps>(
           const m =
             allMoviesMap.get(`${type}_${rawId}`) ||
             allMoviesMap.get(rawId) ||
-            (typeof item === "object" && item !== null && (item.title || item.name)
+            (typeof item === "object" &&
+            item !== null &&
+            (item.title || item.name)
               ? {
                   id: rawId,
                   type,
@@ -512,7 +524,9 @@ export const CategoryView = React.memo<CategoryViewProps>(
                             `${movie.type || "movie"}_${movie.id}`,
                           )}
                           onToggleList={() => toggleMyList(movie)}
-                          onRemove={() => removeFromHistory(movie.id, movie.type)}
+                          onRemove={() =>
+                            removeFromHistory(movie.id, movie.type)
+                          }
                         />
                       </div>
                     ))}

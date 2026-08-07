@@ -1992,9 +1992,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     const handleFullscreenChange = async () => {
       const isFs = Boolean(
         document.fullscreenElement ||
-          (document as any).webkitFullscreenElement ||
-          (document as any).mozFullScreenElement ||
-          (document as any).msFullscreenElement,
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement,
       );
 
       if (isFs) {
@@ -2029,10 +2029,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener(
-      "webkitfullscreenchange",
-      handleFullscreenChange,
-    );
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
     document.addEventListener("mozfullscreenchange", handleFullscreenChange);
     document.addEventListener("MSFullscreenChange", handleFullscreenChange);
 
@@ -4030,8 +4027,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 ),
               );
 
-
-
             // 9. Subtitles prefetch
             let subPrefetchUrl = `${API}/api/subtitles?tmdbId=${movie.id}&type=${movie.type}&title=${encodeURIComponent(movie.title || "")}&season=${nextEp.season}&episode=${nextEp.episode}`;
             fetch(subPrefetchUrl)
@@ -4070,7 +4065,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             image: movie.image || "",
             backdrop: movie.backdrop || "",
             type: movie.type || (key.includes("-") ? "tv" : "movie"),
-            year: movie.year || (movie.release_date ? String(movie.release_date).split("-")[0] : undefined),
+            year:
+              movie.year ||
+              (movie.release_date
+                ? String(movie.release_date).split("-")[0]
+                : undefined),
             vote_average: movie.vote_average || movie.imdb || 0,
             genre: movie.genre || "",
           };
@@ -7835,7 +7834,8 @@ export function InPlayerSourcePicker({
                 return {
                   name: p.id.startsWith("kuro")
                     ? name
-                    : (v as any).name || (p.id === "cinesrc" ? displayName : name),
+                    : (v as any).name ||
+                      (p.id === "cinesrc" ? displayName : name),
                   url: (v as any).url,
                   type: (v as any).type || "hls",
                   quality: (v as any).quality || "Auto",

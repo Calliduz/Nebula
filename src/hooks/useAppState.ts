@@ -807,12 +807,14 @@ function decorateMovieWithNewEpisode(
  * Build the proxy image URL from a raw TMDB poster_path or pre-built image URL.
  * Mirrors the proxyImage + normalizeMovie logic in tmdb.ts so MovieCard.image works.
  */
-const buildImageUrl = (
-  posterPath?: string,
-  existingImage?: string,
-): string => {
+const buildImageUrl = (posterPath?: string, existingImage?: string): string => {
   // If we already have a fully-built image URL (proxy or absolute), use it directly
-  if (existingImage && (existingImage.includes("/api/image?url=") || existingImage.startsWith("http") || existingImage.startsWith("/"))) {
+  if (
+    existingImage &&
+    (existingImage.includes("/api/image?url=") ||
+      existingImage.startsWith("http") ||
+      existingImage.startsWith("/"))
+  ) {
     return existingImage;
   }
   if (!posterPath) return "";
@@ -828,7 +830,12 @@ const buildBackdropUrl = (
   backdropPath?: string,
   existingBackdrop?: string,
 ): string => {
-  if (existingBackdrop && (existingBackdrop.includes("/api/image?url=") || existingBackdrop.startsWith("http") || existingBackdrop.startsWith("/"))) {
+  if (
+    existingBackdrop &&
+    (existingBackdrop.includes("/api/image?url=") ||
+      existingBackdrop.startsWith("http") ||
+      existingBackdrop.startsWith("/"))
+  ) {
     return existingBackdrop;
   }
   if (!backdropPath) return "";
@@ -1039,7 +1046,8 @@ export function useAppState() {
   const [searchResults, setSearchResults] = useState<NebulaMovie[]>([]);
   const [searchPeopleResults, setSearchPeopleResults] = useState<any[]>([]);
 
-  const [allMovies, setAllMovies] = useState<NebulaMovie[]>(getInitialLocalPool);
+  const [allMovies, setAllMovies] =
+    useState<NebulaMovie[]>(getInitialLocalPool);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -1208,7 +1216,8 @@ export function useAppState() {
               const type =
                 typeof item === "object" && item !== null ? item.type : "movie";
               return (
-                id.toString() === m.id.toString() && type === (m.type || "movie")
+                id.toString() === m.id.toString() &&
+                type === (m.type || "movie")
               );
             }),
         )
@@ -1220,7 +1229,10 @@ export function useAppState() {
         const rtype = historyType(item);
         const movie = pool.find(
           (m) =>
-            m && m.id && m.id.toString() === rid && (m.type || "movie") === rtype,
+            m &&
+            m.id &&
+            m.id.toString() === rid &&
+            (m.type || "movie") === rtype,
         );
         if (movie) {
           if (isWatchItAgainItem(movie, progressData, tvDetailsCache)) {
@@ -1410,10 +1422,7 @@ export function useAppState() {
     const needsFetch = (id: string, type: string) => {
       const match = currentAllMovies.find(
         (m) =>
-          m &&
-          m.id &&
-          m.id.toString() === id &&
-          (m.type || "movie") === type,
+          m && m.id && m.id.toString() === id && (m.type || "movie") === type,
       );
       // Missing from pool entirely, or in pool but without an image (legacy skeleton)
       return !match || !match.image;
@@ -1463,13 +1472,18 @@ export function useAppState() {
               }
             }),
           );
-           const valid = fetched.filter(Boolean) as any[];
+          const valid = fetched.filter(Boolean) as any[];
           if (valid.length > 0) {
             // Replace skeleton pool items with fully-hydrated ones
             currentAllMovies = currentAllMovies
-              .filter((m) => !valid.some((v: any) =>
-                v.id.toString() === m.id.toString() && (v.type || "movie") === (m.type || "movie")
-              ))
+              .filter(
+                (m) =>
+                  !valid.some(
+                    (v: any) =>
+                      v.id.toString() === m.id.toString() &&
+                      (v.type || "movie") === (m.type || "movie"),
+                  ),
+              )
               .concat(valid);
             updateGlobalPool(valid);
 
@@ -1484,7 +1498,8 @@ export function useAppState() {
                   const pItem = pVal as any;
                   if (!pItem.title && !pItem.poster_path) {
                     const pBaseId = pKey.split("-")[0];
-                    const pType = pItem.type || (pKey.includes("-") ? "tv" : "movie");
+                    const pType =
+                      pItem.type || (pKey.includes("-") ? "tv" : "movie");
                     const match = valid.find(
                       (v: any) =>
                         v.id.toString() === pBaseId &&
@@ -1497,7 +1512,8 @@ export function useAppState() {
                         ...pItem,
                         title: match.title || match.name,
                         poster_path: posterRaw,
-                        backdrop_path: match.backdrop_path || match.backdrop || "",
+                        backdrop_path:
+                          match.backdrop_path || match.backdrop || "",
                         image: match.image || "",
                         type: pType,
                         vote_average: match.vote_average || match.imdb || 0,
@@ -1509,7 +1525,10 @@ export function useAppState() {
                 }
               }
               if (progressUpdated) {
-                localStorage.setItem("nebula-progress", JSON.stringify(progressCur));
+                localStorage.setItem(
+                  "nebula-progress",
+                  JSON.stringify(progressCur),
+                );
               }
 
               // Enrich nebula-my-list legacy entries
@@ -3593,10 +3612,7 @@ export function useAppState() {
       .slice(0, 20);
   }, [rows]);
 
-  const markAsWatched = (
-    movieOrId: any,
-    type: "movie" | "tv" = "movie",
-  ) => {
+  const markAsWatched = (movieOrId: any, type: "movie" | "tv" = "movie") => {
     let id: string;
     let itemType: "movie" | "tv" = "movie";
     let richObj: any = null;
