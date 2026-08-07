@@ -188,6 +188,8 @@ export const SOURCE_ALIASES: Record<string, string> = {
   Aether: "Aether",
   NetNaija: "Vesper",
   Vesper: "Vesper",
+  VidVault: "Chronos",
+  vidvault: "Chronos",
 };
 
 export function getVidrockAudioHelper(
@@ -430,6 +432,8 @@ export const getCategoryAlias = (category: string): string => {
   if (catLower.startsWith("vidlink")) return "Spectra";
   if (catLower.startsWith("vidnest")) return "Titan";
   if (catLower.startsWith("filmu")) return "Orbital";
+  if (catLower.startsWith("vidvault") || catLower.startsWith("chronos"))
+    return "Chronos";
   if (catLower.startsWith("kuro")) {
     if (catLower.includes("dub")) return "Zenith (Dub)";
     if (catLower.includes("sub")) return "Zenith (Sub)";
@@ -465,7 +469,8 @@ export const formatSubtitleSource = (rawSource?: string): string => {
   if (sLower.includes("vidlink")) return "Spectra";
   if (sLower.includes("videasy")) return "Pulse";
   if (sLower.includes("kuro")) return "Zenith";
-  if (sLower.includes("vidvault")) return "VidVault";
+  if (sLower.includes("vidvault") || sLower.includes("chronos"))
+    return "Chronos";
 
   if (s.includes("(")) {
     const main = s.split("(")[0].trim();
@@ -592,6 +597,17 @@ export const parseMirrorDetails = (sourceName: string) => {
     return {
       category: "Orbital",
       name: ((subClean || "Mirror") + suffix).toUpperCase(),
+    };
+  }
+  if (
+    cleanSource.toLowerCase().startsWith("vidvault") ||
+    cleanSource.toLowerCase().startsWith("chronos")
+  ) {
+    const rest = cleanSource.replace(/^(VidVault|Chronos)[\s-]*/i, "").trim();
+    const subClean = cleanSubProviderName(rest);
+    return {
+      category: "Chronos",
+      name: ((subClean || "Direct") + suffix).toUpperCase(),
     };
   }
   if (cleanSource.toLowerCase().startsWith("kuro")) {
@@ -7946,7 +7962,7 @@ export function InPlayerSourcePicker({
                     s = s.replace(/^[-_\s]*\d*[-_\s]*/, "");
                     s = s
                       .replace(
-                        /^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i,
+                        /^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD|VidVault|Chronos)\s*[-_()]*/i,
                         "",
                       )
                       .trim();

@@ -273,4 +273,6 @@ export const CATEGORY_PRIORITY: string[] = [
   "FilmU",
   "Starlight",
   "Cinesrc",
+  "Chronos",
+  "VidVault",
 ];

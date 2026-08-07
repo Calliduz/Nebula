@@ -583,7 +583,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                         s = s.replace(/^[-_\s]*\d*[-_\s]*/, "");
                         s = s
                           .replace(
-                            /^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD)\s*[-_()]*/i,
+                            /^(VidRock|Videasy|VidLink|FilmU|Vidnest|Vaplayer|Vidplay|Kuro|HDGharTV|NetNaija|HOLLYMOVIEHD|VidVault|Chronos)\s*[-_()]*/i,
                             "",
                           )
                           .trim();
