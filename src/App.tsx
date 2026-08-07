@@ -15,6 +15,7 @@ import { Footer } from "./components/Footer";
 import { MovieDetailsSkeleton } from "./components/MovieDetailsSkeleton";
 import { MovieSkeleton } from "./components/MovieSkeleton";
 import { DiscordInvite } from "./components/DiscordInvite";
+import { AdminDashboard } from "./components/AdminDashboard";
 
 // Auto-retrying lazy loader to handle new production deployments gracefully when chunk hashes change
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
@@ -101,6 +102,30 @@ export default function App() {
   const [selectedActorId, setSelectedActorId] = React.useState<
     string | number | null
   >(null);
+  const [isAdminOpen, setIsAdminOpen] = React.useState(false);
+
+  // Detect /admin URL route
+  React.useEffect(() => {
+    if (location.pathname === "/admin") {
+      setIsAdminOpen(true);
+    }
+  }, [location.pathname]);
+
+  // Global Ctrl + Shift + A shortcut
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        (e.key === "A" || e.key === "a")
+      ) {
+        e.preventDefault();
+        setIsAdminOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleOpenSearch = React.useCallback(() => {
     actions.setIsSearchOpen(true);
@@ -320,6 +345,9 @@ export default function App() {
               element={<MediaPlayerStub actions={actions} state={state} />}
             />
 
+            {/* Direct Admin Dashboard Route */}
+            <Route path="/admin" element={null} />
+
             {/* Catch-all 404 */}
             <Route
               path="*"
@@ -341,6 +369,17 @@ export default function App() {
 
       {/* Discord Server Invite floating card */}
       {!isWatching && <DiscordInvite />}
+
+      {/* Admin Analytics & System Health Modal */}
+      <AdminDashboard
+        isOpen={isAdminOpen}
+        onClose={() => {
+          setIsAdminOpen(false);
+          if (location.pathname === "/admin") {
+            navigate("/");
+          }
+        }}
+      />
 
       <React.Suspense fallback={null}>
         <SearchOverlay

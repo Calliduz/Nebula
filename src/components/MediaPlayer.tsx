@@ -964,6 +964,40 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     similarTitles.length,
   ]);
 
+  // Periodic active viewer heartbeat to server
+  useEffect(() => {
+    if (!movie?.title) return;
+
+    let sessId = sessionStorage.getItem("nebula_sess_id");
+    if (!sessId) {
+      sessId =
+        "s_" +
+        Math.random().toString(36).substring(2, 11) +
+        Date.now().toString(36);
+      sessionStorage.setItem("nebula_sess_id", sessId);
+    }
+
+    const sendHeartbeat = () => {
+      fetch(`${API_BASE_URL}/api/heartbeat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sessId,
+          title: movie.title,
+          tmdbId: movie.id?.toString(),
+          type: movie.type || "movie",
+        }),
+      }).catch(() => {});
+    };
+
+    // Send immediately on mount
+    sendHeartbeat();
+
+    // Repeat every 25 seconds
+    const interval = setInterval(sendHeartbeat, 25000);
+    return () => clearInterval(interval);
+  }, [movie?.id, movie?.title, movie?.type]);
+
   // Reset logo state when the clearLogo URL changes (e.g. episode/movie switch).
   // If clearLogo is missing from movie prop, fetch & enrich it automatically.
   useEffect(() => {
