@@ -1,6 +1,7 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { Search, Download, X, Smartphone, Globe } from "lucide-react";
 import { NAV_ITEMS } from "../data/constants";
+import { usePWAInstall } from "../hooks/usePWAInstall";
 
 export const TopNav = React.memo(
   ({
@@ -11,6 +12,13 @@ export const TopNav = React.memo(
     viewingCategory,
     setViewingCategory,
   }: any) => {
+    const {
+      showInstallButton,
+      handleInstallClick,
+      showModal,
+      closeModal,
+    } = usePWAInstall();
+
     const isItemActive = (itemId: string) => {
       if (itemId === "search") return false;
       if (itemId === "home") return activeTab === "home" && !viewingCategory;
@@ -97,7 +105,18 @@ export const TopNav = React.memo(
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {showInstallButton && (
+              <button
+                onClick={handleInstallClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-[10px] sm:text-[11px] font-semibold transition-all duration-300 active:scale-95 cursor-pointer"
+                title="Install Nebula App"
+              >
+                <Download size={14} className="text-white/60" />
+                <span>Install App</span>
+              </button>
+            )}
+
             <button
               onClick={onSearchClick}
               className="flex items-center gap-2 text-white/70 hover:text-nebula-cyan transition-all duration-300 group cursor-pointer p-2 sm:px-3 sm:py-1.5 rounded-full bg-white/5 sm:bg-transparent border border-white/10 sm:border-transparent active:scale-95 shadow-sm sm:shadow-none"
@@ -115,6 +134,65 @@ export const TopNav = React.memo(
             </button>
           </div>
         </header>
+
+        {/* PWA Manual Install Guidance Modal */}
+        {showModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+            <div className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-2xl overflow-hidden">
+              <button
+                onClick={closeModal}
+                className="absolute top-4 right-4 text-white/50 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80">
+                  <Smartphone size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                    Install App
+                  </h3>
+                  <p className="text-[11px] text-white/50">
+                    Add Nebula to your home screen
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5 text-xs text-white/70 leading-relaxed mb-5 bg-white/5 p-3 rounded-xl border border-white/5">
+                <div className="flex items-start gap-2">
+                  <Globe size={14} className="text-white/60 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-white">Chrome / Brave / Edge:</span>
+                    <p className="text-white/50 text-[11px]">
+                      Open menu <span className="text-white font-semibold">(⋮)</span> and tap <span className="text-white font-semibold">"Install App"</span> or <span className="text-white font-semibold">"Add to Home Screen"</span>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-white/10 my-1" />
+
+                <div className="flex items-start gap-2">
+                  <Smartphone size={14} className="text-white/60 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-white">iOS Safari:</span>
+                    <p className="text-white/50 text-[11px]">
+                      Tap <span className="text-white font-semibold">Share</span> and tap <span className="text-white font-semibold">"Add to Home Screen"</span>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={closeModal}
+                className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Floating Glass Mobile Bottom Nav */}
         <nav className="lg:hidden fixed bottom-2 sm:bottom-3 inset-x-0 z-[100] px-3 sm:px-4 pointer-events-none">
@@ -166,3 +244,4 @@ export const TopNav = React.memo(
     );
   },
 );
+
