@@ -2099,11 +2099,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     };
   }, []);
 
-  // ── Auto-fullscreen on mobile when stream first plays ─────────────────────
+  // ── Auto-fullscreen on mobile when player mounts ───────────────────────────
   useEffect(() => {
-    const video = videoRef.current;
     const container = containerRef.current;
-    if (!video || !container) return;
+    const video = videoRef.current;
+    if (!container) return;
 
     const isMobileDevice =
       ("ontouchstart" in window || navigator.maxTouchPoints > 0) &&
@@ -2111,38 +2111,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     if (!isMobileDevice) return;
 
-    const onFirstPlaying = () => {
-      if (hasAutoFullscreenedRef.current) return;
-      hasAutoFullscreenedRef.current = true;
+    if (hasAutoFullscreenedRef.current) return;
+    hasAutoFullscreenedRef.current = true;
 
-      // Already in fullscreen (e.g. user manually entered before playback)
-      if (
-        document.fullscreenElement ||
-        (document as any).webkitFullscreenElement
-      )
-        return;
+    // Already in fullscreen (e.g. user manually entered before playback)
+    if (
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement
+    )
+      return;
 
-      // Try Fullscreen API on the container (triggers fullscreenchange → landscape lock)
-      if (container.requestFullscreen) {
-        container.requestFullscreen().catch(() => {
-          // Browser blocked it (no user gesture, or not supported)
-          console.warn("[PLAYER] Auto-fullscreen blocked by browser.");
-        });
-      } else if ((video as any).webkitEnterFullscreen) {
-        // iOS Safari fallback — native video fullscreen only
-        try {
-          (video as any).webkitEnterFullscreen();
-        } catch (e) {
-          console.warn("[PLAYER] webkitEnterFullscreen failed:", e);
-        }
+    // Try Fullscreen API on the container (triggers fullscreenchange → landscape lock)
+    if (container.requestFullscreen) {
+      container.requestFullscreen().catch(() => {
+        // Browser blocked it (no user gesture, or not supported)
+        console.warn("[PLAYER] Auto-fullscreen on mount blocked by browser.");
+      });
+    } else if (video && (video as any).webkitEnterFullscreen) {
+      // iOS Safari fallback — native video fullscreen only
+      try {
+        (video as any).webkitEnterFullscreen();
+      } catch (e) {
+        console.warn("[PLAYER] webkitEnterFullscreen failed:", e);
       }
-    };
-
-    video.addEventListener("playing", onFirstPlaying);
-    return () => {
-      video.removeEventListener("playing", onFirstPlaying);
-    };
-  }, [streamUrl]);
+    }
+  }, []);
 
   // ── Fetch stream ──────────────────────────────────────────────────────────
   useEffect(() => {
