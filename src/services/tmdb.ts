@@ -117,6 +117,7 @@ export interface NebulaMovie {
   id: string | number;
   title: string;
   description: string;
+  tagline?: string;
   image: string;
   backdrop: string;
   genre: string;
@@ -240,6 +241,7 @@ const normalizeMovie = (
   id: item.id || Math.floor(Math.random() * 1_000_000),
   title: item.title || item.name || "Unknown Title",
   description: item.overview || "No overview available.",
+  tagline: item.tagline?.trim() || undefined,
   image: item.poster_path
     ? proxyImage(`${IMAGE_BASE_URL}${item.poster_path}`)
     : "/no-image.svg",

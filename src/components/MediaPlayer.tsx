@@ -60,6 +60,7 @@ import {
   getTVSeasonEpisodes,
   getMediaDetails,
   enrichMoviesWithMetadata,
+  getMediaBasicInfo,
 } from "../services/tmdb";
 import {
   type SkipSegment,
@@ -899,6 +900,33 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [subtitles, setSubtitles] = useState<any[]>([]);
   const [logoFailed, setLogoFailed] = useState(() => !movie?.clearLogo);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [tagline, setTagline] = useState<string | undefined>(
+    () => movie?.tagline,
+  );
+
+  useEffect(() => {
+    if (movie?.tagline) {
+      setTagline(movie.tagline);
+      return;
+    }
+    if (movie?.id && (movie?.type || movie?.media_type)) {
+      let isMounted = true;
+      getMediaBasicInfo(movie.id, movie.type || movie.media_type || "movie")
+        .then((info) => {
+          if (isMounted && info?.tagline) {
+            setTagline(info.tagline);
+            if (movie) movie.tagline = info.tagline;
+          }
+        })
+        .catch(() => {});
+      return () => {
+        isMounted = false;
+      };
+    } else {
+      setTagline(undefined);
+    }
+  }, [movie?.id, movie?.type, movie?.tagline]);
 
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
   const [similarTitles, setSimilarTitles] = useState<any[]>(
@@ -5509,84 +5537,98 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         }}
       >
         <div
-          className={`flex items-center gap-3 px-3 sm:px-6 py-3 sm:py-5 ${!isEmbed ? "bg-gradient-to-b from-black/80 to-transparent" : ""}`}
+          className={`flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-5 ${!isEmbed ? "bg-gradient-to-b from-black/80 to-transparent" : ""}`}
           // Stop taps on the top bar from bubbling to the tap layer
           onClick={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={safeClose}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/20 hover:border-white/40 shrink-0 shadow-md"
-            title="Back (Esc)"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          {!isEmbed && (
-            <div className="min-w-0 flex-1">
-              {movie.clearLogo && !logoFailed ? (
-                <div className="flex items-center gap-2.5 mb-0.5">
-                  <img
-                    src={movie.clearLogo}
-                    alt={movie.title}
-                    className="h-7 sm:h-9 max-w-[180px] sm:max-w-[260px] w-auto object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] drop-shadow-md"
-                    referrerPolicy="no-referrer"
-                    onLoad={() => markLogoValid(movie.clearLogo)}
-                    onError={() => {
-                      if (
-                        movie?.clearLogo &&
-                        !isLogoValidated(movie.clearLogo)
-                      ) {
-                        setLogoFailed(true);
-                      }
-                    }}
-                  />
-                  {season !== undefined && episode !== undefined && (
-                    <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
-                      S{season}:E{episode}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <h2 className="text-base sm:text-lg font-display font-bold truncate leading-tight text-white flex items-center gap-2">
-                  <span>{movie.title}</span>
-                  {season !== undefined && episode !== undefined && (
-                    <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
-                      S{season}:E{episode}
-                    </span>
-                  )}
-                </h2>
-              )}
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <p className="text-white/80 text-[10px] sm:text-xs font-sans font-medium tracking-wide">
-                  {movie.type === "tv" ? "TV Series" : "Movie"}
-                  {movie.year ? ` · ${movie.year}` : ""}
-                </p>
-                {qualityTag && qualityTag !== "UNKNOWN" && (
-                  <div className="flex items-center gap-1">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider border ${
-                        qualityTag === "CAM" || qualityTag === "TC"
-                          ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                          : qualityTag === "BLURAY"
-                            ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
-                            : "bg-white/10 border-white/15 text-nebula-cyan"
-                      }`}
-                    >
-                      {qualityTag === "WEBDL"
-                        ? "WEB-DL"
-                        : qualityTag === "WEBRIP"
-                          ? "WEBRip"
-                          : qualityTag}
-                    </span>
-                    {resolution && resolution !== "UNKNOWN" && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider border bg-white/5 border-white/10 text-white/60">
-                        {resolution}
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 shrink-0 max-w-[45%] sm:max-w-[35%] md:max-w-[40%]">
+            <button
+              onClick={safeClose}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/20 hover:border-white/40 shrink-0 shadow-md"
+              title="Back (Esc)"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            {!isEmbed && (
+              <div className="min-w-0 flex-1">
+                {movie.clearLogo && !logoFailed ? (
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <img
+                      src={movie.clearLogo}
+                      alt={movie.title}
+                      className="h-7 sm:h-9 max-w-[120px] xs:max-w-[160px] sm:max-w-[220px] w-auto object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] drop-shadow-md"
+                      referrerPolicy="no-referrer"
+                      onLoad={() => markLogoValid(movie.clearLogo)}
+                      onError={() => {
+                        if (
+                          movie?.clearLogo &&
+                          !isLogoValidated(movie.clearLogo)
+                        ) {
+                          setLogoFailed(true);
+                        }
+                      }}
+                    />
+                    {season !== undefined && episode !== undefined && (
+                      <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
+                        S{season}:E{episode}
                       </span>
                     )}
                   </div>
+                ) : (
+                  <h2 className="text-base sm:text-lg font-display font-bold truncate leading-tight text-white flex items-center gap-2">
+                    <span>{movie.title}</span>
+                    {season !== undefined && episode !== undefined && (
+                      <span className="bg-white/15 text-nebula-cyan font-mono text-xs px-2 py-0.5 rounded border border-white/25 font-extrabold shrink-0 shadow-sm">
+                        S{season}:E{episode}
+                      </span>
+                    )}
+                  </h2>
                 )}
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <p className="text-white/80 text-[10px] sm:text-xs font-sans font-medium tracking-wide">
+                    {movie.type === "tv" ? "TV Series" : "Movie"}
+                    {movie.year ? ` · ${movie.year}` : ""}
+                  </p>
+                  {qualityTag && qualityTag !== "UNKNOWN" && (
+                    <div className="flex items-center gap-1">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider border ${
+                          qualityTag === "CAM" || qualityTag === "TC"
+                            ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                            : qualityTag === "BLURAY"
+                              ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
+                              : "bg-white/10 border-white/15 text-nebula-cyan"
+                        }`}
+                      >
+                        {qualityTag === "WEBDL"
+                          ? "WEB-DL"
+                          : qualityTag === "WEBRIP"
+                            ? "WEBRip"
+                            : qualityTag}
+                      </span>
+                      {resolution && resolution !== "UNKNOWN" && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider border bg-white/5 border-white/10 text-white/60">
+                          {resolution}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
+            )}
+          </div>
+
+          {/* Centered Tagline - Middle Spot */}
+          {tagline && !isEmbed && (
+            <div className="flex flex-1 min-w-0 items-center justify-center px-1 sm:px-3 text-center">
+              <p
+                className="text-white/75 text-[10px] xs:text-xs sm:text-xs md:text-sm font-sans italic tracking-wide truncate max-w-[130px] xs:max-w-[200px] sm:max-w-[360px] md:max-w-[500px] lg:max-w-[650px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
+                title={tagline}
+              >
+                "{tagline}"
+              </p>
             </div>
           )}
 
