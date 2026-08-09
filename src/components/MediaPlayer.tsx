@@ -904,6 +904,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [tagline, setTagline] = useState<string | undefined>(
     () => movie?.tagline,
   );
+  const [episodeName, setEpisodeName] = useState<string | undefined>();
 
   useEffect(() => {
     if (movie?.tagline) {
@@ -927,6 +928,33 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setTagline(undefined);
     }
   }, [movie?.id, movie?.type, movie?.tagline]);
+
+  useEffect(() => {
+    const isTV = movie?.type === "tv" || movie?.media_type === "tv";
+    if (isTV && movie?.id && season !== undefined && episode !== undefined) {
+      let isMounted = true;
+      getTVSeasonEpisodes(movie.id, season)
+        .then((episodes) => {
+          if (!isMounted) return;
+          const currentEp = episodes?.find(
+            (e: any) => e.episode_number === episode,
+          );
+          if (currentEp?.name) {
+            setEpisodeName(currentEp.name);
+          } else {
+            setEpisodeName(undefined);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setEpisodeName(undefined);
+        });
+      return () => {
+        isMounted = false;
+      };
+    } else {
+      setEpisodeName(undefined);
+    }
+  }, [movie?.id, movie?.type, movie?.media_type, season, episode]);
 
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
   const [similarTitles, setSimilarTitles] = useState<any[]>(
@@ -5620,14 +5648,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             )}
           </div>
 
-          {/* Centered Tagline - Middle Spot */}
-          {tagline && !isEmbed && (
+          {/* Centered Middle Spot: Episode Name for TV Series / Tagline for Movies */}
+          {((movie?.type === "tv" || movie?.media_type === "tv" ? episodeName : tagline)) && !isEmbed && (
             <div className="flex flex-1 min-w-0 items-center justify-center px-1 sm:px-3 text-center">
               <p
                 className="text-white/75 text-[10px] xs:text-xs sm:text-xs md:text-sm font-sans italic tracking-wide truncate max-w-[130px] xs:max-w-[200px] sm:max-w-[360px] md:max-w-[500px] lg:max-w-[650px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
-                title={tagline}
+                title={
+                  (movie?.type === "tv" || movie?.media_type === "tv")
+                    ? episodeName
+                    : tagline
+                }
               >
-                "{tagline}"
+                "{(movie?.type === "tv" || movie?.media_type === "tv") ? episodeName : tagline}"
               </p>
             </div>
           )}
