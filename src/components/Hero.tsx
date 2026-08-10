@@ -213,7 +213,9 @@ export const Hero = React.memo<HeroProps>(
 
                 {/* Separator */}
                 {(activeHero.rating || activeHero.imdb) && (
-                  <span className="text-white/20 font-light select-none">•</span>
+                  <span className="text-white/20 font-light select-none">
+                    •
+                  </span>
                 )}
 
                 {/* Media Type */}
@@ -225,7 +227,9 @@ export const Hero = React.memo<HeroProps>(
 
                 {/* Separator */}
                 {activeHero.type && (
-                  <span className="text-white/20 font-light select-none">•</span>
+                  <span className="text-white/20 font-light select-none">
+                    •
+                  </span>
                 )}
 
                 {/* Release Year */}
@@ -237,7 +241,9 @@ export const Hero = React.memo<HeroProps>(
 
                 {/* Separator */}
                 {activeHero.year && activeHero.duration && (
-                  <span className="text-white/20 font-light select-none">•</span>
+                  <span className="text-white/20 font-light select-none">
+                    •
+                  </span>
                 )}
 
                 {/* Duration */}
@@ -250,7 +256,9 @@ export const Hero = React.memo<HeroProps>(
                 {/* Quality Badge (Minimal micro-tag) */}
                 {activeHero.quality && (
                   <>
-                    <span className="text-white/20 font-light select-none">•</span>
+                    <span className="text-white/20 font-light select-none">
+                      •
+                    </span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] md:text-[11px] font-black tracking-wider uppercase bg-white/10 text-white/90 border border-white/15">
                       {activeHero.quality}
                     </span>

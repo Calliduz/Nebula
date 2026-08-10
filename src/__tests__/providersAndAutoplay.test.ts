@@ -1,10 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { PROVIDERS, CATEGORY_PRIORITY, PRIORITY_PROVIDER_ID } from "../config/providers";
+import {
+  PROVIDERS,
+  CATEGORY_PRIORITY,
+  PRIORITY_PROVIDER_ID,
+} from "../config/providers";
 
 // Unit test function simulating the new autoplay selection logic from MovieDetails
 export function selectAutoplayProvider(
   scan: Record<string, { loading: boolean; sources: any[] }>,
-  userPrefId?: string | null
+  userPrefId?: string | null,
 ): string | null {
   // Priority 0: Preferred provider if set
   if (userPrefId && PROVIDERS.some((p) => p.id === userPrefId)) {
@@ -54,8 +58,14 @@ describe("Provider Configuration and Autoplay Selection", () => {
 
   it("should autoplay 1st source (Aether) when it returns non-empty sources", () => {
     const scanState: Record<string, { loading: boolean; sources: any[] }> = {
-      hdghartv: { loading: false, sources: [{ url: "http://test.com/aether" }] },
-      netnaija: { loading: false, sources: [{ url: "http://test.com/vesper" }] },
+      hdghartv: {
+        loading: false,
+        sources: [{ url: "http://test.com/aether" }],
+      },
+      netnaija: {
+        loading: false,
+        sources: [{ url: "http://test.com/vesper" }],
+      },
     };
     expect(selectAutoplayProvider(scanState)).toBe("hdghartv");
   });
@@ -63,15 +73,24 @@ describe("Provider Configuration and Autoplay Selection", () => {
   it("should autoplay 2nd source (Vesper) if 1st source (Aether) returns empty", () => {
     const scanState: Record<string, { loading: boolean; sources: any[] }> = {
       hdghartv: { loading: false, sources: [] },
-      netnaija: { loading: false, sources: [{ url: "http://test.com/vesper" }] },
+      netnaija: {
+        loading: false,
+        sources: [{ url: "http://test.com/vesper" }],
+      },
     };
     expect(selectAutoplayProvider(scanState)).toBe("netnaija");
   });
 
   it("should prioritize preferred source if specified and has sources", () => {
     const scanState: Record<string, { loading: boolean; sources: any[] }> = {
-      hdghartv: { loading: false, sources: [{ url: "http://test.com/aether" }] },
-      vaplayer: { loading: false, sources: [{ url: "http://test.com/quantum" }] },
+      hdghartv: {
+        loading: false,
+        sources: [{ url: "http://test.com/aether" }],
+      },
+      vaplayer: {
+        loading: false,
+        sources: [{ url: "http://test.com/quantum" }],
+      },
     };
     // Preferred source is Quantum (vaplayer)
     expect(selectAutoplayProvider(scanState, "vaplayer")).toBe("vaplayer");
@@ -79,7 +98,10 @@ describe("Provider Configuration and Autoplay Selection", () => {
 
   it("should wait for preferred source if preferred source is still loading", () => {
     const scanState: Record<string, { loading: boolean; sources: any[] }> = {
-      hdghartv: { loading: false, sources: [{ url: "http://test.com/aether" }] },
+      hdghartv: {
+        loading: false,
+        sources: [{ url: "http://test.com/aether" }],
+      },
       vaplayer: { loading: true, sources: [] },
     };
     // Preferred source is Quantum (vaplayer) which is loading
@@ -88,7 +110,10 @@ describe("Provider Configuration and Autoplay Selection", () => {
 
   it("should fall back to default order if preferred source returns empty", () => {
     const scanState: Record<string, { loading: boolean; sources: any[] }> = {
-      hdghartv: { loading: false, sources: [{ url: "http://test.com/aether" }] },
+      hdghartv: {
+        loading: false,
+        sources: [{ url: "http://test.com/aether" }],
+      },
       vaplayer: { loading: false, sources: [] },
     };
     // Preferred source Quantum returned empty -> fall back to Aether

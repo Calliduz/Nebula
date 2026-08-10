@@ -2171,10 +2171,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     hasAutoFullscreenedRef.current = true;
 
     // Already in fullscreen (e.g. user manually entered before playback)
-    if (
-      document.fullscreenElement ||
-      (document as any).webkitFullscreenElement
-    )
+    if (document.fullscreenElement || (document as any).webkitFullscreenElement)
       return;
 
     // Try Fullscreen API on the container (triggers fullscreenchange → landscape lock)
@@ -5649,20 +5646,27 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           </div>
 
           {/* Centered Middle Spot: Episode Name for TV Series / Tagline for Movies */}
-          {((movie?.type === "tv" || movie?.media_type === "tv" ? episodeName : tagline)) && !isEmbed && (
-            <div className="flex flex-1 min-w-0 items-center justify-center px-1 sm:px-3 text-center">
-              <p
-                className="text-white/75 text-[10px] xs:text-xs sm:text-xs md:text-sm font-sans italic tracking-wide truncate max-w-[130px] xs:max-w-[200px] sm:max-w-[360px] md:max-w-[500px] lg:max-w-[650px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
-                title={
-                  (movie?.type === "tv" || movie?.media_type === "tv")
+          {(movie?.type === "tv" || movie?.media_type === "tv"
+            ? episodeName
+            : tagline) &&
+            !isEmbed && (
+              <div className="flex flex-1 min-w-0 items-center justify-center px-1 sm:px-3 text-center">
+                <p
+                  className="text-white/75 text-[10px] xs:text-xs sm:text-xs md:text-sm font-sans italic tracking-wide truncate max-w-[130px] xs:max-w-[200px] sm:max-w-[360px] md:max-w-[500px] lg:max-w-[650px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
+                  title={
+                    movie?.type === "tv" || movie?.media_type === "tv"
+                      ? episodeName
+                      : tagline
+                  }
+                >
+                  "
+                  {movie?.type === "tv" || movie?.media_type === "tv"
                     ? episodeName
-                    : tagline
-                }
-              >
-                "{(movie?.type === "tv" || movie?.media_type === "tv") ? episodeName : tagline}"
-              </p>
-            </div>
-          )}
+                    : tagline}
+                  "
+                </p>
+              </div>
+            )}
 
           {!isEmbed && (
             <div className="flex items-center gap-2 shrink-0">

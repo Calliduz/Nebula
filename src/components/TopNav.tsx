@@ -12,12 +12,8 @@ export const TopNav = React.memo(
     viewingCategory,
     setViewingCategory,
   }: any) => {
-    const {
-      showInstallButton,
-      handleInstallClick,
-      showModal,
-      closeModal,
-    } = usePWAInstall();
+    const { showInstallButton, handleInstallClick, showModal, closeModal } =
+      usePWAInstall();
 
     const isItemActive = (itemId: string) => {
       if (itemId === "search") return false;
@@ -164,9 +160,21 @@ export const TopNav = React.memo(
                 <div className="flex items-start gap-2">
                   <Globe size={14} className="text-white/60 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-semibold text-white">Chrome / Brave / Edge:</span>
+                    <span className="font-semibold text-white">
+                      Chrome / Brave / Edge:
+                    </span>
                     <p className="text-white/50 text-[11px]">
-                      Open menu <span className="text-white font-semibold">(⋮)</span> and tap <span className="text-white font-semibold">"Install App"</span> or <span className="text-white font-semibold">"Add to Home Screen"</span>.
+                      Open menu{" "}
+                      <span className="text-white font-semibold">(⋮)</span> and
+                      tap{" "}
+                      <span className="text-white font-semibold">
+                        "Install App"
+                      </span>{" "}
+                      or{" "}
+                      <span className="text-white font-semibold">
+                        "Add to Home Screen"
+                      </span>
+                      .
                     </p>
                   </div>
                 </div>
@@ -174,11 +182,22 @@ export const TopNav = React.memo(
                 <div className="h-px bg-white/10 my-1" />
 
                 <div className="flex items-start gap-2">
-                  <Smartphone size={14} className="text-white/60 shrink-0 mt-0.5" />
+                  <Smartphone
+                    size={14}
+                    className="text-white/60 shrink-0 mt-0.5"
+                  />
                   <div>
-                    <span className="font-semibold text-white">iOS Safari:</span>
+                    <span className="font-semibold text-white">
+                      iOS Safari:
+                    </span>
                     <p className="text-white/50 text-[11px]">
-                      Tap <span className="text-white font-semibold">Share</span> and tap <span className="text-white font-semibold">"Add to Home Screen"</span>.
+                      Tap{" "}
+                      <span className="text-white font-semibold">Share</span>{" "}
+                      and tap{" "}
+                      <span className="text-white font-semibold">
+                        "Add to Home Screen"
+                      </span>
+                      .
                     </p>
                   </div>
                 </div>
@@ -244,4 +263,3 @@ export const TopNav = React.memo(
     );
   },
 );
-

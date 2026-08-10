@@ -6,19 +6,20 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [showModal, setShowModal] = useState<boolean>(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
-    
+
     const checkStandalone = () => {
       const isStandalone =
         mediaQuery.matches ||
         (navigator as any).standalone ||
         document.referrer.includes("android-app://");
-      
+
       if (isStandalone) {
         setIsInstalled(true);
       }
@@ -43,7 +44,10 @@ export function usePWAInstall() {
 
     return () => {
       mediaQuery.removeEventListener("change", checkStandalone);
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);

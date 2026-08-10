@@ -164,4 +164,3 @@ export const formatDuration = (val?: string | number): string => {
 
   return str;
 };
-
