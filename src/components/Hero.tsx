@@ -105,10 +105,18 @@ export const Hero = React.memo<HeroProps>(
         })}
         {/* Rest of Hero content remains unchanged */}
 
-        {/* ── Gradient overlays ─────────────────────────────────────────────── */}
-        <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/60 via-40% to-transparent z-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-obsidian/90 via-obsidian/40 to-transparent z-10 hidden md:block" />
-        <div className="absolute inset-0 bg-gradient-to-b from-obsidian/70 via-transparent to-transparent z-10 pointer-events-none" />
+        {/* ── Gradient overlays (Localized to text container for a bright background poster) ── */}
+        {/* Top header navigation subtle shadow */}
+        <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-obsidian/80 via-obsidian/40 to-transparent z-10 pointer-events-none" />
+
+        {/* Desktop left-focused gradient (covers text column on left, leaves middle/right poster vivid & bright) */}
+        <div className="absolute inset-y-0 left-0 w-full md:w-[60%] lg:w-[50%] bg-gradient-to-r from-obsidian via-obsidian/80 to-transparent z-10 hidden md:block pointer-events-none" />
+
+        {/* Mobile bottom gradient (protects text at bottom of mobile view) */}
+        <div className="absolute bottom-0 inset-x-0 h-[65%] bg-gradient-to-t from-obsidian via-obsidian/80 to-transparent z-10 md:hidden pointer-events-none" />
+
+        {/* Bottom smooth edge transition into rows below */}
+        <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-obsidian via-obsidian/50 to-transparent z-10 hidden md:block pointer-events-none" />
 
         {/* ── Content overlay (Unified layout to prevent overlapping) ────────── */}
         <div className="absolute inset-0 z-20 flex flex-col justify-end px-4 pb-14 pt-16 md:pb-0 md:pt-10 md:justify-center sm:px-6 md:px-12 pointer-events-none">
