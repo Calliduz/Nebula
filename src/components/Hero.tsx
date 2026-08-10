@@ -114,7 +114,13 @@ export const Hero = React.memo<HeroProps>(
         <div className="absolute inset-0 z-20 flex flex-col justify-end px-4 pb-14 pt-16 md:pb-0 md:pt-10 md:justify-center sm:px-6 md:px-12 pointer-events-none">
           <div className="max-w-3xl pointer-events-auto md:mt-20 w-full flex flex-col items-center md:items-start gap-4 md:gap-6">
             {/* Mobile-only portrait poster card */}
-            <div className="md:hidden w-40 sm:w-48 aspect-[2/3] rounded-xl overflow-hidden shadow-[0_12px_45px_rgba(0,0,0,0.75)] border border-white/10 shrink-0">
+            <div
+              className="md:hidden w-40 sm:w-48 aspect-[2/3] rounded-xl overflow-hidden shadow-[0_12px_45px_rgba(0,0,0,0.75)] border border-white/15 shrink-0 cursor-pointer active:scale-95 hover:border-nebula-cyan/50 transition-all duration-200 group/poster relative"
+              onClick={() => setSelectedMovie(activeHero)}
+              role="button"
+              tabIndex={0}
+              aria-label={`View details for ${activeHero.title}`}
+            >
               <img
                 src={
                   activeHero.image ||
@@ -122,7 +128,7 @@ export const Hero = React.memo<HeroProps>(
                   activeHero.backdrop
                 }
                 alt={activeHero.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover/poster:scale-105 transition-transform duration-300"
                 referrerPolicy="no-referrer"
                 onError={handleImageError}
               />
