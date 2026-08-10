@@ -8,7 +8,7 @@
  *  • The position of each entry in PROVIDERS determines:
  *      1. Display order in the Source Selection modal (MovieDetails)
  *      2. Display order in the compact in-player source picker (MediaPlayer)
- *      3. Autoplay priority — the first entry gets the Quantum grace period
+ *      3. Autoplay priority — preferred source first if selected, otherwise sequential fallback (Aether -> Vesper -> Quantum -> Hyperion...)
  *      4. In-player mirror sort priority (via CATEGORY_PRIORITY below)
  *
  *  • PRIORITY_PROVIDER_ID always equals PROVIDERS[0].id — no manual update needed.
@@ -55,21 +55,22 @@ export interface ProviderConfig {
 
 export const PROVIDERS: ProviderConfig[] = [
   {
-    id: "vaplayer",
-    name: "Quantum",
-    badge: "GLOBAL MIRRORS",
-    colorClass: "cyan",
-    borderClass: "border-cyan-500/40",
-    bgClass: "bg-cyan-500/10",
-    textClass: "text-cyan-400",
-    dotBgClass: "bg-cyan-400",
-    apiCategory: "Vaplayer",
-    buildUrl: ({ tmdbId, type, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+    id: "hdghartv",
+    name: "Aether",
+    badge: "MULTI-AUDIO",
+    colorClass: "emerald",
+    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-500/10",
+    textClass: "text-emerald-400",
+    dotBgClass: "bg-emerald-400",
+    apiCategory: "HDGharTV",
+    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
       if (season !== undefined) u += `&season=${season}`;
       if (episode !== undefined) u += `&episode=${episode}`;
       return u;
     },
+    serializeExtra: (src) => src.audio || "",
   },
   {
     id: "netnaija",
@@ -90,6 +91,23 @@ export const PROVIDERS: ProviderConfig[] = [
     serializeExtra: (src) => src.audio || "",
   },
   {
+    id: "vaplayer",
+    name: "Quantum",
+    badge: "GLOBAL MIRRORS",
+    colorClass: "cyan",
+    borderClass: "border-cyan-500/40",
+    bgClass: "bg-cyan-500/10",
+    textClass: "text-cyan-400",
+    dotBgClass: "bg-cyan-400",
+    apiCategory: "Vaplayer",
+    buildUrl: ({ tmdbId, type, season, episode, force }) => {
+      let u = `${API_BASE_URL}/api/vaplayer?tmdbId=${tmdbId}&type=${type}${force ? "&force=1" : ""}`;
+      if (season !== undefined) u += `&season=${season}`;
+      if (episode !== undefined) u += `&episode=${episode}`;
+      return u;
+    },
+  },
+  {
     id: "vidrock",
     name: "Hyperion",
     badge: "DEFAULT",
@@ -106,24 +124,6 @@ export const PROVIDERS: ProviderConfig[] = [
       return u;
     },
     serializeExtra: (src) => src.audio || src.language || "",
-  },
-  {
-    id: "hdghartv",
-    name: "Aether",
-    badge: "MULTI-AUDIO",
-    colorClass: "emerald",
-    borderClass: "border-emerald-500/40",
-    bgClass: "bg-emerald-500/10",
-    textClass: "text-emerald-400",
-    dotBgClass: "bg-emerald-400",
-    apiCategory: "HDGharTV",
-    buildUrl: ({ tmdbId, type, title, season, episode, force }) => {
-      let u = `${API_BASE_URL}/api/hdghartv?tmdbId=${tmdbId}&type=${type}&title=${encodeURIComponent(title)}${force ? "&force=1" : ""}`;
-      if (season !== undefined) u += `&season=${season}`;
-      if (episode !== undefined) u += `&episode=${episode}`;
-      return u;
-    },
-    serializeExtra: (src) => src.audio || "",
   },
   {
     id: "videasy",
@@ -234,8 +234,7 @@ export const PROVIDERS: ProviderConfig[] = [
 
 /**
  * The ID of the highest-priority provider.
- * Autoplay logic gives this provider a grace period to resolve before
- * falling back to the next available source. Always equals PROVIDERS[0].id.
+ * Autoplay logic checks providers sequentially in PROVIDERS order. Always equals PROVIDERS[0].id.
  */
 export const PRIORITY_PROVIDER_ID = PROVIDERS[0].id;
 
@@ -243,20 +242,20 @@ export const PRIORITY_PROVIDER_ID = PROVIDERS[0].id;
  * Ordered list of category display names used for in-player stream mirror sorting.
  * Controls which provider category appears first in the player mirror list.
  *
- * NOTE: Includes legacy API-side names (e.g. "Vaplayer", "VidRock") alongside
- * display names ("Quantum", "Hyperion") because stream names from the API may
+ * NOTE: Includes legacy API-side names (e.g. "Vaplayer", "VidRock", "HDGharTV") alongside
+ * display names ("Aether", "Vesper", "Quantum", "Hyperion") because stream names from the API may
  * use either form. Keep both when a provider has an alias.
  */
 export const CATEGORY_PRIORITY: string[] = [
-  "Quantum",
-  "Vaplayer",
-  "Vesper",
-  "NetNaija",
-  "Hyperion",
-  "VidRock",
   "Aether",
   "HDGharTV",
   "GharTV",
+  "Vesper",
+  "NetNaija",
+  "Quantum",
+  "Vaplayer",
+  "Hyperion",
+  "VidRock",
   "Pulse",
   "Videasy",
   "Zenith (Sub)",
@@ -276,3 +275,4 @@ export const CATEGORY_PRIORITY: string[] = [
   "Chronos",
   "VidVault",
 ];
+
