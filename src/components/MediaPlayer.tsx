@@ -5710,7 +5710,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 </button>
 
                 {sourceSelect && (
-                  <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-80 sm:w-96 max-w-[92vw] max-h-[65vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
+                  <div className="absolute top-12 right-0 bg-black/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-80 sm:w-96 max-w-[92vw] max-h-[65vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
                     {/* Header */}
                     <div className="px-2.5 pb-2 mb-2 border-b border-white/5 flex items-center justify-between">
                       <div>
@@ -5866,7 +5866,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </button>
 
                   {showServersModal && (
-                    <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-72 max-h-[60vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
+                    <div className="absolute top-12 right-0 bg-black/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-72 max-h-[60vh] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
                       <div className="px-2.5 pb-2 mb-2 border-b border-white/5">
                         <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                           <Cloud size={13} className="text-nebula-cyan" />
@@ -6790,7 +6790,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
               {/* Audio Tracks Menu */}
               {showAudioModal && (
-                <div className="absolute bottom-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1.5 p-3.5 animate-in slide-in-from-bottom-2 duration-200 text-left">
+                <div className="absolute bottom-12 right-0 bg-black/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1.5 p-3.5 animate-in slide-in-from-bottom-2 duration-200 text-left">
                   <div className="px-2 pb-2 mb-2 border-b border-white/5 flex items-center justify-between">
                     <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                       <AudioWaveform size={13} className="text-nebula-cyan" />
@@ -6937,7 +6937,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               )}
 
               {showSettings && (
-                <div className="absolute bottom-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1.5 p-3.5 animate-in slide-in-from-bottom-2 duration-200 text-left">
+                <div className="absolute bottom-12 right-0 bg-black/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-64 max-h-[60vh] overflow-y-auto custom-scrollbar pointer-events-auto flex flex-col gap-1.5 p-3.5 animate-in slide-in-from-bottom-2 duration-200 text-left">
                   <div className="px-2 pb-2 mb-2 border-b border-white/5">
                     <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                       <Settings size={13} className="text-nebula-cyan" />
@@ -7654,7 +7654,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
-              className="fixed inset-x-0 top-3 sm:top-6 bottom-0 z-[1100] bg-[#0c0c0e] border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto pb-[env(safe-area-inset-bottom,16px)] will-change-transform transform-gpu"
+              className="fixed inset-x-0 top-3 sm:top-6 bottom-0 z-[1100] bg-black border-t border-white/10 sm:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto pb-[env(safe-area-inset-bottom,16px)] will-change-transform transform-gpu"
             >
               {/* Drag Handle Bar */}
               <div
@@ -7741,7 +7741,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-[#0a0a0a] border border-white/10 p-6 sm:p-8 rounded-2xl shadow-2xl space-y-6"
+              className="w-full max-w-md bg-black border border-white/10 p-6 sm:p-8 rounded-2xl shadow-2xl space-y-6"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-4">
                 <div className="flex items-center gap-3">

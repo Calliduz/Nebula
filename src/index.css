@@ -7,7 +7,7 @@
   --font-accent: "Montserrat", sans-serif;
   --color-nebula-cyan: #00e5ff;
   --color-nebula-red: #e50914;
-  --color-obsidian: #050505;
+  --color-obsidian: #000000;
   --color-dim: #a0a0a0;
 }
 
@@ -82,7 +82,7 @@
 }
 
 .glass-header.scrolled {
-  background: #050505;
+  background: #000000;
 }
 
 .glow-cyan {
@@ -372,9 +372,9 @@ input[type="range"].appearance-slider-vertical {
     right: 0;
     background: linear-gradient(
       to top,
-      rgba(5, 5, 5, 0.98) 0%,
-      rgba(5, 5, 5, 0.92) 65%,
-      rgba(5, 5, 5, 0) 100%
+      rgba(0, 0, 0, 0.98) 0%,
+      rgba(0, 0, 0, 0.92) 65%,
+      rgba(0, 0, 0, 0) 100%
     );
     transform: translateY(100%);
     transition:

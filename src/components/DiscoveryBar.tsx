@@ -21,7 +21,7 @@ const AgeGateDialog: React.FC<{
       onClick={onCancel}
     />
     {/* Dialog */}
-    <div className="relative z-10 w-full max-w-sm bg-[#0a0a0a] border border-red-500/30 rounded-2xl p-6 shadow-[0_0_60px_rgba(229,9,20,0.2)]">
+    <div className="relative z-10 w-full max-w-sm bg-black border border-red-500/30 rounded-2xl p-6 shadow-[0_0_60px_rgba(229,9,20,0.2)]">
       {/* Close */}
       <button
         onClick={onCancel}

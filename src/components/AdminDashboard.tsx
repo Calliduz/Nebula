@@ -146,7 +146,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505]/85 p-3 sm:p-6 backdrop-blur-xl transition-all">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-6 backdrop-blur-xl transition-all">
       {/* Toast Notification Banner */}
       {toast && (
         <div
@@ -163,7 +163,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      <div className="relative mb-14 sm:mb-0 flex max-h-[85vh] sm:max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#080808] text-white shadow-[0_0_50px_rgba(0,229,255,0.08)]">
+      <div className="relative mb-14 sm:mb-0 flex max-h-[85vh] sm:max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-black text-white shadow-[0_0_50px_rgba(0,229,255,0.08)]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-black/40 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">

@@ -396,7 +396,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="relative w-full max-w-lg bg-[#0a0a0f] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden transform-gpu"
+        className="relative w-full max-w-lg bg-black border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden transform-gpu"
         style={{ animation: "modalSlideIn 0.18s ease-out" }}
       >
         {/* ── Header ── */}
@@ -1990,7 +1990,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
 
                           {showSeasonDropdown && (
                             <div
-                              className={`absolute left-0 w-48 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.85)] max-h-72 overflow-y-auto custom-scrollbar z-20 animate-in fade-in duration-150 ${dropUpSeasonDropdown ? "bottom-full mb-2" : "top-full mt-2"}`}
+                              className={`absolute left-0 w-48 bg-black/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.85)] max-h-72 overflow-y-auto custom-scrollbar z-20 animate-in fade-in duration-150 ${dropUpSeasonDropdown ? "bottom-full mb-2" : "top-full mt-2"}`}
                             >
                               {tvDetails.seasons
                                 .filter((s: any) => s.season_number > 0)

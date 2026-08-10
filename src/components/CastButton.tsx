@@ -96,7 +96,7 @@ export const CastButton: React.FC<CastButtonProps> = ({
 
       {/* Selector Dropdown when both Cast and AirPlay are available */}
       {showMenu && (
-        <div className="absolute top-12 right-0 bg-[#0f0f11]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-56 flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
+        <div className="absolute top-12 right-0 bg-black/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-3 shadow-[0_25px_60px_rgba(0,0,0,0.95)] w-56 flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200 z-[250] text-left">
           <div className="px-2 pb-1.5 border-b border-white/5">
             <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
               <Tv size={13} className="text-nebula-cyan" />
