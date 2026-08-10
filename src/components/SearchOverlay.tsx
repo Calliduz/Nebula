@@ -729,7 +729,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                           })}
                         </div>
                         {activeSearchTab === "all" && (
-                          <div className="h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent my-6" />
+                          <div className="h-px bg-gradient-to-r from-white/20 via-white/10 to-transparent my-6" />
                         )}
                       </div>
                     )}

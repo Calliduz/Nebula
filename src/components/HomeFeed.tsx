@@ -10,13 +10,13 @@ import { LazyViewport } from "./LazyViewport";
 
 const SectionDivider = ({ label }: { label?: string }) => (
   <div className="flex items-center gap-6 my-2 md:my-6 px-4 sm:px-0">
-    <div className="h-px flex-1 bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent" />
+    <div className="h-px flex-1 bg-gradient-to-r from-white/20 via-white/10 to-transparent" />
     {label && (
-      <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/20 shrink-0">
+      <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/60 shrink-0">
         {label}
       </span>
     )}
-    <div className="h-px flex-1 bg-gradient-to-l from-white/[0.06] via-white/[0.03] to-transparent" />
+    <div className="h-px flex-1 bg-gradient-to-l from-white/20 via-white/10 to-transparent" />
   </div>
 );
 
