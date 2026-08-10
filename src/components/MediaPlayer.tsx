@@ -46,6 +46,8 @@ import { API_BASE_URL } from "../config";
 import {
   PROVIDERS,
   CATEGORY_PRIORITY,
+  getFavoriteProviders,
+  toggleFavoriteProvider,
   type ProviderConfig,
 } from "../config/providers";
 import {
@@ -1379,11 +1381,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (!m) return;
     setActiveMirror(index);
     activeMirrorRef.current = index;
-    if (m.source) {
-      try {
-        localStorage.setItem("nebula-preferred-source", m.source);
-      } catch (e) {}
-    }
     setFailedMirrors((prev) => {
       const next = { ...prev };
       delete next[m.source];
@@ -1410,6 +1407,38 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       setQualities([]);
       setActiveQuality(-1);
     }
+  }, []);
+
+  const getInitialMirrorIndex = useCallback((grouped: any[]): number => {
+    try {
+      const favorites = getFavoriteProviders();
+      if (favorites.length > 0) {
+        for (const favId of favorites) {
+          const providerConfig = PROVIDERS.find((p) => p.id === favId);
+          if (!providerConfig) continue;
+
+          const matchIdx = grouped.findIndex((m) => {
+            const srcLower = (m.source || "").toLowerCase();
+            const pNameLower = providerConfig.name.toLowerCase();
+            const pIdLower = providerConfig.id.toLowerCase();
+            const apiCatLower = (
+              providerConfig.apiCategory || ""
+            ).toLowerCase();
+
+            return (
+              srcLower.includes(pIdLower) ||
+              srcLower.includes(pNameLower) ||
+              (apiCatLower && srcLower.includes(apiCatLower))
+            );
+          });
+
+          if (matchIdx !== -1) {
+            return matchIdx;
+          }
+        }
+      }
+    } catch (e) {}
+    return 0;
   }, []);
 
   const getNextFallbackMirrorIndex = useCallback(
@@ -2280,34 +2309,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const grouped = groupMirrors(processedMirrors);
         setMirrors(grouped);
         mirrorsRef.current = grouped;
-        let startIndex = 0;
-        try {
-          const preferred = localStorage.getItem("nebula-preferred-source");
-          if (preferred) {
-            let matchIdx = grouped.findIndex((m) => m.source === preferred);
-            if (matchIdx === -1) {
-              const { name: prefServerName } = parseMirrorDetails(preferred);
-              const cleanPrefServer = prefServerName.toLowerCase();
-              if (
-                cleanPrefServer &&
-                cleanPrefServer !== "original" &&
-                cleanPrefServer !== "mirror"
-              ) {
-                matchIdx = grouped.findIndex((m) => {
-                  const { name: mServerName } = parseMirrorDetails(m.source);
-                  const cleanMServer = mServerName.toLowerCase();
-                  return (
-                    cleanMServer.includes(cleanPrefServer) ||
-                    cleanPrefServer.includes(cleanMServer)
-                  );
-                });
-              }
-            }
-            if (matchIdx !== -1) {
-              startIndex = matchIdx;
-            }
-          }
-        } catch (e) {}
+        const startIndex = getInitialMirrorIndex(grouped);
         selectMirror(startIndex, grouped);
         setLoading(false);
 
@@ -2539,35 +2541,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           const grouped = groupMirrors(processedMirrors);
           setMirrors(grouped);
           mirrorsRef.current = grouped;
-
-          let startIndex = 0;
-          try {
-            const preferred = localStorage.getItem("nebula-preferred-source");
-            if (preferred) {
-              let matchIdx = grouped.findIndex((m) => m.source === preferred);
-              if (matchIdx === -1) {
-                const { name: prefServerName } = parseMirrorDetails(preferred);
-                const cleanPrefServer = prefServerName.toLowerCase();
-                if (
-                  cleanPrefServer &&
-                  cleanPrefServer !== "original" &&
-                  cleanPrefServer !== "mirror"
-                ) {
-                  matchIdx = grouped.findIndex((m) => {
-                    const { name: mServerName } = parseMirrorDetails(m.source);
-                    const cleanMServer = mServerName.toLowerCase();
-                    return (
-                      cleanMServer.includes(cleanPrefServer) ||
-                      cleanPrefServer.includes(cleanMServer)
-                    );
-                  });
-                }
-              }
-              if (matchIdx !== -1) {
-                startIndex = matchIdx;
-              }
-            }
-          } catch (e) {}
+          const startIndex = getInitialMirrorIndex(grouped);
           selectMirror(startIndex, grouped);
 
           if (data.qualityTag) setQualityTag(data.qualityTag);

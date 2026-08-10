@@ -8,16 +8,19 @@ import {
 // Unit test function simulating the new autoplay selection logic from MovieDetails
 export function selectAutoplayProvider(
   scan: Record<string, { loading: boolean; sources: any[] }>,
-  userPrefId?: string | null,
+  favoriteIds: string[] = [],
 ): string | null {
-  // Priority 0: Preferred provider if set
-  if (userPrefId && PROVIDERS.some((p) => p.id === userPrefId)) {
-    const prefState = scan[userPrefId];
-    const isPrefLoading = prefState?.loading ?? true;
-    const prefSrcsCount = prefState?.sources?.length ?? 0;
+  // Priority 0: Check if any favourited provider is scanning or has sources
+  if (favoriteIds.length > 0) {
+    const favProviders = PROVIDERS.filter((p) => favoriteIds.includes(p.id));
+    for (const p of favProviders) {
+      const prefState = scan[p.id];
+      const isPrefLoading = prefState?.loading ?? true;
+      const prefSrcsCount = prefState?.sources?.length ?? 0;
 
-    if (isPrefLoading) return null; // Wait for preferred provider scan
-    if (prefSrcsCount > 0) return userPrefId; // Play preferred provider
+      if (isPrefLoading) return null; // Wait for favorited provider scan
+      if (prefSrcsCount > 0) return p.id; // Play favorited provider
+    }
   }
 
   // Default sequential fallback: check providers in PROVIDERS order
@@ -81,7 +84,7 @@ describe("Provider Configuration and Autoplay Selection", () => {
     expect(selectAutoplayProvider(scanState)).toBe("netnaija");
   });
 
-  it("should prioritize preferred source if specified and has sources", () => {
+  it("should prioritize favourite source if specified and has sources", () => {
     const scanState: Record<string, { loading: boolean; sources: any[] }> = {
       hdghartv: {
         loading: false,
@@ -92,11 +95,11 @@ describe("Provider Configuration and Autoplay Selection", () => {
         sources: [{ url: "http://test.com/quantum" }],
       },
     };
-    // Preferred source is Quantum (vaplayer)
-    expect(selectAutoplayProvider(scanState, "vaplayer")).toBe("vaplayer");
+    // Favourite source is Quantum (vaplayer)
+    expect(selectAutoplayProvider(scanState, ["vaplayer"])).toBe("vaplayer");
   });
 
-  it("should wait for preferred source if preferred source is still loading", () => {
+  it("should wait for favourite source if favourite source is still loading", () => {
     const scanState: Record<string, { loading: boolean; sources: any[] }> = {
       hdghartv: {
         loading: false,
@@ -104,11 +107,11 @@ describe("Provider Configuration and Autoplay Selection", () => {
       },
       vaplayer: { loading: true, sources: [] },
     };
-    // Preferred source is Quantum (vaplayer) which is loading
-    expect(selectAutoplayProvider(scanState, "vaplayer")).toBeNull();
+    // Favourite source is Quantum (vaplayer) which is loading
+    expect(selectAutoplayProvider(scanState, ["vaplayer"])).toBeNull();
   });
 
-  it("should fall back to default order if preferred source returns empty", () => {
+  it("should fall back to default order if favourite source returns empty", () => {
     const scanState: Record<string, { loading: boolean; sources: any[] }> = {
       hdghartv: {
         loading: false,
@@ -116,7 +119,7 @@ describe("Provider Configuration and Autoplay Selection", () => {
       },
       vaplayer: { loading: false, sources: [] },
     };
-    // Preferred source Quantum returned empty -> fall back to Aether
-    expect(selectAutoplayProvider(scanState, "vaplayer")).toBe("hdghartv");
+    // Favourite source Quantum returned empty -> fall back to Aether
+    expect(selectAutoplayProvider(scanState, ["vaplayer"])).toBe("hdghartv");
   });
 });

@@ -275,3 +275,48 @@ export const CATEGORY_PRIORITY: string[] = [
   "Chronos",
   "VidVault",
 ];
+
+// ── Favorite Providers Storage & Helpers ─────────────────────────────────────
+export const FAVORITE_PROVIDERS_KEY = "nebula-favorite-providers";
+
+/**
+ * Reads array of favorited provider IDs from localStorage.
+ */
+export function getFavoriteProviders(): string[] {
+  if (typeof window === "undefined" || !window.localStorage) return [];
+  try {
+    const raw = localStorage.getItem(FAVORITE_PROVIDERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Toggles a provider ID in localStorage favorites.
+ * Returns the updated array of favorited provider IDs.
+ */
+export function toggleFavoriteProvider(id: string): string[] {
+  if (typeof window === "undefined" || !window.localStorage) return [];
+  try {
+    const current = getFavoriteProviders();
+    const exists = current.includes(id);
+    const updated = exists
+      ? current.filter((favId) => favId !== id)
+      : [...current, id];
+    localStorage.setItem(FAVORITE_PROVIDERS_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Checks if a provider ID is currently favorited.
+ */
+export function isFavoriteProvider(id: string): boolean {
+  return getFavoriteProviders().includes(id);
+}
+

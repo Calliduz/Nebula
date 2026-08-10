@@ -36,6 +36,8 @@ import { API_BASE_URL } from "../config";
 import {
   PROVIDERS,
   PRIORITY_PROVIDER_ID,
+  getFavoriteProviders,
+  toggleFavoriteProvider,
   type ProviderConfig,
 } from "../config/providers";
 import {
@@ -118,11 +120,6 @@ function serializeSources(sources: any[], extra?: (s: any) => string): string {
     .join("|");
 }
 
-// localStorage key for per-title preferred provider
-function prefKey(tmdbId: string | number, type: string): string {
-  return `nebula-src-pref:${type}:${tmdbId}`;
-}
-
 interface SourceSelectionModalProps {
   movie: any;
   season?: number;
@@ -168,6 +165,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   const [autoPlayId, setAutoPlayId] = React.useState<string | null>(null);
   const [autoPlayCountdown, setAutoPlayCountdown] = React.useState(3);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [favoriteIds, setFavoriteIds] = React.useState<string[]>(() =>
+    getFavoriteProviders(),
+  );
   const isMountedRef = useRef(true);
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Persistent ref so cancellation survives scan-state updates that would
@@ -184,6 +184,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         type: movie.type,
         title: movie.title || "",
         year: movie.year || "",
+        releaseDate: movie.release_date || movie.first_air_date,
         season,
         episode,
         force,
@@ -195,11 +196,9 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       if (episode !== undefined) subUrl += `&episode=${episode}`;
       fetch(subUrl).catch(() => {});
 
-      // Collect all per-provider fetch promises
       const tasks = PROVIDERS.map(async (p) => {
         try {
           let rawSources: any[] = [];
-
           if (p.id === "videasy") {
             const data = await fetchVideasySourcesDirect(
               movie,
@@ -211,14 +210,16 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
               .filter(([, v]: any) => v && v.url)
               .map(([name, v]: any) => ({
                 name: name.startsWith("Videasy") ? name : `Videasy (${name})`,
-                url: v.url,
-                type: v.type || "hls",
-                audio: v.audio || "",
+                url: (v as any).url,
+                type: (v as any).type || "hls",
+                audio: (v as any).audio || "",
               }));
           } else {
             const url = p.buildUrl(params);
             if (!url) {
-              dispatch({ type: "LOADED", id: p.id, sources: [] });
+              if (isMountedRef.current) {
+                dispatch({ type: "LOADED", id: p.id, sources: [] });
+              }
               return;
             }
             const res = await fetch(url);
@@ -282,31 +283,30 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   }, [runScan]);
 
   // ── Auto-play selection and countdown ──────────────────────────────────────
-  // Respects user's stored provider preference or falls back to PROVIDERS order sequentially
+  // Prioritizes favourited provider sources before falling back to PROVIDERS order
   useEffect(() => {
     if (autoPlayCancelledRef.current) return;
     if (autoPlayId !== null) return; // already selected an autoplay provider
 
-    // Priority 0: Check user's saved preferred provider for this title
-    try {
-      const userPrefId = localStorage.getItem(prefKey(movie.id, movie.type));
-      if (userPrefId && PROVIDERS.some((p) => p.id === userPrefId)) {
-        const prefState = scan[userPrefId];
+    // Priority 0: Check if any favourited provider is scanning or has sources
+    if (favoriteIds.length > 0) {
+      const favProviders = PROVIDERS.filter((p) => favoriteIds.includes(p.id));
+      for (const p of favProviders) {
+        const prefState = scan[p.id];
         const isPrefLoading = prefState?.loading ?? true;
         const prefSrcsCount = prefState?.sources.length ?? 0;
 
-        // If preferred provider is still scanning, wait for it to complete
+        // If a favorited provider is still scanning, wait for it to complete
         if (isPrefLoading) return;
 
-        // If preferred provider finished and returned sources, select it for autoplay
+        // If a favorited provider finished and returned sources, select it for autoplay
         if (prefSrcsCount > 0) {
-          setAutoPlayId(userPrefId);
+          setAutoPlayId(p.id);
           setAutoPlayCountdown(3);
           return;
         }
-        // If preferred provider finished with 0 sources, fall through to default order below
       }
-    } catch (e) {}
+    }
 
     // Default sequential fallback (1st source -> 2nd source -> 3rd source...)
     // If a provider is scanning, wait for it.
@@ -328,7 +328,7 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         return;
       }
     }
-  }, [scan, autoPlayId, movie.id, movie.type]);
+  }, [scan, autoPlayId, favoriteIds, movie.id, movie.type]);
 
   useEffect(() => {
     if (autoPlayId === null) return;
@@ -338,7 +338,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
       if (p) {
         const srcs = scan[p.id]?.sources ?? [];
         if (srcs.length > 0) {
-          localStorage.setItem(prefKey(movie.id, movie.type), p.id);
           onSelect(serializeSources(srcs, p.serializeExtra));
         } else {
           // If sources became empty, cancel autoplay cleanly
@@ -370,7 +369,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     const srcs = scan[p.id]?.sources ?? [];
     if (!srcs.length) return;
     cancelAutoPlay();
-    localStorage.setItem(prefKey(movie.id, movie.type), p.id);
     setSelectedId(p.id);
     onSelect(serializeSources(srcs, p.serializeExtra));
   };
@@ -383,7 +381,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   ) => {
     e.stopPropagation();
     cancelAutoPlay();
-    localStorage.setItem(prefKey(movie.id, movie.type), p.id);
     setSelectedId(p.id);
     const reordered = [src, ...allSrcs.filter((s) => s.name !== src.name)];
     onSelect(serializeSources(reordered, p.serializeExtra));
@@ -595,47 +592,77 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                   ) : null}
                 </div>
 
-                {/* Right: active dot or auto-play ring */}
-                <div className="shrink-0 w-5 flex items-center justify-center">
-                  {isActive && (
-                    <span
-                      className={`w-2 h-2 rounded-full ${p.textClass.replace("text-", "bg-")}`}
+                {/* Right: Star favourite button & active dot or auto-play ring */}
+                <div className="shrink-0 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      const updated = toggleFavoriteProvider(p.id);
+                      setFavoriteIds(updated);
+                    }}
+                    onTouchEnd={(e) => {
+                      e.stopPropagation();
+                    }}
+                    title={
+                      favoriteIds.includes(p.id)
+                        ? "Remove from favourite sources"
+                        : "Favourite this source"
+                    }
+                    className="p-1 min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-white/30 hover:text-amber-400 active:scale-95 transition-all touch-manipulation cursor-pointer"
+                  >
+                    <Star
+                      size={14}
+                      className={
+                        favoriteIds.includes(p.id)
+                          ? "text-amber-400 fill-amber-400 filter drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]"
+                          : "group-hover:text-white/60"
+                      }
                     />
-                  )}
-                  {isAutoPlay && !isActive && (
-                    <div className="relative w-4 h-4 flex items-center justify-center">
-                      <svg
-                        className="absolute inset-0 w-4 h-4 -rotate-90"
-                        viewBox="0 0 16 16"
-                      >
-                        <circle
-                          cx="8"
-                          cy="8"
-                          r="6"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          className={p.textClass}
-                          strokeOpacity="0.2"
-                        />
-                        <circle
-                          cx="8"
-                          cy="8"
-                          r="6"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          className={p.textClass}
-                          strokeDasharray={`${2 * Math.PI * 6}`}
-                          strokeDashoffset={`${2 * Math.PI * 6 * (autoPlayCountdown / 3)}`}
-                          style={{ transition: "stroke-dashoffset 1s linear" }}
-                        />
-                      </svg>
-                      <span className={`text-[7px] font-black ${p.textClass}`}>
-                        {autoPlayCountdown}
-                      </span>
-                    </div>
-                  )}
+                  </button>
+
+                  <div className="w-5 flex items-center justify-center">
+                    {isActive && (
+                      <span
+                        className={`w-2 h-2 rounded-full ${p.textClass.replace("text-", "bg-")}`}
+                      />
+                    )}
+                    {isAutoPlay && !isActive && (
+                      <div className="relative w-4 h-4 flex items-center justify-center">
+                        <svg
+                          className="absolute inset-0 w-4 h-4 -rotate-90"
+                          viewBox="0 0 16 16"
+                        >
+                          <circle
+                            cx="8"
+                            cy="8"
+                            r="6"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            className={p.textClass}
+                            strokeOpacity="0.2"
+                          />
+                          <circle
+                            cx="8"
+                            cy="8"
+                            r="6"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            className={p.textClass}
+                            strokeDasharray={`${2 * Math.PI * 6}`}
+                            strokeDashoffset={`${2 * Math.PI * 6 * (autoPlayCountdown / 3)}`}
+                            style={{ transition: "stroke-dashoffset 1s linear" }}
+                          />
+                        </svg>
+                        <span className={`text-[7px] font-black ${p.textClass}`}>
+                          {autoPlayCountdown}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -644,9 +671,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
         {/* ── Footer hint ── */}
         <div className="px-4 py-2.5 border-t border-white/[0.07] shrink-0">
-          <p className="text-[9px] text-white/20 font-medium text-center">
-            Click a provider to play · Click a mirror badge for a specific
-            stream
+          <p className="text-[9px] text-white/30 font-medium text-center flex items-center justify-center gap-1">
+            <span>Click</span>
+            <Star size={10} className="text-amber-400 fill-amber-400 inline shrink-0" />
+            <span>to favourite sources · Favourites auto-play first</span>
           </p>
         </div>
       </div>
