@@ -132,3 +132,36 @@ export const getOptimizedPosterUrl = (
   // Replace /t/p/w500/ or /t/p/original/ or /t/p/w342/ with calculated size
   return url.replace(/\/t\/p\/(w\d+|original)\//, `/t/p/${targetSize}/`);
 };
+
+/**
+ * Format movie/show runtime duration into a clean human-readable string.
+ * Converts "124M", "124", 124, "124min" -> "2h 4m"
+ * Keeps existing descriptive strings ("1 Season", "24 eps", etc.) untouched.
+ */
+export const formatDuration = (val?: string | number): string => {
+  if (!val) return "";
+  const str = String(val).trim();
+  if (!str) return "";
+
+  // If it's already a season or episode count, return as is
+  if (/season|episodes|eps/i.test(str)) {
+    return str;
+  }
+
+  // Extract pure number of minutes (e.g. "124M", "124m", "124 min", "124")
+  const match = str.match(/^(\d+)/);
+  if (match) {
+    const totalMinutes = parseInt(match[1], 10);
+    if (isNaN(totalMinutes) || totalMinutes <= 0) return str;
+
+    if (totalMinutes >= 60) {
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+    return `${totalMinutes}m`;
+  }
+
+  return str;
+};
+

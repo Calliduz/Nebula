@@ -1,11 +1,12 @@
 import React from "react";
 import { motion } from "motion/react";
-import { Play, Plus, Info, Sparkles } from "lucide-react";
+import { Play, Plus, Info, Star } from "lucide-react";
 import {
   handleImageError,
   handleBackdropError,
   handleClearLogoError,
   markLogoValid,
+  formatDuration,
 } from "../utils/helpers";
 
 interface HeroProps {
@@ -68,7 +69,7 @@ export const Hero = React.memo<HeroProps>(
 
     return (
       <section
-        className="relative h-[65vh] sm:h-[70vh] md:h-[95vh] overflow-hidden"
+        className="relative h-[65vh] sm:h-[70vh] md:h-[95vh] overflow-hidden group"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -105,8 +106,9 @@ export const Hero = React.memo<HeroProps>(
         {/* Rest of Hero content remains unchanged */}
 
         {/* ── Gradient overlays ─────────────────────────────────────────────── */}
-        <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/40 to-transparent z-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-transparent to-transparent z-10 hidden md:block" />
+        <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/60 via-40% to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-obsidian/90 via-obsidian/40 to-transparent z-10 hidden md:block" />
+        <div className="absolute inset-0 bg-gradient-to-b from-obsidian/70 via-transparent to-transparent z-10 pointer-events-none" />
 
         {/* ── Content overlay (Unified layout to prevent overlapping) ────────── */}
         <div className="absolute inset-0 z-20 flex flex-col justify-end px-4 pb-14 pt-16 md:pb-0 md:pt-10 md:justify-center sm:px-6 md:px-12 pointer-events-none">
@@ -128,8 +130,8 @@ export const Hero = React.memo<HeroProps>(
 
             <motion.div
               key={`hero-content-${activeHero.id || currentHeroIndex}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.7, ease: "easeOut" }}
               className="flex flex-col items-center md:items-start text-center md:text-left w-full"
             >
@@ -185,56 +187,109 @@ export const Hero = React.memo<HeroProps>(
                 </h1>
               )}
 
-              {/* Meta Badges */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-6 text-[10px] md:text-[13px] font-bold text-white/50 tracking-[0.15em] md:tracking-[0.2em] uppercase mb-4 md:mb-6">
-                <span className="text-nebula-cyan font-black border border-nebula-cyan/30 md:border-2 px-2 py-0.5 md:px-3 md:py-1 rounded leading-none">
-                  {activeHero.rating || "8.4"}
-                </span>
-                <span>{activeHero.year}</span>
-                <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-nebula-red" />
-                <span>{activeHero.duration || "124M"}</span>
-                <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-white/20 hidden sm:block" />
-                <span className="hidden sm:flex items-center gap-2">
-                  <Sparkles size={14} className="text-nebula-cyan" /> 4K ULTRA
-                  HD
-                </span>
+              {/* Meta Information Line (Minimalist Streaming Style) */}
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 sm:gap-3 text-xs md:text-sm font-semibold tracking-wide text-white/80 select-none mb-4 md:mb-6">
+                {/* Rating */}
+                {(activeHero.rating || activeHero.imdb) && (
+                  <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
+                    <span>{activeHero.rating || activeHero.imdb}</span>
+                  </div>
+                )}
+
+                {/* Separator */}
+                {(activeHero.rating || activeHero.imdb) && (
+                  <span className="text-white/20 font-light select-none">•</span>
+                )}
+
+                {/* Media Type */}
+                {activeHero.type && (
+                  <span className="text-white/90 font-bold uppercase tracking-wider text-[11px] md:text-xs">
+                    {activeHero.type === "tv" ? "TV Series" : "Movie"}
+                  </span>
+                )}
+
+                {/* Separator */}
+                {activeHero.type && (
+                  <span className="text-white/20 font-light select-none">•</span>
+                )}
+
+                {/* Release Year */}
+                {activeHero.year && (
+                  <span className="text-white/80 font-medium">
+                    {activeHero.year}
+                  </span>
+                )}
+
+                {/* Separator */}
+                {activeHero.year && activeHero.duration && (
+                  <span className="text-white/20 font-light select-none">•</span>
+                )}
+
+                {/* Duration */}
+                {activeHero.duration && (
+                  <span className="text-white/80 font-medium">
+                    {formatDuration(activeHero.duration)}
+                  </span>
+                )}
+
+                {/* Quality Badge (Minimal micro-tag) */}
+                {activeHero.quality && (
+                  <>
+                    <span className="text-white/20 font-light select-none">•</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] md:text-[11px] font-black tracking-wider uppercase bg-white/10 text-white/90 border border-white/15">
+                      {activeHero.quality}
+                    </span>
+                  </>
+                )}
+
+                {/* Genres */}
+                {activeHero.genre && (
+                  <>
+                    <span className="text-white/20 font-light select-none hidden sm:inline">
+                      •
+                    </span>
+                    <span className="text-white/50 font-normal text-xs md:text-sm hidden sm:inline">
+                      {activeHero.genre.split(",").slice(0, 3).join(" • ")}
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* Desktop Description */}
-              <p className="hidden md:block text-lg md:text-xl text-white/55 font-light leading-relaxed mb-8 max-w-2xl drop-shadow-md line-clamp-3">
+              <p className="hidden md:block text-lg md:text-xl text-white/60 font-normal leading-relaxed mb-8 max-w-2xl drop-shadow-md line-clamp-3">
                 {activeHero.description}
               </p>
             </motion.div>
 
             {/* CTA Buttons */}
-            <div className="flex w-full max-w-[280px] md:max-w-none justify-center md:justify-start gap-3 md:gap-4 pb-0">
+            <div className="flex w-full max-w-[320px] md:max-w-none justify-center md:justify-start gap-3 md:gap-4 pb-0">
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => startPlayback(activeHero)}
-                className="bg-white text-obsidian px-4 md:px-10 py-2.5 md:py-4 rounded-lg font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.2em] flex items-center gap-2 md:gap-3 shadow-[0_8px_30px_rgba(255,255,255,0.12)] hover:shadow-[0_8px_40px_rgba(0,229,255,0.25)] transition-shadow duration-300 flex-1 md:flex-none justify-center"
+                className="bg-white text-obsidian px-5 md:px-10 py-3 md:py-4 rounded-xl font-black text-[11px] sm:text-xs md:text-sm uppercase tracking-[0.18em] flex items-center gap-2.5 md:gap-3 shadow-[0_4px_25px_rgba(255,255,255,0.18)] hover:shadow-[0_4px_35px_rgba(0,229,255,0.4)] hover:bg-cyan-50 transition-all duration-300 flex-1 md:flex-none justify-center"
               >
-                <Play size={16} className="md:w-5 md:h-5" fill="currentColor" />{" "}
-                Play
+                <Play size={18} className="md:w-5 md:h-5 fill-current" /> Play
               </motion.button>
 
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                className={`px-4 md:px-10 py-2.5 md:py-4 rounded-lg font-bold text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 md:gap-3 transition-all duration-300 flex-1 md:flex-none border ${
+                className={`px-5 md:px-10 py-3 md:py-4 rounded-xl font-bold text-[11px] sm:text-xs md:text-sm uppercase tracking-[0.18em] flex items-center justify-center gap-2.5 md:gap-3 backdrop-blur-md transition-all duration-300 flex-1 md:flex-none border ${
                   isInMyList
-                    ? "bg-nebula-cyan/15 border-nebula-cyan/60 text-nebula-cyan"
-                    : "bg-white/8 border-white/12 text-white hover:bg-white/12 hover:border-white/25"
+                    ? "bg-nebula-cyan/20 border-nebula-cyan/60 text-nebula-cyan shadow-[0_0_20px_rgba(0,229,255,0.2)]"
+                    : "bg-white/8 border-white/15 text-white hover:bg-white/15 hover:border-white/30"
                 }`}
                 onClick={() => toggleMyList(activeHero.id)}
               >
                 {isInMyList ? (
                   <>
-                    <XIcon size={16} className="md:w-5 md:h-5" /> Remove
+                    <XIcon size={18} className="md:w-5 md:h-5" /> Remove
                   </>
                 ) : (
                   <>
-                    <Plus size={16} className="md:w-5 md:h-5" /> My List
+                    <Plus size={18} className="md:w-5 md:h-5" /> My List
                   </>
                 )}
               </motion.button>
@@ -242,8 +297,9 @@ export const Hero = React.memo<HeroProps>(
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                className="bg-white/8 border border-white/12 hover:bg-white/14 hover:border-white/28 px-4 sm:px-5 py-3 md:py-4 rounded-lg text-white transition-all duration-300 shrink-0 hidden md:flex items-center"
+                className="bg-white/8 border border-white/15 hover:bg-white/15 hover:border-white/30 px-4 sm:px-5 py-3 md:py-4 rounded-xl text-white backdrop-blur-md transition-all duration-300 shrink-0 hidden md:flex items-center justify-center"
                 onClick={() => setSelectedMovie(activeHero)}
+                title="More Details"
               >
                 <Info size={20} />
               </motion.button>
