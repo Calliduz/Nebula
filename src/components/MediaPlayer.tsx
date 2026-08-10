@@ -9,6 +9,7 @@ import {
   VolumeX,
   Volume2,
   Maximize,
+  Minimize,
   Settings,
   Gauge,
   Loader2,
@@ -1303,6 +1304,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   }, [centerFeedback?.key]);
 
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isMobileDevice, setIsMobileDevice] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return Boolean(
@@ -2115,6 +2117,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         (document as any).mozFullScreenElement ||
         (document as any).msFullscreenElement,
       );
+      setIsFullscreen(isFs);
 
       if (isFs) {
         // Lock orientation to landscape strictly while in full screen mode
@@ -5591,7 +5594,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     {movie.year ? ` · ${movie.year}` : ""}
                   </p>
                   {qualityTag && qualityTag !== "UNKNOWN" && (
-                    <div className="flex items-center gap-1">
+                    <div className="hidden sm:flex items-center gap-1">
                       <span
                         className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider border ${
                           qualityTag === "CAM" || qualityTag === "TC"
@@ -5619,12 +5622,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             )}
           </div>
 
-          {/* Centered Middle Spot: Episode Name for TV Series / Tagline for Movies */}
+          {/* Centered Middle Spot: Episode Name for TV Series / Tagline for Movies — Hidden on mobile/portrait */}
           {(movie?.type === "tv" || movie?.media_type === "tv"
             ? episodeName
             : tagline) &&
             !isEmbed && (
-              <div className="flex flex-1 min-w-0 items-center justify-center px-1 sm:px-3 text-center">
+              <div className="hidden md:flex flex-1 min-w-0 items-center justify-center px-1 sm:px-3 text-center">
                 <p
                   className="text-white/75 text-[10px] xs:text-xs sm:text-xs md:text-sm font-sans italic tracking-wide truncate max-w-[130px] xs:max-w-[200px] sm:max-w-[360px] md:max-w-[500px] lg:max-w-[650px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
                   title={
@@ -6078,34 +6081,34 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             </>
           )}
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-3">
+          <div className="flex items-center justify-between gap-1.5 sm:gap-3 w-full min-w-0">
+            <div className="flex items-center gap-1 sm:gap-2.5 min-w-0 flex-1 overflow-hidden">
               {!isEmbed && (
                 <>
                   <button
                     onClick={() => seekBy(-10)}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
+                    className="w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
                     title="–10s (J)"
                   >
-                    <RotateCcw size={16} />
+                    <RotateCcw size={15} />
                   </button>
                   <button
                     onClick={togglePlay}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
+                    className="w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
                     title="Play/Pause (Space)"
                   >
                     {isPaused ? (
-                      <Play size={20} fill="currentColor" className="ml-0.5" />
+                      <Play size={18} fill="currentColor" className="ml-0.5" />
                     ) : (
-                      <Pause size={20} fill="currentColor" />
+                      <Pause size={18} fill="currentColor" />
                     )}
                   </button>
                   <button
                     onClick={() => seekBy(10)}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
+                    className="w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 hover:border-white/40 shrink-0 shadow-sm"
                     title="+10s (L)"
                   >
-                    <RotateCw size={16} />
+                    <RotateCw size={15} />
                   </button>
                 </>
               )}
@@ -6113,7 +6116,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <button
                   onClick={handleNextEpisode}
                   disabled={!hasNext}
-                  className={`w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 text-xs font-bold transition-all border ${
+                  className={`w-7.5 h-7.5 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 text-xs font-bold transition-all border shrink-0 ${
                     hasNext
                       ? "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40 active:scale-95 shadow-sm"
                       : "bg-white/5 text-white/30 border-white/10 opacity-40 cursor-not-allowed"
@@ -6156,7 +6159,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       </div>
                     </div>
                   )}
-                  <span className="text-white font-bold text-xs sm:text-sm font-mono tabular-nums ml-1 flex items-center gap-1">
+                  <span className="text-white font-bold text-[10.5px] xs:text-xs sm:text-sm font-mono tabular-nums ml-0.5 sm:ml-1 flex items-center gap-0.5 sm:gap-1 shrink-0 truncate">
                     {currentTime}{" "}
                     <span className="text-white/40 font-normal">/</span>{" "}
                     {duration}
@@ -6166,7 +6169,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2.5 relative shrink-0">
-              {/* More Like This Button */}
+              {/* More Like This Button — hidden on mobile & portrait mode to preserve control space */}
               {!isEmbed && (
                 <button
                   onClick={() => {
@@ -6174,7 +6177,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     closeAllModals();
                     setShowMoreLikeThis(next);
                   }}
-                  className={`flex h-8 sm:h-9 px-2.5 sm:px-3 rounded-full text-xs font-bold transition-all border items-center gap-1.5 shrink-0 ${
+                  className={`hidden sm:flex portrait:hidden h-8 sm:h-9 px-2.5 sm:px-3 rounded-full text-xs font-bold transition-all border items-center gap-1.5 shrink-0 ${
                     showMoreLikeThis
                       ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.4)]"
                       : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
@@ -6204,14 +6207,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                     closeAllModals();
                     setShowEpisodeDrawer(next);
                   }}
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
+                  className={`w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                     showEpisodeDrawer
                       ? "bg-white text-black border-white shadow-md"
                       : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
                   }`}
                   title="Episodes"
                 >
-                  <List size={16} />
+                  <List size={15} />
                 </button>
               )}
               {!isEmbed && (
@@ -6223,14 +6226,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       closeAllModals();
                       setShowSubtitles(next);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
+                    className={`w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                       showSubtitles
                         ? "bg-white text-black border-white shadow-md"
                         : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
                     }`}
                     title="Subtitles"
                   >
-                    <Subtitles size={16} />
+                    <Subtitles size={15} />
                   </button>
 
                   {/* Audio Tracks Button — hidden on small mobile to preserve essential space */}
@@ -6257,23 +6260,23 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                       closeAllModals();
                       setShowSettings(next);
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
+                    className={`w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 shrink-0 ${
                       showSettings
                         ? "bg-white text-black border-white shadow-md"
                         : "bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40"
                     }`}
                     title="Settings"
                   >
-                    <Settings size={16} />
+                    <Settings size={15} />
                   </button>
 
                   {/* Fullscreen (far right) — ALWAYS visible on mobile */}
                   <button
                     onClick={handleFullscreen}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/40 transition-all active:scale-95 shrink-0"
-                    title="Fullscreen (F)"
+                    className="w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/40 transition-all active:scale-95 shrink-0 shadow-sm"
+                    title={isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}
                   >
-                    <Maximize size={16} />
+                    {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
                   </button>
                 </>
               )}
