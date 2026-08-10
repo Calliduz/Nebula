@@ -657,10 +657,14 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
                             className={p.textClass}
                             strokeDasharray={`${2 * Math.PI * 6}`}
                             strokeDashoffset={`${2 * Math.PI * 6 * (autoPlayCountdown / 3)}`}
-                            style={{ transition: "stroke-dashoffset 1s linear" }}
+                            style={{
+                              transition: "stroke-dashoffset 1s linear",
+                            }}
                           />
                         </svg>
-                        <span className={`text-[7px] font-black ${p.textClass}`}>
+                        <span
+                          className={`text-[7px] font-black ${p.textClass}`}
+                        >
                           {autoPlayCountdown}
                         </span>
                       </div>
@@ -676,7 +680,10 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
         <div className="px-4 py-2.5 border-t border-white/[0.07] shrink-0">
           <p className="text-[9px] text-white/30 font-medium text-center flex items-center justify-center gap-1">
             <span>Click</span>
-            <Star size={10} className="text-amber-400 fill-amber-400 inline shrink-0" />
+            <Star
+              size={10}
+              className="text-amber-400 fill-amber-400 inline shrink-0"
+            />
             <span>to favourite sources · Favourites auto-play first</span>
           </p>
         </div>

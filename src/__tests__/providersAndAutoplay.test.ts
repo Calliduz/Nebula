@@ -14,7 +14,7 @@ export function selectAutoplayProvider(
   if (favoriteIds.length > 0) {
     const favProviders = favoriteIds
       .map((id) => PROVIDERS.find((p) => p.id === id))
-      .filter((p): p is typeof PROVIDERS[0] => Boolean(p));
+      .filter((p): p is (typeof PROVIDERS)[0] => Boolean(p));
     for (const p of favProviders) {
       const prefState = scan[p.id];
       const isPrefLoading = prefState?.loading ?? true;

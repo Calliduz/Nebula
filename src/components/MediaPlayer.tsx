@@ -6274,9 +6274,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   <button
                     onClick={handleFullscreen}
                     className="w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/40 transition-all active:scale-95 shrink-0 shadow-sm"
-                    title={isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}
+                    title={
+                      isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"
+                    }
                   >
-                    {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+                    {isFullscreen ? (
+                      <Minimize size={15} />
+                    ) : (
+                      <Maximize size={15} />
+                    )}
                   </button>
                 </>
               )}

@@ -290,8 +290,6 @@ const normalizeMovie = (
       : undefined,
 });
 
-
-
 // Known adult / ecchi short series to filter out from general Anime tab unless allowAdult is true
 const EXCLUDED_ECCHI_PATTERNS = [
   "overflow",

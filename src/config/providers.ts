@@ -319,4 +319,3 @@ export function toggleFavoriteProvider(id: string): string[] {
 export function isFavoriteProvider(id: string): boolean {
   return getFavoriteProviders().includes(id);
 }
-
