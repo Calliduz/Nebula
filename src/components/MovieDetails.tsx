@@ -173,13 +173,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   // Persistent ref so cancellation survives scan-state updates that would
   // otherwise re-trigger the autoplay selection effect.
   const autoPlayCancelledRef = useRef(false);
-  // Grace-period timer: we wait up to AUTOPLAY_GRACE_MS after the *first*
-  // provider resolves so that higher-priority sources (Quantum) have time
-  // to come back before we lock in a lower-priority autoplay pick.
-  const autoPlayGraceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  const autoPlayGraceElapsedRef = useRef(false);
 
   // ── Fetch orchestration ────────────────────────────────────────────────────
   const runScan = React.useCallback(
@@ -280,97 +273,60 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
 
   useEffect(() => {
     isMountedRef.current = true;
-    // Reset cancelled flag + grace-period state for a fresh scan.
     autoPlayCancelledRef.current = false;
-    autoPlayGraceElapsedRef.current = false;
-    if (autoPlayGraceTimerRef.current) {
-      clearTimeout(autoPlayGraceTimerRef.current);
-      autoPlayGraceTimerRef.current = null;
-    }
     runScan(false);
     return () => {
       isMountedRef.current = false;
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
-      if (autoPlayGraceTimerRef.current) {
-        clearTimeout(autoPlayGraceTimerRef.current);
-        autoPlayGraceTimerRef.current = null;
-      }
-      autoPlayGraceElapsedRef.current = false;
     };
   }, [runScan]);
 
   // ── Auto-play selection and countdown ──────────────────────────────────────
-  // Respects user's stored provider preference or falls back to PROVIDERS order
+  // Respects user's stored provider preference or falls back to PROVIDERS order sequentially
   useEffect(() => {
     if (autoPlayCancelledRef.current) return;
     if (autoPlayId !== null) return; // already selected an autoplay provider
 
-    // Priority 0: Check user's saved preferred provider for this specific title
+    // Priority 0: Check user's saved preferred provider for this title
     try {
       const userPrefId = localStorage.getItem(prefKey(movie.id, movie.type));
-      if (userPrefId) {
-        const prefSrcs = scan[userPrefId]?.sources ?? [];
-        if (prefSrcs.length > 0) {
-          if (autoPlayGraceTimerRef.current) {
-            clearTimeout(autoPlayGraceTimerRef.current);
-            autoPlayGraceTimerRef.current = null;
-          }
+      if (userPrefId && PROVIDERS.some((p) => p.id === userPrefId)) {
+        const prefState = scan[userPrefId];
+        const isPrefLoading = prefState?.loading ?? true;
+        const prefSrcsCount = prefState?.sources.length ?? 0;
+
+        // If preferred provider is still scanning, wait for it to complete
+        if (isPrefLoading) return;
+
+        // If preferred provider finished and returned sources, select it for autoplay
+        if (prefSrcsCount > 0) {
           setAutoPlayId(userPrefId);
           setAutoPlayCountdown(3);
           return;
         }
+        // If preferred provider finished with 0 sources, fall through to default order below
       }
     } catch (e) {}
 
-    const firstReadyProviderWithData = PROVIDERS.find(
-      (p) => (scan[p.id]?.sources.length ?? 0) > 0,
-    );
+    // Default sequential fallback (1st source -> 2nd source -> 3rd source...)
+    // If a provider is scanning, wait for it.
+    // If it finishes with sources, autoplay it immediately.
+    // If it finishes with 0 sources, proceed to the next provider in PROVIDERS order.
+    for (const p of PROVIDERS) {
+      const providerState = scan[p.id];
+      const isLoading = providerState?.loading ?? true;
+      const sourcesCount = providerState?.sources.length ?? 0;
 
-    // #1 provider in PROVIDERS array — always PROVIDERS[0] (currently Hyperion/vidrock)
-    const isQuantumReady =
-      (scan[PRIORITY_PROVIDER_ID]?.sources.length ?? 0) > 0;
-    const isQuantumLoading = scan[PRIORITY_PROVIDER_ID]?.loading ?? true;
-
-    // If the priority provider (#1) is ready with sources, pick it IMMEDIATELY!
-    if (isQuantumReady) {
-      if (autoPlayGraceTimerRef.current) {
-        clearTimeout(autoPlayGraceTimerRef.current);
-        autoPlayGraceTimerRef.current = null;
+      if (isLoading) {
+        // Highest priority remaining provider is still scanning — wait for it!
+        return;
       }
-      setAutoPlayId(PRIORITY_PROVIDER_ID);
-      setAutoPlayCountdown(3);
-      return;
-    }
 
-    // If Quantum is still loading but another provider resolved with sources,
-    // wait up to 3.5s for Quantum to finish scanning.
-    if (firstReadyProviderWithData && isQuantumLoading) {
-      if (!autoPlayGraceTimerRef.current) {
-        autoPlayGraceTimerRef.current = setTimeout(() => {
-          autoPlayGraceTimerRef.current = null;
-          if (autoPlayCancelledRef.current) return;
-
-          // Grace period expired: pick the highest-priority provider in PROVIDERS order that has sources
-          const bestInOrder = PROVIDERS.find(
-            (p) => (scan[p.id]?.sources.length ?? 0) > 0,
-          );
-          if (bestInOrder) {
-            setAutoPlayId(bestInOrder.id);
-            setAutoPlayCountdown(3);
-          }
-        }, 3500);
+      if (sourcesCount > 0) {
+        setAutoPlayId(p.id);
+        setAutoPlayCountdown(3);
+        return;
       }
-      return;
-    }
-
-    // If Quantum finished loading and has 0 sources, pick highest-priority ready provider immediately
-    if (!isQuantumLoading && firstReadyProviderWithData) {
-      if (autoPlayGraceTimerRef.current) {
-        clearTimeout(autoPlayGraceTimerRef.current);
-        autoPlayGraceTimerRef.current = null;
-      }
-      setAutoPlayId(firstReadyProviderWithData.id);
-      setAutoPlayCountdown(3);
     }
   }, [scan, autoPlayId, movie.id, movie.type]);
 
@@ -402,11 +358,6 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
   // the scan state later changes (new providers resolving).
   const cancelAutoPlay = React.useCallback(() => {
     autoPlayCancelledRef.current = true;
-    // Also clear any pending grace-period timer.
-    if (autoPlayGraceTimerRef.current) {
-      clearTimeout(autoPlayGraceTimerRef.current);
-      autoPlayGraceTimerRef.current = null;
-    }
     setAutoPlayId(null);
     setAutoPlayCountdown(3);
   }, []);
