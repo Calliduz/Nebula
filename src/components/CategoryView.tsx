@@ -334,6 +334,33 @@ export const CategoryView = React.memo<CategoryViewProps>(
           </div>
         )}
 
+        {(viewingCategory === "Anime" ||
+          viewingCategory === "Anime Series" ||
+          viewingCategory === "Anime Movies") && (
+          <div className="flex flex-wrap gap-2.5 sm:gap-3 mb-8 sm:mb-10 overflow-x-auto pb-2 no-scrollbar">
+            {[
+              { id: "Anime", label: "All Anime" },
+              { id: "Anime Series", label: "Anime Series" },
+              { id: "Anime Movies", label: "Anime Movies" },
+            ].map((sub) => {
+              const isSelected = viewingCategory === sub.id;
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => setViewingCategory(sub.id)}
+                  className={`px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
+                    isSelected
+                      ? "bg-nebula-cyan border-nebula-cyan text-obsidian shadow-[0_0_15px_rgba(0,229,255,0.4)]"
+                      : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20"
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {viewingCategory === "Library" ? (
           <div className="space-y-8 sm:space-y-10">
             {/* Sub-Tab Navigation Bar & Action Header */}

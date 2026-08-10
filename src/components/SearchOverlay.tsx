@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { topSearches } from "../data/constants";
 import { handleImageError } from "../utils/helpers";
+import { isAnimeMedia } from "../services/tmdb";
 
 const RECENT_KEY = "nebula-recent-searches";
 const MAX_RECENT = 8;
@@ -274,6 +275,7 @@ const GENRE_FILTERS = [
   "Sci-Fi",
   "Drama",
   "Comedy",
+  "Anime",
   "Animation",
   "Horror",
   "★ 8.0+",
@@ -376,6 +378,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     if (selectedGenreFilter === "All") return searchResults;
     if (selectedGenreFilter === "★ 8.0+") {
       return searchResults.filter((m) => m.imdb && m.imdb >= 8.0);
+    }
+    if (selectedGenreFilter === "Anime") {
+      return searchResults.filter((m) => isAnimeMedia(m));
     }
     return searchResults.filter((m) => {
       const gStr = Array.isArray(m.genres) ? m.genres.join(" ") : m.genre || "";

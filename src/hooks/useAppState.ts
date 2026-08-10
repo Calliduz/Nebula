@@ -25,6 +25,7 @@ import {
   getPopularActors,
   GENRE_MAP,
   invalidateRecommendationCache,
+  isAnimeMedia,
 } from "../services/tmdb";
 
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -287,10 +288,41 @@ export const ROW_FETCH_CONFIG: Record<string, RowConfig> = {
     discoverParams: { with_genres: "18", sort_by: "popularity.desc" },
     filterFn: (m) => m.type === "tv" && m.genre.includes("Drama"),
   },
+  Anime: {
+    mediaType: "all",
+    discoverParams: {
+      with_genres: "16",
+      with_original_language: "ja",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => isAnimeMedia(m),
+  },
   "Anime Series": {
     mediaType: "tv",
-    discoverParams: { with_genres: "16", sort_by: "popularity.desc" },
-    filterFn: (m) => m.type === "tv" && m.genre.includes("Animation"),
+    discoverParams: {
+      with_genres: "16",
+      with_original_language: "ja",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => m.type === "tv" && isAnimeMedia(m),
+  },
+  "Anime Movies": {
+    mediaType: "movie",
+    discoverParams: {
+      with_genres: "16",
+      with_original_language: "ja",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => m.type === "movie" && isAnimeMedia(m),
+  },
+  "Trending Anime": {
+    mediaType: "all",
+    discoverParams: {
+      with_genres: "16",
+      with_original_language: "ja",
+      sort_by: "popularity.desc",
+    },
+    filterFn: (m) => isAnimeMedia(m),
   },
   "2010s Hits": {
     mediaType: "movie",
@@ -2429,10 +2461,13 @@ export function useAppState() {
         ...myListItems,
         ...watchItAgainItems,
       ]);
-      setAllMovies(finalPool);
+      setAllMovies((prev) => hardDedupe([...prev, ...finalPool]));
       featuredMoviesRef.current = enrichedFeatured;
       rowsRef.current = initialRows;
-      allMoviesRef.current = finalPool;
+      allMoviesRef.current = hardDedupe([
+        ...allMoviesRef.current,
+        ...finalPool,
+      ]);
 
       markInitialPagesAsFetched(initialRows);
       await syncUserRows();
@@ -2823,7 +2858,15 @@ export function useAppState() {
     const config = ROW_FETCH_CONFIG[viewingCategory || ""];
 
     if (config) {
-      if (row) {
+      const FULL_GRID_CATEGORIES = [
+        "Movies",
+        "TV Shows",
+        "Anime",
+        "Anime Series",
+        "Anime Movies",
+        "Trending Anime",
+      ];
+      if (row && !FULL_GRID_CATEGORIES.includes(viewingCategory || "")) {
         return row.items;
       }
       const PROVIDERS = [
@@ -3434,7 +3477,7 @@ export function useAppState() {
       const existingData = getCategoryMovies();
       if (
         isPageFetched(viewingCategory, selectedRegion, dramaPage) &&
-        existingData.length > 0
+        existingData.length >= 18
       )
         return;
       const fetchMoreForCategory = async () => {
@@ -3446,9 +3489,9 @@ export function useAppState() {
         }
 
         if (config) {
-          // Only show loading state if we don't have any data yet for this category
+          // Show loading state if we don't have a full page of data yet for this category
           const existingData = getCategoryMovies();
-          if (existingData.length === 0) setIsLoading(true);
+          if (existingData.length < 18) setIsLoading(true);
 
           try {
             let more: NebulaMovie[] = [];
@@ -3486,7 +3529,24 @@ export function useAppState() {
               ]);
               more = hardDedupe([...mRes, ...tvRes]);
             } else if (config.mediaType === "all") {
-              more = await getTrending("all", dramaPage.toString());
+              if (
+                config.discoverParams &&
+                Object.keys(config.discoverParams).length > 0
+              ) {
+                const [mRes, tvRes] = await Promise.all([
+                  discoverMediaWithAdult("movie", {
+                    ...config.discoverParams,
+                    page: dramaPage.toString(),
+                  }).catch(() => []),
+                  discoverMediaWithAdult("tv", {
+                    ...config.discoverParams,
+                    page: dramaPage.toString(),
+                  }).catch(() => []),
+                ]);
+                more = hardDedupe([...mRes, ...tvRes]);
+              } else {
+                more = await getTrending("all", dramaPage.toString());
+              }
             } else {
               more = await discoverMediaWithAdult(config.mediaType, {
                 ...config.discoverParams,
@@ -3708,6 +3768,7 @@ export function useAppState() {
       let cat: string | null = null;
       if (id === "movies") cat = "Movies";
       else if (id === "tv") cat = "TV Shows";
+      else if (id === "anime") cat = "Anime";
       else if (id === "drama") cat = "Dramas";
       else if (id === "library") cat = "Library";
 

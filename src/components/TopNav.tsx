@@ -30,6 +30,15 @@ export const TopNav = React.memo(
           viewingCategory === "TV Shows" ||
           viewingCategory === "TV Dramas"
         );
+      if (itemId === "anime")
+        return (
+          (activeTab === "anime" && !viewingCategory) ||
+          viewingCategory === "Anime" ||
+          viewingCategory === "Anime Series" ||
+          viewingCategory === "Anime Movies" ||
+          viewingCategory === "Trending Anime" ||
+          viewingCategory === "Adult Anime"
+        );
       if (itemId === "library")
         return (
           (activeTab === "library" && !viewingCategory) ||
@@ -214,8 +223,8 @@ export const TopNav = React.memo(
         )}
 
         {/* Floating Glass Mobile Bottom Nav */}
-        <nav className="lg:hidden fixed bottom-2 sm:bottom-3 inset-x-0 z-[100] px-3 sm:px-4 pointer-events-none">
-          <div className="max-w-md mx-auto pointer-events-auto relative rounded-3xl bg-black/85 backdrop-blur-2xl border border-white/12 shadow-[0_12px_40px_rgba(0,0,0,0.9),_0_0_20px_rgba(0,229,255,0.08)] px-3 py-2 flex items-center justify-around overflow-hidden">
+        <nav className="lg:hidden fixed bottom-2 sm:bottom-3 inset-x-0 z-[100] px-2 sm:px-4 pointer-events-none">
+          <div className="max-w-md mx-auto pointer-events-auto relative rounded-3xl bg-black/85 backdrop-blur-2xl border border-white/12 shadow-[0_12px_40px_rgba(0,0,0,0.9),_0_0_20px_rgba(0,229,255,0.08)] px-1.5 sm:px-3 py-1.5 sm:py-2 flex items-center justify-around overflow-hidden">
             {/* Glass Specular Top Highlight */}
             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
@@ -232,14 +241,14 @@ export const TopNav = React.memo(
                       onTabChange(item.id);
                     }
                   }}
-                  className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-300 active:scale-90 cursor-pointer ${
+                  className={`relative flex flex-col items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-2xl transition-all duration-300 active:scale-90 cursor-pointer ${
                     isActive
                       ? "bg-nebula-cyan/15 text-nebula-cyan border border-nebula-cyan/30 shadow-[0_0_15px_rgba(0,229,255,0.25)]"
                       : "text-white/45 hover:text-white/80 border border-transparent"
                   }`}
                 >
                   <Icon
-                    size={19}
+                    size={18}
                     strokeWidth={isActive ? 2.5 : 2}
                     className={`transition-all duration-300 ${
                       isActive
@@ -248,7 +257,7 @@ export const TopNav = React.memo(
                     }`}
                   />
                   <span
-                    className={`text-[8.5px] font-black uppercase tracking-wider transition-colors ${
+                    className={`text-[8px] sm:text-[8.5px] font-black uppercase tracking-wider transition-colors ${
                       isActive ? "text-nebula-cyan" : "text-white/45"
                     }`}
                   >

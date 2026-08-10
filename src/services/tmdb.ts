@@ -5,7 +5,7 @@ const API_KEY = import.meta.env.VITE_TMDB_API_KEY || "PLACEHOLDER";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 const BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/original";
 
-const CACHE_VERSION = "v2.0"; // Bump to invalidate all old caches
+const CACHE_VERSION = "v3.0"; // Bumped to v3.0 to invalidate stale cached items lacking original_language/origin_country
 
 const TTL = {
   TRENDING: 1000 * 60 * 60 * 4, // 4 hours — changes frequently
@@ -136,6 +136,8 @@ export interface NebulaMovie {
   adult?: boolean;
   progress?: any;
   hasNewEpisode?: boolean;
+  original_language?: string;
+  origin_country?: string[];
 }
 
 import { API_BASE_URL } from "../config";
@@ -280,7 +282,83 @@ const normalizeMovie = (
     return "HD";
   })(),
   adult: !!item.adult,
+  original_language: item.original_language || undefined,
+  origin_country: Array.isArray(item.origin_country)
+    ? item.origin_country
+    : item.origin_country
+      ? [item.origin_country]
+      : undefined,
 });
+
+
+
+// Known adult / ecchi short series to filter out from general Anime tab unless allowAdult is true
+const EXCLUDED_ECCHI_PATTERNS = [
+  "overflow",
+  "secret mission",
+  "caressing my hibernating bear",
+  "choking my virginity away",
+  "xl joushi",
+  "showtime!",
+  "araiya-san",
+  "omaera zenbu mendokusai",
+  "sweet punishment",
+  "yubisaki kara no honki no netsujou",
+  "joshikousei no mudazukai",
+  "ore wo suki nano wa omae dake ka yo",
+  "harem in the labyrinth of another world",
+  "redo of healer",
+  "interspecies reviewers",
+  "peter grill",
+  "world's end harem",
+];
+
+export const isAnimeMedia = (
+  m: NebulaMovie,
+  allowAdult: boolean = false,
+): boolean => {
+  if (!m) return false;
+  const titleLower = (m.title || "").toLowerCase();
+
+  // 1. Exclude Ecchi / Adult Hentai shorts from general Anime tab unless allowAdult is true
+  if (!allowAdult) {
+    if (m.adult) return false;
+    for (let i = 0; i < EXCLUDED_ECCHI_PATTERNS.length; i++) {
+      if (titleLower.includes(EXCLUDED_ECCHI_PATTERNS[i])) return false;
+    }
+  }
+
+  // 2. Must be Animation or Anime genre
+  const genreLower = (m.genre || "").toLowerCase();
+  const isAnimation =
+    genreLower.includes("animation") || genreLower.includes("anime");
+  if (!isAnimation) return false;
+
+  // 3. Primary check: Japanese original language ('ja') or origin country ('JP')
+  const isJapaneseLang = m.original_language === "ja";
+  const isJapaneseCountry =
+    Array.isArray(m.origin_country) && m.origin_country.includes("JP");
+
+  if (isJapaneseLang || isJapaneseCountry) {
+    return true;
+  }
+
+  // 4. Reject explicitly non-Japanese languages (e.g. 'en', 'fr', 'es', 'de', 'cn', 'kr')
+  if (m.original_language && m.original_language !== "ja") {
+    return false;
+  }
+
+  // 5. Reject explicitly non-Japanese origin countries (e.g. 'US', 'GB', 'FR', 'CA')
+  if (
+    Array.isArray(m.origin_country) &&
+    m.origin_country.length > 0 &&
+    !m.origin_country.includes("JP")
+  ) {
+    return false;
+  }
+
+  return false;
+};
 
 /**
  * Batches a check against the server's StreamCache to verify if we definitely have a copy.
