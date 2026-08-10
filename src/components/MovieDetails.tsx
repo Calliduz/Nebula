@@ -288,9 +288,12 @@ export const SourceSelectionModal: React.FC<SourceSelectionModalProps> = ({
     if (autoPlayCancelledRef.current) return;
     if (autoPlayId !== null) return; // already selected an autoplay provider
 
-    // Priority 0: Check if any favourited provider is scanning or has sources
+    // Priority 0: Check if any favourited provider is scanning or has sources (in user preference order)
     if (favoriteIds.length > 0) {
-      const favProviders = PROVIDERS.filter((p) => favoriteIds.includes(p.id));
+      const favProviders = favoriteIds
+        .map((id) => PROVIDERS.find((p) => p.id === id))
+        .filter((p): p is ProviderConfig => Boolean(p));
+
       for (const p of favProviders) {
         const prefState = scan[p.id];
         const isPrefLoading = prefState?.loading ?? true;

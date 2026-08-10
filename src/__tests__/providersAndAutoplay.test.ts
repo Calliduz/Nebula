@@ -10,9 +10,11 @@ export function selectAutoplayProvider(
   scan: Record<string, { loading: boolean; sources: any[] }>,
   favoriteIds: string[] = [],
 ): string | null {
-  // Priority 0: Check if any favourited provider is scanning or has sources
+  // Priority 0: Check if any favourited provider is scanning or has sources (in user preference order)
   if (favoriteIds.length > 0) {
-    const favProviders = PROVIDERS.filter((p) => favoriteIds.includes(p.id));
+    const favProviders = favoriteIds
+      .map((id) => PROVIDERS.find((p) => p.id === id))
+      .filter((p): p is typeof PROVIDERS[0] => Boolean(p));
     for (const p of favProviders) {
       const prefState = scan[p.id];
       const isPrefLoading = prefState?.loading ?? true;
@@ -121,5 +123,23 @@ describe("Provider Configuration and Autoplay Selection", () => {
     };
     // Favourite source Quantum returned empty -> fall back to Aether
     expect(selectAutoplayProvider(scanState, ["vaplayer"])).toBe("hdghartv");
+  });
+
+  it("should support multi-favouriting and fall back to 2nd favourite if 1st favourite returns empty", () => {
+    const scanState: Record<string, { loading: boolean; sources: any[] }> = {
+      hdghartv: {
+        loading: false,
+        sources: [{ url: "http://test.com/aether" }],
+      },
+      vaplayer: { loading: false, sources: [] },
+      netnaija: {
+        loading: false,
+        sources: [{ url: "http://test.com/vesper" }],
+      },
+    };
+    // Favorites: 1st is Quantum (vaplayer, empty), 2nd is Vesper (netnaija, has sources)
+    expect(selectAutoplayProvider(scanState, ["vaplayer", "netnaija"])).toBe(
+      "netnaija",
+    );
   });
 });
