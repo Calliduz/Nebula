@@ -1709,7 +1709,9 @@ export const searchPeople = async (
         (p: any) =>
           p.id === scored[0].id ||
           p.popularity > 2 ||
-          (p.popularity > topPop * 0.05 && p.known_for && p.known_for.length > 0),
+          (p.popularity > topPop * 0.05 &&
+            p.known_for &&
+            p.known_for.length > 0),
       );
     }
 

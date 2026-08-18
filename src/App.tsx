@@ -1,6 +1,14 @@
 import React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Loader2, X, Calendar, MapPin, User, Film, Clapperboard } from "lucide-react";
+import {
+  Loader2,
+  X,
+  Calendar,
+  MapPin,
+  User,
+  Film,
+  Clapperboard,
+} from "lucide-react";
 
 // Hooks
 import { useAppState } from "./hooks/useAppState";
@@ -962,12 +970,13 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                       <span>{details.known_for_department || "Creator"}</span>
                     </div>
 
-                    {details.combined_credits && details.combined_credits.length > 0 && (
-                      <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-white/80 text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                        <Film size={12} className="text-white/40" />
-                        <span>{details.combined_credits.length} Credits</span>
-                      </div>
-                    )}
+                    {details.combined_credits &&
+                      details.combined_credits.length > 0 && (
+                        <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-white/80 text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                          <Film size={12} className="text-white/40" />
+                          <span>{details.combined_credits.length} Credits</span>
+                        </div>
+                      )}
                   </div>
 
                   <h2 className="text-xl sm:text-2.5xl md:text-3xl font-display font-black tracking-tight uppercase text-white drop-shadow-md">
@@ -978,13 +987,19 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                   <div className="flex flex-wrap gap-2 sm:gap-3 mt-2.5 justify-center sm:justify-start text-xs text-white/70 font-medium">
                     {details.birthday && (
                       <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
-                        <Calendar size={13} className="text-nebula-cyan shrink-0" />
+                        <Calendar
+                          size={13}
+                          className="text-nebula-cyan shrink-0"
+                        />
                         <span>{details.birthday}</span>
                       </div>
                     )}
                     {details.place_of_birth && (
                       <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
-                        <MapPin size={13} className="text-nebula-cyan shrink-0" />
+                        <MapPin
+                          size={13}
+                          className="text-nebula-cyan shrink-0"
+                        />
                         <span className="truncate max-w-[200px] sm:max-w-[280px]">
                           {details.place_of_birth}
                         </span>
@@ -1032,7 +1047,10 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[10px] sm:text-xs font-black text-white/50 uppercase tracking-[0.2em] flex items-center gap-1.5">
                   <Film size={13} className="text-nebula-cyan" />
-                  <span>Featured Filmography ({details.combined_credits?.length || 0})</span>
+                  <span>
+                    Featured Filmography (
+                    {details.combined_credits?.length || 0})
+                  </span>
                 </h3>
               </div>
 

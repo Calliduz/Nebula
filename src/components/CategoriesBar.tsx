@@ -469,7 +469,9 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
                         </span>
                         {person.known_for && person.known_for.length > 0 && (
                           <span className="text-[7.5px] sm:text-[8.5px] font-medium text-white/70 truncate block w-full drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-                            {person.known_for.map((k: any) => k.title).join(" • ")}
+                            {person.known_for
+                              .map((k: any) => k.title)
+                              .join(" • ")}
                           </span>
                         )}
                       </div>

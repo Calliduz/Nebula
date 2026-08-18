@@ -2393,7 +2393,9 @@ export function useAppState() {
             isLoading: false,
             config,
           };
-          setRows((prev) => (prev.some((r) => r.title === rowTitle) ? prev : [...prev, row!]));
+          setRows((prev) =>
+            prev.some((r) => r.title === rowTitle) ? prev : [...prev, row!],
+          );
         } else {
           return;
         }
@@ -2420,7 +2422,9 @@ export function useAppState() {
         setRows((prev) => {
           const exists = prev.some((r) => r.title === title);
           if (exists) {
-            return prev.map((r) => (r.title === title ? { ...r, isLoading: true } : r));
+            return prev.map((r) =>
+              r.title === title ? { ...r, isLoading: true } : r,
+            );
           } else {
             return [
               ...prev,

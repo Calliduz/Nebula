@@ -288,8 +288,8 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
               No Creators Found
             </h3>
             <p className="text-white/40 text-xs max-w-sm mb-3">
-              We couldn't find any creators matching "{searchQuery}". Try another
-              name or clear filters.
+              We couldn't find any creators matching "{searchQuery}". Try
+              another name or clear filters.
             </p>
             <button
               onClick={handleClearSearch}
@@ -384,7 +384,10 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
             >
               {isLoadingMore ? (
                 <>
-                  <Loader2 size={14} className="animate-spin text-nebula-cyan" />
+                  <Loader2
+                    size={14}
+                    className="animate-spin text-nebula-cyan"
+                  />
                   <span>Loading Creators...</span>
                 </>
               ) : (
