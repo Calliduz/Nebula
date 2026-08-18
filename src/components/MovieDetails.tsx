@@ -904,10 +904,13 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
   };
 
   const loadBackupTorrents = (epNum: number) => {
+    const titleVal = movie?.title || movie?.name || "";
+    const titleParam = titleVal ? `&title=${encodeURIComponent(titleVal)}` : "";
+
     // 1. Fetch Torrent Backups
     setBackupTorrentsLoading((prev) => ({ ...prev, [epNum]: true }));
     fetch(
-      `${API_BASE_URL}/api/download/episode?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`,
+      `${API_BASE_URL}/api/download/episode?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}${titleParam}`,
     )
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load torrent backups");
@@ -929,7 +932,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     // 2. Fetch Direct Downloads
     setBackupDirectLoading((prev) => ({ ...prev, [epNum]: true }));
     fetch(
-      `${API_BASE_URL}/api/download/episode/direct?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`,
+      `${API_BASE_URL}/api/download/episode/direct?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}${titleParam}`,
     )
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load direct backups");
@@ -1048,8 +1051,8 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
     let active = true;
 
     const prefetchEpisodes = async () => {
-      const BATCH_SIZE = 5;
-      const DELAY_MS = 100;
+      const BATCH_SIZE = 2;
+      const DELAY_MS = 400;
 
       for (let i = 1; i <= episodeCount; i += BATCH_SIZE) {
         if (!active) break;
@@ -1071,11 +1074,16 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
         }
 
         if (batch.length > 0) {
+          const titleVal = movie?.title || movie?.name || "";
+          const titleParam = titleVal
+            ? `&title=${encodeURIComponent(titleVal)}`
+            : "";
+
           batch.forEach((epNum) => {
             // Fetch TV episode backup torrents
             setBackupTorrentsLoading((prev) => ({ ...prev, [epNum]: true }));
             fetch(
-              `${API_BASE_URL}/api/download/episode?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`,
+              `${API_BASE_URL}/api/download/episode?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}${titleParam}`,
             )
               .then((res) => {
                 if (!res.ok) throw new Error("Failed to load torrent backups");
@@ -1104,7 +1112,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
             // Fetch TV episode direct downloads
             setBackupDirectLoading((prev) => ({ ...prev, [epNum]: true }));
             fetch(
-              `${API_BASE_URL}/api/download/episode/direct?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}`,
+              `${API_BASE_URL}/api/download/episode/direct?tmdbId=${movie.id}&season=${activeDownloadSeason}&episode=${epNum}${titleParam}`,
             )
               .then((res) => {
                 if (!res.ok) throw new Error("Failed to load direct downloads");
@@ -1131,7 +1139,7 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
               });
           });
 
-          // Rest for 100ms before starting the next batch
+          // Rest before starting the next batch
           await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
         }
       }
