@@ -946,26 +946,27 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
               <div className="flex-1 min-w-0 flex flex-col justify-between">
                 <div>
                   {/* Role Badge & Name */}
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
-                    <span
-                      className={`inline-flex items-center gap-1 text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border backdrop-blur-md ${
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
+                    <div
+                      className={`px-3 py-1 rounded-lg border backdrop-blur-md text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm ${
                         details.known_for_department === "Directing"
-                          ? "bg-purple-600/30 border-purple-400/40 text-purple-200"
-                          : "bg-cyan-500/25 border-nebula-cyan/40 text-nebula-cyan"
+                          ? "bg-purple-500/15 border-purple-400/40 text-purple-200"
+                          : "bg-cyan-500/15 border-nebula-cyan/40 text-nebula-cyan"
                       }`}
                     >
                       {details.known_for_department === "Directing" ? (
-                        <Clapperboard size={10} />
+                        <Clapperboard size={12} className="shrink-0" />
                       ) : (
-                        <User size={10} />
+                        <User size={12} className="shrink-0" />
                       )}
                       <span>{details.known_for_department || "Creator"}</span>
-                    </span>
+                    </div>
 
                     {details.combined_credits && details.combined_credits.length > 0 && (
-                      <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/50">
-                        {details.combined_credits.length} Credits
-                      </span>
+                      <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-white/80 text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                        <Film size={12} className="text-white/40" />
+                        <span>{details.combined_credits.length} Credits</span>
+                      </div>
                     )}
                   </div>
 
@@ -974,17 +975,17 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                   </h2>
 
                   {/* Metadata: Birthday & Birthplace */}
-                  <div className="flex flex-wrap gap-2.5 sm:gap-4 mt-2 justify-center sm:justify-start text-[10px] sm:text-[11px] text-white/50 font-medium">
+                  <div className="flex flex-wrap gap-2 sm:gap-3 mt-2.5 justify-center sm:justify-start text-xs text-white/70 font-medium">
                     {details.birthday && (
-                      <div className="flex items-center gap-1 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/5">
-                        <Calendar size={12} className="text-white/30" />
+                      <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                        <Calendar size={13} className="text-nebula-cyan shrink-0" />
                         <span>{details.birthday}</span>
                       </div>
                     )}
                     {details.place_of_birth && (
-                      <div className="flex items-center gap-1 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/5">
-                        <MapPin size={12} className="text-white/30" />
-                        <span className="truncate max-w-[180px] sm:max-w-[220px]">
+                      <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                        <MapPin size={13} className="text-nebula-cyan shrink-0" />
+                        <span className="truncate max-w-[200px] sm:max-w-[280px]">
                           {details.place_of_birth}
                         </span>
                       </div>
@@ -1002,7 +1003,7 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                       ? bio.slice(0, BIO_LIMIT).trimEnd() + "…"
                       : bio;
                   return (
-                    <div className="mt-3 sm:mt-4 text-xs text-white/70 leading-relaxed font-sans border-l-2 border-nebula-cyan/40 pl-3 text-left">
+                    <div className="mt-3.5 sm:mt-4 text-xs sm:text-[13px] text-white/85 leading-relaxed font-sans border-l-2 border-nebula-cyan/50 pl-3.5 text-left bg-white/[0.02] py-1.5 pr-2 rounded-r-lg">
                       {bio ? (
                         <>
                           <span>{displayBio}</span>
@@ -1027,36 +1028,36 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
             </div>
 
             {/* Bottom Section: Combined Filmography Row */}
-            <div className="w-full pt-2 border-t border-white/10">
+            <div className="w-full pt-3 border-t border-white/10">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[10px] sm:text-xs font-black text-white/40 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                <h3 className="text-[10px] sm:text-xs font-black text-white/50 uppercase tracking-[0.2em] flex items-center gap-1.5">
                   <Film size={13} className="text-nebula-cyan" />
                   <span>Featured Filmography ({details.combined_credits?.length || 0})</span>
                 </h3>
               </div>
 
               <div className="relative group/filmrow">
-                {/* Left Arrow */}
+                {/* Left Arrow (Desktop only - appears on hover) */}
                 {canScrollLeft && (
                   <button
                     onClick={() => scrollRow("left")}
-                    className="absolute left-0 top-0 bottom-3 z-20 w-8 sm:w-10 flex items-center justify-center bg-gradient-to-r from-obsidian via-obsidian/80 to-transparent transition-all duration-300 cursor-pointer"
+                    className="hidden md:flex absolute left-0 top-0 bottom-3 z-30 w-8 sm:w-10 items-center justify-center bg-gradient-to-r from-obsidian via-obsidian/90 to-transparent opacity-0 group-hover/filmrow:opacity-100 transition-opacity duration-300 cursor-pointer"
                     aria-label="Scroll left"
                   >
-                    <div className="w-7 h-7 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/25 hover:border-nebula-cyan/60 transition-all text-white">
+                    <div className="w-7 h-7 rounded-full bg-black/80 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 hover:border-nebula-cyan/60 transition-all text-white shadow-lg">
                       ‹
                     </div>
                   </button>
                 )}
 
-                {/* Right Arrow */}
+                {/* Right Arrow (Desktop only - appears on hover) */}
                 {canScrollRight && (
                   <button
                     onClick={() => scrollRow("right")}
-                    className="absolute right-0 top-0 bottom-3 z-20 w-8 sm:w-10 flex items-center justify-center bg-gradient-to-l from-obsidian via-obsidian/80 to-transparent transition-all duration-300 cursor-pointer"
+                    className="hidden md:flex absolute right-0 top-0 bottom-3 z-30 w-8 sm:w-10 items-center justify-center bg-gradient-to-l from-obsidian via-obsidian/90 to-transparent opacity-0 group-hover/filmrow:opacity-100 transition-opacity duration-300 cursor-pointer"
                     aria-label="Scroll right"
                   >
-                    <div className="w-7 h-7 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/25 hover:border-nebula-cyan/60 transition-all text-white">
+                    <div className="w-7 h-7 rounded-full bg-black/80 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 hover:border-nebula-cyan/60 transition-all text-white shadow-lg">
                       ›
                     </div>
                   </button>
@@ -1091,28 +1092,23 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                           </div>
                         )}
 
-                        {/* Top Badges */}
-                        <div className="absolute top-1.5 inset-x-1.5 flex items-center justify-between z-10">
-                          <span
-                            className={`text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md shadow-sm ${
-                              m.type === "tv"
-                                ? "bg-white/20 text-white border border-white/20"
-                                : "bg-cyan-500/90 text-obsidian font-bold"
-                            }`}
-                          >
-                            {m.type === "tv" ? "TV" : "Movie"}
-                          </span>
+                        {/* Type badge — top-left corner tab */}
+                        {m.type && (
+                          <div className="absolute top-0 left-0 z-20 pointer-events-none bg-black/85 backdrop-blur-md text-white/90 text-[7.5px] sm:text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-br-lg border-r border-b border-white/10 leading-none">
+                            {m.type === "tv" ? "TV" : "Film"}
+                          </div>
+                        )}
 
-                          {m.year > 0 && (
-                            <span className="text-[7px] sm:text-[8px] font-bold text-white/80 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">
-                              {m.year}
-                            </span>
-                          )}
-                        </div>
+                        {/* Year badge — top-right corner tab */}
+                        {m.year > 0 && (
+                          <div className="absolute top-0 right-0 z-20 pointer-events-none bg-black/85 backdrop-blur-md text-white/80 text-[7.5px] sm:text-[8.5px] font-bold px-2 py-0.5 rounded-bl-lg border-l border-b border-white/10 leading-none">
+                            {m.year}
+                          </div>
+                        )}
 
                         {/* Bottom Scrim & Title */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-85 group-hover/film:opacity-95 transition-opacity flex flex-col justify-end p-2 sm:p-2.5">
-                          <p className="text-[8.5px] sm:text-[10px] font-display font-black uppercase tracking-tight text-white leading-tight line-clamp-2 drop-shadow-md group-hover/film:text-nebula-cyan transition-colors">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90 group-hover/film:opacity-95 transition-opacity flex flex-col justify-end p-2 sm:p-2.5">
+                          <p className="text-[9px] sm:text-[10.5px] font-display font-black uppercase tracking-tight text-white leading-tight line-clamp-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] group-hover/film:text-nebula-cyan transition-colors">
                             {m.title}
                           </p>
                         </div>

@@ -441,34 +441,35 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
                         </div>
                       )}
 
-                      {/* Scrim Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-85 group-hover:opacity-75 transition-opacity duration-300" />
-                      <div className="absolute top-0 inset-x-0 h-10 bg-gradient-to-b from-black/50 to-transparent" />
-
-                      {/* Glass Specular Top Highlight */}
-                      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
-
-                      {/* Top Role Badge */}
-                      <div className="relative z-10 flex justify-start">
-                        <span
-                          className={`text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md border ${
-                            isDirector
-                              ? "bg-purple-600/30 border-purple-400/40 text-purple-200"
-                              : "bg-cyan-500/25 border-nebula-cyan/40 text-nebula-cyan"
-                          }`}
-                        >
-                          {isDirector ? "Director" : "Actor"}
-                        </span>
+                      {/* Type badge — top-left corner tab */}
+                      <div
+                        className={`absolute top-0 left-0 z-20 pointer-events-none backdrop-blur-md text-[7.5px] sm:text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-br-lg border-r border-b leading-none ${
+                          isDirector
+                            ? "bg-purple-950/90 text-purple-200 border-purple-500/30"
+                            : "bg-cyan-950/90 text-nebula-cyan border-nebula-cyan/30"
+                        }`}
+                      >
+                        {isDirector ? "Director" : "Actor"}
                       </div>
 
+                      {/* Scrim Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-300 pointer-events-none" />
+                      <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
+
+                      {/* Glass Specular Top Highlight */}
+                      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                      {/* Spacer */}
+                      <div className="h-4" />
+
                       {/* Bottom Info */}
-                      <div className="relative z-10 w-full">
-                        <span className="text-[9.5px] sm:text-[10.5px] font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors truncate block w-full drop-shadow-md leading-tight">
+                      <div className="relative z-10 w-full flex flex-col gap-0.5">
+                        <span className="text-[10px] sm:text-[11px] font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors truncate block w-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] leading-tight">
                           {person.name}
                         </span>
                         {person.known_for && person.known_for.length > 0 && (
-                          <span className="text-[7.5px] sm:text-[8px] text-white/60 truncate block w-full drop-shadow-sm mt-0.5">
-                            {person.known_for[0].title}
+                          <span className="text-[7.5px] sm:text-[8.5px] font-medium text-white/70 truncate block w-full drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                            {person.known_for.map((k: any) => k.title).join(" • ")}
                           </span>
                         )}
                       </div>
