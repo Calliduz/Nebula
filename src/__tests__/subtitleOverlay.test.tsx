@@ -10,13 +10,15 @@ import {
 describe("SubtitleOverlay - Cue text sanitizer and parser", () => {
   describe("cleanCueText", () => {
     it("strips font tags with face, size, and color attributes", () => {
-      const input = '<font face="Swis721 BT" size="48"><b>What should we do, Allen?</b></font>';
+      const input =
+        '<font face="Swis721 BT" size="48"><b>What should we do, Allen?</b></font>';
       const cleaned = cleanCueText(input);
       expect(cleaned).toBe("<b>What should we do, Allen?</b>");
     });
 
     it("strips font tags from Chronos sample", () => {
-      const input = '<font face="Swis721 BT" size="48">We work together to save Rohzenheim.</font>';
+      const input =
+        '<font face="Swis721 BT" size="48">We work together to save Rohzenheim.</font>';
       const cleaned = cleanCueText(input);
       expect(cleaned).toBe("We work together to save Rohzenheim.");
     });
@@ -46,7 +48,8 @@ describe("SubtitleOverlay - Cue text sanitizer and parser", () => {
     });
 
     it("strips voice, class, ruby, and other non-formatting tags", () => {
-      const input = "<v Speaker><c.yellow><ruby>Base<rt>Annotation</rt></ruby> Message</c></v>";
+      const input =
+        "<v Speaker><c.yellow><ruby>Base<rt>Annotation</rt></ruby> Message</c></v>";
       const cleaned = cleanCueText(input);
       expect(cleaned).toBe("BaseAnnotation Message");
     });
@@ -63,9 +66,11 @@ describe("SubtitleOverlay - Cue text sanitizer and parser", () => {
       expect(decodeHtmlEntities("&quot;Hello&quot; &amp; &lt;World&gt;")).toBe(
         '"Hello" & <World>',
       );
-      expect(decodeHtmlEntities("&apos;quote&apos; &#39;quote&#39; &#039;quote&#039;")).toBe(
-        "'quote' 'quote' 'quote'",
-      );
+      expect(
+        decodeHtmlEntities(
+          "&apos;quote&apos; &#39;quote&#39; &#039;quote&#039;",
+        ),
+      ).toBe("'quote' 'quote' 'quote'");
       expect(decodeHtmlEntities("word&nbsp;word")).toBe("word word");
     });
 
@@ -77,7 +82,8 @@ describe("SubtitleOverlay - Cue text sanitizer and parser", () => {
 
   describe("parseCueText", () => {
     it("renders cleaned text with nested React elements without raw tags", () => {
-      const input = '<font face="Swis721 BT" size="48"><b>What should we do, Allen?</b></font>';
+      const input =
+        '<font face="Swis721 BT" size="48"><b>What should we do, Allen?</b></font>';
       const result = parseCueText(input) as React.ReactNode[];
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);

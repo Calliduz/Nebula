@@ -118,10 +118,7 @@ export function parseCueText(text: string): React.ReactNode {
       }
       if (activeStyles.underline > 0) {
         node = (
-          <span
-            style={{ textDecoration: "underline" }}
-            key={`u-${keyCount++}`}
-          >
+          <span style={{ textDecoration: "underline" }} key={`u-${keyCount++}`}>
             {node}
           </span>
         );
