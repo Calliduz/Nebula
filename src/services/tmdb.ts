@@ -1331,48 +1331,54 @@ export interface NebulaPersonSummary {
   }[];
 }
 
-export const LEGENDARY_DIRECTORS: {
-  id: string;
-  name: string;
-  avatar?: string;
-}[] = [
-  { id: "525", name: "Christopher Nolan" },
-  { id: "137427", name: "Denis Villeneuve" },
-  { id: "138", name: "Quentin Tarantino" },
-  { id: "1032", name: "Martin Scorsese" },
-  { id: "10828", name: "Guillermo del Toro" },
-  { id: "61502", name: "Greta Gerwig" },
-  { id: "608", name: "Hayao Miyazaki" },
-  { id: "7467", name: "David Fincher" },
-  { id: "488", name: "Steven Spielberg" },
-  { id: "2710", name: "James Cameron" },
-  { id: "21684", name: "Bong Joon-ho" },
-  { id: "578", name: "Ridley Scott" },
-  { id: "5655", name: "Wes Anderson" },
-  { id: "1226274", name: "Jordan Peele" },
-  { id: "7623", name: "Sam Raimi" },
-  { id: "11218", name: "Alfonso Cuarón" },
-  { id: "116805", name: "Makoto Shinkai" },
-  { id: "956", name: "Guy Ritchie" },
-  { id: "15217", name: "Zack Snyder" },
-  { id: "55934", name: "Taika Waititi" },
-  { id: "928543", name: "Chad Stahelski" },
-  { id: "20629", name: "George Miller" },
-  { id: "108", name: "Peter Jackson" },
-  { id: "4762", name: "Paul Thomas Anderson" },
+export const TOP_CREATORS_POOL = [
+  // Acclaimed Directors
+  { id: "525", name: "Christopher Nolan", department: "Directing" },
+  { id: "137427", name: "Denis Villeneuve", department: "Directing" },
+  { id: "138", name: "Quentin Tarantino", department: "Directing" },
+  { id: "1032", name: "Martin Scorsese", department: "Directing" },
+  { id: "7467", name: "David Fincher", department: "Directing" },
+  { id: "488", name: "Steven Spielberg", department: "Directing" },
+  { id: "2710", name: "James Cameron", department: "Directing" },
+  { id: "10828", name: "Guillermo del Toro", department: "Directing" },
+  { id: "61502", name: "Greta Gerwig", department: "Directing" },
+  { id: "608", name: "Hayao Miyazaki", department: "Directing" },
+  { id: "21684", name: "Bong Joon-ho", department: "Directing" },
+  { id: "578", name: "Ridley Scott", department: "Directing" },
+  { id: "5655", name: "Wes Anderson", department: "Directing" },
+  { id: "1226274", name: "Jordan Peele", department: "Directing" },
+  { id: "7623", name: "Sam Raimi", department: "Directing" },
+  { id: "11218", name: "Alfonso Cuarón", department: "Directing" },
+  { id: "116805", name: "Makoto Shinkai", department: "Directing" },
+  { id: "956", name: "Guy Ritchie", department: "Directing" },
+  { id: "15217", name: "Zack Snyder", department: "Directing" },
+  { id: "55934", name: "Taika Waititi", department: "Directing" },
+  { id: "928543", name: "Chad Stahelski", department: "Directing" },
+  { id: "20629", name: "George Miller", department: "Directing" },
+  { id: "108", name: "Peter Jackson", department: "Directing" },
+  { id: "4762", name: "Paul Thomas Anderson", department: "Directing" },
 ];
+
+export const LEGENDARY_DIRECTORS = TOP_CREATORS_POOL.filter(
+  (c) => c.department === "Directing",
+);
 
 export const getPopularPeople = async (
   department: "all" | "Acting" | "Directing" = "all",
   page: number = 1,
 ): Promise<NebulaPersonSummary[]> => {
   try {
+    const BATCH_SIZE = 24;
+
     if (department === "Directing") {
       // For directors, fetch popular director profiles from TMDB & cache with combined credits
-      const directorPromises = LEGENDARY_DIRECTORS.slice(
-        (page - 1) * 12,
-        page * 12,
-      ).map(async (d) => {
+      const startIndex = (page - 1) * BATCH_SIZE;
+      const directorsSlice = LEGENDARY_DIRECTORS.slice(
+        startIndex,
+        startIndex + BATCH_SIZE,
+      );
+
+      const directorPromises = directorsSlice.map(async (d) => {
         try {
           const data = await fetchFromTMDB(
             `/person/${d.id}`,
@@ -1382,7 +1388,11 @@ export const getPopularPeople = async (
           if (!data) return null;
 
           const directingCredits = (data.combined_credits?.crew || [])
-            .filter((c: any) => c.job === "Director" || (c.department === "Directing" && c.poster_path))
+            .filter(
+              (c: any) =>
+                c.job === "Director" ||
+                (c.department === "Directing" && c.poster_path),
+            )
             .sort((a: any, b: any) => (b.vote_count || 0) - (a.vote_count || 0))
             .slice(0, 3)
             .map((k: any) => ({
@@ -1421,39 +1431,104 @@ export const getPopularPeople = async (
       return resolved;
     }
 
-    const data = await fetchFromTMDB(
-      "/person/popular",
-      { page: page.toString() },
-      TTL.POPULAR,
-    );
-    let results = data.results || [];
+    // Fetch from TMDB popular people (multiple pages if needed to reach BATCH_SIZE high-quality entries)
+    const tmdbPage1 = (page - 1) * 2 + 1;
+    const tmdbPage2 = tmdbPage1 + 1;
 
+    const [data1, data2] = await Promise.all([
+      fetchFromTMDB(
+        "/person/popular",
+        { page: tmdbPage1.toString() },
+        TTL.POPULAR,
+      ),
+      fetchFromTMDB(
+        "/person/popular",
+        { page: tmdbPage2.toString() },
+        TTL.POPULAR,
+      ),
+    ]);
+
+    let rawList = [...(data1.results || []), ...(data2.results || [])];
+
+    // Filter by department if Acting
     if (department === "Acting") {
-      results = results.filter(
+      rawList = rawList.filter(
         (p: any) => (p.known_for_department || "Acting") === "Acting",
       );
     }
 
-    return results
-      .filter((p: any) => p.profile_path)
-      .slice(0, 18)
-      .map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        avatar: p.profile_path
-          ? proxyImage(`${IMAGE_BASE_URL}${p.profile_path}`)
+    // High quality filter: Must have profile path and known works
+    const filtered = rawList.filter(
+      (p: any) =>
+        p.profile_path &&
+        p.popularity > 8 &&
+        p.known_for &&
+        p.known_for.length > 0 &&
+        p.known_for.some((k: any) => (k.vote_count || 0) > 20),
+    );
+
+    // Deduplicate by ID
+    const seenIds = new Set<string>();
+    const unique = filtered.filter((p: any) => {
+      const idStr = p.id.toString();
+      if (seenIds.has(idStr)) return false;
+      seenIds.add(idStr);
+      return true;
+    });
+
+    // In 'all' tab, if on page 1, blend in top directors for great variety
+    let combinedResults = unique;
+    if (department === "all" && page === 1) {
+      const topDirectors = await Promise.all(
+        LEGENDARY_DIRECTORS.slice(0, 6).map(async (d) => {
+          try {
+            const data = await fetchFromTMDB(
+              `/person/${d.id}`,
+              { append_to_response: "combined_credits" },
+              TTL.DETAILS,
+            );
+            if (!data || !data.profile_path) return null;
+            return {
+              id: data.id,
+              name: data.name,
+              profile_path: data.profile_path,
+              known_for_department: "Directing",
+              popularity: (data.popularity || 40) + 50,
+              known_for: (data.combined_credits?.crew || [])
+                .filter((c: any) => c.job === "Director")
+                .slice(0, 3),
+            };
+          } catch {
+            return null;
+          }
+        }),
+      );
+      const validDirectors = topDirectors.filter(Boolean);
+      combinedResults = [...validDirectors, ...unique];
+    }
+
+    // Sort by popularity descending
+    combinedResults.sort(
+      (a: any, b: any) => (b.popularity || 0) - (a.popularity || 0),
+    );
+
+    return combinedResults.slice(0, BATCH_SIZE).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      avatar: p.profile_path
+        ? proxyImage(`${IMAGE_BASE_URL}${p.profile_path}`)
+        : null,
+      department: p.known_for_department || p.department || "Acting",
+      popularity: p.popularity,
+      known_for: (p.known_for || []).map((k: any) => ({
+        id: k.id,
+        title: k.title || k.name || "",
+        poster: k.poster_path
+          ? proxyImage(`${IMAGE_BASE_URL}${k.poster_path}`)
           : null,
-        department: p.known_for_department || "Acting",
-        popularity: p.popularity,
-        known_for: (p.known_for || []).map((k: any) => ({
-          id: k.id,
-          title: k.title || k.name || "",
-          poster: k.poster_path
-            ? proxyImage(`${IMAGE_BASE_URL}${k.poster_path}`)
-            : null,
-          type: k.media_type || "movie",
-        })),
-      }));
+        type: k.media_type || "movie",
+      })),
+    }));
   } catch (err) {
     console.error("[TMDB] Error fetching popular people:", err);
     return [];
@@ -1551,7 +1626,7 @@ export const getPersonDetails = async (
           (isActingDept && a.media_type === "movie" ? 2 : 1);
         const popB =
           (b.popularity || 0) *
-          (isActingDept && b.media_type === "movie" ? 2 : 1);
+          (isActingDept && a.media_type === "movie" ? 2 : 1);
         return popB - popA;
       })
       .slice(0, 40)
@@ -1593,24 +1668,67 @@ export const searchPeople = async (
       signal,
     );
 
-    return (data.results || [])
-      .filter((p: any) => p.profile_path)
-      .slice(0, 20)
-      .map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        avatar: proxyImage(`${IMAGE_BASE_URL}${p.profile_path}`),
-        role: p.known_for_department || "Acting",
-        department: p.known_for_department || "Acting",
-        known_for: (p.known_for || []).map((k: any) => ({
-          id: k.id,
-          title: k.title || k.name || "",
-          poster: k.poster_path
-            ? proxyImage(`${IMAGE_BASE_URL}${k.poster_path}`)
-            : null,
-          type: k.media_type || "movie",
-        })),
-      }));
+    const raw = (data.results || []).filter((p: any) => p.profile_path);
+    const lowerQuery = trimmedQuery.toLowerCase();
+
+    // Score and rank search results for maximum relevance
+    const scored = raw.map((p: any) => {
+      const lowerName = (p.name || "").toLowerCase();
+      let score = Number(p.popularity) || 0;
+
+      // Exact match bonus
+      if (lowerName === lowerQuery) {
+        score += 5000;
+      } else if (lowerName.startsWith(lowerQuery)) {
+        score += 2000;
+      } else if (lowerName.includes(lowerQuery)) {
+        score += 500;
+      }
+
+      // Has legitimate known works
+      const hasKnownWorks =
+        p.known_for &&
+        p.known_for.some(
+          (k: any) => (k.vote_count || 0) > 10 || Boolean(k.poster_path),
+        );
+      if (hasKnownWorks) {
+        score += 500;
+      }
+
+      return { ...p, _relevanceScore: score };
+    });
+
+    // Sort by relevance score descending
+    scored.sort((a: any, b: any) => b._relevanceScore - a._relevanceScore);
+
+    // If top result is an exact match with high popularity, filter out trivial low-popularity namesake duplicates
+    let finalResults = scored;
+    if (scored.length > 1 && scored[0].popularity > 15) {
+      const topPop = scored[0].popularity;
+      finalResults = scored.filter(
+        (p: any) =>
+          p.id === scored[0].id ||
+          p.popularity > 2 ||
+          (p.popularity > topPop * 0.05 && p.known_for && p.known_for.length > 0),
+      );
+    }
+
+    return finalResults.slice(0, 24).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      avatar: proxyImage(`${IMAGE_BASE_URL}${p.profile_path}`),
+      role: p.known_for_department || "Acting",
+      department: p.known_for_department || "Acting",
+      popularity: p.popularity,
+      known_for: (p.known_for || []).map((k: any) => ({
+        id: k.id,
+        title: k.title || k.name || "",
+        poster: k.poster_path
+          ? proxyImage(`${IMAGE_BASE_URL}${k.poster_path}`)
+          : null,
+        type: k.media_type || "movie",
+      })),
+    }));
   } catch (err) {
     console.error(`[TMDB] Failed to search people for "${query}":`, err);
     return [];

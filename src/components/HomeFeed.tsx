@@ -265,37 +265,7 @@ export const HomeFeed = React.memo<HomeFeedProps>(
           </>
         )}
 
-        {/* 7. Extended Genre Rows - Auto-loaded on-demand when scrolling towards bottom */}
-        {!showExtendedCatalog && (
-          <LazyViewport
-            placeholder={<div className="h-10 w-full" />}
-            onVisible={() => setShowExtendedCatalog(true)}
-            prefetchMargin="1000px 0px 1000px 0px"
-            renderMargin="1000px 0px 1000px 0px"
-            minHeight="40px"
-          >
-            <div className="h-2" />
-          </LazyViewport>
-        )}
-
-        {showExtendedCatalog && (
-          <>
-            <SectionDivider label="Explore More Genres" />
-            {EXTENDED_GENRE_ROWS.map((title, idx) => {
-              const existingRow = rows.find((r) => r.title === title);
-              const rowObj = existingRow || {
-                title,
-                items: [],
-                hasLoaded: false,
-                isLoading: false,
-                config: ROW_FETCH_CONFIG[title],
-              };
-              return renderRow(rowObj, 200 + idx);
-            })}
-          </>
-        )}
-
-        {/* Fallback Recommendation Row if not already in rows */}
+        {/* 6. Fallback Recommendation Row if not already in rows */}
         {!rows.some((r) => r.title === "Based on Watch History") && (
           <MovieRow title="Based on Watch History">
             {isLoading
@@ -326,6 +296,36 @@ export const HomeFeed = React.memo<HomeFeedProps>(
                   />
                 ))}
           </MovieRow>
+        )}
+
+        {/* 7. Extended Genre Rows - Auto-loaded on-demand when scrolling towards bottom */}
+        {!showExtendedCatalog && (
+          <LazyViewport
+            placeholder={<div className="h-10 w-full" />}
+            onVisible={() => setShowExtendedCatalog(true)}
+            prefetchMargin="1000px 0px 1000px 0px"
+            renderMargin="1000px 0px 1000px 0px"
+            minHeight="40px"
+          >
+            <div className="h-2" />
+          </LazyViewport>
+        )}
+
+        {showExtendedCatalog && (
+          <>
+            <SectionDivider label="Explore More Genres" />
+            {EXTENDED_GENRE_ROWS.map((title, idx) => {
+              const existingRow = rows.find((r) => r.title === title);
+              const rowObj = existingRow || {
+                title,
+                items: [],
+                hasLoaded: false,
+                isLoading: false,
+                config: ROW_FETCH_CONFIG[title],
+              };
+              return renderRow(rowObj, 200 + idx);
+            })}
+          </>
         )}
       </div>
     );

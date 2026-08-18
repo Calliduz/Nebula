@@ -282,16 +282,17 @@ export default function App() {
                 ) : state.viewingCategory === "People" ? (
                   <React.Suspense
                     fallback={
-                      <div className="min-h-screen bg-obsidian pt-24 sm:pt-28 md:pt-32 px-4 sm:px-6 md:px-12 pb-32">
-                        <div className="h-10 w-48 bg-white/5 rounded-lg mb-12 shimmer-bg" />
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-5">
-                          {[...Array(12)].map((_, i) => (
+                      <div className="min-h-screen bg-obsidian pt-16 sm:pt-24 md:pt-28 px-3.5 sm:px-6 md:px-12 pb-24 sm:pb-32">
+                        <div className="h-8 w-40 bg-white/5 rounded-lg mb-6 shimmer-bg" />
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-8 gap-2.5 sm:gap-3.5">
+                          {[...Array(24)].map((_, i) => (
                             <div
                               key={`person-skel-main-${i}`}
-                              className="rounded-2xl p-4 bg-white/[0.02] border border-white/5 flex flex-col items-center gap-3 animate-pulse"
+                              className="aspect-[2/3] rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/5 p-2 sm:p-3 flex flex-col justify-end gap-1 sm:gap-1.5 animate-pulse overflow-hidden relative"
                             >
-                              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white/5 shimmer-bg" />
-                              <div className="h-3 w-20 bg-white/5 rounded-md shimmer-bg" />
+                              <div className="absolute inset-0 shimmer-bg opacity-30" />
+                              <div className="h-3 sm:h-4 w-3/4 bg-white/10 rounded shimmer-bg relative z-10" />
+                              <div className="h-2 sm:h-3 w-1/2 bg-white/10 rounded shimmer-bg relative z-10 opacity-60" />
                             </div>
                           ))}
                         </div>
@@ -828,12 +829,13 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
     };
   }, []);
 
-  // Track scroll state for navigation arrows
+  // Track scroll state for navigation arrows with precision
   const updateScrollState = React.useCallback(() => {
     const el = filmRowRef.current;
     if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 10);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(maxScroll > 4 && el.scrollLeft < maxScroll - 4);
   }, []);
 
   React.useEffect(() => {
@@ -842,9 +844,17 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
     // Initial check after render
     const timer = setTimeout(updateScrollState, 100);
     el.addEventListener("scroll", updateScrollState, { passive: true });
+
+    // ResizeObserver ensures changes in width or loaded cards update arrows instantly
+    const ro = new ResizeObserver(() => {
+      updateScrollState();
+    });
+    ro.observe(el);
+
     return () => {
       clearTimeout(timer);
       el.removeEventListener("scroll", updateScrollState);
+      ro.disconnect();
     };
   }, [details, updateScrollState]);
 
@@ -872,12 +882,8 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
         exit={{ opacity: 0, scale: 0.96, y: 15 }}
         transition={{ type: "spring", duration: 0.45, bounce: 0.1 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl max-h-[88vh] bg-obsidian/95 border border-white/15 rounded-2xl sm:rounded-3xl overflow-y-auto custom-scrollbar flex flex-col p-4 sm:p-7 md:p-8 text-white shadow-[0_25px_60px_rgba(0,0,0,0.9)]"
+        className="relative w-full max-w-3xl max-h-[88vh] bg-obsidian border border-white/15 rounded-2xl sm:rounded-3xl overflow-y-auto custom-scrollbar flex flex-col p-4 sm:p-7 md:p-8 text-white shadow-[0_25px_60px_rgba(0,0,0,0.9)]"
       >
-        {/* Ambient Glow Aura */}
-        <div className="absolute -top-24 -left-24 w-72 h-72 bg-nebula-cyan/15 rounded-full blur-3xl pointer-events-none -z-10" />
-        <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-purple-600/15 rounded-full blur-3xl pointer-events-none -z-10" />
-
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -1069,7 +1075,7 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                           onSelectMovie(m);
                           onClose();
                         }}
-                        className="group/film relative w-24 sm:w-32 md:w-36 aspect-[2/3] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 hover:border-nebula-cyan/60 transition-all duration-300 cursor-pointer shrink-0 snap-start shadow-md hover:shadow-[0_8px_20px_rgba(0,229,255,0.2)] hover:-translate-y-1 text-left"
+                        className="group/film relative w-24 sm:w-28 md:w-32 aspect-[2/3] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 hover:border-nebula-cyan/60 transition-all duration-300 cursor-pointer shrink-0 snap-start shadow-md hover:shadow-[0_8px_20px_rgba(0,229,255,0.2)] hover:-translate-y-1 text-left"
                       >
                         {m.image ? (
                           <img
@@ -1132,16 +1138,17 @@ function PeoplePageStub({ actions, onSelectActor }: any) {
   return (
     <React.Suspense
       fallback={
-        <div className="min-h-screen bg-obsidian pt-24 sm:pt-28 md:pt-32 px-4 sm:px-6 md:px-12 pb-32">
-          <div className="h-10 w-48 bg-white/5 rounded-lg mb-12 shimmer-bg" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-5">
-            {[...Array(12)].map((_, i) => (
+        <div className="min-h-screen bg-obsidian pt-16 sm:pt-24 md:pt-28 px-3.5 sm:px-6 md:px-12 pb-24 sm:pb-32">
+          <div className="h-8 w-40 bg-white/5 rounded-lg mb-6 shimmer-bg" />
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-8 gap-2.5 sm:gap-3.5">
+            {[...Array(24)].map((_, i) => (
               <div
                 key={`person-page-skel-${i}`}
-                className="rounded-2xl p-4 bg-white/[0.02] border border-white/5 flex flex-col items-center gap-3 animate-pulse"
+                className="aspect-[2/3] rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/5 p-2 sm:p-3 flex flex-col justify-end gap-1 sm:gap-1.5 animate-pulse overflow-hidden relative"
               >
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white/5 shimmer-bg" />
-                <div className="h-3 w-20 bg-white/5 rounded-md shimmer-bg" />
+                <div className="absolute inset-0 shimmer-bg opacity-30" />
+                <div className="h-3 sm:h-4 w-3/4 bg-white/10 rounded shimmer-bg relative z-10" />
+                <div className="h-2 sm:h-3 w-1/2 bg-white/10 rounded shimmer-bg relative z-10 opacity-60" />
               </div>
             ))}
           </div>
@@ -1149,7 +1156,11 @@ function PeoplePageStub({ actions, onSelectActor }: any) {
       }
     >
       <PeopleView
-        onClose={() => navigate("/")}
+        onClose={() => {
+          actions.setViewingCategory(null);
+          actions.setActiveTab("home");
+          navigate("/");
+        }}
         onSelectActor={onSelectActor}
         onSelectMovie={actions.setSelectedMovie}
       />

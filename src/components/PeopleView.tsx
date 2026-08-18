@@ -87,7 +87,7 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
           .then((data) => {
             if (!isMounted) return;
             setPeople(data);
-            setHasMore(data.length >= 12);
+            setHasMore(data.length >= 24);
           })
           .catch(() => {
             if (isMounted) setPeople([]);
@@ -146,7 +146,7 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
             return [...prev, ...uniqueNew];
           });
           setPage(nextPage);
-          if (nextData.length < 12) setHasMore(false);
+          if (nextData.length < 24) setHasMore(false);
         }
       } catch (err) {
         console.error("Failed to load more people:", err);
@@ -156,130 +156,126 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
     }, [departmentFilter, hasMore, isLoadingMore, page, searchQuery]);
 
     return (
-      <div className="min-h-screen bg-obsidian text-white pt-16 sm:pt-20 md:pt-24 px-3 sm:px-6 md:px-10 pb-28">
-        {/* Cinematic Compact Header */}
-        <div className="flex flex-col gap-3 sm:gap-4 mb-5 sm:mb-7">
-          {/* Top Row: Back Button, Title & Department Tabs */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button
-                onClick={onClose}
-                className="group flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] border border-white/10 text-white/70 hover:text-white transition-all active:scale-95 cursor-pointer shadow-md hover:border-nebula-cyan/30"
-                aria-label="Back to browse"
-              >
-                <ArrowLeft
-                  size={15}
-                  className="transition-transform duration-300 group-hover:-translate-x-0.5"
+      <div className="min-h-screen bg-obsidian text-white pt-16 sm:pt-24 md:pt-28 px-3.5 sm:px-6 md:px-12 pb-24 sm:pb-32">
+        {/* Header matching CategoryView / Anime page design */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 sm:mb-10">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:border-nebula-cyan/30 text-nebula-cyan hover:text-white transition-all duration-300 group self-start shadow-md backdrop-blur-sm active:scale-95 cursor-pointer"
+              aria-label="Back to home"
+            >
+              <ArrowLeft
+                size={13}
+                className="group-hover:-translate-x-0.5 transition-transform duration-300"
+              />
+              <span className="text-[8.5px] font-black tracking-[0.18em] uppercase">
+                Back to Home
+              </span>
+            </button>
+
+            <div className="flex items-center gap-3 sm:gap-4 h-10 sm:h-12 md:h-16">
+              <span className="w-[3px] self-stretch rounded-full bg-gradient-to-b from-nebula-cyan to-nebula-cyan/20 shadow-[0_0_8px_rgba(0,229,255,0.7)] shrink-0" />
+              <h2 className="text-2.5xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-black tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white/95 to-white/70 bg-clip-text text-transparent flex items-center gap-2.5">
+                <span>Creators & Talent</span>
+                <Sparkles
+                  size={20}
+                  className="text-nebula-cyan animate-pulse hidden sm:inline"
                 />
-                <span className="text-[11px] font-bold uppercase tracking-wider hidden sm:inline">
-                  Back
-                </span>
-              </button>
-
-              <div className="flex items-center gap-2">
-                <span className="w-1 h-5 sm:h-6 rounded-full bg-gradient-to-b from-nebula-cyan to-transparent shrink-0 shadow-[0_0_10px_rgba(0,229,255,0.7)]" />
-                <div>
-                  <h1 className="text-sm sm:text-xl md:text-2xl font-display font-black uppercase tracking-tight text-white flex items-center gap-1.5 leading-tight">
-                    <span>Creators & Talent</span>
-                    <Sparkles
-                      size={14}
-                      className="text-nebula-cyan animate-pulse hidden sm:inline"
-                    />
-                  </h1>
-                </div>
-              </div>
-            </div>
-
-            {/* Department Filter Tabs */}
-            <div className="flex items-center self-start sm:self-auto gap-1 bg-black/60 border border-white/10 p-1 rounded-xl backdrop-blur-xl shadow-lg relative z-20">
-              {[
-                { id: "all", label: "All Talent", icon: Sparkles },
-                { id: "Acting", label: "Actors", icon: User },
-                { id: "Directing", label: "Directors", icon: Clapperboard },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = departmentFilter === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setDepartmentFilter(tab.id as any)}
-                    className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-lg text-[9px] sm:text-[10.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                      isActive
-                        ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_15px_rgba(0,229,255,0.4)] scale-[1.02]"
-                        : "text-white/45 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <Icon size={11} className={isActive ? "text-obsidian" : ""} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
+              </h2>
             </div>
           </div>
 
-          {/* Search Bar & Quick Inspiration Chips */}
-          <div className="flex flex-col gap-2">
-            {/* Search Input Bar */}
-            <div className="relative max-w-xl w-full">
-              <Search
-                size={14}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none"
-              />
-              <input
-                type="text"
-                placeholder="Search directors, actors, creators..."
-                value={inputVal}
-                onChange={handleSearchChange}
-                className="w-full pl-9 pr-8 py-2 sm:py-2.5 rounded-xl bg-white/[0.05] border border-white/10 focus:border-nebula-cyan/60 focus:bg-white/[0.08] text-xs text-white placeholder-white/30 outline-none transition-all duration-300 font-sans shadow-inner focus:shadow-[0_0_15px_rgba(0,229,255,0.15)]"
-              />
-              {inputVal && (
+          {/* Department Filter Tabs on Right */}
+          <div className="flex items-center gap-1.5 bg-black/60 border border-white/10 p-1.5 rounded-2xl backdrop-blur-xl shadow-lg self-start md:self-end">
+            {[
+              { id: "all", label: "All Talent", icon: Sparkles },
+              { id: "Acting", label: "Actors", icon: User },
+              { id: "Directing", label: "Directors", icon: Clapperboard },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = departmentFilter === tab.id;
+              return (
                 <button
-                  onClick={handleClearSearch}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-                  aria-label="Clear search"
+                  key={tab.id}
+                  onClick={() => setDepartmentFilter(tab.id as any)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                    isActive
+                      ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_15px_rgba(0,229,255,0.4)] scale-[1.02]"
+                      : "text-white/45 hover:text-white hover:bg-white/5"
+                  }`}
                 >
-                  <X size={13} />
+                  <Icon size={12} className={isActive ? "text-obsidian" : ""} />
+                  <span>{tab.label}</span>
                 </button>
-              )}
-            </div>
-
-            {/* Quick Inspiration Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-white/60">
-              <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-white/30 shrink-0 flex items-center gap-1">
-                <Flame size={10} className="text-nebula-cyan" />
-                <span>Featured:</span>
-              </span>
-              {QUICK_CHIPS.map((chip) => {
-                const isSelected = searchQuery.toLowerCase() === chip.name.toLowerCase();
-                return (
-                  <button
-                    key={chip.id}
-                    onClick={() => handleChipClick(chip.name)}
-                    className={`shrink-0 px-2 py-0.5 rounded-lg text-[8.5px] sm:text-[9px] font-bold tracking-wide transition-all duration-300 cursor-pointer border ${
-                      isSelected
-                        ? "bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan shadow-[0_0_8px_rgba(0,229,255,0.3)]"
-                        : "bg-white/[0.03] border-white/10 hover:border-white/25 text-white/60 hover:text-white hover:bg-white/[0.07]"
-                    }`}
-                  >
-                    {chip.name}
-                  </button>
-                );
-              })}
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Content Section: 6 Columns on Desktop for Perfect Multiples */}
+        {/* Search Bar & Quick Inspiration Chips */}
+        <div className="flex flex-col gap-2.5 mb-8 sm:mb-10 max-w-2xl">
+          {/* Search Input Bar */}
+          <div className="relative w-full">
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none"
+            />
+            <input
+              type="text"
+              placeholder="Search directors, actors, creators..."
+              value={inputVal}
+              onChange={handleSearchChange}
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-white/[0.05] border border-white/10 focus:border-nebula-cyan/60 focus:bg-white/[0.08] text-xs sm:text-sm text-white placeholder-white/30 outline-none transition-all duration-300 font-sans shadow-inner focus:shadow-[0_0_15px_rgba(0,229,255,0.15)]"
+            />
+            {inputVal && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Inspiration Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-white/60">
+            <span className="text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-wider text-white/30 shrink-0 flex items-center gap-1">
+              <Flame size={11} className="text-nebula-cyan" />
+              <span>Featured:</span>
+            </span>
+            {QUICK_CHIPS.map((chip) => {
+              const isSelected =
+                searchQuery.toLowerCase() === chip.name.toLowerCase();
+              return (
+                <button
+                  key={chip.id}
+                  onClick={() => handleChipClick(chip.name)}
+                  className={`shrink-0 px-2.5 py-0.5 rounded-lg text-[9px] sm:text-[9.5px] font-bold tracking-wide transition-all duration-300 cursor-pointer border ${
+                    isSelected
+                      ? "bg-nebula-cyan/20 border-nebula-cyan text-nebula-cyan shadow-[0_0_8px_rgba(0,229,255,0.3)]"
+                      : "bg-white/[0.03] border-white/10 hover:border-white/25 text-white/60 hover:text-white hover:bg-white/[0.07]"
+                  }`}
+                >
+                  {chip.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Content Section: 24 items in 3 / 4 / 6 / 8 Columns for Zero Dangling Cards */}
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-6 gap-2.5 sm:gap-4">
-            {[...Array(18)].map((_, i) => (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-8 gap-2.5 sm:gap-3.5">
+            {[...Array(24)].map((_, i) => (
               <div
                 key={`person-poster-skel-${i}`}
-                className="aspect-[3/4] rounded-xl sm:rounded-2xl bg-white/[0.03] border border-white/5 p-3 flex flex-col justify-end gap-1.5 animate-pulse overflow-hidden relative"
+                className="aspect-[2/3] rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/5 p-2 sm:p-3 flex flex-col justify-end gap-1 sm:gap-1.5 animate-pulse overflow-hidden relative"
               >
                 <div className="absolute inset-0 shimmer-bg opacity-30" />
-                <div className="h-3 w-3/4 bg-white/10 rounded shimmer-bg relative z-10" />
-                <div className="h-2.5 w-1/2 bg-white/10 rounded shimmer-bg relative z-10 opacity-60" />
+                <div className="h-3 sm:h-4 w-3/4 bg-white/10 rounded shimmer-bg relative z-10" />
+                <div className="h-2 sm:h-3 w-1/2 bg-white/10 rounded shimmer-bg relative z-10 opacity-60" />
               </div>
             ))}
           </div>
@@ -292,7 +288,8 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
               No Creators Found
             </h3>
             <p className="text-white/40 text-xs max-w-sm mb-3">
-              We couldn't find any creators matching "{searchQuery}". Try another name or clear filters.
+              We couldn't find any creators matching "{searchQuery}". Try another
+              name or clear filters.
             </p>
             <button
               onClick={handleClearSearch}
@@ -302,7 +299,7 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-6 gap-2.5 sm:gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-8 gap-2.5 sm:gap-3.5">
             {people.map((person) => {
               const isDirector =
                 person.department === "Directing" ||
@@ -312,7 +309,7 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
                 <button
                   key={`creator-card-${person.id}`}
                   onClick={() => onSelectActor(person.id)}
-                  className="group relative aspect-[3/4] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-950 border border-white/10 hover:border-nebula-cyan/60 transition-all duration-400 cursor-pointer shadow-md hover:shadow-[0_10px_30px_rgba(0,229,255,0.2)] hover:-translate-y-1 flex flex-col justify-between p-2.5 sm:p-3.5 text-left"
+                  className="group relative aspect-[2/3] rounded-lg sm:rounded-xl overflow-hidden bg-zinc-950 border border-white/10 hover:border-nebula-cyan/60 transition-all duration-400 cursor-pointer shadow-md hover:shadow-[0_10px_30px_rgba(0,229,255,0.2)] hover:-translate-y-1 flex flex-col justify-between p-1.5 sm:p-2.5 text-left"
                 >
                   {/* Background Full Headshot */}
                   {person.avatar ? (
@@ -325,13 +322,17 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950 flex items-center justify-center text-white/20">
-                      {isDirector ? <Clapperboard size={36} /> : <User size={36} />}
+                      {isDirector ? (
+                        <Clapperboard size={28} />
+                      ) : (
+                        <User size={28} />
+                      )}
                     </div>
                   )}
 
                   {/* Gradient Scrim Overlays */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-85 group-hover:opacity-75 transition-opacity duration-400" />
-                  <div className="absolute top-0 inset-x-0 h-12 bg-gradient-to-b from-black/50 to-transparent" />
+                  <div className="absolute top-0 inset-x-0 h-10 bg-gradient-to-b from-black/50 to-transparent" />
 
                   {/* Glass Specular Top Highlight */}
                   <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -339,31 +340,31 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
                   {/* Top Badge: Department / Role */}
                   <div className="relative z-10 flex items-center justify-between w-full">
                     <span
-                      className={`inline-flex items-center gap-1 text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-md backdrop-blur-md shadow-sm border ${
+                      className={`inline-flex items-center gap-0.5 text-[6.5px] sm:text-[7.5px] font-black uppercase tracking-wider px-1 sm:px-1.5 py-px rounded-md backdrop-blur-md shadow-sm border ${
                         isDirector
                           ? "bg-purple-600/30 border-purple-400/40 text-purple-200"
                           : "bg-cyan-500/25 border-nebula-cyan/40 text-nebula-cyan"
                       }`}
                     >
                       {isDirector ? (
-                        <Clapperboard size={9} className="shrink-0" />
+                        <Clapperboard size={7} className="shrink-0" />
                       ) : (
-                        <User size={9} className="shrink-0" />
+                        <User size={7} className="shrink-0" />
                       )}
                       <span>{isDirector ? "Director" : "Actor"}</span>
                     </span>
                   </div>
 
                   {/* Bottom Content: Name & Known For */}
-                  <div className="relative z-10 flex flex-col gap-0.5 sm:gap-1 w-full">
+                  <div className="relative z-10 flex flex-col gap-0.5 w-full">
                     {/* Creator Name */}
-                    <h3 className="text-[11px] sm:text-xs md:text-sm font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors duration-300 leading-tight drop-shadow-md truncate w-full">
+                    <h3 className="text-[10px] sm:text-xs md:text-sm font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors duration-300 leading-tight drop-shadow-md truncate w-full">
                       {person.name}
                     </h3>
 
                     {/* Top Known For Credits */}
                     {person.known_for && person.known_for.length > 0 && (
-                      <p className="text-[7.5px] sm:text-[8.5px] font-medium text-white/60 truncate w-full leading-tight drop-shadow-sm">
+                      <p className="text-[7px] sm:text-[8px] md:text-[9px] font-medium text-white/60 truncate w-full leading-tight drop-shadow-sm">
                         {person.known_for.map((k) => k.title).join(" • ")}
                       </p>
                     )}
