@@ -227,10 +227,12 @@ export function useSubtitleManager(streamUrl: string | null) {
     const currentCues: ActiveCue[] = [];
     for (let i = 0; i < cuesList.length; i++) {
       const cue = cuesList[i] as VTTCue;
-      currentCues.push({
-        id: cue.id || String(i),
-        text: cue.text || "",
-      });
+      if (cue && cue.text) {
+        currentCues.push({
+          id: cue.id || `cue-${cue.startTime ?? 0}-${cue.endTime ?? 0}-${i}`,
+          text: cue.text,
+        });
+      }
     }
 
     const serialized = JSON.stringify(currentCues);

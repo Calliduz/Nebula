@@ -10,7 +10,15 @@ interface SubtitleOverlayProps {
 // Helper to safely convert hex color to rgba color
 export function hexToRgba(hex: string, opacity: number): string {
   try {
-    const cleanHex = (hex || "").replace("#", "");
+    const cleanHex = (hex || "").replace("#", "").trim();
+    if (cleanHex.length === 3) {
+      const r = parseInt(cleanHex[0] + cleanHex[0], 16);
+      const g = parseInt(cleanHex[1] + cleanHex[1], 16);
+      const b = parseInt(cleanHex[2] + cleanHex[2], 16);
+      return isNaN(r) || isNaN(g) || isNaN(b)
+        ? `rgba(0, 0, 0, ${opacity})`
+        : `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
     if (cleanHex.length !== 6) {
       return `rgba(0, 0, 0, ${opacity})`;
     }
@@ -27,20 +35,54 @@ export function hexToRgba(hex: string, opacity: number): string {
 }
 
 // Decode basic HTML entities to avoid mathematical tags crashing
-function decodeHtmlEntities(str: string): string {
+export function decodeHtmlEntities(str: string): string {
   return str
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;|&#39;|&#039;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, code) => {
+      const num = Number(code);
+      return isNaN(num) ? "" : String.fromCharCode(num);
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      const num = parseInt(hex, 16);
+      return isNaN(num) ? "" : String.fromCharCode(num);
+    });
+}
+
+// Strip extraneous tags and styling artifacts from raw subtitle cues
+export function cleanCueText(rawText: string): string {
+  if (!rawText) return "";
+
+  let text = rawText;
+
+  // 1. Remove ASS/SSA override blocks: {\an8}, {\pos(x,y)}, {\c&H...&}, etc.
+  text = text.replace(/\{[^}]*\}/g, "");
+
+  // 2. Convert line break tags (<br>, <br/>, <br />) into newlines
+  text = text.replace(/<br\s*\/?>/gi, "\n");
+
+  // 3. Normalize strong/em tags to b/i
+  text = text.replace(/<(\/?)strong>/gi, "<$1b>");
+  text = text.replace(/<(\/?)em>/gi, "<$1i>");
+
+  // 4. Strip any tag that is not <b>, </b>, <i>, </i>, <u>, </u>
+  // This cleans <font ...>, </font>, <color ...>, </color>, <c...>, </c>, <v...>, </v>, <span>, etc.
+  text = text.replace(/<(?!\/?(?:b|i|u)\b)[^>]+>/gi, "");
+
+  return text;
 }
 
 // Parse formatting tags (<i>, <b>, <u>) safely into React nodes
 export function parseCueText(text: string): React.ReactNode {
-  const decoded = decodeHtmlEntities(text);
+  if (!text) return null;
+
+  const cleaned = cleanCueText(text);
   const tokenRegex = /(<\/?[biu]>)/gi;
-  const parts = decoded.split(tokenRegex);
+  const parts = cleaned.split(tokenRegex);
 
   const result: React.ReactNode[] = [];
   const activeStyles = {
@@ -65,27 +107,26 @@ export function parseCueText(text: string): React.ReactNode {
       activeStyles.underline++;
     } else if (lowerPart === "</u>") {
       activeStyles.underline = Math.max(0, activeStyles.underline - 1);
-    } else {
-      if (part) {
-        let node: React.ReactNode = part;
-        if (activeStyles.bold > 0) {
-          node = <strong key={`b-${keyCount++}`}>{node}</strong>;
-        }
-        if (activeStyles.italic > 0) {
-          node = <em key={`i-${keyCount++}`}>{node}</em>;
-        }
-        if (activeStyles.underline > 0) {
-          node = (
-            <span
-              style={{ textDecoration: "underline" }}
-              key={`u-${keyCount++}`}
-            >
-              {node}
-            </span>
-          );
-        }
-        result.push(node);
+    } else if (part) {
+      const decoded = decodeHtmlEntities(part);
+      let node: React.ReactNode = decoded;
+      if (activeStyles.bold > 0) {
+        node = <strong key={`b-${keyCount++}`}>{node}</strong>;
       }
+      if (activeStyles.italic > 0) {
+        node = <em key={`i-${keyCount++}`}>{node}</em>;
+      }
+      if (activeStyles.underline > 0) {
+        node = (
+          <span
+            style={{ textDecoration: "underline" }}
+            key={`u-${keyCount++}`}
+          >
+            {node}
+          </span>
+        );
+      }
+      result.push(node);
     }
   }
 
@@ -126,7 +167,9 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = memo(
 
     return (
       <div
-        className="absolute left-1/2 -translate-x-1/2 z-[15] pointer-events-none text-center select-none w-[96%] max-w-5xl bottom-[5%]"
+        className={`absolute left-1/2 -translate-x-1/2 z-[15] pointer-events-none text-center select-none w-[96%] max-w-5xl transition-all duration-200 ${
+          showUi ? "bottom-[16%] md:bottom-[12%]" : "bottom-[5%]"
+        }`}
         data-testid="subtitle-overlay"
       >
         <div className="flex flex-col items-center gap-1.5">
