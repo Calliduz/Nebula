@@ -332,7 +332,7 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
 
                   {/* Type badge — top-left corner tab matching MovieCard */}
                   <div
-                    className={`absolute top-0 left-0 z-20 pointer-events-none backdrop-blur-md text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-br-lg border-r border-b leading-none transition-colors ${
+                    className={`absolute top-0 left-0 z-20 pointer-events-none backdrop-blur-md text-[7px] min-[380px]:text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-br-lg border-r border-b leading-none transition-colors ${
                       isDirector
                         ? "bg-purple-950/90 text-purple-200 border-purple-500/30 group-hover:border-purple-400/60"
                         : "bg-cyan-950/90 text-nebula-cyan border-nebula-cyan/30 group-hover:border-nebula-cyan/60"
@@ -341,26 +341,25 @@ export const PeopleView: React.FC<PeopleViewProps> = React.memo(
                     {isDirector ? "Director" : "Actor"}
                   </div>
 
-                  {/* Gradient Scrim Overlays for High Readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-300 pointer-events-none" />
-                  <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
+                  {/* Gradient Scrim Overlay for High Readability - Compact bottom scrim so person's face remains clear and unobstructed */}
+                  <div className="absolute inset-x-0 bottom-0 h-16 sm:h-20 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
 
                   {/* Glass Specular Top Highlight */}
                   <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                   {/* Spacer to push content to bottom */}
-                  <div className="h-6" />
+                  <div className="h-4" />
 
                   {/* Bottom Content: Name & Known For */}
-                  <div className="relative z-10 flex flex-col gap-0.5 sm:gap-1 w-full">
-                    {/* Creator Name */}
-                    <h3 className="text-xs sm:text-sm font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors duration-300 leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] truncate w-full">
+                  <div className="relative z-10 flex flex-col gap-0.5 w-full">
+                    {/* Creator Name - Scaled on mobile to fit names without premature truncation */}
+                    <h3 className="text-[9.5px] min-[380px]:text-[10px] sm:text-xs md:text-sm font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors duration-300 leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] truncate w-full">
                       {person.name}
                     </h3>
 
                     {/* Top Known For Credits */}
                     {person.known_for && person.known_for.length > 0 && (
-                      <p className="text-[7.5px] sm:text-[8.5px] md:text-[9.5px] font-medium text-white/75 truncate w-full leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                      <p className="text-[7px] min-[380px]:text-[7.5px] sm:text-[8.5px] md:text-[9.5px] font-medium text-white/75 truncate w-full leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
                         {person.known_for.map((k) => k.title).join(" • ")}
                       </p>
                     )}

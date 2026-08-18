@@ -1125,7 +1125,7 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                         )}
 
                         {/* Bottom Scrim & Title */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90 group-hover/film:opacity-95 transition-opacity flex flex-col justify-end p-2 sm:p-2.5">
+                        <div className="absolute inset-x-0 bottom-0 h-16 sm:h-20 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col justify-end p-2 sm:p-2.5">
                           <p className="text-[9px] sm:text-[10.5px] font-display font-black uppercase tracking-tight text-white leading-tight line-clamp-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] group-hover/film:text-nebula-cyan transition-colors">
                             {m.title}
                           </p>

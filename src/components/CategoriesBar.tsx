@@ -452,9 +452,8 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
                         {isDirector ? "Director" : "Actor"}
                       </div>
 
-                      {/* Scrim Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-300 pointer-events-none" />
-                      <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
+                      {/* Scrim Overlay - Compact bottom scrim so portrait is clear */}
+                      <div className="absolute inset-x-0 bottom-0 h-14 sm:h-20 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
 
                       {/* Glass Specular Top Highlight */}
                       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -464,11 +463,11 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
 
                       {/* Bottom Info */}
                       <div className="relative z-10 w-full flex flex-col gap-0.5">
-                        <span className="text-[10px] sm:text-[11px] font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors truncate block w-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] leading-tight">
+                        <span className="text-[9.5px] min-[380px]:text-[10px] sm:text-[11px] font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors truncate block w-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] leading-tight">
                           {person.name}
                         </span>
                         {person.known_for && person.known_for.length > 0 && (
-                          <span className="text-[7.5px] sm:text-[8.5px] font-medium text-white/70 truncate block w-full drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                          <span className="text-[7px] min-[380px]:text-[7.5px] sm:text-[8.5px] font-medium text-white/70 truncate block w-full drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
                             {person.known_for
                               .map((k: any) => k.title)
                               .join(" • ")}
