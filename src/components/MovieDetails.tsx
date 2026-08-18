@@ -1545,9 +1545,18 @@ export const MovieDetails: React.FC<MovieDetailsProps> = ({
       <div className="absolute inset-x-0 top-0 h-[70vh] z-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-obsidian/60 to-obsidian z-10" />
         <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-obsidian/40 to-transparent z-10" />
+        {/* Desktop Backdrop / Fanart Background */}
         <img
           src={movie.fanartBackground || movie.backdrop || movie.image}
-          className="w-full h-full object-cover blur-[2px] scale-110 opacity-40 origin-center"
+          className="w-full h-full object-cover blur-[2px] scale-110 opacity-40 origin-center hidden sm:block"
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={handleBackdropError}
+        />
+        {/* Mobile Enlarged Poster Background */}
+        <img
+          src={movie.image || movie.poster || movie.backdrop}
+          className="w-full h-full object-cover blur-[2px] scale-125 opacity-40 origin-center block sm:hidden"
           alt=""
           referrerPolicy="no-referrer"
           onError={handleBackdropError}
