@@ -39,6 +39,11 @@ export const TopNav = React.memo(
           viewingCategory === "Trending Anime" ||
           viewingCategory === "Adult Anime"
         );
+      if (itemId === "people")
+        return (
+          (activeTab === "people" && !viewingCategory) ||
+          viewingCategory === "People"
+        );
       if (itemId === "library")
         return (
           (activeTab === "library" && !viewingCategory) ||
@@ -241,7 +246,7 @@ export const TopNav = React.memo(
                       onTabChange(item.id);
                     }
                   }}
-                  className={`relative flex flex-col items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-2xl transition-all duration-300 active:scale-90 cursor-pointer ${
+                  className={`relative flex flex-col items-center gap-0.5 sm:gap-1 px-1 sm:px-2.5 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl transition-all duration-300 active:scale-90 cursor-pointer ${
                     isActive
                       ? "bg-nebula-cyan/15 text-nebula-cyan border border-nebula-cyan/30 shadow-[0_0_15px_rgba(0,229,255,0.25)]"
                       : "text-white/45 hover:text-white/80 border border-transparent"

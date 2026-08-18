@@ -1317,18 +1317,157 @@ export const getPersonMovies = async (
   }
 };
 
-export const getPopularActors = async (): Promise<
-  { id: string; name: string }[]
-> => {
+export interface NebulaPersonSummary {
+  id: string | number;
+  name: string;
+  avatar: string | null;
+  department: string;
+  popularity?: number;
+  known_for?: {
+    id: number;
+    title: string;
+    poster: string | null;
+    type: string;
+  }[];
+}
+
+export const LEGENDARY_DIRECTORS: {
+  id: string;
+  name: string;
+  avatar?: string;
+}[] = [
+  { id: "525", name: "Christopher Nolan" },
+  { id: "137427", name: "Denis Villeneuve" },
+  { id: "138", name: "Quentin Tarantino" },
+  { id: "1032", name: "Martin Scorsese" },
+  { id: "10828", name: "Guillermo del Toro" },
+  { id: "61502", name: "Greta Gerwig" },
+  { id: "608", name: "Hayao Miyazaki" },
+  { id: "7467", name: "David Fincher" },
+  { id: "488", name: "Steven Spielberg" },
+  { id: "2710", name: "James Cameron" },
+  { id: "21684", name: "Bong Joon-ho" },
+  { id: "578", name: "Ridley Scott" },
+  { id: "5655", name: "Wes Anderson" },
+  { id: "1226274", name: "Jordan Peele" },
+  { id: "7623", name: "Sam Raimi" },
+  { id: "11218", name: "Alfonso Cuarón" },
+  { id: "116805", name: "Makoto Shinkai" },
+  { id: "956", name: "Guy Ritchie" },
+  { id: "15217", name: "Zack Snyder" },
+  { id: "55934", name: "Taika Waititi" },
+  { id: "928543", name: "Chad Stahelski" },
+  { id: "20629", name: "George Miller" },
+  { id: "108", name: "Peter Jackson" },
+  { id: "4762", name: "Paul Thomas Anderson" },
+];
+
+export const getPopularPeople = async (
+  department: "all" | "Acting" | "Directing" = "all",
+  page: number = 1,
+): Promise<NebulaPersonSummary[]> => {
   try {
-    const data = await fetchFromTMDB("/person/popular", {}, TTL.POPULAR);
-    return (data.results || []).slice(0, 20).map((p: any) => ({
-      id: p.id.toString(),
-      name: p.name,
-    }));
-  } catch {
+    if (department === "Directing") {
+      // For directors, fetch popular director profiles from TMDB & cache with combined credits
+      const directorPromises = LEGENDARY_DIRECTORS.slice(
+        (page - 1) * 12,
+        page * 12,
+      ).map(async (d) => {
+        try {
+          const data = await fetchFromTMDB(
+            `/person/${d.id}`,
+            { append_to_response: "combined_credits" },
+            TTL.DETAILS,
+          );
+          if (!data) return null;
+
+          const directingCredits = (data.combined_credits?.crew || [])
+            .filter((c: any) => c.job === "Director" || (c.department === "Directing" && c.poster_path))
+            .sort((a: any, b: any) => (b.vote_count || 0) - (a.vote_count || 0))
+            .slice(0, 3)
+            .map((k: any) => ({
+              id: k.id,
+              title: k.title || k.name || "",
+              poster: k.poster_path
+                ? proxyImage(`${IMAGE_BASE_URL}${k.poster_path}`)
+                : null,
+              type: k.media_type || "movie",
+            }));
+
+          return {
+            id: data.id,
+            name: data.name,
+            avatar: data.profile_path
+              ? proxyImage(`${IMAGE_BASE_URL}${data.profile_path}`)
+              : null,
+            department: "Directing",
+            popularity: data.popularity || 50,
+            known_for: directingCredits,
+          };
+        } catch {
+          return {
+            id: d.id,
+            name: d.name,
+            avatar: null,
+            department: "Directing",
+            popularity: 50,
+          };
+        }
+      });
+
+      const resolved = (await Promise.all(directorPromises)).filter(
+        Boolean,
+      ) as NebulaPersonSummary[];
+      return resolved;
+    }
+
+    const data = await fetchFromTMDB(
+      "/person/popular",
+      { page: page.toString() },
+      TTL.POPULAR,
+    );
+    let results = data.results || [];
+
+    if (department === "Acting") {
+      results = results.filter(
+        (p: any) => (p.known_for_department || "Acting") === "Acting",
+      );
+    }
+
+    return results
+      .filter((p: any) => p.profile_path)
+      .slice(0, 18)
+      .map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        avatar: p.profile_path
+          ? proxyImage(`${IMAGE_BASE_URL}${p.profile_path}`)
+          : null,
+        department: p.known_for_department || "Acting",
+        popularity: p.popularity,
+        known_for: (p.known_for || []).map((k: any) => ({
+          id: k.id,
+          title: k.title || k.name || "",
+          poster: k.poster_path
+            ? proxyImage(`${IMAGE_BASE_URL}${k.poster_path}`)
+            : null,
+          type: k.media_type || "movie",
+        })),
+      }));
+  } catch (err) {
+    console.error("[TMDB] Error fetching popular people:", err);
     return [];
   }
+};
+
+export const getPopularActors = async (): Promise<NebulaPersonSummary[]> => {
+  return getPopularPeople("Acting", 1);
+};
+
+export const getPopularDirectors = async (
+  page = 1,
+): Promise<NebulaPersonSummary[]> => {
+  return getPopularPeople("Directing", page);
 };
 
 export const invalidateRecommendationCache = (
@@ -1456,12 +1595,21 @@ export const searchPeople = async (
 
     return (data.results || [])
       .filter((p: any) => p.profile_path)
-      .slice(0, 8)
+      .slice(0, 20)
       .map((p: any) => ({
         id: p.id,
         name: p.name,
         avatar: proxyImage(`${IMAGE_BASE_URL}${p.profile_path}`),
         role: p.known_for_department || "Acting",
+        department: p.known_for_department || "Acting",
+        known_for: (p.known_for || []).map((k: any) => ({
+          id: k.id,
+          title: k.title || k.name || "",
+          poster: k.poster_path
+            ? proxyImage(`${IMAGE_BASE_URL}${k.poster_path}`)
+            : null,
+          type: k.media_type || "movie",
+        })),
       }));
   } catch (err) {
     console.error(`[TMDB] Failed to search people for "${query}":`, err);

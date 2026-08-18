@@ -2055,9 +2055,9 @@ export function useAppState() {
         });
       }
 
-      // 5. Personalized Recommendation Rows from watch history
+      // 5. Personalized Recommendation Rows from watch history (limit to top 2 for clean feed)
       const recommendationRows: any[] = [];
-      resolvedHistoryBasicInfos.slice(0, 5).forEach((movie, histIdx) => {
+      resolvedHistoryBasicInfos.slice(0, 2).forEach((movie, histIdx) => {
         const label =
           histIdx === 0
             ? `Because you watched ${movie.title}`
@@ -2108,7 +2108,7 @@ export function useAppState() {
         },
       });
 
-      // 8. User Genre Preference Profile (top 2 genres)
+      // 8. User Favorite Genre Row (top 1-2 genres if user has history)
       const genreCounts: Record<string, number> = {};
       [...resolvedHistoryBasicInfos, ...myListItems].forEach((m) => {
         if (m?.genre) {
@@ -2126,41 +2126,25 @@ export function useAppState() {
         const gId = Object.entries(GENRE_MAP).find(
           ([_, name]) => name === g,
         )?.[0];
-        initialRows.push({
-          title: `Because you like ${g}`,
-          items: [],
-          hasLoaded: false,
-          isLoading: false,
-          config: gId
-            ? {
-                mediaType: "movie",
-                discoverParams: {
-                  with_genres: gId,
-                  sort_by: "popularity.desc",
-                },
-                filterFn: (m: any) => m.genre.includes(g),
-              }
-            : undefined,
-        });
+        if (gId) {
+          initialRows.push({
+            title: `Because you like ${g}`,
+            items: [],
+            hasLoaded: false,
+            isLoading: false,
+            config: {
+              mediaType: "movie",
+              discoverParams: {
+                with_genres: gId,
+                sort_by: "popularity.desc",
+              },
+              filterFn: (m: any) => m.genre.includes(g),
+            },
+          });
+        }
       });
 
-      // 9. Daily Declassified Discoveries Row
-      initialRows.push({
-        title: "Daily Declassified Discoveries",
-        items: [],
-        hasLoaded: false,
-        isLoading: false,
-        config: {
-          mediaType: "movie",
-          discoverParams: {
-            "vote_average.gte": "7.0",
-            sort_by: "popularity.desc",
-          },
-          filterFn: (m) => (m.imdb ?? 0) >= 7.0,
-        },
-      });
-
-      // 10. Time-of-Day & Day-of-Week Contextual Intent Row
+      // 9. Time-of-Day & Day-of-Week Contextual Intent Row
       const now = new Date();
       const currentHour = now.getHours();
       const dayOfWeek = now.getDay();
@@ -2228,7 +2212,7 @@ export function useAppState() {
         config: contextConfig,
       });
 
-      // 11. Under the Radar Row
+      // 10. Under the Radar Row
       initialRows.push({
         title: "Under the Radar Missions",
         items: [],
@@ -2245,22 +2229,7 @@ export function useAppState() {
         },
       });
 
-      // 12. Popular Near You Row
-      initialRows.push({
-        title: "Popular Near You",
-        items: [],
-        hasLoaded: false,
-        isLoading: false,
-        config: {
-          mediaType: "movie",
-          discoverParams: {
-            sort_by: "popularity.desc",
-          },
-          filterFn: (m) => m.type === "movie",
-        },
-      });
-
-      // 13. New Releases Row
+      // 11. New Releases Row
       initialRows.push({
         title: "New Releases",
         items: [],
@@ -2279,7 +2248,7 @@ export function useAppState() {
         },
       });
 
-      // 14. Spotlight Actor Row
+      // 12. Spotlight Actor Row
       let actorToUse =
         SPOTLIGHT_POOL[
           Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % SPOTLIGHT_POOL.length
@@ -2316,91 +2285,6 @@ export function useAppState() {
           },
           filterFn: () => true,
         },
-      });
-
-      // 15. Bingeworthy TV Shows Row
-      initialRows.push({
-        title: "Bingeworthy TV Shows",
-        items: [],
-        hasLoaded: false,
-        isLoading: false,
-        config: {
-          mediaType: "tv",
-          discoverParams: { sort_by: "popularity.desc" },
-          filterFn: (m) => m.type === "tv",
-        },
-      });
-
-      // 16. Popular Movies Row
-      initialRows.push({
-        title: "Popular Movies",
-        items: [],
-        hasLoaded: false,
-        isLoading: false,
-        config: {
-          mediaType: "movie",
-          discoverParams: { sort_by: "popularity.desc" },
-          filterFn: (m) => m.type === "movie",
-        },
-      });
-
-      // 17. Dynamic Genre Rows
-      const allGenreRows = [
-        {
-          title: "Critically Acclaimed: Missions",
-          genreName: "Critically Acclaimed",
-        },
-        {
-          title: "Cinematic Masterpieces",
-          genreName: "Cinematic Masterpieces",
-        },
-        { title: "Award-Winning Hits", genreName: "Award-Winning Hits" },
-        { title: "Action Packed Missions", genreName: "Action" },
-        { title: "Hidden Gems", genreName: "Hidden Gems" },
-        { title: "Comedy Gold", genreName: "Comedy" },
-        { title: "Scary Nights (Horror)", genreName: "Horror" },
-        { title: "Mystery & Suspense", genreName: "Mystery" },
-        { title: "Animation Favorites", genreName: "Animation" },
-        { title: "Sci-Fi Spectacles", genreName: "Sci-Fi" },
-        { title: "Documentary Collection", genreName: "Documentary" },
-        { title: "Epic Fantasy Worlds", genreName: "Fantasy" },
-        { title: "Feel-Good Romance", genreName: "Romance" },
-        { title: "Crime & Investigation", genreName: "Crime" },
-        { title: "Historical Epics", genreName: "History" },
-        { title: "Family Movie Night", genreName: "Family" },
-        { title: "War & Military", genreName: "War" },
-        { title: "Heart-Pounding Thrillers", genreName: "Thriller" },
-        { title: "Musical & Music", genreName: "Music" },
-        { title: "Western Frontier", genreName: "Western" },
-        { title: "TV Dramas", genreName: "TV Dramas" },
-        { title: "Anime Series", genreName: "Anime Series" },
-        { title: "2010s Hits", genreName: "2010s Hits" },
-      ];
-
-      const favoriteRows = allGenreRows.filter((r) =>
-        topGenres.includes(r.genreName),
-      );
-      const nonFavoriteRows = allGenreRows.filter(
-        (r) => !topGenres.includes(r.genreName),
-      );
-
-      const selectedNonFavorites = seededShuffle(
-        nonFavoriteRows,
-        activeSeed,
-      ).slice(0, Math.max(4, 6 - favoriteRows.length));
-
-      const selectedGenreRows = [...favoriteRows, ...selectedNonFavorites];
-      selectedGenreRows.forEach((genreRow) => {
-        const config =
-          ROW_FETCH_CONFIG[genreRow.title] ||
-          ROW_FETCH_CONFIG[genreRow.genreName];
-        initialRows.push({
-          title: genreRow.title,
-          items: [],
-          hasLoaded: false,
-          isLoading: false,
-          config,
-        });
       });
 
       // 18. Adult Content Rows (only added when adultMode is enabled)
@@ -2497,8 +2381,24 @@ export function useAppState() {
   const fetchRowData = useCallback(
     async (rowTitle: string) => {
       // Check if the row exists, is already loaded, or is currently loading/queued
-      const row = rows.find((r) => r.title === rowTitle);
-      if (!row || row.hasLoaded || row.isLoading) return;
+      let row = rows.find((r) => r.title === rowTitle);
+      if (!row) {
+        // If row is requested dynamically (e.g. from bottom extended catalog)
+        const config = ROW_FETCH_CONFIG[rowTitle];
+        if (config) {
+          row = {
+            title: rowTitle,
+            items: [],
+            hasLoaded: false,
+            isLoading: false,
+            config,
+          };
+          setRows((prev) => (prev.some((r) => r.title === rowTitle) ? prev : [...prev, row!]));
+        } else {
+          return;
+        }
+      }
+      if (row.hasLoaded || row.isLoading) return;
 
       // Check if it's already queued
       if (pendingRowFetchQueueRef.current.includes(rowTitle)) return;
@@ -2517,9 +2417,23 @@ export function useAppState() {
       // Helper to start the fetch
       const executeFetch = async (title: string) => {
         // Mark the row as loading in state
-        setRows((prev) =>
-          prev.map((r) => (r.title === title ? { ...r, isLoading: true } : r)),
-        );
+        setRows((prev) => {
+          const exists = prev.some((r) => r.title === title);
+          if (exists) {
+            return prev.map((r) => (r.title === title ? { ...r, isLoading: true } : r));
+          } else {
+            return [
+              ...prev,
+              {
+                title,
+                items: [],
+                hasLoaded: false,
+                isLoading: true,
+                config: ROW_FETCH_CONFIG[title],
+              },
+            ];
+          }
+        });
 
         try {
           const targetRow = rows.find((r) => r.title === title);
@@ -3771,6 +3685,7 @@ export function useAppState() {
       else if (id === "anime") cat = "Anime";
       else if (id === "drama") cat = "Dramas";
       else if (id === "library") cat = "Library";
+      else if (id === "people") cat = "People";
 
       setSelectedMovie(null);
 

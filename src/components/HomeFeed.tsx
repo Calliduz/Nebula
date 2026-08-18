@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { DiscoveryBar } from "./DiscoveryBar";
 import { TopTenShelf } from "./TopTenShelf";
 import { MovieRow } from "./MovieRow";
@@ -7,6 +7,7 @@ import { MovieSkeleton } from "./MovieSkeleton";
 import { ProvidersShelf } from "./ProvidersShelf";
 import { CategoriesBar } from "./CategoriesBar";
 import { LazyViewport } from "./LazyViewport";
+import { ROW_FETCH_CONFIG } from "../hooks/useAppState";
 
 const SectionDivider = ({ label }: { label?: string }) => (
   <div className="flex items-center gap-6 my-2 md:my-6 px-4 sm:px-0">
@@ -19,6 +20,27 @@ const SectionDivider = ({ label }: { label?: string }) => (
     <div className="h-px flex-1 bg-gradient-to-l from-white/20 via-white/10 to-transparent" />
   </div>
 );
+
+const EXTENDED_GENRE_ROWS = [
+  "Action Packed Missions",
+  "Sci-Fi Spectacles",
+  "Comedy Gold",
+  "Scary Nights (Horror)",
+  "Mystery & Suspense",
+  "Animation Favorites",
+  "Epic Fantasy Worlds",
+  "Feel-Good Romance",
+  "Crime & Investigation",
+  "Historical Epics",
+  "Family Movie Night",
+  "Heart-Pounding Thrillers",
+  "Documentary Collection",
+  "War & Military",
+  "Musical & Music",
+  "Western Frontier",
+  "TV Dramas",
+  "Anime Series",
+];
 
 interface HomeFeedProps {
   sortBy: string;
@@ -42,6 +64,7 @@ interface HomeFeedProps {
   fetchRowData: (rowTitle: string) => void;
   adultMode?: boolean;
   setAdultMode?: (val: boolean) => void;
+  onSelectActor?: (id: string | number) => void;
 }
 
 export const HomeFeed = React.memo<HomeFeedProps>(
@@ -67,7 +90,10 @@ export const HomeFeed = React.memo<HomeFeedProps>(
     fetchRowData,
     adultMode = false,
     setAdultMode,
+    onSelectActor,
   }) => {
+    const [showExtendedCatalog, setShowExtendedCatalog] = useState(false);
+
     const ADULT_ROW_TITLES = [
       "Rated R Hits",
       "Steamy Romance",
@@ -100,7 +126,7 @@ export const HomeFeed = React.memo<HomeFeedProps>(
       );
     };
 
-    const myListSet = React.useMemo(() => {
+    const myListSet = useMemo(() => {
       const set = new Set<string>();
       if (Array.isArray(myList)) {
         for (const item of myList) {
@@ -218,11 +244,12 @@ export const HomeFeed = React.memo<HomeFeedProps>(
         <CategoriesBar
           setViewingCategory={setViewingCategory}
           adultMode={adultMode}
+          onSelectActor={onSelectActor}
         />
 
         <SectionDivider label="Catalog" />
 
-        {/* 4. Catalog Rows (My List, New Releases, Genre rows) */}
+        {/* 4. Initial Core Catalog Rows (My List, New Releases, etc.) */}
         {catalogRows.map((row, idx) => renderRow(row, idx))}
 
         <SectionDivider label="Recommended For You" />
@@ -235,6 +262,36 @@ export const HomeFeed = React.memo<HomeFeedProps>(
           <>
             <SectionDivider label="🔞 Mature Content" />
             {adultRows.map((row, idx) => renderRow(row, idx))}
+          </>
+        )}
+
+        {/* 7. Extended Genre Rows - Auto-loaded on-demand when scrolling towards bottom */}
+        {!showExtendedCatalog && (
+          <LazyViewport
+            placeholder={<div className="h-10 w-full" />}
+            onVisible={() => setShowExtendedCatalog(true)}
+            prefetchMargin="1000px 0px 1000px 0px"
+            renderMargin="1000px 0px 1000px 0px"
+            minHeight="40px"
+          >
+            <div className="h-2" />
+          </LazyViewport>
+        )}
+
+        {showExtendedCatalog && (
+          <>
+            <SectionDivider label="Explore More Genres" />
+            {EXTENDED_GENRE_ROWS.map((title, idx) => {
+              const existingRow = rows.find((r) => r.title === title);
+              const rowObj = existingRow || {
+                title,
+                items: [],
+                hasLoaded: false,
+                isLoading: false,
+                config: ROW_FETCH_CONFIG[title],
+              };
+              return renderRow(rowObj, 200 + idx);
+            })}
           </>
         )}
 

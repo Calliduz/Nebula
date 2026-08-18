@@ -1,4 +1,12 @@
-import { Home, Search, Clapperboard, Tv, Swords, Library } from "lucide-react";
+import {
+  Home,
+  Search,
+  Clapperboard,
+  Tv,
+  Swords,
+  Library,
+  Users,
+} from "lucide-react";
 
 export const NAV_ITEMS = [
   { id: "home", icon: Home, label: "Home" },
@@ -6,6 +14,7 @@ export const NAV_ITEMS = [
   { id: "movies", icon: Clapperboard, label: "Movies" },
   { id: "tv", icon: Tv, label: "TV Shows" },
   { id: "anime", icon: Swords, label: "Anime" },
+  { id: "people", icon: Users, label: "People" },
   { id: "library", icon: Library, label: "Library" },
 ];
 

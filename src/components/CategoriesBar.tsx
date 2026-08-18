@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback } from "react";
+import React, { memo, useState, useCallback, useEffect } from "react";
 import {
   Sword,
   Laugh,
@@ -12,8 +12,18 @@ import {
   Wand,
   Flame,
   Zap,
+  User,
+  Clapperboard,
+  ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { API_BASE_URL } from "../config";
+import {
+  getPopularPeople,
+  getPopularDirectors,
+  NebulaPersonSummary,
+} from "../services/tmdb";
+import { handleImageError } from "../utils/helpers";
 
 type CategoryEntry = {
   name: string;
@@ -118,18 +128,53 @@ const STUDIO_CATEGORIES = [
 interface CategoriesBarProps {
   setViewingCategory: (category: string | null) => void;
   adultMode?: boolean;
+  onSelectActor?: (id: string | number) => void;
 }
 
 export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
-  ({ setViewingCategory, adultMode = false }) => {
-    const [activeSection, setActiveSection] = useState<"genres" | "studios">(
-      "studios",
-    );
+  ({ setViewingCategory, adultMode = false, onSelectActor }) => {
+    const [activeSection, setActiveSection] = useState<
+      "studios" | "genres" | "people"
+    >("studios");
+    const [peopleSubTab, setPeopleSubTab] = useState<
+      "all" | "Acting" | "Directing"
+    >("all");
+    const [peopleList, setPeopleList] = useState<NebulaPersonSummary[]>([]);
+    const [isPeopleLoading, setIsPeopleLoading] = useState(false);
     const [glowing, setGlowing] = useState<string | null>(null);
 
     const categories = adultMode
       ? [...BASE_CATEGORIES, ...ADULT_CATEGORIES]
       : BASE_CATEGORIES;
+
+    // Fetch people when people tab is active
+    useEffect(() => {
+      if (activeSection !== "people") return;
+      let isMounted = true;
+      setIsPeopleLoading(true);
+
+      const fetchFn =
+        peopleSubTab === "Directing"
+          ? getPopularDirectors(1)
+          : getPopularPeople(peopleSubTab, 1);
+
+      fetchFn
+        .then((data) => {
+          if (isMounted) {
+            setPeopleList(data.slice(0, 10));
+          }
+        })
+        .catch(() => {
+          if (isMounted) setPeopleList([]);
+        })
+        .finally(() => {
+          if (isMounted) setIsPeopleLoading(false);
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }, [activeSection, peopleSubTab]);
 
     const handleCategoryClick = useCallback(
       (cat: CategoryEntry) => {
@@ -163,7 +208,11 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
               Explore Library
             </h3>
             <span className="text-[8px] sm:text-[9px] font-black tracking-[0.2em] text-nebula-cyan uppercase bg-nebula-cyan/10 border border-nebula-cyan/30 rounded-md px-2 py-0.5 leading-none shadow-[0_0_10px_rgba(0,229,255,0.15)]">
-              {activeSection === "studios" ? "Studios" : "Genres"}
+              {activeSection === "studios"
+                ? "Studios"
+                : activeSection === "genres"
+                  ? "Genres"
+                  : "Creators"}
             </span>
             {adultMode && activeSection === "genres" && (
               <span className="text-[8px] sm:text-[9px] font-bold tracking-[0.1em] text-red-400 uppercase bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-md leading-none">
@@ -173,10 +222,10 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
           </div>
 
           {/* Premium Tab Switcher */}
-          <div className="flex items-center self-start sm:self-auto gap-1.5 bg-black/40 border border-white/10 p-1.5 rounded-2xl backdrop-blur-xl relative z-25 shadow-xl">
+          <div className="flex items-center self-start sm:self-auto gap-1 sm:gap-1.5 bg-black/40 border border-white/10 p-1 sm:p-1.5 rounded-2xl backdrop-blur-xl relative z-25 shadow-xl">
             <button
               onClick={() => setActiveSection("studios")}
-              className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+              className={`px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
                 activeSection === "studios"
                   ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_20px_rgba(0,229,255,0.4)] scale-[1.02]"
                   : "text-white/40 hover:text-white hover:bg-white/5"
@@ -186,13 +235,23 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
             </button>
             <button
               onClick={() => setActiveSection("genres")}
-              className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+              className={`px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
                 activeSection === "genres"
                   ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_20px_rgba(0,229,255,0.4)] scale-[1.02]"
                   : "text-white/40 hover:text-white hover:bg-white/5"
               }`}
             >
               Genres
+            </button>
+            <button
+              onClick={() => setActiveSection("people")}
+              className={`px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                activeSection === "people"
+                  ? "bg-gradient-to-r from-nebula-cyan to-nebula-cyan/80 text-obsidian font-bold shadow-[0_0_20px_rgba(0,229,255,0.4)] scale-[1.02]"
+                  : "text-white/40 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              People
             </button>
           </div>
         </div>
@@ -247,7 +306,7 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
               );
             })}
           </div>
-        ) : (
+        ) : activeSection === "genres" ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2.5 sm:gap-3 px-4 sm:px-0">
             {categories.map((cat) => {
               const Icon = cat.icon;
@@ -293,6 +352,134 @@ export const CategoriesBar: React.FC<CategoriesBarProps> = memo(
                 </button>
               );
             })}
+          </div>
+        ) : (
+          /* People / Creators Section */
+          <div className="space-y-4 px-4 sm:px-0">
+            {/* Sub-Filters & Explore All Action */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 bg-white/[0.03] border border-white/10 p-1 rounded-xl">
+                {(
+                  [
+                    { id: "all", label: "All Talent" },
+                    { id: "Acting", label: "Actors" },
+                    { id: "Directing", label: "Directors" },
+                  ] as const
+                ).map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => setPeopleSubTab(st.id)}
+                    className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                      peopleSubTab === st.id
+                        ? "bg-white/15 text-nebula-cyan font-bold border border-nebula-cyan/30 shadow-sm"
+                        : "text-white/40 hover:text-white"
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setViewingCategory("People")}
+                className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-nebula-cyan hover:text-white transition-colors cursor-pointer group"
+              >
+                <span>Full Directory</span>
+                <ArrowRight
+                  size={13}
+                  className="transition-transform duration-300 group-hover:translate-x-1"
+                />
+              </button>
+            </div>
+
+            {/* People Cards Grid */}
+            {isPeopleLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-3">
+                {[...Array(10)].map((_, i) => (
+                  <div
+                    key={`people-skel-${i}`}
+                    className="aspect-[3/4] rounded-2xl bg-white/[0.03] border border-white/5 p-3 flex flex-col justify-end gap-1.5 animate-pulse overflow-hidden relative"
+                  >
+                    <div className="absolute inset-0 shimmer-bg opacity-30" />
+                    <div className="h-3 w-3/4 bg-white/10 rounded shimmer-bg relative z-10" />
+                  </div>
+                ))}
+              </div>
+            ) : peopleList.length === 0 ? (
+              <div className="py-8 text-center text-white/40 text-xs italic">
+                No creators found.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-3">
+                {peopleList.map((person) => {
+                  const isDirector =
+                    person.department === "Directing" ||
+                    person.department?.toLowerCase().includes("direct");
+
+                  return (
+                    <button
+                      key={`cat-person-${person.id}`}
+                      onClick={() => onSelectActor && onSelectActor(person.id)}
+                      className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-zinc-950 border border-white/10 hover:border-nebula-cyan/60 transition-all duration-500 cursor-pointer shadow-lg hover:shadow-[0_8px_25px_rgba(0,229,255,0.2)] hover:-translate-y-1 flex flex-col justify-between p-2.5 sm:p-3 text-left"
+                    >
+                      {/* Full-Bleed Headshot Background */}
+                      {person.avatar ? (
+                        <img
+                          src={person.avatar}
+                          alt={person.name}
+                          className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-110 filter brightness-95 group-hover:brightness-105"
+                          loading="lazy"
+                          onError={handleImageError}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950 flex items-center justify-center text-white/20">
+                          {isDirector ? (
+                            <Clapperboard size={24} />
+                          ) : (
+                            <User size={24} />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Scrim Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-85 group-hover:opacity-75 transition-opacity duration-300" />
+                      <div className="absolute top-0 inset-x-0 h-10 bg-gradient-to-b from-black/50 to-transparent" />
+
+                      {/* Glass Specular Top Highlight */}
+                      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+
+                      {/* Top Role Badge */}
+                      <div className="relative z-10 flex justify-start">
+                        <span
+                          className={`text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md border ${
+                            isDirector
+                              ? "bg-purple-600/30 border-purple-400/40 text-purple-200"
+                              : "bg-cyan-500/25 border-nebula-cyan/40 text-nebula-cyan"
+                          }`}
+                        >
+                          {isDirector ? "Director" : "Actor"}
+                        </span>
+                      </div>
+
+                      {/* Bottom Info */}
+                      <div className="relative z-10 w-full">
+                        <span className="text-[9.5px] sm:text-[10.5px] font-display font-black uppercase tracking-tight text-white group-hover:text-nebula-cyan transition-colors truncate block w-full drop-shadow-md leading-tight">
+                          {person.name}
+                        </span>
+                        {person.known_for && person.known_for.length > 0 && (
+                          <span className="text-[7.5px] sm:text-[8px] text-white/60 truncate block w-full drop-shadow-sm mt-0.5">
+                            {person.known_for[0].title}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Bottom Accent Glow Line */}
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] w-0 bg-gradient-to-r from-nebula-cyan via-white to-nebula-cyan transition-all duration-300 group-hover:w-4/5 rounded-full shadow-[0_0_8px_rgba(0,229,255,0.8)]" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </section>

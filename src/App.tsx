@@ -1,6 +1,6 @@
 import React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Loader2, X, Calendar, MapPin, User, Film } from "lucide-react";
+import { Loader2, X, Calendar, MapPin, User, Film, Clapperboard } from "lucide-react";
 
 // Hooks
 import { useAppState } from "./hooks/useAppState";
@@ -61,6 +61,11 @@ const SearchOverlay = lazyWithRetry(() =>
 const CategoryView = lazyWithRetry(() =>
   import("./components/CategoryView").then((module) => ({
     default: module.CategoryView,
+  })),
+);
+const PeopleView = lazyWithRetry(() =>
+  import("./components/PeopleView").then((module) => ({
+    default: module.PeopleView,
   })),
 );
 const NotFound = lazyWithRetry(() =>
@@ -271,8 +276,34 @@ export default function App() {
                       fetchRowData={actions.fetchRowData}
                       adultMode={state.adultMode}
                       setAdultMode={actions.setAdultMode}
+                      onSelectActor={setSelectedActorId}
                     />
                   </>
+                ) : state.viewingCategory === "People" ? (
+                  <React.Suspense
+                    fallback={
+                      <div className="min-h-screen bg-obsidian pt-24 sm:pt-28 md:pt-32 px-4 sm:px-6 md:px-12 pb-32">
+                        <div className="h-10 w-48 bg-white/5 rounded-lg mb-12 shimmer-bg" />
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-5">
+                          {[...Array(12)].map((_, i) => (
+                            <div
+                              key={`person-skel-main-${i}`}
+                              className="rounded-2xl p-4 bg-white/[0.02] border border-white/5 flex flex-col items-center gap-3 animate-pulse"
+                            >
+                              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white/5 shimmer-bg" />
+                              <div className="h-3 w-20 bg-white/5 rounded-md shimmer-bg" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    }
+                  >
+                    <PeopleView
+                      onClose={() => actions.setViewingCategory(null)}
+                      onSelectActor={setSelectedActorId}
+                      onSelectMovie={actions.setSelectedMovie}
+                    />
+                  </React.Suspense>
                 ) : (
                   <React.Suspense
                     fallback={
@@ -313,6 +344,17 @@ export default function App() {
                     />
                   </React.Suspense>
                 )
+              }
+            />
+
+            {/* /people standalone route */}
+            <Route
+              path="/people"
+              element={
+                <PeoplePageStub
+                  actions={actions}
+                  onSelectActor={setSelectedActorId}
+                />
               }
             />
 
@@ -821,40 +863,45 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[1600] bg-black/85 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 z-[1600] bg-black/85 backdrop-blur-2xl flex items-center justify-center p-3 sm:p-6"
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: "spring", duration: 0.5 }}
+        exit={{ opacity: 0, scale: 0.96, y: 15 }}
+        transition={{ type: "spring", duration: 0.45, bounce: 0.1 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl max-h-[90vh] bg-obsidian/95 border border-white/10 rounded-2xl overflow-y-auto custom-scrollbar flex flex-col p-5 sm:p-10 text-white shadow-2xl"
+        className="relative w-full max-w-3xl max-h-[88vh] bg-obsidian/95 border border-white/15 rounded-2xl sm:rounded-3xl overflow-y-auto custom-scrollbar flex flex-col p-4 sm:p-7 md:p-8 text-white shadow-[0_25px_60px_rgba(0,0,0,0.9)]"
       >
+        {/* Ambient Glow Aura */}
+        <div className="absolute -top-24 -left-24 w-72 h-72 bg-nebula-cyan/15 rounded-full blur-3xl pointer-events-none -z-10" />
+        <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-purple-600/15 rounded-full blur-3xl pointer-events-none -z-10" />
+
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 sm:right-6 sm:top-6 p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-nebula-cyan/30 text-white/50 hover:text-white transition-all cursor-pointer z-55"
+          className="absolute right-3.5 top-3.5 sm:right-5 sm:top-5 p-2 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 hover:border-nebula-cyan/40 text-white/50 hover:text-white transition-all cursor-pointer z-50 active:scale-95"
+          aria-label="Close modal"
         >
-          <X size={18} />
+          <X size={16} />
         </button>
 
         {loading ? (
-          <div className="flex-1 py-32 flex flex-col items-center justify-center gap-4">
-            <Loader2 className="animate-spin text-nebula-cyan" size={40} />
+          <div className="flex-1 py-28 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="animate-spin text-nebula-cyan" size={36} />
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 animate-pulse">
-              Syncing Actor Records...
+              Syncing Creator Records...
             </p>
           </div>
         ) : !details ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+          <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+            <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
               !
             </div>
             <div>
-              <h3 className="text-lg font-black uppercase tracking-tighter italic">
-                Actor Profile Offline
+              <h3 className="text-base font-black uppercase tracking-tight">
+                Creator Profile Offline
               </h3>
               <p className="text-white/40 text-xs mt-1">
                 The database could not locate this creator's profile.
@@ -862,60 +909,86 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="mt-2 px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold rounded-full transition-all"
+              className="mt-2 px-5 py-2 bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold rounded-full transition-all cursor-pointer"
             >
               Go Back
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-6 sm:gap-10">
-            {/* Top Section: Photo & Bio Info */}
-            <div className="flex flex-col md:flex-row gap-5 sm:gap-10">
-              {/* Profile Photo */}
-              <div className="w-28 h-28 sm:w-48 sm:h-48 rounded-2xl overflow-hidden border border-white/10 shrink-0 self-center md:self-start bg-white/5">
+          <div className="flex flex-col gap-5 sm:gap-7">
+            {/* Top Profile Header */}
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start text-center sm:text-left">
+              {/* Portrait Photo */}
+              <div className="relative w-28 h-36 sm:w-36 sm:h-48 md:w-40 md:h-52 rounded-2xl overflow-hidden border border-white/15 shrink-0 bg-white/5 shadow-2xl group">
                 {details.profile_path ? (
                   <img
                     src={details.profile_path}
                     alt={details.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top filter brightness-95 group-hover:brightness-105 transition-all duration-300"
+                    onError={handleImageError}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white/20">
-                    <User size={48} />
+                    <User size={40} />
                   </div>
                 )}
+                {/* Subtle Inner Border Glow */}
+                <div className="absolute inset-0 rounded-2xl ring-1 ring-white/20 pointer-events-none" />
               </div>
 
-              {/* Text Info */}
-              <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <h2 className="text-xl sm:text-4xl font-display font-black tracking-tight uppercase italic text-center md:text-left">
-                  {details.name}
-                </h2>
-                <p className="text-[10px] sm:text-xs font-semibold text-nebula-cyan uppercase tracking-[0.25em] mt-1.5 text-center md:text-left">
-                  {details.known_for_department}
-                </p>
+              {/* Creator Metadata & Biography */}
+              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div>
+                  {/* Role Badge & Name */}
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
+                    <span
+                      className={`inline-flex items-center gap-1 text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border backdrop-blur-md ${
+                        details.known_for_department === "Directing"
+                          ? "bg-purple-600/30 border-purple-400/40 text-purple-200"
+                          : "bg-cyan-500/25 border-nebula-cyan/40 text-nebula-cyan"
+                      }`}
+                    >
+                      {details.known_for_department === "Directing" ? (
+                        <Clapperboard size={10} />
+                      ) : (
+                        <User size={10} />
+                      )}
+                      <span>{details.known_for_department || "Creator"}</span>
+                    </span>
 
-                {/* Metadata Row */}
-                <div className="flex flex-wrap gap-3 sm:gap-6 mt-3 sm:mt-4 justify-center md:justify-start text-[10px] sm:text-xs text-white/50 font-medium">
-                  {details.birthday && (
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={14} className="text-white/30" />
-                      <span>{details.birthday}</span>
-                    </div>
-                  )}
-                  {details.place_of_birth && (
-                    <div className="flex items-center gap-1.5">
-                      <MapPin size={14} className="text-white/30" />
-                      <span className="truncate max-w-[180px] sm:max-w-[200px]">
-                        {details.place_of_birth}
+                    {details.combined_credits && details.combined_credits.length > 0 && (
+                      <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/50">
+                        {details.combined_credits.length} Credits
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  <h2 className="text-xl sm:text-2.5xl md:text-3xl font-display font-black tracking-tight uppercase text-white drop-shadow-md">
+                    {details.name}
+                  </h2>
+
+                  {/* Metadata: Birthday & Birthplace */}
+                  <div className="flex flex-wrap gap-2.5 sm:gap-4 mt-2 justify-center sm:justify-start text-[10px] sm:text-[11px] text-white/50 font-medium">
+                    {details.birthday && (
+                      <div className="flex items-center gap-1 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/5">
+                        <Calendar size={12} className="text-white/30" />
+                        <span>{details.birthday}</span>
+                      </div>
+                    )}
+                    {details.place_of_birth && (
+                      <div className="flex items-center gap-1 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/5">
+                        <MapPin size={12} className="text-white/30" />
+                        <span className="truncate max-w-[180px] sm:max-w-[220px]">
+                          {details.place_of_birth}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Biography */}
                 {(() => {
-                  const BIO_LIMIT = 280;
+                  const BIO_LIMIT = 240;
                   const bio = details.biography || "";
                   const isLong = bio.length > BIO_LIMIT;
                   const displayBio =
@@ -923,22 +996,22 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                       ? bio.slice(0, BIO_LIMIT).trimEnd() + "…"
                       : bio;
                   return (
-                    <div className="mt-4 sm:mt-6 text-xs sm:text-sm text-white/70 leading-relaxed font-sans pr-2 border-l border-white/10 pl-3 sm:pl-4 text-justify">
+                    <div className="mt-3 sm:mt-4 text-xs text-white/70 leading-relaxed font-sans border-l-2 border-nebula-cyan/40 pl-3 text-left">
                       {bio ? (
                         <>
-                          {displayBio}
+                          <span>{displayBio}</span>
                           {isLong && (
                             <button
                               onClick={() => setBioExpanded(!bioExpanded)}
-                              className="ml-1 text-nebula-cyan/80 hover:text-nebula-cyan text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                              className="ml-1.5 text-nebula-cyan hover:underline text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer inline-block"
                             >
                               {bioExpanded ? "Show less" : "Read more"}
                             </button>
                           )}
                         </>
                       ) : (
-                        <span className="italic text-white/30">
-                          No biography transmission recorded for this actor.
+                        <span className="italic text-white/30 text-[11px]">
+                          No biography transmission recorded for this creator.
                         </span>
                       )}
                     </div>
@@ -947,34 +1020,25 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
               </div>
             </div>
 
-            {/* Bottom Section: Combined Filmography Row with Nav Arrows */}
-            <div className="w-full">
-              <h3 className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-[0.2em] mb-3 sm:mb-6 flex items-center gap-3">
-                <Film size={14} className="text-white/30" />
-                Featured Missions ({details.combined_credits?.length || 0})
-              </h3>
+            {/* Bottom Section: Combined Filmography Row */}
+            <div className="w-full pt-2 border-t border-white/10">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[10px] sm:text-xs font-black text-white/40 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                  <Film size={13} className="text-nebula-cyan" />
+                  <span>Featured Filmography ({details.combined_credits?.length || 0})</span>
+                </h3>
+              </div>
 
               <div className="relative group/filmrow">
                 {/* Left Arrow */}
                 {canScrollLeft && (
                   <button
                     onClick={() => scrollRow("left")}
-                    className="absolute left-0 top-0 bottom-4 z-10 w-10 sm:w-12 flex items-center justify-center bg-gradient-to-r from-obsidian via-obsidian/80 to-transparent opacity-0 group-hover/filmrow:opacity-100 transition-opacity duration-300 cursor-pointer"
+                    className="absolute left-0 top-0 bottom-3 z-20 w-8 sm:w-10 flex items-center justify-center bg-gradient-to-r from-obsidian via-obsidian/80 to-transparent transition-all duration-300 cursor-pointer"
+                    aria-label="Scroll left"
                   >
-                    <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/20 hover:border-nebula-cyan/40 transition-all">
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-white"
-                      >
-                        <polyline points="15 18 9 12 15 6" />
-                      </svg>
+                    <div className="w-7 h-7 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/25 hover:border-nebula-cyan/60 transition-all text-white">
+                      ‹
                     </div>
                   </button>
                 )}
@@ -983,73 +1047,73 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
                 {canScrollRight && (
                   <button
                     onClick={() => scrollRow("right")}
-                    className="absolute right-0 top-0 bottom-4 z-10 w-10 sm:w-12 flex items-center justify-center bg-gradient-to-l from-obsidian via-obsidian/80 to-transparent opacity-0 group-hover/filmrow:opacity-100 transition-opacity duration-300 cursor-pointer"
+                    className="absolute right-0 top-0 bottom-3 z-20 w-8 sm:w-10 flex items-center justify-center bg-gradient-to-l from-obsidian via-obsidian/80 to-transparent transition-all duration-300 cursor-pointer"
+                    aria-label="Scroll right"
                   >
-                    <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/20 hover:border-nebula-cyan/40 transition-all">
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-white"
-                      >
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
+                    <div className="w-7 h-7 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/25 hover:border-nebula-cyan/60 transition-all text-white">
+                      ›
                     </div>
                   </button>
                 )}
 
                 <div
                   ref={filmRowRef}
-                  className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory scroll-smooth"
+                  className="flex gap-2.5 sm:gap-3.5 overflow-x-auto pb-3 custom-scrollbar snap-x snap-mandatory scroll-smooth"
                 >
                   {details.combined_credits &&
                   details.combined_credits.length > 0 ? (
                     details.combined_credits.map((m: any, i: number) => (
-                      <div
+                      <button
                         key={`actor-film-${m.id}-${i}`}
                         onClick={() => {
                           onSelectMovie(m);
                           onClose();
                         }}
-                        className="w-24 sm:w-36 aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10 group cursor-pointer relative shrink-0 snap-start"
+                        className="group/film relative w-24 sm:w-32 md:w-36 aspect-[2/3] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 hover:border-nebula-cyan/60 transition-all duration-300 cursor-pointer shrink-0 snap-start shadow-md hover:shadow-[0_8px_20px_rgba(0,229,255,0.2)] hover:-translate-y-1 text-left"
                       >
-                        <img
-                          src={m.image}
-                          className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-500"
-                          referrerPolicy="no-referrer"
-                          onError={handleImageError}
-                        />
-                        {/* Always-visible type badge — hidden on mobile */}
-                        <div className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5 hidden sm:block">
+                        {m.image ? (
+                          <img
+                            src={m.image}
+                            alt={m.title}
+                            className="w-full h-full object-cover filter brightness-95 group-hover/film:brightness-105 group-hover/film:scale-105 transition-all duration-500"
+                            referrerPolicy="no-referrer"
+                            onError={handleImageError}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-zinc-800 text-white/20">
+                            <Film size={24} />
+                          </div>
+                        )}
+
+                        {/* Top Badges */}
+                        <div className="absolute top-1.5 inset-x-1.5 flex items-center justify-between z-10">
                           <span
-                            className={`text-[7px] sm:text-[9px] font-black uppercase tracking-wide px-1.5 sm:px-2 py-[2px] sm:py-[3px] rounded-md backdrop-blur-md shadow-sm ${m.type === "tv" ? "bg-white/15 text-white border border-white/20" : "bg-nebula-cyan/90 text-obsidian"}`}
+                            className={`text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md shadow-sm ${
+                              m.type === "tv"
+                                ? "bg-white/20 text-white border border-white/20"
+                                : "bg-cyan-500/90 text-obsidian font-bold"
+                            }`}
                           >
                             {m.type === "tv" ? "TV" : "Movie"}
                           </span>
-                        </div>
-                        {/* Year badge */}
-                        {m.year > 0 && (
-                          <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 hidden sm:block">
-                            <span className="text-[7px] sm:text-[8px] font-bold text-white/80 bg-black/50 backdrop-blur-sm px-1.5 py-0.5 rounded">
+
+                          {m.year > 0 && (
+                            <span className="text-[7px] sm:text-[8px] font-bold text-white/80 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">
                               {m.year}
                             </span>
-                          </div>
-                        )}
-                        {/* Hover overlay with title */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 sm:p-3">
-                          <p className="text-[9px] sm:text-[10px] font-bold text-white leading-tight line-clamp-2">
+                          )}
+                        </div>
+
+                        {/* Bottom Scrim & Title */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-85 group-hover/film:opacity-95 transition-opacity flex flex-col justify-end p-2 sm:p-2.5">
+                          <p className="text-[8.5px] sm:text-[10px] font-display font-black uppercase tracking-tight text-white leading-tight line-clamp-2 drop-shadow-md group-hover/film:text-nebula-cyan transition-colors">
                             {m.title}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     ))
                   ) : (
-                    <p className="text-white/30 text-xs italic">
+                    <p className="text-white/30 text-xs italic py-4">
                       No active operations found in catalog for this creator.
                     </p>
                   )}
@@ -1062,3 +1126,33 @@ export const CastExplorerModal: React.FC<CastExplorerModalProps> = ({
     </motion.div>
   );
 };
+
+function PeoplePageStub({ actions, onSelectActor }: any) {
+  const navigate = useNavigate();
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen bg-obsidian pt-24 sm:pt-28 md:pt-32 px-4 sm:px-6 md:px-12 pb-32">
+          <div className="h-10 w-48 bg-white/5 rounded-lg mb-12 shimmer-bg" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-5">
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={`person-page-skel-${i}`}
+                className="rounded-2xl p-4 bg-white/[0.02] border border-white/5 flex flex-col items-center gap-3 animate-pulse"
+              >
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white/5 shimmer-bg" />
+                <div className="h-3 w-20 bg-white/5 rounded-md shimmer-bg" />
+              </div>
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <PeopleView
+        onClose={() => navigate("/")}
+        onSelectActor={onSelectActor}
+        onSelectMovie={actions.setSelectedMovie}
+      />
+    </React.Suspense>
+  );
+}
