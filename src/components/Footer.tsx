@@ -1,11 +1,11 @@
 import React from "react";
 import { Bug, Coffee, ExternalLink, ShieldAlert, Tv2 } from "lucide-react";
+import { DISCORD_URL } from "../data/constants";
 
 const KOFI_URL = "https://ko-fi.com/calliduz";
 const DMCA_EMAIL = "mailto:nebula.database@gmail.com";
 const SUPPORT_EMAIL =
   "mailto:nebula.database@gmail.com?subject=Nebula - Bug/Issue Report";
-const DISCORD_URL = "https://discord.gg/EYVm7HkMTM";
 const CURRENT_YEAR = new Date().getFullYear();
 
 export const Footer = React.memo(() => (

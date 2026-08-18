@@ -1,6 +1,6 @@
 import React from "react";
 import { Search, Download, X, Smartphone, Globe } from "lucide-react";
-import { NAV_ITEMS } from "../data/constants";
+import { NAV_ITEMS, DISCORD_URL } from "../data/constants";
 import { usePWAInstall } from "../hooks/usePWAInstall";
 
 export const TopNav = React.memo(
@@ -115,7 +115,7 @@ export const TopNav = React.memo(
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {showInstallButton && (
               <button
                 onClick={handleInstallClick}
@@ -126,6 +126,25 @@ export const TopNav = React.memo(
                 <span>Install App</span>
               </button>
             )}
+
+            {/* Discord Community Link (Mobile & Desktop) */}
+            <a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-full bg-white/5 hover:bg-[#5865F2]/20 border border-white/10 hover:border-[#5865F2]/50 text-white/70 hover:text-[#5865F2] hover:shadow-[0_0_16px_rgba(88,101,242,0.25)] text-[10px] sm:text-[11px] font-semibold transition-all duration-300 active:scale-95 group cursor-pointer shadow-sm"
+              title="Join our Discord Community"
+              aria-label="Join our Discord Community"
+            >
+              <svg
+                className="w-4.5 h-4.5 sm:w-3.5 sm:h-3.5 fill-current transition-transform duration-300 group-hover:scale-110"
+                viewBox="0 0 127.14 96.36"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.5-5c.88-.65,1.72-1.34,2.51-2a75.58,75.58,0,0,0,73,0c.79.71,1.63,1.4,2.51,2a68.32,68.32,0,0,1-10.5,5,77.91,77.91,0,0,0,6.63,10.85,105.73,105.73,0,0,0,32.58-18.83C129.07,48.45,123.07,25.68,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z" />
+              </svg>
+              <span className="hidden sm:inline">Discord</span>
+            </a>
 
             <button
               onClick={onSearchClick}

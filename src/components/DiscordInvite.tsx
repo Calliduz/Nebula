@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { DISCORD_URL } from "../data/constants";
 
 export const DiscordInvite = () => {
   const [dismissed, setDismissed] = useLocalStorage(
@@ -92,7 +93,7 @@ export const DiscordInvite = () => {
             </p>
 
             <a
-              href="https://discord.gg/EYVm7HkMTM"
+              href={DISCORD_URL}
               target="_blank"
               rel="noopener noreferrer"
               onClick={handleDismiss}

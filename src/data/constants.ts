@@ -8,6 +8,8 @@ import {
   Users,
 } from "lucide-react";
 
+export const DISCORD_URL = "https://discord.gg/EYVm7HkMTM";
+
 export const NAV_ITEMS = [
   { id: "home", icon: Home, label: "Home" },
   { id: "search", icon: Search, label: "Search" },
