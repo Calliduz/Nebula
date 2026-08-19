@@ -121,6 +121,9 @@ export interface NebulaMovie {
   image: string;
   backdrop: string;
   genre: string;
+  genres?: string[];
+  isDocumentary?: boolean;
+  displayType?: string;
   year: number;
   release_date?: string; // NEW: full date string for filtering
   vote_count?: number; // NEW: for Hidden Gems filter
@@ -239,56 +242,85 @@ const fetchFromTMDB = async (
 const normalizeMovie = (
   item: any,
   type: "movie" | "tv" = "movie",
-): NebulaMovie => ({
-  id: item.id || Math.floor(Math.random() * 1_000_000),
-  title: item.title || item.name || "Unknown Title",
-  description: item.overview || "No overview available.",
-  tagline: item.tagline?.trim() || undefined,
-  image: item.poster_path
-    ? proxyImage(`${IMAGE_BASE_URL}${item.poster_path}`)
-    : "/no-image.svg",
-  backdrop: item.backdrop_path
-    ? proxyImage(`${BACKDROP_BASE_URL}${item.backdrop_path}`)
-    : "",
-  genre: item.genre_ids
-    ? item.genre_ids.map((id: number) => GENRE_MAP[id] || "Unknown").join(", ")
+): NebulaMovie => {
+  const genreList: string[] = item.genre_ids
+    ? item.genre_ids.map((id: number) => GENRE_MAP[id] || "Unknown")
     : item.genres
-      ? item.genres.map((g: any) => g.name).join(", ")
-      : "Unknown Genre",
-  year: parseInt(
-    (item.release_date || item.first_air_date || "2024").substring(0, 4),
-    10,
-  ),
-  release_date: item.release_date || item.first_air_date || undefined,
-  vote_count: item.vote_count ?? undefined,
-  popularity: item.popularity ?? undefined,
-  imdb: item.vote_average
-    ? parseFloat(item.vote_average.toFixed(1))
-    : undefined,
-  type: item.media_type || type,
-  duration: item.runtime ? `${item.runtime}m` : undefined,
-  quality: (() => {
-    if (!item.release_date && !item.first_air_date) return "HD";
-    const releaseDate = new Date(item.release_date || item.first_air_date);
-    const now = new Date();
-    const diffDays = Math.floor(
-      (now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24),
-    );
+      ? item.genres.map((g: any) => g.name || "")
+      : [];
 
-    if (diffDays < 0) return "TBA"; // Not released yet
-    if (type === "tv") return "HD"; // TV shows usually HD immediately
-    if (diffDays < 14) return "CAM"; // Very new movies
-    if (diffDays < 45) return "HD (Early)"; // Likely early digital or high-quality CAM
-    return "HD";
-  })(),
-  adult: !!item.adult,
-  original_language: item.original_language || undefined,
-  origin_country: Array.isArray(item.origin_country)
-    ? item.origin_country
-    : item.origin_country
-      ? [item.origin_country]
+  const genreStr =
+    genreList.length > 0 ? genreList.join(", ") : "Unknown Genre";
+  const isDoc =
+    (item.genre_ids && item.genre_ids.includes(99)) ||
+    genreList.some((g) => g.toLowerCase().includes("documentary")) ||
+    (item.title || item.name || "").toLowerCase().includes("documentary");
+
+  const isAnime =
+    (item.original_language === "ja" ||
+      (Array.isArray(item.origin_country) &&
+        item.origin_country.includes("JP"))) &&
+    genreList.some((g) => g.toLowerCase().includes("animation"));
+
+  const resolvedType: "movie" | "tv" = item.media_type || type;
+  const displayType = isAnime
+    ? "Anime"
+    : isDoc
+      ? "Doc"
+      : resolvedType === "tv"
+        ? "TV"
+        : "Film";
+
+  return {
+    id: item.id || Math.floor(Math.random() * 1_000_000),
+    title: item.title || item.name || "Unknown Title",
+    description: item.overview || "No overview available.",
+    tagline: item.tagline?.trim() || undefined,
+    image: item.poster_path
+      ? proxyImage(`${IMAGE_BASE_URL}${item.poster_path}`)
+      : "/no-image.svg",
+    backdrop: item.backdrop_path
+      ? proxyImage(`${BACKDROP_BASE_URL}${item.backdrop_path}`)
+      : "",
+    genre: genreStr,
+    genres: genreList,
+    isDocumentary: isDoc,
+    displayType,
+    year: parseInt(
+      (item.release_date || item.first_air_date || "2024").substring(0, 4),
+      10,
+    ),
+    release_date: item.release_date || item.first_air_date || undefined,
+    vote_count: item.vote_count ?? undefined,
+    popularity: item.popularity ?? undefined,
+    imdb: item.vote_average
+      ? parseFloat(item.vote_average.toFixed(1))
       : undefined,
-});
+    type: resolvedType,
+    duration: item.runtime ? `${item.runtime}m` : undefined,
+    quality: (() => {
+      if (!item.release_date && !item.first_air_date) return "HD";
+      const releaseDate = new Date(item.release_date || item.first_air_date);
+      const now = new Date();
+      const diffDays = Math.floor(
+        (now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      if (diffDays < 0) return "TBA";
+      if (type === "tv") return "HD";
+      if (diffDays < 14) return "CAM";
+      if (diffDays < 45) return "HD (Early)";
+      return "HD";
+    })(),
+    adult: !!item.adult,
+    original_language: item.original_language || undefined,
+    origin_country: Array.isArray(item.origin_country)
+      ? item.origin_country
+      : item.origin_country
+        ? [item.origin_country]
+        : undefined,
+  };
+};
 
 // Known adult / ecchi short series to filter out from general Anime tab unless allowAdult is true
 const EXCLUDED_ECCHI_PATTERNS = [
@@ -505,6 +537,404 @@ export const discoverMedia = async (
     const data = await fetchFromTMDB(`/discover/${type}`, finalParams, ttl);
     return data.results.map((m: any) => normalizeMovie(m, type));
   } catch {
+    return [];
+  }
+};
+
+export const GENRE_NAME_TO_ID: Record<string, number> = {
+  Action: 28,
+  Adventure: 12,
+  Animation: 16,
+  Comedy: 35,
+  Crime: 80,
+  Documentary: 99,
+  Drama: 18,
+  Family: 10751,
+  Fantasy: 14,
+  History: 36,
+  Horror: 27,
+  Music: 10402,
+  Mystery: 9648,
+  Romance: 10749,
+  "Sci-Fi": 878,
+  "Sci-Fi & Fantasy": 10765,
+  Thriller: 53,
+  War: 10752,
+  Western: 37,
+  "Action & Adventure": 10759,
+};
+
+export interface DiscoverFilters {
+  type?: "all" | "movie" | "tv" | "anime" | "people";
+  sortBy?:
+    | "relevance"
+    | "popularity"
+    | "most_watched"
+    | "rating"
+    | "newest"
+    | "oldest"
+    | "title";
+  year?: string | number; // "all", "2026", "2025", "2024", "2023", "2020-2022", "2010s", "2000s", "90s", "classic"
+  genre?: string; // "All", "Action", etc.
+  minRating?: number; // 0, 6, 7, 7.5, 8, 8.5
+  includeAdult?: boolean;
+  page?: number;
+}
+
+export const matchYearFilter = (
+  movieYear: number | undefined,
+  yearFilter: string | number | undefined,
+): boolean => {
+  if (!yearFilter || yearFilter === "all" || yearFilter === "All") return true;
+  if (!movieYear || isNaN(movieYear)) return false;
+
+  const str = String(yearFilter).trim().toLowerCase();
+  if (/^\d{4}$/.test(str)) {
+    return movieYear === parseInt(str, 10);
+  }
+
+  const rangeMatch = str.match(/^(\d{4})-(\d{4})$/);
+  if (rangeMatch) {
+    const start = parseInt(rangeMatch[1], 10);
+    const end = parseInt(rangeMatch[2], 10);
+    return movieYear >= start && movieYear <= end;
+  }
+
+  if (str === "2010s") return movieYear >= 2010 && movieYear <= 2019;
+  if (str === "2000s") return movieYear >= 2000 && movieYear <= 2009;
+  if (str === "90s" || str === "1990s")
+    return movieYear >= 1990 && movieYear <= 1999;
+  if (str === "80s" || str === "1980s")
+    return movieYear >= 1980 && movieYear <= 1989;
+  if (str === "classic" || str === "pre-1990") return movieYear < 1990;
+  if (str === "pre-2000") return movieYear < 2000;
+
+  return true;
+};
+
+const getYearFilterDates = (
+  yearValue: string | number,
+): {
+  movieParams: Record<string, string>;
+  tvParams: Record<string, string>;
+} => {
+  if (!yearValue || yearValue === "all" || yearValue === "All") {
+    return { movieParams: {}, tvParams: {} };
+  }
+
+  const str = String(yearValue).trim().toLowerCase();
+
+  // Exact single 4-digit year
+  if (/^\d{4}$/.test(str)) {
+    return {
+      movieParams: { primary_release_year: str },
+      tvParams: { first_air_date_year: str },
+    };
+  }
+
+  // Range: "2020-2022" or "2020-2024"
+  const rangeMatch = str.match(/^(\d{4})-(\d{4})$/);
+  if (rangeMatch) {
+    const [, startYear, endYear] = rangeMatch;
+    return {
+      movieParams: {
+        "primary_release_date.gte": `${startYear}-01-01`,
+        "primary_release_date.lte": `${endYear}-12-31`,
+      },
+      tvParams: {
+        "first_air_date.gte": `${startYear}-01-01`,
+        "first_air_date.lte": `${endYear}-12-31`,
+      },
+    };
+  }
+
+  // Decades
+  if (str === "2010s") {
+    return {
+      movieParams: {
+        "primary_release_date.gte": "2010-01-01",
+        "primary_release_date.lte": "2019-12-31",
+      },
+      tvParams: {
+        "first_air_date.gte": "2010-01-01",
+        "first_air_date.lte": "2019-12-31",
+      },
+    };
+  }
+  if (str === "2000s") {
+    return {
+      movieParams: {
+        "primary_release_date.gte": "2000-01-01",
+        "primary_release_date.lte": "2009-12-31",
+      },
+      tvParams: {
+        "first_air_date.gte": "2000-01-01",
+        "first_air_date.lte": "2009-12-31",
+      },
+    };
+  }
+  if (str === "90s" || str === "1990s") {
+    return {
+      movieParams: {
+        "primary_release_date.gte": "1990-01-01",
+        "primary_release_date.lte": "1999-12-31",
+      },
+      tvParams: {
+        "first_air_date.gte": "1990-01-01",
+        "first_air_date.lte": "1999-12-31",
+      },
+    };
+  }
+  if (str === "80s" || str === "1980s") {
+    return {
+      movieParams: {
+        "primary_release_date.gte": "1980-01-01",
+        "primary_release_date.lte": "1989-12-31",
+      },
+      tvParams: {
+        "first_air_date.gte": "1980-01-01",
+        "first_air_date.lte": "1989-12-31",
+      },
+    };
+  }
+  if (str === "classic" || str === "pre-1990") {
+    return {
+      movieParams: {
+        "primary_release_date.lte": "1989-12-31",
+      },
+      tvParams: {
+        "first_air_date.lte": "1989-12-31",
+      },
+    };
+  }
+
+  return { movieParams: {}, tvParams: {} };
+};
+
+export const filterAndSortSearchResults = (
+  items: NebulaMovie[],
+  filters: DiscoverFilters,
+): NebulaMovie[] => {
+  if (!items || !Array.isArray(items)) return [];
+
+  let result = [...items];
+
+  // 1. Media Type Filter
+  if (filters.type && filters.type !== "all" && filters.type !== "people") {
+    if (filters.type === "anime") {
+      result = result.filter((m) => isAnimeMedia(m, filters.includeAdult));
+    } else if (filters.type === "movie") {
+      result = result.filter(
+        (m) => m.type === "movie" && !isAnimeMedia(m, filters.includeAdult),
+      );
+    } else if (filters.type === "tv") {
+      result = result.filter(
+        (m) => m.type === "tv" && !isAnimeMedia(m, filters.includeAdult),
+      );
+    }
+  }
+
+  // 2. Year Filter
+  if (filters.year && filters.year !== "all") {
+    result = result.filter((m) => matchYearFilter(m.year, filters.year));
+  }
+
+  // 3. Genre Filter
+  if (filters.genre && filters.genre !== "All") {
+    if (filters.genre === "Anime") {
+      result = result.filter((m) => isAnimeMedia(m, filters.includeAdult));
+    } else {
+      const gLower = filters.genre.toLowerCase();
+      result = result.filter((m) => {
+        const genreStr = Array.isArray((m as any).genres)
+          ? (m as any).genres.join(" ")
+          : m.genre || "";
+        return genreStr.toLowerCase().includes(gLower);
+      });
+    }
+  }
+
+  // 4. Rating Filter
+  if (filters.minRating && filters.minRating > 0) {
+    result = result.filter((m) => (m.imdb || 0) >= filters.minRating!);
+  }
+
+  // 5. Sort By
+  if (filters.sortBy && filters.sortBy !== "relevance") {
+    if (filters.sortBy === "popularity" || filters.sortBy === "most_watched") {
+      result.sort((a, b) => {
+        const scoreA = (a.popularity || 0) + (a.vote_count || 0) * 0.01;
+        const scoreB = (b.popularity || 0) + (b.vote_count || 0) * 0.01;
+        return scoreB - scoreA;
+      });
+    } else if (filters.sortBy === "rating") {
+      result.sort((a, b) => (b.imdb || 0) - (a.imdb || 0));
+    } else if (filters.sortBy === "newest") {
+      result.sort((a, b) => {
+        const dateA = a.release_date
+          ? new Date(a.release_date).getTime()
+          : (a.year || 0) * 10000;
+        const dateB = b.release_date
+          ? new Date(b.release_date).getTime()
+          : (b.year || 0) * 10000;
+        return dateB - dateA;
+      });
+    } else if (filters.sortBy === "oldest") {
+      result.sort((a, b) => {
+        const dateA = a.release_date
+          ? new Date(a.release_date).getTime()
+          : (a.year || 9999) * 10000;
+        const dateB = b.release_date
+          ? new Date(b.release_date).getTime()
+          : (b.year || 9999) * 10000;
+        return dateA - dateB;
+      });
+    } else if (filters.sortBy === "title") {
+      result.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+    }
+  }
+
+  return result;
+};
+
+export const discoverMediaWithFilters = async (
+  filters: DiscoverFilters = {},
+  signal?: AbortSignal,
+): Promise<NebulaMovie[]> => {
+  const {
+    type = "all",
+    sortBy = "popularity",
+    year = "all",
+    genre = "All",
+    minRating = 0,
+    includeAdult = false,
+    page = 1,
+  } = filters;
+
+  const { movieParams: yearMovieParams, tvParams: yearTvParams } =
+    getYearFilterDates(year);
+
+  // Common sort mappings
+  let movieSort = "popularity.desc";
+  let tvSort = "popularity.desc";
+  let minVoteCount = "20";
+
+  if (sortBy === "rating") {
+    movieSort = "vote_average.desc";
+    tvSort = "vote_average.desc";
+    minVoteCount = "100";
+  } else if (sortBy === "newest") {
+    movieSort = "primary_release_date.desc";
+    tvSort = "first_air_date.desc";
+    minVoteCount = "5";
+  } else if (sortBy === "oldest") {
+    movieSort = "primary_release_date.asc";
+    tvSort = "first_air_date.asc";
+    minVoteCount = "10";
+  } else if (sortBy === "title") {
+    movieSort = "original_title.asc";
+    tvSort = "name.asc";
+    minVoteCount = "0";
+  }
+
+  // Genre mappings
+  let movieGenreParam: string | undefined;
+  let tvGenreParam: string | undefined;
+  const isAnime = type === "anime" || genre === "Anime";
+
+  if (genre && genre !== "All" && genre !== "Anime") {
+    const genreId = GENRE_NAME_TO_ID[genre];
+    if (genreId) {
+      movieGenreParam = genreId.toString();
+      if (genre === "Action")
+        tvGenreParam = "10759"; // Action & Adventure for TV
+      else if (genre === "Sci-Fi")
+        tvGenreParam = "10765"; // Sci-Fi & Fantasy for TV
+      else tvGenreParam = genreId.toString();
+    }
+  }
+
+  const baseMovieParams: Record<string, string> = {
+    sort_by: movieSort,
+    page: page.toString(),
+    include_adult: includeAdult.toString(),
+    ...yearMovieParams,
+  };
+
+  const baseTvParams: Record<string, string> = {
+    sort_by: tvSort,
+    page: page.toString(),
+    include_adult: includeAdult.toString(),
+    ...yearTvParams,
+  };
+
+  if (minRating > 0) {
+    baseMovieParams["vote_average.gte"] = minRating.toString();
+    baseMovieParams["vote_count.gte"] = minVoteCount;
+    baseTvParams["vote_average.gte"] = minRating.toString();
+    baseTvParams["vote_count.gte"] = minVoteCount;
+  } else if (sortBy === "rating") {
+    baseMovieParams["vote_count.gte"] = minVoteCount;
+    baseTvParams["vote_count.gte"] = minVoteCount;
+  }
+
+  if (movieGenreParam) baseMovieParams["with_genres"] = movieGenreParam;
+  if (tvGenreParam) baseTvParams["with_genres"] = tvGenreParam;
+
+  if (isAnime) {
+    baseMovieParams["with_genres"] = "16";
+    baseMovieParams["with_original_language"] = "ja";
+    baseTvParams["with_genres"] = "16";
+    baseTvParams["with_original_language"] = "ja";
+  }
+
+  try {
+    const promises: Promise<any>[] = [];
+
+    if (type === "movie" || type === "all" || isAnime) {
+      promises.push(
+        fetchFromTMDB("/discover/movie", baseMovieParams, TTL.GENRE, signal)
+          .then((data) =>
+            (data.results || []).map((m: any) => normalizeMovie(m, "movie")),
+          )
+          .catch(() => []),
+      );
+    }
+
+    if (type === "tv" || type === "all" || isAnime) {
+      promises.push(
+        fetchFromTMDB("/discover/tv", baseTvParams, TTL.GENRE, signal)
+          .then((data) =>
+            (data.results || []).map((m: any) => normalizeMovie(m, "tv")),
+          )
+          .catch(() => []),
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const flattened = results.flat();
+
+    // Deduplicate
+    const seen = new Set<string | number>();
+    const deduped: NebulaMovie[] = [];
+    for (const item of flattened) {
+      if (!item || !item.id) continue;
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      deduped.push(item);
+    }
+
+    // Re-sort combined list
+    return filterAndSortSearchResults(deduped, {
+      type,
+      sortBy: sortBy === "relevance" ? "popularity" : (sortBy as any),
+      year,
+      genre,
+      minRating,
+      includeAdult,
+    });
+  } catch (err) {
+    console.error("[TMDB] discoverMediaWithFilters failed:", err);
     return [];
   }
 };
@@ -774,6 +1204,12 @@ export const searchMedia = async (
 
     people.sort((a, b) => getPersonScore(b) - getPersonScore(a));
 
+    const topPerson = people[0];
+    const isActorOrDirectorSearch =
+      topPerson &&
+      (getMatchTier(getNormalizedTitle(topPerson.name || ""), queryNorm) >= 2 ||
+        (topPerson.popularity || 0) >= 15);
+
     // Parallel fetch credits for top 3 people matched
     const personCreditsPromises = people.slice(0, 3).map(async (p) => {
       try {
@@ -790,19 +1226,39 @@ export const searchMedia = async (
           credits = data.crew || data.cast || [];
         }
 
-        // Deduplicate movies within this person's credits to prevent duplicate crew entries
+        // Deduplicate and filter out obscure trivia/self-interviews
         const uniqueCredits: any[] = [];
         const seenCreditIds = new Set<number | string>();
         for (const c of credits) {
           if (!c || !c.id) continue;
           if (seenCreditIds.has(c.id)) continue;
+          const char = (c.character || "").toLowerCase();
+          // Filter out low-vote archive footage / special thanks / trivia
+          if (
+            (char.includes("self") ||
+              char.includes("uncredited") ||
+              char.includes("special thanks")) &&
+            (c.vote_count || 0) < 100
+          ) {
+            continue;
+          }
           seenCreditIds.add(c.id);
           uniqueCredits.push(c);
         }
 
         return uniqueCredits
-          .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0))
-          .slice(0, 10)
+          .sort((a: any, b: any) => {
+            const scoreA =
+              (a.popularity || 0) * 0.5 +
+              (a.vote_count || 0) * 0.015 +
+              (a.vote_average || 0) * 2;
+            const scoreB =
+              (b.popularity || 0) * 0.5 +
+              (b.vote_count || 0) * 0.015 +
+              (b.vote_average || 0) * 2;
+            return scoreB - scoreA;
+          })
+          .slice(0, 35)
           .map((m: any) => ({
             ...m,
             media_type: m.media_type || (m.first_air_date ? "tv" : "movie"),
@@ -835,29 +1291,61 @@ export const searchMedia = async (
       Promise.all(recsPromises),
     ]);
 
-    // Combine all results
+    // Combine all results with intelligent actor & franchise prioritization
     const finalResults: NebulaMovie[] = [];
+    const finalSeenIds = new Set<string | number>();
 
-    // 1. Direct results first
-    directResults.forEach((m) => {
-      finalResults.push(normalizeMovie(m, m.media_type));
-    });
+    if (isActorOrDirectorSearch) {
+      // 1. Credits from the person search first! (Starring blockbusters)
+      creditsLists.forEach((list) => {
+        list.forEach((m) => {
+          if (!finalSeenIds.has(m.id)) {
+            finalSeenIds.add(m.id);
+            finalResults.push(normalizeMovie(m, m.media_type));
+          }
+        });
+      });
 
-    // 2. Credits from people searches next
-    creditsLists.forEach((list) => {
-      list.forEach((m) => {
-        if (!seenIds.has(m.id)) {
-          seenIds.add(m.id);
+      // 2. Direct results second (filtering out low-vote biographies/documentaries)
+      directResults.forEach((m) => {
+        if (!finalSeenIds.has(m.id)) {
+          const isLowVoteDoc =
+            (m.genre_ids?.includes(99) ||
+              (m.title || "").toLowerCase().includes("biography") ||
+              (m.title || "").toLowerCase().includes("documentary")) &&
+            (m.vote_count || 0) < 150;
+          if (!isLowVoteDoc) {
+            finalSeenIds.add(m.id);
+            finalResults.push(normalizeMovie(m, m.media_type));
+          }
+        }
+      });
+    } else {
+      // Standard movie / show search
+      // 1. Direct results first
+      directResults.forEach((m) => {
+        if (!finalSeenIds.has(m.id)) {
+          finalSeenIds.add(m.id);
           finalResults.push(normalizeMovie(m, m.media_type));
         }
       });
-    });
+
+      // 2. Credits from people searches next
+      creditsLists.forEach((list) => {
+        list.forEach((m) => {
+          if (!finalSeenIds.has(m.id)) {
+            finalSeenIds.add(m.id);
+            finalResults.push(normalizeMovie(m, m.media_type));
+          }
+        });
+      });
+    }
 
     // 3. Recommendations next
     recsLists.forEach((list) => {
       list.forEach((m) => {
-        if (!seenIds.has(m.id)) {
-          seenIds.add(m.id);
+        if (!finalSeenIds.has(m.id)) {
+          finalSeenIds.add(m.id);
           finalResults.push(normalizeMovie(m, m.media_type));
         }
       });
