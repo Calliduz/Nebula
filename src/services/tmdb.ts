@@ -1038,15 +1038,29 @@ const getNormalizedTitle = (title: string): string => {
 
 const getMatchTier = (titleNorm: string, queryNorm: string): number => {
   if (!queryNorm || !titleNorm) return 0;
-  if (titleNorm === queryNorm) return 3; // Exact match
+  if (titleNorm === queryNorm) return 4; // Exact full match (e.g. "dune" === "dune")
 
-  // Collapse spaces for compound word matching (e.g., "viral hit" vs "viralhit")
+  // Direct franchise sequel / leading whole-word match (e.g. "dune: part two", "dune 2", "dune part three")
+  if (
+    titleNorm.startsWith(queryNorm + " ") ||
+    titleNorm.startsWith(queryNorm + ":") ||
+    titleNorm.startsWith(queryNorm + "-")
+  ) {
+    return 3.8;
+  }
+
+  // Collapse spaces for compound word matching (e.g., "viral hit" vs "viralhit", "spider man" vs "spiderman")
   const titleCollapsed = titleNorm.replace(/\s+/g, "");
   const queryCollapsed = queryNorm.replace(/\s+/g, "");
 
-  if (titleCollapsed === queryCollapsed) return 3; // Exact match collapsed
-  if (titleCollapsed.startsWith(queryCollapsed)) return 2; // Starts with collapsed
-  if (titleCollapsed.includes(queryCollapsed)) return 1; // Contains collapsed
+  if (titleCollapsed === queryCollapsed) return 4; // Exact match collapsed
+  if (titleCollapsed.startsWith(queryCollapsed)) return 3.0; // General prefix match
+
+  // Check if query is a distinct word within the title (e.g. "planet dune", "the dark knight")
+  const words = titleNorm.split(/\s+/);
+  if (words.includes(queryNorm)) return 2.0;
+
+  if (titleCollapsed.includes(queryCollapsed)) return 1.0; // Substring match
   return 0; // No match
 };
 
@@ -1140,13 +1154,13 @@ export const searchMedia = async (
     const now = Date.now();
 
     /**
-     * Composite score designed for "commonly watched" ranking (Netflix-style):
-     * - matchTier × 1000 — title match quality is always the primary signal
-     * - popularity  × 0.3  — TMDB popularity is recency-weighted, good secondary
-     * - vote_count  × 0.008 — proxy for how many people actually watched it
-     * - vote_avg    × 2    — small quality bonus (7.5+ films surface slightly higher)
-     * - future penalty      — unreleased content pushed below watchable titles
-     * - obscurity filter    — skip items with < 3 votes AND popularity < 1.5 (noise)
+     * Composite score designed for modern cinematic search (matching TMDB/Netflix accuracy):
+     * - matchTier × 400 — exact title (4) & franchise sequels (3.8) dominate over distant matches
+     * - popularity  × 1.5  — strong indicator of current relevance
+     * - log(vote_count) × 80 — robust measure of true viewership scale without runaway linear inflation
+     * - vote_avg    × 5    — quality signal
+     * - future penalty      — unreleased content softly demoted below watchable titles
+     * - no-match penalty    — completely unrelated items pushed to bottom
      */
     const getCompositeScore = (item: any): number => {
       const title = item.title || item.name || "";
@@ -1156,20 +1170,27 @@ export const searchMedia = async (
       const voteCount = item.vote_count || 0;
       const voteAvg = item.vote_average || 0;
 
-      // Penalise content that hasn't been released yet
+      // Soft penalty for unreleased future content
       const releaseStr = item.release_date || item.first_air_date || "";
       let futurePenalty = 0;
       if (releaseStr) {
         const releaseMs = new Date(releaseStr).getTime();
-        if (!isNaN(releaseMs) && releaseMs > now) futurePenalty = 500;
+        if (!isNaN(releaseMs) && releaseMs > now) futurePenalty = 150;
       }
 
+      // Strong penalty for items with zero title match
+      const noMatchPenalty = tier === 0 ? 500 : 0;
+
+      // Log-scaled vote count gives balanced weight for 100 vs 1,000 vs 10,000+ votes
+      const voteLogScore = Math.log10(voteCount + 1) * 80;
+
       return (
-        tier * 1000 +
-        popularity * 0.3 +
-        voteCount * 0.008 +
-        voteAvg * 2 -
-        futurePenalty
+        tier * 400 +
+        popularity * 1.5 +
+        voteLogScore +
+        voteAvg * 5 -
+        futurePenalty -
+        noMatchPenalty
       );
     };
 
@@ -1203,12 +1224,26 @@ export const searchMedia = async (
     };
 
     people.sort((a, b) => getPersonScore(b) - getPersonScore(a));
-
     const topPerson = people[0];
+
+    // Detect if there is a dominant exact direct title match (e.g. searching "Dune", "Inception", "Deadpool")
+    const topDirect = directResults[0];
+    const hasDominantTitleMatch =
+      topDirect &&
+      getMatchTier(
+        getNormalizedTitle(topDirect.title || topDirect.name || ""),
+        queryNorm,
+      ) >= 2 &&
+      ((topDirect.vote_count || 0) >= 30 || (topDirect.popularity || 0) >= 10);
+
+    // Only treat as an actor/director search if there is NO dominant direct title match,
+    // AND the top person is a prominent exact/prefix match (e.g. "Tom Cruise", "Christopher Nolan")
     const isActorOrDirectorSearch =
+      !hasDominantTitleMatch &&
       topPerson &&
-      (getMatchTier(getNormalizedTitle(topPerson.name || ""), queryNorm) >= 2 ||
-        (topPerson.popularity || 0) >= 15);
+      getMatchTier(getNormalizedTitle(topPerson.name || ""), queryNorm) >= 2 &&
+      (topPerson.popularity || 0) >= 20 &&
+      (queryNorm.includes(" ") || (topPerson.popularity || 0) >= 40);
 
     // Parallel fetch credits for top 3 people matched
     const personCreditsPromises = people.slice(0, 3).map(async (p) => {
@@ -1258,7 +1293,7 @@ export const searchMedia = async (
               (b.vote_average || 0) * 2;
             return scoreB - scoreA;
           })
-          .slice(0, 35)
+          .slice(0, 25)
           .map((m: any) => ({
             ...m,
             media_type: m.media_type || (m.first_air_date ? "tv" : "movie"),
@@ -1291,24 +1326,28 @@ export const searchMedia = async (
       Promise.all(recsPromises),
     ]);
 
-    // Combine all results with intelligent actor & franchise prioritization
+    // Combine all results with intelligent prioritization
     const finalResults: NebulaMovie[] = [];
     const finalSeenIds = new Set<string | number>();
 
     if (isActorOrDirectorSearch) {
-      // 1. Credits from the person search first! (Starring blockbusters)
-      creditsLists.forEach((list) => {
-        list.forEach((m) => {
-          if (!finalSeenIds.has(m.id)) {
-            finalSeenIds.add(m.id);
-            finalResults.push(normalizeMovie(m, m.media_type));
-          }
-        });
+      // ── Actor/Director Search Branch ─────────────────────────────────────────
+      // 1. Star filmography credits first (sorted by popularity + votes + rating)
+      const allActorCredits = creditsLists.flat().sort((a, b) => {
+        const scoreA =
+          (a.popularity || 0) * 0.4 +
+          (a.vote_count || 0) * 0.01 +
+          (a.vote_average || 0) * 2;
+        const scoreB =
+          (b.popularity || 0) * 0.4 +
+          (b.vote_count || 0) * 0.01 +
+          (b.vote_average || 0) * 2;
+        return scoreB - scoreA;
       });
 
-      // 2. Direct results second (filtering out low-vote biographies/documentaries)
-      directResults.forEach((m) => {
+      for (const m of allActorCredits) {
         if (!finalSeenIds.has(m.id)) {
+          // Exclude low-vote documentaries / biographies
           const isLowVoteDoc =
             (m.genre_ids?.includes(99) ||
               (m.title || "").toLowerCase().includes("biography") ||
@@ -1319,39 +1358,60 @@ export const searchMedia = async (
             finalResults.push(normalizeMovie(m, m.media_type));
           }
         }
-      });
+      }
+
+      // 2. Direct results second
+      for (const m of directResults) {
+        if (!finalSeenIds.has(m.id)) {
+          finalSeenIds.add(m.id);
+          finalResults.push(normalizeMovie(m, m.media_type));
+        }
+      }
     } else {
-      // Standard movie / show search
-      // 1. Direct results first
+      // ── Standard Movie/Show Search Branch (e.g. "Dune", "Breaking Bad") ──────
+      const allCandidates: any[] = [];
+
+      // 1. Direct results
       directResults.forEach((m) => {
         if (!finalSeenIds.has(m.id)) {
           finalSeenIds.add(m.id);
-          finalResults.push(normalizeMovie(m, m.media_type));
+          allCandidates.push(m);
         }
       });
 
-      // 2. Credits from people searches next
+      // 2. Only high-engagement person credits
       creditsLists.forEach((list) => {
         list.forEach((m) => {
           if (!finalSeenIds.has(m.id)) {
-            finalSeenIds.add(m.id);
-            finalResults.push(normalizeMovie(m, m.media_type));
+            const voteCount = m.vote_count || 0;
+            const pop = m.popularity || 0;
+            if (voteCount >= 100 || pop >= 15) {
+              finalSeenIds.add(m.id);
+              allCandidates.push(m);
+            }
           }
         });
       });
+
+      // 3. Recommendations
+      recsLists.forEach((list) => {
+        list.forEach((m) => {
+          if (!finalSeenIds.has(m.id)) {
+            finalSeenIds.add(m.id);
+            allCandidates.push(m);
+          }
+        });
+      });
+
+      // Sort ALL candidates using composite scoring (Exact title match >>> popularity > votes)
+      allCandidates.sort((a, b) => getCompositeScore(b) - getCompositeScore(a));
+
+      for (const m of allCandidates.slice(0, 50)) {
+        finalResults.push(normalizeMovie(m, m.media_type));
+      }
     }
 
-    // 3. Recommendations next
-    recsLists.forEach((list) => {
-      list.forEach((m) => {
-        if (!finalSeenIds.has(m.id)) {
-          finalSeenIds.add(m.id);
-          finalResults.push(normalizeMovie(m, m.media_type));
-        }
-      });
-    });
-
-    return finalResults.slice(0, 50); // limit to top 50
+    return finalResults.slice(0, 50);
   } catch (err) {
     console.error("[TMDB] Intelligent search failed:", err);
     return [];
